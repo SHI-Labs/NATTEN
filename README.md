@@ -37,7 +37,7 @@ The latest version of NATTEN runs pretty fast on Ampere with the latest torch an
 NATTEN supports PyTorch version 1.8 and later, and Python versions 3.7, 3.8, and 3.9.
 However, we highly recommend using Python 3.8 and PyTorch 1.12.1 + CUDA 11.6 for the best performance.
 
-**NOTE:** The current version of NATTEN comes with Linux-only wheels, and supports Pascal and above (`SM >= 6.0`, i.e. Tesla P100).
+**NOTE:** The current version of NATTEN comes with Linux-only wheels, and supports Pascal and above (`SM >= 60`, i.e. Tesla P100).
 Make sure your GPU is supported by referring to 
 [this webpage](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/).
 Future versions will extend support to older GPUs.
@@ -89,7 +89,7 @@ pip install -e .
 - [x] Dilation support
 - [x] Float16 support and utilization
 - [ ] BFloat16 support
-- [ ] Kepler and Maxwell (3<=SM<6) support
+- [ ] Kepler and Maxwell (30<=SM<60) support
 - [ ] Windows builds
 
 ## Usage
