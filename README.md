@@ -1,6 +1,6 @@
 ![NATTENLogo](assets/natten_dark.png#gh-dark-mode-only) ![NATTENLogo](assets/natten_light.png#gh-light-mode-only)
 
-<a href="http://www.shi-labs.com/natten/"><img src="https://img.shields.io/badge/pip%20install%20natten-read%20more-%23C209C1" /></a>
+<a href="https://www.shi-labs.com/natten/"><img src="https://img.shields.io/badge/pip%20install%20natten-read%20more-%23C209C1" /></a>
 
 *Neighborhood Attention Extension*
 

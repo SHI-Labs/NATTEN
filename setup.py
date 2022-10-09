@@ -92,7 +92,7 @@ setup(
     name="natten",
     version=get_version(),
     author="Ali Hassani",
-    url="https://github.com/SHI-Labs/Neighborhood-Attention-Transformer",
+    url="https://github.com/SHI-Labs/NATTEN",
     description="Neighborhood Attention Extension.",
     packages=['natten/'],
     python_requires=">=3.7",
