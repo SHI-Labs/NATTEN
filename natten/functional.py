@@ -12,7 +12,7 @@ try:
 except ImportError:
     raise ImportError(f"Failed to import NATTEN's CPP backend. " + \
                       f"This could be due to an invalid/incomplete install. " + \
-                      f"Please uninstall NATTEN (pip uninstall natten) and re-install with the correct torch and cuda build: " + \
+                      f"Please uninstall NATTEN (pip uninstall natten) and re-install with the correct torch build: " + \
                       f"natten.shi-labs.com."
                       )
 

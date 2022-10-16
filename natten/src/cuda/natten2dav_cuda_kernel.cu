@@ -1,5 +1,5 @@
 /*
-NATTEN-AV TORCH EXTENSION (CUDA)
+NATTEN2D-AV TORCH EXTENSION (CUDA)
 
 This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
@@ -94,7 +94,7 @@ namespace natten {
 
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenav_cuda_forward_kernel_fp16(
+__global__ void natten2dav_cuda_forward_kernel_fp16(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> out,
@@ -141,7 +141,7 @@ __global__ void nattenav_cuda_forward_kernel_fp16(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenav_cuda_forward_kernel_fp32(
+__global__ void natten2dav_cuda_forward_kernel_fp32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> out,
@@ -860,7 +860,7 @@ __global__ void nattenv_cuda_backward_kernel_fp16(
     }
 }
 
-torch::Tensor nattenav_cuda_forward_fp16(
+torch::Tensor natten2dav_cuda_forward_fp16(
     const torch::Tensor &attn,
     const torch::Tensor &value,
     const int dilation) {
@@ -873,7 +873,7 @@ torch::Tensor nattenav_cuda_forward_fp16(
     int kernel_size_sq = attn.size(4);
     int kernel_size = sqrt(kernel_size_sq);
     CHECK_FEATMAP(height, width, kernel_size, dilation);
-    CHECK_KERNELSIZE("nattenav_cuda_forward_fp16", kernel_size);
+    CHECK_KERNELSIZE("natten2dav_cuda_forward_fp16", kernel_size);
 
     auto out = torch::zeros_like(value);
 
@@ -882,17 +882,17 @@ torch::Tensor nattenav_cuda_forward_fp16(
     dim3 grid(blocks);
     dim3 block(CUDA_NUM_THREADS_FP16);
     const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_HALF_TYPES(at::kHalf, value.scalar_type(), "nattenav_forward_cuda_fp16", ([&] {
+    AT_DISPATCH_HALF_TYPES(at::kHalf, value.scalar_type(), "natten2dav_forward_cuda_fp16", ([&] {
         const auto attn_a = attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto value_a = value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         auto out_a = out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenav_cuda_forward_kernel_fp16, grid, block, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dav_cuda_forward_kernel_fp16, grid, block, 0, stream, 
                 attn_a, value_a, out_a, height, width, heads, dilation, dimhalf, nhalf);
     }));
     return out;
 }
 
-torch::Tensor nattenav_cuda_forward(
+torch::Tensor natten2dav_cuda_forward(
     const torch::Tensor &attn,
     const torch::Tensor &value,
     const int dilation) {
@@ -904,7 +904,7 @@ torch::Tensor nattenav_cuda_forward(
     int kernel_size_sq = attn.size(4);
     int kernel_size = sqrt(kernel_size_sq);
     CHECK_FEATMAP(height, width, kernel_size, dilation);
-    CHECK_KERNELSIZE("nattenav_cuda_forward", kernel_size);
+    CHECK_KERNELSIZE("natten2dav_cuda_forward", kernel_size);
 
     auto out = torch::zeros_like(value);
 
@@ -913,17 +913,17 @@ torch::Tensor nattenav_cuda_forward(
     dim3 grid(blocks);
     dim3 block(CUDA_NUM_THREADS_F);
     const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_FLOATING_TYPES(value.scalar_type(), "nattenav_forward_cuda", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(value.scalar_type(), "natten2dav_forward_cuda", ([&] {
         const auto attn_a = attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto value_a = value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         auto out_a = out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenav_cuda_forward_kernel_fp32, grid, block, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dav_cuda_forward_kernel_fp32, grid, block, 0, stream, 
                 attn_a, value_a, out_a, height, width, heads, dilation, dim, n);
     }));
     return out;
 }
 
-std::vector<torch::Tensor> nattenav_cuda_backward_tiled_32(
+std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
@@ -939,10 +939,10 @@ std::vector<torch::Tensor> nattenav_cuda_backward_tiled_32(
     int ysize = height * kernel_size;
     int zsize = batch_size * heads;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
-    TORCH_CHECK(dim == DIM_32, "nattenav_cuda_backward_tiled_32", " only supports 32-dim attention heads.");
+    TORCH_CHECK(dim == DIM_32, "natten2dav_cuda_backward_tiled_32", " only supports 32-dim attention heads.");
     TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_5 || kernel_size == KERNEL_SIZE_9 || 
             kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13, 
-            "nattenav_cuda_backward_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
+            "natten2dav_cuda_backward_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
 
     auto d_attn = torch::zeros_like(attn);
     auto d_value = torch::zeros_like(value);
@@ -990,7 +990,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward_tiled_32(
     dim3 grid_value(blocks_value);
     dim3 block(CUDA_NUM_THREADS_V);
     const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_FLOATING_TYPES(d_attn.scalar_type(), "nattenav_cuda_backward_tiled_32", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(d_attn.scalar_type(), "natten2dav_cuda_backward_tiled_32", ([&] {
         auto d_attn_a = d_attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         auto d_value_a = d_value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto d_out_a = d_out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
@@ -1052,7 +1052,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward_tiled_32(
     return {d_attn, d_value};
 }
 
-std::vector<torch::Tensor> nattenav_cuda_backward_fp16_tiled_32(
+std::vector<torch::Tensor> natten2dav_cuda_backward_fp16_tiled_32(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
@@ -1069,10 +1069,10 @@ std::vector<torch::Tensor> nattenav_cuda_backward_fp16_tiled_32(
     int ysize = height * kernel_size;
     int zsize = batch_size * heads;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
-    TORCH_CHECK(dimhalf*2 == DIM_32, "nattenav_cuda_backward_fp16_tiled_32", " only supports 32-dim attention heads.");
+    TORCH_CHECK(dimhalf*2 == DIM_32, "natten2dav_cuda_backward_fp16_tiled_32", " only supports 32-dim attention heads.");
     TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_5 || kernel_size == KERNEL_SIZE_9 || 
             kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13, 
-            "nattenav_cuda_backward_fp16_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
+            "natten2dav_cuda_backward_fp16_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
 
     auto d_attn = torch::zeros_like(attn);
     auto d_value = torch::zeros_like(value);
@@ -1120,7 +1120,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward_fp16_tiled_32(
     dim3 grid_value(blocks_value);
     dim3 block(CUDA_NUM_THREADS_V16);
     const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_HALF_TYPES(at::kHalf, d_attn.scalar_type(), "nattenav_cuda_backward_fp16_tiled_32", ([&] {
+    AT_DISPATCH_HALF_TYPES(at::kHalf, d_attn.scalar_type(), "natten2dav_cuda_backward_fp16_tiled_32", ([&] {
         auto d_attn_a = d_attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         auto d_value_a = d_value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto d_out_a = d_out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
@@ -1179,7 +1179,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward_fp16_tiled_32(
     return {d_attn, d_value};
 }
 
-std::vector<torch::Tensor> nattenav_cuda_backward(
+std::vector<torch::Tensor> natten2dav_cuda_backward(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
@@ -1194,7 +1194,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward(
     int zsize = batch_size * heads;
     int xsize = height * width;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
-    CHECK_KERNELSIZE("nattenav_cuda_backward", kernel_size);
+    CHECK_KERNELSIZE("natten2dav_cuda_backward", kernel_size);
     int KERNELTHREADS = min(CUDA_NUM_THREADS, kernel_size_sq);
     int PIXELTHREADS = min(int(CUDA_NUM_THREADS / KERNELTHREADS), xsize);
     int BATCHTHREADS = max(1, CUDA_NUM_THREADS / (PIXELTHREADS * KERNELTHREADS));
@@ -1212,7 +1212,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward(
     dim3 grid_value(blocks_value);
     dim3 block(CUDA_NUM_THREADS);
     const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_FLOATING_TYPES(d_attn.scalar_type(), "nattenav_backward_cuda", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(d_attn.scalar_type(), "natten2dav_backward_cuda", ([&] {
         auto d_attn_a = d_attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         auto d_value_a = d_value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto d_out_a = d_out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
@@ -1226,7 +1226,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward(
     return {d_attn, d_value};
 }
 
-std::vector<torch::Tensor> nattenav_cuda_backward_fp16(
+std::vector<torch::Tensor> natten2dav_cuda_backward_fp16(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
@@ -1242,7 +1242,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward_fp16(
     int zsize = batch_size * heads;
     int xsize = height * width;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
-    CHECK_KERNELSIZE("nattenav_cuda_backward_fp16", kernel_size);
+    CHECK_KERNELSIZE("natten2dav_cuda_backward_fp16", kernel_size);
     int KERNELTHREADS = min(CUDA_NUM_THREADS, kernel_size_sq);
     int PIXELTHREADS = min(int(CUDA_NUM_THREADS / KERNELTHREADS), xsize);
     int BATCHTHREADS = max(1, CUDA_NUM_THREADS / (PIXELTHREADS * KERNELTHREADS));
@@ -1260,7 +1260,7 @@ std::vector<torch::Tensor> nattenav_cuda_backward_fp16(
     dim3 grid_value(blocks_value);
     dim3 block(CUDA_NUM_THREADS);
     const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_HALF_TYPES(at::kHalf, d_attn.scalar_type(), "nattenav_backward_cuda_fp16", ([&] {
+    AT_DISPATCH_HALF_TYPES(at::kHalf, d_attn.scalar_type(), "natten2dav_backward_cuda_fp16", ([&] {
         auto d_attn_a = d_attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         auto d_value_a = d_value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto d_out_a = d_out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();

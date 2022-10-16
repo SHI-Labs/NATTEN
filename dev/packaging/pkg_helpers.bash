@@ -55,7 +55,6 @@ setup_cuda() {
     cpu)
       unset FORCE_CUDA
       export CUDA_VISIBLE_DEVICES=
-      echo "WARNING: NATTEN does not have a CPU build yet. This is a placeholder."
       ;;
     *)
       echo "Unrecognized CU_VERSION=$CU_VERSION"

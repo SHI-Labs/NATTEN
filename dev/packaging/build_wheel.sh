@@ -16,10 +16,11 @@ echo "PYTORCH_VERSION: $PYTORCH_VERSION"       # e.g. 1.4
 setup_cuda
 setup_wheel_python
 
-yum install ninja-build -y
-ln -sv /usr/bin/ninja-build /usr/bin/ninja || true
+#yum install ninja-build -y
+#ln -sv /usr/bin/ninja-build /usr/bin/ninja || true
 
 pip_install pip numpy -U
+pip_install ninja
 pip_install "torch==$PYTORCH_VERSION" \
   -f https://download.pytorch.org/whl/"$CU_VERSION"/torch_stable.html
 

@@ -9,7 +9,7 @@
 }
 
 pytorch_ver="1.8"
-container_name=manylinux-cuda101
+container_name=manylinux-cpu
 cu="cpu"
 py_versions=(3.7 3.8 3.9)
 

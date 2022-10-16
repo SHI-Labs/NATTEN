@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.14.2] - 2022-10-15
+ 
+### Added
+- CPU support!
+  - CPP backend for CPU computation.
+  - CPU-only builds now supported.
+  - Note we only have naive kernels for CPU at the moment. Feel free to open a PR!
+
+### Changed
+- Refactored the CPP/CUDA backend.
+- Unit tests for NA1D and NA2D
+  - Gradcheck tests in slow and fast mode
+  - Gradcheck tests for CPU backend
+  - Allclose tests between CPU and CUDA outputs and gradients
+
 ## [0.14.1] - 2022-10-08
  
 ### Added
