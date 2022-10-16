@@ -11,6 +11,7 @@ This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
 """
 
+import warnings
 import glob
 import os
 import shutil
@@ -20,8 +21,13 @@ from typing import List
 import torch
 from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension
 
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "assets/README_pypi.md").read_text()
+
 torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 assert torch_ver >= [1, 8], "NATTEN requires PyTorch >= 1.8"
+AVX_INT = torch_ver >= [1, 10]
 HAS_CUDA = (torch.cuda.is_available() and (CUDA_HOME is not None) or os.getenv("FORCE_CUDA", "0") == "1")
 
 
@@ -30,14 +36,14 @@ def get_version():
     init_py = open(init_py_path, "r").readlines()
     version_line = [l.strip() for l in init_py if l.startswith("__version__")][0]
     version = version_line.split("=")[-1].strip().strip("'\"")
-    if not HAS_CUDA:
-        # Non-CUDA build
-        return version
     PYTORCH_VERSION = ''.join(torch.__version__.split('.')[:2])
 
-    assert HAS_CUDA, 'Unfortunately NATTEN does not support cpu only build presently. Please make sure you have CUDA.'
-    CUDA_VERSION = ''.join(torch.version.cuda.split('.')[:2])
-    version = f'{version}+torch{PYTORCH_VERSION}cu{CUDA_VERSION}'
+    if HAS_CUDA:
+        CUDA_VERSION = ''.join(torch.version.cuda.split('.')[:2])
+        CU = f'cu{CUDA_VERSION}'
+    else:
+        CU = 'cpu'
+    version = f'{version}+torch{PYTORCH_VERSION}{CU}'
 
     return version
 
@@ -45,12 +51,6 @@ def get_version():
 def get_extension():
     this_dir = path.dirname(path.abspath(__file__))
     extensions_dir = path.join(this_dir, "natten", "src")
-
-    if not HAS_CUDA:
-        # Non-CUDA build
-        # TODO: implement NATTEN for CPU
-        cpp_source = path.join(extensions_dir, "placeholder.cpp")
-        return [CppExtension("natten._C", [cpp_source])]
 
     main_source = path.join(extensions_dir, "natten.cpp")
     sources = glob.glob(path.join(extensions_dir, "**", "*.cpp"))
@@ -62,17 +62,24 @@ def get_extension():
     )
     assert not is_rocm_pytorch, "Unfortunately NATTEN does not support ROCM."
 
-    # common code between cuda and rocm platforms, for hipify version [1,0,0] and later.
     source_cuda = glob.glob(path.join(extensions_dir, "**", "*.cu")) + glob.glob(
         path.join(extensions_dir, "*.cu")
     )
     sources = [main_source] + sources
 
-    extra_compile_args = {"cxx": []}
+    extension = CppExtension
+    extra_compile_args = {"cxx": ["-O3"]}
     define_macros = []
+    if AVX_INT:
+        define_macros += [("AVX_INT", 1)]
+    else:
+        warnings.warn('Compiling CPU kernels without AVX vectorization, because you are using PyTorch < 1.10.', UserWarning, stacklevel=2)
 
-    extension = CUDAExtension
-    sources += source_cuda
+    if HAS_CUDA:
+        extension = CUDAExtension
+        sources += source_cuda
+        define_macros += [("WITH_CUDA", 1)]
+        extra_compile_args["nvcc"] = ["-O3"]
 
     include_dirs = [extensions_dir]
 
@@ -82,6 +89,7 @@ def get_extension():
             sources,
             include_dirs=include_dirs,
             define_macros=define_macros,
+            extra_compile_args=extra_compile_args,
         )
     ]
 
@@ -94,6 +102,8 @@ setup(
     author="Ali Hassani",
     url="https://github.com/SHI-Labs/NATTEN",
     description="Neighborhood Attention Extension.",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     packages=['natten/'],
     python_requires=">=3.7",
     install_requires=[

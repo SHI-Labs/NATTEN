@@ -1,6 +1,6 @@
 """
 Neighborhood Attention FLOP counter
-Because we're using a custom CUDA kernel, FVCore won't recognize it and count its flops, so we have
+Because we're using a custom CPP backend, FVCore won't recognize it and count flops, so we have
 to manually define flop counters for each extension.
 
 This source code is licensed under the license found in the

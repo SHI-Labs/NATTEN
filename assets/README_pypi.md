@@ -1,4 +1,4 @@
-![NATTENLogo](assets/natten_dark.png#gh-dark-mode-only) ![NATTENLogo](assets/natten_light.png#gh-light-mode-only)
+![NATTENLogo](https://www.shi-labs.com/natten/assets/img/natten_light.png) 
 
 <a href="https://www.shi-labs.com/natten/"><img src="https://img.shields.io/badge/pip%20install%20natten-read%20more-%23C209C1" /></a>
 
@@ -29,8 +29,8 @@ For more information, we highly recommend reading our preprints [NAT](https://ar
 ### How fast is NATTEN?
 The latest version of NATTEN runs pretty fast on Ampere with the latest torch and CUDA versions.
 
-![TimePlot](assets/cudatime_dark.png#gh-dark-mode-only) ![TimePlot](assets/cudatime_light.png#gh-light-mode-only)
-![MemPlot](assets/cudamemory_dark.png#gh-dark-mode-only) ![MemPlot](assets/cudamemory_light.png#gh-light-mode-only)
+![TimePlot](https://www.shi-labs.com/natten/assets/img/cudatime_light.png)
+![MemPlot](https://www.shi-labs.com/natten/assets/img/cudamemory_light.png)
 
 
 ## Requirements
@@ -76,12 +76,6 @@ pip install ninja # Recommended, not required
 git clone https://github.com/SHI-Labs/NATTEN
 cd NATTEN
 pip install -e .
-```
-
-#### Optional: unit tests
-You can optionally run unit tests to verify building from source finished successfully:
-```bash
-python -m unittest discover -v -s ./tests
 ```
 
 
@@ -136,7 +130,7 @@ flop_ctr = add_natten_handle(flop_ctr)
 ```
 
 ## License
-NATTEN is released under the [MIT License](LICENSE).
+NATTEN is released under the [MIT License](https://github.com/SHI-Labs/NATTEN/blob/main/LICENSE).
 
 ## Citation
 ```bibtex

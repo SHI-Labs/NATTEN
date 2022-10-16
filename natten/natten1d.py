@@ -1,5 +1,5 @@
 """
-Neighborhood Attention 1D PyTorch Module (CUDA only)
+Neighborhood Attention 1D PyTorch Module
 
 This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
