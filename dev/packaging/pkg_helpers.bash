@@ -1,7 +1,6 @@
 #!/bin/bash -e
 # Based on detectron2's builder:
 # github.com/facebookresearch/detectron2
-# Copyright (c) Facebook, Inc. and its affiliates.
 
 # Function to retry functions that sometimes timeout or have flaky failures
 retry () {
@@ -14,12 +13,16 @@ pip_install() {
 
 
 setup_cuda() {
-  # Now work out the CUDA settings
+  # SM<6.0 is not supported at this time.
   # Like other torch domain libraries, we choose common GPU architectures only.
   # See https://github.com/pytorch/pytorch/blob/master/torch/utils/cpp_extension.py
   # and https://github.com/pytorch/vision/blob/main/packaging/pkg_helpers.bash for reference.
   export FORCE_CUDA=1
   case "$CU_VERSION" in
+    cu117)
+      export CUDA_HOME=/usr/local/cuda-11.7/
+      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
+      ;;
     cu116)
       export CUDA_HOME=/usr/local/cuda-11.6/
       export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
@@ -68,6 +71,8 @@ setup_wheel_python() {
     3.7) python_abi=cp37-cp37m ;;
     3.8) python_abi=cp38-cp38 ;;
     3.9) python_abi=cp39-cp39 ;;
+    3.10) python_abi=cp310-cp310 ;;
+    3.11) python_abi=cp311-cp311 ;;
     *)
       echo "Unrecognized PYTHON_VERSION=$PYTHON_VERSION"
       exit 1

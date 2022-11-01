@@ -18,9 +18,9 @@ namespace natten {
       m.def("natten1dav_forward", &natten1dav_forward, "NATTEN1DAV forward");
       m.def("natten1dav_backward", &natten1dav_backward, "NATTEN1DAV backward");
 
-      m.def("natten2dqkrpb_forward", &natten2dqkrpb_forward, "NATTENQK+RPB forward");
-      m.def("natten2dqkrpb_backward", &natten2dqkrpb_backward, "NATTENQK+RPB backward");
-      m.def("natten2dav_forward", &natten2dav_forward, "NATTENAV forward");
-      m.def("natten2dav_backward", &natten2dav_backward, "NATTENAV backward");
+      m.def("natten2dqkrpb_forward", &natten2dqkrpb_forward, "NATTEN2DQK+RPB forward");
+      m.def("natten2dqkrpb_backward", &natten2dqkrpb_backward, "NATTEN2DQK+RPB backward");
+      m.def("natten2dav_forward", &natten2dav_forward, "NATTEN2DAV forward");
+      m.def("natten2dav_backward", &natten2dav_backward, "NATTEN2DAV backward");
     }
 } // namespace natten

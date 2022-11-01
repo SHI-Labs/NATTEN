@@ -10,7 +10,14 @@ LICENSE file in the root directory of this source tree.
 #include <ATen/cuda/CUDAContext.h>
 #include <ATen/ATen.h>
 
-#define AT_DISPATCH_HALF_TYPES(SCALARTYPE1, TYPE, NAME, ...)                         \
+#if defined(TORCH_113)
+
+#define AT_DISPATCH_HALF_TYPES(SCALARTYPE1, TYPE, NAME, ...)                             \
+  AT_DISPATCH_SWITCH(TYPE, NAME, AT_DISPATCH_CASE(SCALARTYPE1, __VA_ARGS__))
+
+#else
+
+#define AT_DISPATCH_HALF_TYPES(SCALARTYPE1, TYPE, NAME, ...)                \
   [&] {                                                                     \
     const auto& the_type = TYPE;                                            \
     /* don't use TYPE again in case it is an expensive or side-effect op */ \
@@ -27,6 +34,7 @@ LICENSE file in the root directory of this source tree.
     }                                                                       \
   }()
 
+#endif
 
 #define CUDA_NUM_THREADS 1024
 

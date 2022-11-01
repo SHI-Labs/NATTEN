@@ -34,8 +34,7 @@ The latest version of NATTEN runs pretty fast on Ampere with the latest torch an
 
 
 ## Requirements
-NATTEN supports PyTorch version 1.8 and later, and Python versions 3.7, 3.8, and 3.9.
-However, we highly recommend using Python 3.8 and PyTorch 1.12.1 + CUDA 11.6 for the best performance.
+NATTEN supports PyTorch version 1.8 and later, and Python versions 3.7, 3.8, 3.9, 3.10(only torch >= 1.11), and 3.11 (only torch >= 1.13).
 
 **NOTE:** The current version of NATTEN comes with Linux-only wheels, and supports Pascal and above (`SM >= 60`, i.e. Tesla P100).
 Make sure your GPU is supported by referring to 
@@ -94,7 +93,7 @@ python -m unittest discover -v -s ./tests
 - [ ] Neighborhood Attention 3D (CPU)
 - [x] Dilation support
 - [x] Float16 support and utilization
-- [ ] BFloat16 support
+- [ ] BFloat16 support (awaiting CUDA 11.8/12 builds of torch)
 - [ ] Kepler and Maxwell (30<=SM<60) support
 - [ ] Windows builds
 
@@ -104,8 +103,8 @@ Simply import `NeighborhoodAttention1D` or `NeighborhoodAttention2D` from `natte
 from natten import NeighborhoodAttention1D
 from natten import NeighborhoodAttention2D
 
-na1d = NeighborhoodAttention1D(dim=128, kernel_size=7, dilation=2, num_heads=4).cuda()
-na2d = NeighborhoodAttention2D(dim=128, kernel_size=7, dilation=2, num_heads=4).cuda()
+na1d = NeighborhoodAttention1D(dim=128, kernel_size=7, dilation=2, num_heads=4)
+na2d = NeighborhoodAttention2D(dim=128, kernel_size=7, dilation=2, num_heads=4)
 ```
 
 ### FLOPs

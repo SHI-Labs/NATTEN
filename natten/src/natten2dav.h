@@ -1,5 +1,5 @@
 /*
-NATTEN-AV TORCH EXTENSION
+NATTEN2D-AV TORCH EXTENSION
 
 This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
@@ -99,7 +99,10 @@ std::vector<torch::Tensor> natten2dav_backward(
         int dim = value.size(4);
         int kernel_size = sqrt(attn.size(4));
         bool half = ::detail::scalar_type(value.scalar_type()) == at::ScalarType::Half;
-        if ((kernel_size == 7 || kernel_size == 5 || kernel_size == 9 || kernel_size == 11 || kernel_size == 13) && dim == 32){
+        if ((
+            kernel_size == 7 || kernel_size == 3 || kernel_size == 5 ||
+            kernel_size == 9 || kernel_size == 11 || kernel_size == 13
+            ) && dim == 32){
             if (half)
                 return natten2dav_cuda_backward_fp16_tiled_32(d_out, attn, value, dilation);
             return natten2dav_cuda_backward_tiled_32(d_out, attn, value, dilation);

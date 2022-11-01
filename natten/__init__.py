@@ -7,4 +7,4 @@ LICENSE file in the root directory of this source tree.
 from .natten1d import NeighborhoodAttention1D
 from .natten2d import NeighborhoodAttention2D, NeighborhoodAttention
 
-__version__ = "0.14.2"
+__version__ = "0.14.4"
