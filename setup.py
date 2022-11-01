@@ -23,12 +23,17 @@ from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension
 
 from pathlib import Path
 this_directory = Path(__file__).parent
-long_description = (this_directory / "assets/README_pypi.md").read_text()
+try:
+    long_description = (this_directory / "assets/README_pypi.md").read_text()
+except:
+    long_description = "Neighborhood Attention Extension."
 
 torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 assert torch_ver >= [1, 8], "NATTEN requires PyTorch >= 1.8"
 AVX_INT = torch_ver >= [1, 10]
+TORCH_113 = torch_ver >= [1, 13]
 HAS_CUDA = (torch.cuda.is_available() and (CUDA_HOME is not None) or os.getenv("FORCE_CUDA", "0") == "1")
+NATTEN_VERSION_SUFFIX = os.getenv("NATTEN_VERSION_SUFFIX", "")
 
 
 def get_version():
@@ -36,7 +41,9 @@ def get_version():
     init_py = open(init_py_path, "r").readlines()
     version_line = [l.strip() for l in init_py if l.startswith("__version__")][0]
     version = version_line.split("=")[-1].strip().strip("'\"")
-    PYTORCH_VERSION = ''.join(torch.__version__.split('.')[:2])
+    if NATTEN_VERSION_SUFFIX != "1":
+        return f'{version}{NATTEN_VERSION_SUFFIX}'
+    PYTORCH_VERSION = ''.join(torch.__version__.split('+')[0].split('.'))
 
     if HAS_CUDA:
         CUDA_VERSION = ''.join(torch.version.cuda.split('.')[:2])
@@ -70,6 +77,8 @@ def get_extension():
     extension = CppExtension
     extra_compile_args = {"cxx": ["-O3"]}
     define_macros = []
+    if TORCH_113:
+        define_macros += [("TORCH_113", 1)]
     if AVX_INT:
         define_macros += [("AVX_INT", 1)]
     else:

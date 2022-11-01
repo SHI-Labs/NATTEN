@@ -12,6 +12,8 @@ echo "Build Settings:"
 echo "CU_VERSION: $CU_VERSION"                 # e.g. cu101
 echo "PYTHON_VERSION: $PYTHON_VERSION"         # e.g. 3.7
 echo "PYTORCH_VERSION: $PYTORCH_VERSION"       # e.g. 1.4
+      
+export NATTEN_VERSION_SUFFIX=1
 
 setup_cuda
 setup_wheel_python

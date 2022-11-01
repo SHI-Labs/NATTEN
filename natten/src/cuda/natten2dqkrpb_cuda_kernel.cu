@@ -25,22 +25,26 @@ namespace natten {
 #define KERNEL_SIZE_9 9
 #define KERNEL_SIZE_7 7
 #define KERNEL_SIZE_5 5
+#define KERNEL_SIZE_3 3
 #define NEIGHBORHOOD_SIZE_13 6
 #define NEIGHBORHOOD_SIZE_11 5
 #define NEIGHBORHOOD_SIZE_9 4
 #define NEIGHBORHOOD_SIZE_7 3
 #define NEIGHBORHOOD_SIZE_5 2
+#define NEIGHBORHOOD_SIZE_3 1
 // Always keep batchthreads 1, because we want each thread block to process one 1 sample 1 head
 #define BATCHTHREADS_13 1
 #define BATCHTHREADS_11 1
 #define BATCHTHREADS_9 1
 #define BATCHTHREADS_7 1
 #define BATCHTHREADS_5 1
+#define BATCHTHREADS_3 1
 // Tile is the number of pixels across each axis that are processed within a single threadblock
 // So far the best tile size for Kernel size 7 is 3x3.
 #define TILE_9 3
 #define TILE_7 3
 #define TILE_5 4
+#define TILE_3 7
 
 #define TILE_11_X 2
 #define TILE_11_Y 3
@@ -50,6 +54,7 @@ namespace natten {
 #define KTILE_9 11
 #define KTILE_7 9
 #define KTILE_5 8
+#define KTILE_3 9
 
 #define KTILE_11_X 12
 #define KTILE_11_Y 13
@@ -63,6 +68,7 @@ namespace natten {
 #define XYTHREADS_9 27
 #define XYTHREADS_7 21
 #define XYTHREADS_5 20
+#define XYTHREADS_3 21
 
 #define XTHREADS_11 33
 #define YTHREADS_11 22
@@ -83,8 +89,13 @@ namespace natten {
 #define KSTRIDE_32 4
 // For kernel size 5, we have to do 2 query dims per thread, because we have fewer threads in each threadblock than the total
 // number of queries.
+// For kernel size 3, we have to read 2 query dims per thread
 #define QITERS_5 2
 #define QSTRIDE_5 16
+#define QITERS_3 4
+#define QSTRIDE_3 8
+#define QITERS_3_HALF 2
+#define QSTRIDE_3_HALF 8
 
 // This is just for the other kernels that are not using SMEM
 #define CUDA_NUM_THREADS_Q 512
@@ -186,6 +197,182 @@ __global__ void natten2dqkrpb_cuda_forward_kernel_fp32(
             }
         }
     }
+}
+
+
+/* TODO: FIX BANK CONFLICTS */
+template <int DILATION, typename scalar_t>
+__global__ void natten2dqkrpb_cuda_forward_kernel_fp16_3x3_32(
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> query,
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> key,
+    const torch::PackedTensorAccessor32<scalar_t,3,torch::DefaultPtrTraits> rpb,
+    torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> attn,
+    const int height,
+    const int width,
+    const int batch_size,
+    const int heads,
+    const int dilation_in) {
+    const int dilation = (DILATION>0) ? DILATION : dilation_in;
+    // Because batch heads have stride 1 per threadblock, we can just use blockIdx since blockDim will be 1 and threadIdx will
+    // always be 0.
+    // const int z = blockIdx.z * blockDim.z + threadIdx.z;
+    const int z = blockIdx.z;
+    const int b = z / heads;
+    const int h = z - b * heads;
+    // Not needed again because it will always be true.
+    // if (z < batch_size * heads)
+    // {
+    const int lti = threadIdx.y * (TILE_3*KERNEL_SIZE_3) + threadIdx.x;
+    const int stride2 = DIMHALF_32 * width;
+    const int batchHeadOffset = b * (stride2*height*heads) + h * (stride2*height);
+    const int si = int(blockIdx.y / dilation) * (TILE_3 * dilation) + (blockIdx.y % dilation);
+    const int sj = int(blockIdx.x / dilation) * (TILE_3 * dilation) + (blockIdx.x % dilation);
+    const int sni = get_window_start(si, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    const int snj = get_window_start(sj, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    __shared__ __half2 tile[TILE_3*TILE_3][DIM_32+3];
+    __shared__ __half2 kTile[KTILE_3*KTILE_3][DIM_32+3];
+    __half2* query2 = reinterpret_cast<__half2*>(query.data());
+    __half2* key2 = reinterpret_cast<__half2*>(key.data());
+
+    /* query tile */
+    const int qtx = lti / QSTRIDE_3_HALF;
+    const int qty = (lti - qtx * QSTRIDE_3_HALF) * QITERS_3_HALF;
+    if (qtx < TILE_3*TILE_3)
+    {
+        int qi = qtx / TILE_3;
+        const int qj = (qtx - qi * TILE_3) * dilation + sj;
+        qi = qi * dilation + si;
+        if (qi < height && qj < width){
+            #pragma unroll
+            for (int ti=0; ti < QITERS_3_HALF; ++ti)
+                tile[qtx][qty+ti] = query2[batchHeadOffset + qi * stride2 + qj * DIMHALF_32 + qty+ti];
+        }
+    }
+    /* key tile */
+    const int ktx = lti / KSTRIDE_32;
+    const int kty = (lti - ktx * KSTRIDE_32) * KHALFITERS_32;
+    if (ktx < KTILE_3*KTILE_3)
+    {
+        int bi = ktx / KTILE_3;
+        const int bj = (ktx - bi * KTILE_3) * dilation + snj;
+        bi = bi * dilation + sni;
+        if (bi < height && bj < width){
+            const int keyOffset = batchHeadOffset + bi * stride2 + bj * DIMHALF_32 + kty;
+            #pragma unroll
+            for (int ti=0; ti < KHALFITERS_32; ++ti)
+                kTile[ktx][kty + ti] = key2[keyOffset + ti];
+        }
+    }
+    __syncthreads();
+    const int ii = threadIdx.y / KERNEL_SIZE_3;
+    const int ki = threadIdx.y - ii * KERNEL_SIZE_3;
+    const int jj = threadIdx.x / KERNEL_SIZE_3;
+    const int kj = threadIdx.x - jj * KERNEL_SIZE_3;
+    const int i = si + ii*dilation, j = sj + jj*dilation;
+    if (i < height && j < width){
+        const int ni = get_window_start(i, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int nj = get_window_start(j, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int pi = get_pb_start(i, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int pj = get_pb_start(j, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        __half2 updt = __float2half2_rn(0.f);
+        const int queryIdx = ii*TILE_3 + jj;
+        const int keyIdx = int((ni+ki*dilation - sni)/dilation)*KTILE_3 + int((nj+kj*dilation - snj)/dilation);
+
+        #pragma unroll
+        for (int dimOffset=0; dimOffset < DIMHALF_32; ++dimOffset)
+            updt = __hfma2(tile[queryIdx][dimOffset], kTile[keyIdx][dimOffset], updt);
+        const int index = b * attn.stride(0) + h * attn.stride(1) + i * attn.stride(2) + j * attn.stride(3) + ki*KERNEL_SIZE_3+kj;
+        const int rpbIndex = h * rpb.stride(0) + (pi+ki) * rpb.stride(1) + (pj+kj) * rpb.stride(2);
+        attn.data()[index] = static_cast<scalar_t>(__hadd(updt.x, updt.y)) + rpb.data()[rpbIndex];
+    }
+    //}
+}
+
+/* TODO: CHECK BANK CONFLICTS */
+template <int DILATION, typename scalar_t>
+__global__ void natten2dqkrpb_cuda_forward_kernel_fp32_3x3_32(
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> query,
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> key,
+    const torch::PackedTensorAccessor32<scalar_t,3,torch::DefaultPtrTraits> rpb,
+    torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> attn,
+    const int height,
+    const int width,
+    const int batch_size,
+    const int heads,
+    const int dilation_in) {
+    const int dilation = (DILATION>0) ? DILATION : dilation_in;
+    // Because batch heads have stride 1 per threadblock, we can just use blockIdx since blockDim will be 1 and threadIdx will
+    // always be 0.
+    // const int z = blockIdx.z * blockDim.z + threadIdx.z;
+    const int z = blockIdx.z;
+    const int b = z / heads;
+    const int h = z - b * heads;
+    // Not needed again because it will always be true.
+    // if (z < batch_size * heads)
+    // {
+    const int lti = threadIdx.y * (TILE_3*KERNEL_SIZE_3) + threadIdx.x;
+    const int batchHeadOffset = b * query.stride(0) + h * query.stride(1);
+    const int si = int(blockIdx.y / dilation) * (TILE_3 * dilation) + (blockIdx.y % dilation);
+    const int sj = int(blockIdx.x / dilation) * (TILE_3 * dilation) + (blockIdx.x % dilation);
+    const int sni = get_window_start(si, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    const int snj = get_window_start(sj, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    __shared__ scalar_t tile[TILE_3*TILE_3][DIM_32+3];
+    __shared__ scalar_t kTile[KTILE_3*KTILE_3][DIM_32+3];
+
+    /* query tile */
+    const int qtx = lti / QSTRIDE_3;
+    const int qty = (lti - qtx * QSTRIDE_3) * QITERS_3;
+    if (qtx < TILE_3*TILE_3)
+    {
+        int qi = qtx / TILE_3;
+        const int qj = (qtx - qi * TILE_3) * dilation + sj;
+        qi = qi * dilation + si;
+        if (qi < height && qj < width){
+            #pragma unroll
+            for (int ti=0; ti < QITERS_3; ++ti)
+                tile[qtx][qty+ti] = query.data()[batchHeadOffset + qi * query.stride(2) + qj * query.stride(3) + qty+ti];
+        }
+    }
+    /* key tile */
+    const int ktx = lti / KSTRIDE_32;
+    const int kty = (lti - ktx * KSTRIDE_32) * KITERS_32;
+    if (ktx < KTILE_3*KTILE_3)
+    {
+        int bi = ktx / KTILE_3;
+        const int bj = (ktx - bi * KTILE_3) * dilation + snj;
+        bi = bi * dilation + sni;
+        if (bi < height && bj < width){
+            const int keyOffset = batchHeadOffset + bi * query.stride(2) + bj * query.stride(3) + kty;
+            #pragma unroll
+            for (int ti=0; ti < KITERS_32; ++ti)
+                kTile[ktx][kty + ti] = key.data()[keyOffset + ti];
+        }
+    }
+    __syncthreads();
+    const int ii = threadIdx.y / KERNEL_SIZE_3;
+    const int ki = threadIdx.y - ii * KERNEL_SIZE_3;
+    const int jj = threadIdx.x / KERNEL_SIZE_3;
+    const int kj = threadIdx.x - jj * KERNEL_SIZE_3;
+    const int i = si + ii*dilation, j = sj + jj*dilation;
+    if (i < height && j < width){
+        const int ni = get_window_start(i, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int nj = get_window_start(j, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int pi = get_pb_start(i, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int pj = get_pb_start(j, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        scalar_t updt = scalar_t(0);
+        const int queryIdx = ii*TILE_3 + jj;
+        const int keyIdx = int((ni+ki*dilation - sni)/dilation)*KTILE_3 + int((nj+kj*dilation - snj)/dilation);
+
+        #pragma unroll
+        for (int dimOffset=0; dimOffset < DIM_32; ++dimOffset)
+            updt += tile[queryIdx][dimOffset] * kTile[keyIdx][dimOffset];
+
+        const int index = b * attn.stride(0) + h * attn.stride(1) + i * attn.stride(2) + j * attn.stride(3) + ki*KERNEL_SIZE_3+kj;
+        const int rpbIndex = h * rpb.stride(0) + (pi+ki) * rpb.stride(1) + (pj+kj) * rpb.stride(2);
+        updt += rpb.data()[rpbIndex];
+        attn.data()[index] = updt;
+    }
+    //}
 }
 
 
@@ -709,7 +896,7 @@ __global__ void natten2dqkrpb_cuda_forward_kernel_fp32_11x11_13x13_32(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenq_cuda_backward_kernel_fp32(
+__global__ void natten2dq_cuda_backward_kernel_fp32(
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_query,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> key,
@@ -751,7 +938,7 @@ __global__ void nattenq_cuda_backward_kernel_fp32(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenq_cuda_backward_kernel_fp16(
+__global__ void natten2dq_cuda_backward_kernel_fp16(
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_query,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> key,
@@ -797,7 +984,7 @@ __global__ void nattenq_cuda_backward_kernel_fp16(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenrpb_cuda_backward_kernel_fp16(
+__global__ void natten2drpb_cuda_backward_kernel_fp16(
     torch::PackedTensorAccessor32<scalar_t,3,torch::DefaultPtrTraits> d_rpb,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const int height,
@@ -835,7 +1022,7 @@ __global__ void nattenrpb_cuda_backward_kernel_fp16(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenrpb_cuda_backward_kernel(
+__global__ void natten2drpb_cuda_backward_kernel(
     torch::PackedTensorAccessor32<scalar_t,3,torch::DefaultPtrTraits> d_rpb,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const int height,
@@ -873,7 +1060,7 @@ __global__ void nattenrpb_cuda_backward_kernel(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenk_cuda_backward_kernel_fp16(
+__global__ void natten2dk_cuda_backward_kernel_fp16(
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_key,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> query,
@@ -924,7 +1111,7 @@ __global__ void nattenk_cuda_backward_kernel_fp16(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenk_cuda_backward_kernel_fp32(
+__global__ void natten2dk_cuda_backward_kernel_fp32(
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_key,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> query,
@@ -1069,9 +1256,9 @@ torch::Tensor natten2dqkrpb_cuda_forward_tiled_32(
     int kernel_size = (RPB_MAX + 1) / 2;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
     TORCH_CHECK(dim == DIM_32, "natten2dqkrpb_cuda_forward_fp32_tiled_32", " only supports 32-dim attention heads.");
-    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_5 || kernel_size == KERNEL_SIZE_9 || 
-            kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13, 
-            "natten2dqkrpb_cuda_forward_fp32_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
+    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_3 || kernel_size == KERNEL_SIZE_5 ||
+            kernel_size == KERNEL_SIZE_9 || kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13,
+            "natten2dqkrpb_cuda_forward_fp32_tiled_32", " only supports kernel sizes 3, 5, 7, 9, 11, and 13.");
     int xsize = width * kernel_size;
     int ysize = height * kernel_size;
     int zsize = batch_size * heads;
@@ -1087,6 +1274,12 @@ torch::Tensor natten2dqkrpb_cuda_forward_tiled_32(
         XTHREADS = XYTHREADS_7;
         YTHREADS = XYTHREADS_7;
         BATCHTHREADS = BATCHTHREADS_7;
+    }
+    else if (kernel_size == KERNEL_SIZE_3)
+    {
+        XTHREADS = XYTHREADS_3;
+        YTHREADS = XYTHREADS_3;
+        BATCHTHREADS = BATCHTHREADS_3;
     }
     else if (kernel_size == KERNEL_SIZE_5)
     {
@@ -1130,8 +1323,14 @@ torch::Tensor natten2dqkrpb_cuda_forward_tiled_32(
             LAUNCH_DNA_KNS_TILED79(TILE_9, KTILE_9, KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation,
                     natten2dqkrpb_cuda_forward_kernel_fp32_7x7_9x9_32, blocks, threads, 0, stream, 
                     query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
+        else if (kernel_size == KERNEL_SIZE_3)
+            LAUNCH_DNA_DS(dilation, natten2dqkrpb_cuda_forward_kernel_fp32_3x3_32,
+                    blocks, threads, 0, stream,
+                    query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
         else if (kernel_size == KERNEL_SIZE_5)
-            LAUNCH_DNA_DS(dilation, natten2dqkrpb_cuda_forward_kernel_fp32_5x5_32, blocks, threads, 0, stream, query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
+            LAUNCH_DNA_DS(dilation, natten2dqkrpb_cuda_forward_kernel_fp32_5x5_32,
+                    blocks, threads, 0, stream,
+                    query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
         else if (kernel_size == KERNEL_SIZE_11)
             LAUNCH_DNA_KNS_TILED1113(TILE_11_X, TILE_11_Y, KTILE_11_X, KTILE_11_Y, 
                     KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, scalar_t,
@@ -1163,9 +1362,9 @@ torch::Tensor natten2dqkrpb_cuda_forward_fp16_tiled_32(
     CHECK_FEATMAP(height, width, kernel_size, dilation);
     TORCH_CHECK(dimhalf*2 == query.size(4), "Dims per head must be an even number in FP16.");
     TORCH_CHECK(dimhalf*2 == DIM_32, "natten2dqkrpb_cuda_forward_fp16_tiled_32", " only supports 32-dim attention heads.");
-    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_5 || kernel_size == KERNEL_SIZE_9 || 
-            kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13, 
-            "natten2dqkrpb_cuda_forward_fp16_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
+    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_3 || kernel_size == KERNEL_SIZE_5 ||
+            kernel_size == KERNEL_SIZE_9 || kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13,
+            "natten2dqkrpb_cuda_forward_fp16_tiled_32", " only supports kernel sizes 3, 5, 7, 9, 11, and 13.");
     int xsize = width * kernel_size;
     int ysize = height * kernel_size;
     int zsize = batch_size * heads;
@@ -1181,6 +1380,12 @@ torch::Tensor natten2dqkrpb_cuda_forward_fp16_tiled_32(
         XTHREADS = XYTHREADS_7;
         YTHREADS = XYTHREADS_7;
         BATCHTHREADS = BATCHTHREADS_7;
+    }
+    else if (kernel_size == KERNEL_SIZE_3)
+    {
+        XTHREADS = XYTHREADS_3;
+        YTHREADS = XYTHREADS_3;
+        BATCHTHREADS = BATCHTHREADS_3;
     }
     else if (kernel_size == KERNEL_SIZE_5)
     {
@@ -1224,8 +1429,14 @@ torch::Tensor natten2dqkrpb_cuda_forward_fp16_tiled_32(
             LAUNCH_DNA_KNS_TILED79(TILE_9, KTILE_9, KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation,
                     natten2dqkrpb_cuda_forward_kernel_fp16_7x7_9x9_32, blocks, threads, 0, stream, 
                     query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
+        else if (kernel_size == KERNEL_SIZE_3)
+            LAUNCH_DNA_DS(dilation, natten2dqkrpb_cuda_forward_kernel_fp16_3x3_32,
+                    blocks, threads, 0, stream,
+                    query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
         else if (kernel_size == KERNEL_SIZE_5)
-            LAUNCH_DNA_DS(dilation, natten2dqkrpb_cuda_forward_kernel_fp16_5x5_32, blocks, threads, 0, stream, query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
+            LAUNCH_DNA_DS(dilation, natten2dqkrpb_cuda_forward_kernel_fp16_5x5_32,
+                    blocks, threads, 0, stream,
+                    query_a, key_a, rpb_a, attn_a, height, width, batch_size, heads, dilation);
         else if (kernel_size == KERNEL_SIZE_11)
             LAUNCH_DNA_KNS_TILED1113(TILE_11_X, TILE_11_Y, KTILE_11_X, KTILE_11_Y, 
                     KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, scalar_t,
@@ -1282,11 +1493,11 @@ std::vector<torch::Tensor> natten2dqkrpb_cuda_backward(
         const auto d_attn_a = d_attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto query_a = query.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto key_a = key.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenrpb_cuda_backward_kernel, grid_rpb, blockr, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2drpb_cuda_backward_kernel, grid_rpb, blockr, 0, stream,
                 d_rpb_a, d_attn_a, height, width, dilation, batch_size, d_rpb.numel(), n_rpb);
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenq_cuda_backward_kernel_fp32, grid_query, blockq, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dq_cuda_backward_kernel_fp32, grid_query, blockq, 0, stream,
                 d_query_a, d_attn_a, key_a, height, width, heads, dilation, dim, n_query);
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenk_cuda_backward_kernel_fp32, grid_key, blockk, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dk_cuda_backward_kernel_fp32, grid_key, blockk, 0, stream,
                 d_key_a, d_attn_a, query_a, height, width, heads, dilation, dim, n_key);
     }));
     return {d_query, d_key, d_rpb};
@@ -1333,11 +1544,11 @@ std::vector<torch::Tensor> natten2dqkrpb_cuda_backward_fp16(
         const auto d_attn_a = d_attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto query_a = query.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto key_a = key.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenrpb_cuda_backward_kernel_fp16, grid_rpb, blockr, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2drpb_cuda_backward_kernel_fp16, grid_rpb, blockr, 0, stream,
                 d_rpb_a, d_attn_a, height, width, dilation, batch_size, d_rpb.numel(), n_rpb);
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenq_cuda_backward_kernel_fp16, grid_query, blockq, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dq_cuda_backward_kernel_fp16, grid_query, blockq, 0, stream,
                 d_query_a, d_attn_a, key_a, height, width, heads, dilation, dimhalf, nhalf_query);
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenk_cuda_backward_kernel_fp16, grid_key, blockk, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dk_cuda_backward_kernel_fp16, grid_key, blockk, 0, stream,
                 d_key_a, d_attn_a, query_a, height, width, heads, dilation, dimhalf, nhalf_key);
     }));
     return {d_query, d_key, d_rpb};

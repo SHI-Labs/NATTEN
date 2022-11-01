@@ -1,5 +1,5 @@
 /*
-NATTEN-QKRPB TORCH EXTENSION
+NATTEN2D-QKRPB TORCH EXTENSION
 
 This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
@@ -82,7 +82,10 @@ torch::Tensor natten2dqkrpb_forward(
         int dim = query.size(4);
         int kernel_size = (rpb.size(1) + 1) / 2;
         bool half = ::detail::scalar_type(query.scalar_type()) == at::ScalarType::Half;
-        if ((kernel_size == 7 || kernel_size == 5 || kernel_size == 9 || kernel_size == 11 || kernel_size == 13) && dim == 32){
+        if ((
+            kernel_size == 7 || kernel_size == 3 || kernel_size == 5 ||
+            kernel_size == 9 || kernel_size == 11 || kernel_size == 13
+            ) && dim == 32){
             if (half)
                 return natten2dqkrpb_cuda_forward_fp16_tiled_32(query, key, rpb, dilation);
             return natten2dqkrpb_cuda_forward_tiled_32(query, key, rpb, dilation);

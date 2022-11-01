@@ -25,22 +25,26 @@ namespace natten {
 #define KERNEL_SIZE_9 9
 #define KERNEL_SIZE_7 7
 #define KERNEL_SIZE_5 5
+#define KERNEL_SIZE_3 3
 #define NEIGHBORHOOD_SIZE_13 6
 #define NEIGHBORHOOD_SIZE_11 5
 #define NEIGHBORHOOD_SIZE_9 4
 #define NEIGHBORHOOD_SIZE_7 3
 #define NEIGHBORHOOD_SIZE_5 2
+#define NEIGHBORHOOD_SIZE_3 1
 // Always keep batchthreads 1, because we want each thread block to process one 1 sample 1 head
 #define BATCHTHREADS_13 1
 #define BATCHTHREADS_11 1
 #define BATCHTHREADS_9 1
 #define BATCHTHREADS_7 1
 #define BATCHTHREADS_5 1
+#define BATCHTHREADS_3 1
 // Tile is the number of pixels across each axis that are processed within a single threadblock
 // So far the best tile size for Kernel size 7 is 3x3.
 #define TILE_9 3
 #define TILE_7 3
 #define TILE_5 4
+#define TILE_3 7
 
 #define TILE_11_X 2
 #define TILE_11_Y 3
@@ -50,6 +54,7 @@ namespace natten {
 #define KTILE_9 11
 #define KTILE_7 9
 #define KTILE_5 8
+#define KTILE_3 9
 
 #define KTILE_11_X 12
 #define KTILE_11_Y 13
@@ -63,6 +68,7 @@ namespace natten {
 #define XYTHREADS_9 27
 #define XYTHREADS_7 21
 #define XYTHREADS_5 20
+#define XYTHREADS_3 21
 
 #define XTHREADS_11 33
 #define YTHREADS_11 22
@@ -83,8 +89,14 @@ namespace natten {
 #define KSTRIDE_32 4
 // For kernel size 5, we have to do 2 query dims per thread, because we have fewer threads in each threadblock than the total
 // number of queries.
+// For kernel size 3, we have to read 2 query dims per thread.
+// Tiled NA is a bit of a mess right now, but documentation is underway. I promise. Scouts honor.
 #define QITERS_5 2
 #define QSTRIDE_5 16
+#define QITERS_3 4
+#define QSTRIDE_3 8
+#define QITERS_3_HALF 2
+#define QSTRIDE_3_HALF 8
 
 // This is just for the other kernels that are not using SMEM
 #define CUDA_NUM_THREADS_F 512
@@ -185,7 +197,7 @@ __global__ void natten2dav_cuda_forward_kernel_fp32(
 
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattena_cuda_backward_kernel_fp16(
+__global__ void natten2da_cuda_backward_kernel_fp16(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -229,7 +241,7 @@ __global__ void nattena_cuda_backward_kernel_fp16(
 
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattena_cuda_backward_kernel_fp32(
+__global__ void natten2da_cuda_backward_kernel_fp32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -270,7 +282,173 @@ __global__ void nattena_cuda_backward_kernel_fp32(
 
 /* TODO: FIX BANK CONFLICTS */
 template <int DILATION, typename scalar_t>
-__global__ void nattena_cuda_backward_kernel_fp16_5x5_32(
+__global__ void natten2da_cuda_backward_kernel_fp16_3x3_32(
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
+    torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
+    const int height,
+    const int width,
+    const int batch_size,
+    const int heads,
+    const int dilation_in) {
+    const int dilation = (DILATION>0) ? DILATION : dilation_in;
+    // Because batch heads have stride 1 per threadblock, we can just use blockIdx since blockDim will be 1 and threadIdx will
+    // always be 0.
+    // const int z = blockIdx.z * blockDim.z + threadIdx.z;
+    const int z = blockIdx.z;
+    const int b = z / heads;
+    const int h = z - b * heads;
+    // Not needed again because it will always be true.
+    // if (z < batch_size * heads)
+    // {
+    const int lti = threadIdx.y * (TILE_3*KERNEL_SIZE_3) + threadIdx.x;
+    const int stride2 = DIMHALF_32 * width;
+    const int batchHeadOffset = b * (stride2*height*heads) + h * (stride2*height);
+    const int si = int(blockIdx.y / dilation) * (TILE_3 * dilation) + (blockIdx.y % dilation);
+    const int sj = int(blockIdx.x / dilation) * (TILE_3 * dilation) + (blockIdx.x % dilation);
+    const int sni = get_window_start(si, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    const int snj = get_window_start(sj, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    __shared__ __half2 tile[TILE_3*TILE_3][DIM_32+3];
+    __shared__ __half2 kTile[KTILE_3*KTILE_3][DIM_32+3];
+    __half2* d_out2 = reinterpret_cast<__half2*>(d_out.data());
+    __half2* value2 = reinterpret_cast<__half2*>(value.data());
+
+    /* d_out tile */
+    const int qtx = lti / QSTRIDE_3_HALF;
+    const int qty = (lti - qtx * QSTRIDE_3_HALF) * QITERS_3_HALF;
+    if (qtx < TILE_3*TILE_3)
+    {
+        int qi = qtx / TILE_3;
+        const int qj = (qtx - qi * TILE_3) * dilation + sj;
+        qi = qi * dilation + si;
+        if (qi < height && qj < width){
+            #pragma unroll
+            for (int ti=0; ti < QITERS_3_HALF; ++ti)
+                tile[qtx][qty+ti] = d_out2[batchHeadOffset + qi * stride2 + qj * DIMHALF_32 + qty+ti];
+        }
+    }
+    /* value tile */
+    const int ktx = lti / KSTRIDE_32;
+    const int kty = (lti - ktx * KSTRIDE_32) * KHALFITERS_32;
+    if (ktx < KTILE_3*KTILE_3)
+    {
+        int bi = ktx / KTILE_3;
+        const int bj = (ktx - bi * KTILE_3) * dilation + snj;
+        bi = bi * dilation + sni;
+        if (bi < height && bj < width){
+            const int valueOffset = batchHeadOffset + bi * stride2 + bj * DIMHALF_32 + kty;
+            #pragma unroll
+            for (int ti=0; ti < KHALFITERS_32; ++ti)
+                kTile[ktx][kty + ti] = value2[valueOffset + ti];
+        }
+    }
+    __syncthreads();
+    const int ii = threadIdx.y / KERNEL_SIZE_3;
+    const int ki = threadIdx.y - ii * KERNEL_SIZE_3;
+    const int jj = threadIdx.x / KERNEL_SIZE_3;
+    const int kj = threadIdx.x - jj * KERNEL_SIZE_3;
+    const int i = si + ii*dilation, j = sj + jj*dilation;
+    if (i < height && j < width){
+        const int ni = get_window_start(i, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int nj = get_window_start(j, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        __half2 updt = __float2half2_rn(0.f);
+        const int d_outIdx = ii*TILE_3 + jj;
+        const int valueIdx = int((ni+ki*dilation - sni)/dilation)*KTILE_3 + int((nj+kj*dilation - snj)/dilation);
+
+        #pragma unroll
+        for (int dimOffset=0; dimOffset < DIMHALF_32; ++dimOffset)
+            updt = __hfma2(tile[d_outIdx][dimOffset], kTile[valueIdx][dimOffset], updt);
+        const int index = b * d_attn.stride(0) + h * d_attn.stride(1) + i * d_attn.stride(2) + j * d_attn.stride(3) + ki*KERNEL_SIZE_3+kj;
+        d_attn.data()[index] = static_cast<scalar_t>(__hadd(updt.x, updt.y));
+    }
+    //}
+}
+
+/* TODO: CHECK BANK CONFLICTS */
+template <int DILATION, typename scalar_t>
+__global__ void natten2da_cuda_backward_kernel_fp32_3x3_32(
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
+    torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
+    const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
+    const int height,
+    const int width,
+    const int batch_size,
+    const int heads,
+    const int dilation_in) {
+    const int dilation = (DILATION>0) ? DILATION : dilation_in;
+    // Because batch heads have stride 1 per threadblock, we can just use blockIdx since blockDim will be 1 and threadIdx will
+    // always be 0.
+    // const int z = blockIdx.z * blockDim.z + threadIdx.z;
+    const int z = blockIdx.z;
+    const int b = z / heads;
+    const int h = z - b * heads;
+    // Not needed again because it will always be true.
+    // if (z < batch_size * heads)
+    // {
+    const int lti = threadIdx.y * (TILE_3*KERNEL_SIZE_3) + threadIdx.x;
+    const int batchHeadOffset = b * d_out.stride(0) + h * d_out.stride(1);
+    const int si = int(blockIdx.y / dilation) * (TILE_3 * dilation) + (blockIdx.y % dilation);
+    const int sj = int(blockIdx.x / dilation) * (TILE_3 * dilation) + (blockIdx.x % dilation);
+    const int sni = get_window_start(si, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    const int snj = get_window_start(sj, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+    __shared__ scalar_t tile[TILE_3*TILE_3][DIM_32+3];
+    __shared__ scalar_t kTile[KTILE_3*KTILE_3][DIM_32+3];
+
+    /* d_out tile */
+    const int qtx = lti / QSTRIDE_3;
+    const int qty = (lti - qtx * QSTRIDE_3) * QITERS_3;
+    if (qtx < TILE_3*TILE_3)
+    {
+        int qi = qtx / TILE_3;
+        const int qj = (qtx - qi * TILE_3) * dilation + sj;
+        qi = qi * dilation + si;
+        if (qi < height && qj < width){
+            #pragma unroll
+            for (int ti=0; ti < QITERS_3; ++ti)
+                tile[qtx][qty+ti] = d_out.data()[batchHeadOffset + qi * d_out.stride(2) + qj * d_out.stride(3) + qty+ti];
+        }
+    }
+    /* value tile */
+    const int ktx = lti / KSTRIDE_32;
+    const int kty = (lti - ktx * KSTRIDE_32) * KITERS_32;
+    if (ktx < KTILE_3*KTILE_3)
+    {
+        int bi = ktx / KTILE_3;
+        const int bj = (ktx - bi * KTILE_3) * dilation + snj;
+        bi = bi * dilation + sni;
+        if (bi < height && bj < width){
+            const int valueOffset = batchHeadOffset + bi * d_out.stride(2) + bj * d_out.stride(3) + kty;
+            #pragma unroll
+            for (int ti=0; ti < KITERS_32; ++ti)
+                kTile[ktx][kty + ti] = value.data()[valueOffset + ti];
+        }
+    }
+    __syncthreads();
+    const int ii = threadIdx.y / KERNEL_SIZE_3;
+    const int ki = threadIdx.y - ii * KERNEL_SIZE_3;
+    const int jj = threadIdx.x / KERNEL_SIZE_3;
+    const int kj = threadIdx.x - jj * KERNEL_SIZE_3;
+    const int i = si + ii*dilation, j = sj + jj*dilation;
+    if (i < height && j < width){
+        const int ni = get_window_start(i, height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        const int nj = get_window_start(j, width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
+        scalar_t updt = scalar_t(0);
+        const int d_outIdx = ii*TILE_3 + jj;
+        const int valueIdx = int((ni+ki*dilation - sni)/dilation)*KTILE_3 + int((nj+kj*dilation - snj)/dilation);
+
+        #pragma unroll
+        for (int dimOffset=0; dimOffset < DIM_32; ++dimOffset)
+            updt += tile[d_outIdx][dimOffset] * kTile[valueIdx][dimOffset];
+
+        const int index = b * d_attn.stride(0) + h * d_attn.stride(1) + i * d_attn.stride(2) + j * d_attn.stride(3) + ki*KERNEL_SIZE_3+kj;
+        d_attn.data()[index] = updt;
+    }
+    //}
+}
+
+/* TODO: FIX BANK CONFLICTS */
+template <int DILATION, typename scalar_t>
+__global__ void natten2da_cuda_backward_kernel_fp16_5x5_32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -352,7 +530,7 @@ __global__ void nattena_cuda_backward_kernel_fp16_5x5_32(
 
 /* TODO: CHECK BANK CONFLICTS */
 template <int DILATION, typename scalar_t>
-__global__ void nattena_cuda_backward_kernel_fp32_5x5_32(
+__global__ void natten2da_cuda_backward_kernel_fp32_5x5_32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -433,7 +611,7 @@ __global__ void nattena_cuda_backward_kernel_fp32_5x5_32(
 }
 
 template <int TILE, int KTILE, int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattena_cuda_backward_kernel_fp16_7x7_9x9_32(
+__global__ void natten2da_cuda_backward_kernel_fp16_7x7_9x9_32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -518,7 +696,7 @@ __global__ void nattena_cuda_backward_kernel_fp16_7x7_9x9_32(
 }
 
 template <int TILE, int KTILE, int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattena_cuda_backward_kernel_fp32_7x7_9x9_32(
+__global__ void natten2da_cuda_backward_kernel_fp32_7x7_9x9_32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -596,7 +774,7 @@ __global__ void nattena_cuda_backward_kernel_fp32_7x7_9x9_32(
 }
 
 template <int TILEX, int TILEY, int KTILEX, int KTILEY, int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t, typename memscalar_t>
-__global__ void nattena_cuda_backward_kernel_fp16_11x11_13x13_32(
+__global__ void natten2da_cuda_backward_kernel_fp16_11x11_13x13_32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -683,7 +861,7 @@ __global__ void nattena_cuda_backward_kernel_fp16_11x11_13x13_32(
 }
 
 template <int TILEX, int TILEY, int KTILEX, int KTILEY, int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t, typename memscalar_t>
-__global__ void nattena_cuda_backward_kernel_fp32_11x11_13x13_32(
+__global__ void natten2da_cuda_backward_kernel_fp32_11x11_13x13_32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_attn,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> value,
@@ -763,7 +941,7 @@ __global__ void nattena_cuda_backward_kernel_fp32_11x11_13x13_32(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenv_cuda_backward_kernel_fp32(
+__global__ void natten2dv_cuda_backward_kernel_fp32(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_value,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> attn,
@@ -810,7 +988,7 @@ __global__ void nattenv_cuda_backward_kernel_fp32(
 }
 
 template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void nattenv_cuda_backward_kernel_fp16(
+__global__ void natten2dv_cuda_backward_kernel_fp16(
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_out,
     torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> d_value,
     const torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits> attn,
@@ -940,9 +1118,9 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
     int zsize = batch_size * heads;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
     TORCH_CHECK(dim == DIM_32, "natten2dav_cuda_backward_tiled_32", " only supports 32-dim attention heads.");
-    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_5 || kernel_size == KERNEL_SIZE_9 || 
-            kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13, 
-            "natten2dav_cuda_backward_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
+    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_3 ||  kernel_size == KERNEL_SIZE_5 ||
+            kernel_size == KERNEL_SIZE_9 || kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13,
+            "natten2dav_cuda_backward_tiled_32", " only supports kernel sizes 3, 5, 7, 9, 11, and 13.");
 
     auto d_attn = torch::zeros_like(attn);
     auto d_value = torch::zeros_like(value);
@@ -954,6 +1132,12 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
         XTHREADS = XYTHREADS_7;
         YTHREADS = XYTHREADS_7;
         BATCHTHREADS = BATCHTHREADS_7;
+    }
+    else if (kernel_size == KERNEL_SIZE_3)
+    {
+        XTHREADS = XYTHREADS_3;
+        YTHREADS = XYTHREADS_3;
+        BATCHTHREADS = BATCHTHREADS_3;
     }
     else if (kernel_size == KERNEL_SIZE_5)
     {
@@ -999,30 +1183,38 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
         if (kernel_size == KERNEL_SIZE_7)
         {
             LAUNCH_DNA_KNS_TILED79(TILE_7, KTILE_7, KERNEL_SIZE_7, NEIGHBORHOOD_SIZE_7, dilation,
-                    nattena_cuda_backward_kernel_fp32_7x7_9x9_32, 
+                    natten2da_cuda_backward_kernel_fp32_7x7_9x9_32, 
                     attn_blocks, attn_threads, 0, stream,
                     d_out_a, d_attn_a, value_a, height, width,
                     batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_7, NEIGHBORHOOD_SIZE_7, dilation, nattenv_cuda_backward_kernel_fp32, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_7, NEIGHBORHOOD_SIZE_7, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dim, n_value);
         }
         else if (kernel_size == KERNEL_SIZE_9)
         {
             LAUNCH_DNA_KNS_TILED79(TILE_9, KTILE_9, KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation,
-                    nattena_cuda_backward_kernel_fp32_7x7_9x9_32, 
+                    natten2da_cuda_backward_kernel_fp32_7x7_9x9_32, 
                     attn_blocks, attn_threads, 0, stream, 
                     d_out_a, d_attn_a, value_a, height, width,
                     batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation, nattenv_cuda_backward_kernel_fp32, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value,
+                    block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
+                    heads, dilation, dim, n_value);
+        }
+        else if (kernel_size == KERNEL_SIZE_3)
+        {
+            LAUNCH_DNA_DS(dilation, natten2da_cuda_backward_kernel_fp32_3x3_32, attn_blocks, attn_threads, 0, stream, d_out_a, d_attn_a, value_a, height, width,
+                    batch_size, heads, dilation);
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dim, n_value);
         }
         else if (kernel_size == KERNEL_SIZE_5)
         {
-            LAUNCH_DNA_DS(dilation, nattena_cuda_backward_kernel_fp32_5x5_32, attn_blocks, attn_threads, 0, stream, d_out_a, d_attn_a, value_a, height, width,
+            LAUNCH_DNA_DS(dilation, natten2da_cuda_backward_kernel_fp32_5x5_32, attn_blocks, attn_threads, 0, stream, d_out_a, d_attn_a, value_a, height, width,
                     batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation, nattenv_cuda_backward_kernel_fp32, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dim, n_value);
         }
@@ -1030,10 +1222,10 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
         {
             LAUNCH_DNA_KNS_TILED1113(TILE_11_X, TILE_11_Y, KTILE_11_X, KTILE_11_Y, 
                     KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, scalar_t,
-                    nattena_cuda_backward_kernel_fp32_11x11_13x13_32, 
+                    natten2da_cuda_backward_kernel_fp32_11x11_13x13_32, 
                     attn_blocks, attn_threads, 0, stream,
                     d_out_a, d_attn_a, value_a, height, width, batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, nattenv_cuda_backward_kernel_fp32, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dim, n_value);
         }
@@ -1041,10 +1233,10 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
         {
             LAUNCH_DNA_KNS_TILED1113(TILE_13_X, TILE_13_Y, KTILE_13_X, KTILE_13_Y, 
                     KERNEL_SIZE_13, NEIGHBORHOOD_SIZE_13, dilation, float,
-                    nattena_cuda_backward_kernel_fp32_11x11_13x13_32, 
+                    natten2da_cuda_backward_kernel_fp32_11x11_13x13_32, 
                     attn_blocks, attn_threads, 0, stream,
                     d_out_a, d_attn_a, value_a, height, width, batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_13, NEIGHBORHOOD_SIZE_13, dilation, nattenv_cuda_backward_kernel_fp32, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_13, NEIGHBORHOOD_SIZE_13, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dim, n_value);
         }
@@ -1070,9 +1262,9 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_fp16_tiled_32(
     int zsize = batch_size * heads;
     CHECK_FEATMAP(height, width, kernel_size, dilation);
     TORCH_CHECK(dimhalf*2 == DIM_32, "natten2dav_cuda_backward_fp16_tiled_32", " only supports 32-dim attention heads.");
-    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_5 || kernel_size == KERNEL_SIZE_9 || 
-            kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13, 
-            "natten2dav_cuda_backward_fp16_tiled_32", " only supports kernel sizes 5, 7, 9, 11, and 13.");
+    TORCH_CHECK(kernel_size == KERNEL_SIZE_7 || kernel_size == KERNEL_SIZE_3 ||  kernel_size == KERNEL_SIZE_5 ||
+            kernel_size == KERNEL_SIZE_9 || kernel_size == KERNEL_SIZE_11 || kernel_size == KERNEL_SIZE_13,
+            "natten2dav_cuda_backward_fp16_tiled_32", " only supports kernel sizes 3, 5, 7, 9, 11, and 13.");
 
     auto d_attn = torch::zeros_like(attn);
     auto d_value = torch::zeros_like(value);
@@ -1084,6 +1276,12 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_fp16_tiled_32(
         XTHREADS = XYTHREADS_7;
         YTHREADS = XYTHREADS_7;
         BATCHTHREADS = BATCHTHREADS_7;
+    }
+    else if (kernel_size == KERNEL_SIZE_3)
+    {
+        XTHREADS = XYTHREADS_3;
+        YTHREADS = XYTHREADS_3;
+        BATCHTHREADS = BATCHTHREADS_3;
     }
     else if (kernel_size == KERNEL_SIZE_5)
     {
@@ -1128,50 +1326,59 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_fp16_tiled_32(
         const auto attn_a = attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         if (kernel_size == KERNEL_SIZE_7){
             LAUNCH_DNA_KNS_TILED79(TILE_7, KTILE_7, KERNEL_SIZE_7, NEIGHBORHOOD_SIZE_7, dilation,
-                    nattena_cuda_backward_kernel_fp16_7x7_9x9_32, 
+                    natten2da_cuda_backward_kernel_fp16_7x7_9x9_32, 
                     attn_blocks, attn_threads, 0, stream, 
                     d_out_a, d_attn_a, value_a, height, width,
                     batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_7, NEIGHBORHOOD_SIZE_7, dilation, nattenv_cuda_backward_kernel_fp16, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_7, NEIGHBORHOOD_SIZE_7, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dimhalf, nhalf_value);
         }
         else if (kernel_size == KERNEL_SIZE_9){
             LAUNCH_DNA_KNS_TILED79(TILE_9, KTILE_9, KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation,
-                    nattena_cuda_backward_kernel_fp16_7x7_9x9_32, 
+                    natten2da_cuda_backward_kernel_fp16_7x7_9x9_32, 
                     attn_blocks, attn_threads, 0, stream, 
                     d_out_a, d_attn_a, value_a, height, width,
                     batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation, nattenv_cuda_backward_kernel_fp16, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_9, NEIGHBORHOOD_SIZE_9, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dimhalf, nhalf_value);
         }
         else if (kernel_size == KERNEL_SIZE_5){
-            LAUNCH_DNA_DS(dilation, nattena_cuda_backward_kernel_fp16_5x5_32, 
+            LAUNCH_DNA_DS(dilation, natten2da_cuda_backward_kernel_fp16_5x5_32, 
                     attn_blocks, attn_threads, 0, stream, 
                     d_out_a, d_attn_a, value_a, height, width,
                     batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation, nattenv_cuda_backward_kernel_fp16, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value,
+                    block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
+                    heads, dilation, dimhalf, nhalf_value);
+        }
+        else if (kernel_size == KERNEL_SIZE_3){
+            LAUNCH_DNA_DS(dilation, natten2da_cuda_backward_kernel_fp16_3x3_32,
+                    attn_blocks, attn_threads, 0, stream,
+                    d_out_a, d_attn_a, value_a, height, width,
+                    batch_size, heads, dilation);
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dimhalf, nhalf_value);
         }
         else if (kernel_size == KERNEL_SIZE_11){
             LAUNCH_DNA_KNS_TILED1113(TILE_11_X, TILE_11_Y, KTILE_11_X, KTILE_11_Y, 
                     KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, scalar_t,
-                    nattena_cuda_backward_kernel_fp16_11x11_13x13_32, 
+                    natten2da_cuda_backward_kernel_fp16_11x11_13x13_32, 
                     attn_blocks, attn_threads, 0, stream,
                     d_out_a, d_attn_a, value_a, height, width, batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, nattenv_cuda_backward_kernel_fp16, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_11, NEIGHBORHOOD_SIZE_11, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dimhalf, nhalf_value);
         }
         else if (kernel_size == KERNEL_SIZE_13){
             LAUNCH_DNA_KNS_TILED1113(TILE_13_X, TILE_13_Y, KTILE_13_X, KTILE_13_Y, 
                     KERNEL_SIZE_13, NEIGHBORHOOD_SIZE_13, dilation, scalar_t,
-                    nattena_cuda_backward_kernel_fp16_11x11_13x13_32, 
+                    natten2da_cuda_backward_kernel_fp16_11x11_13x13_32, 
                     attn_blocks, attn_threads, 0, stream,
                     d_out_a, d_attn_a, value_a, height, width, batch_size, heads, dilation);
-            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_13, NEIGHBORHOOD_SIZE_13, dilation, nattenv_cuda_backward_kernel_fp16, grid_value,
+            _IN_LAUNCH_DNA_KNS(KERNEL_SIZE_13, NEIGHBORHOOD_SIZE_13, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value,
                     block, 0, stream,d_out_a, d_value_a, attn_a, height, width,
                     heads, dilation, dimhalf, nhalf_value);
         }
@@ -1218,9 +1425,9 @@ std::vector<torch::Tensor> natten2dav_cuda_backward(
         const auto d_out_a = d_out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto value_a = value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto attn_a = attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattena_cuda_backward_kernel_fp32, attn_blocks, attn_threads, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2da_cuda_backward_kernel_fp32, attn_blocks, attn_threads, 0, stream, 
                 d_out_a, d_attn_a, value_a, height, width, batch_size, heads, dilation, dim);
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenv_cuda_backward_kernel_fp32, grid_value, block, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dv_cuda_backward_kernel_fp32, grid_value, block, 0, stream, 
                 d_out_a, d_value_a, attn_a, height, width, heads, dilation, dim, n_value);
     }));
     return {d_attn, d_value};
@@ -1266,9 +1473,9 @@ std::vector<torch::Tensor> natten2dav_cuda_backward_fp16(
         const auto d_out_a = d_out.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto value_a = value.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
         const auto attn_a = attn.packed_accessor32<scalar_t,5,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattena_cuda_backward_kernel_fp16, attn_blocks, attn_threads, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2da_cuda_backward_kernel_fp16, attn_blocks, attn_threads, 0, stream, 
                 d_out_a, d_attn_a, value_a, height, width, batch_size, heads, dilation, dimhalf);
-        LAUNCH_DNA_KNS(kernel_size, dilation, nattenv_cuda_backward_kernel_fp16, grid_value, block, 0, stream, 
+        LAUNCH_DNA_KNS(kernel_size, dilation, natten2dv_cuda_backward_kernel_fp16, grid_value, block, 0, stream, 
                 d_out_a, d_value_a, attn_a, height, width, heads, dilation, dimhalf, nhalf_value);
     }));
     return {d_attn, d_value};

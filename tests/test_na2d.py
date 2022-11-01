@@ -174,5 +174,109 @@ class NA2DTest(unittest.TestCase):
         b, li, lj = 4, 14, 16
         _priv_test_allclose_cpu_cuda(b, li, lj)
 
+    def test_natten2dqkrpb_tiled3x3_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 6, 6, 32, 3, 2
+        _priv_test_gradcheck_natten2dqkrpb(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dav_tiled3x3_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 6, 6, 32, 3, 2
+        _priv_test_gradcheck_natten2dav(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dqkrpb_tiled5x5_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 10, 10, 32, 5, 2
+        _priv_test_gradcheck_natten2dqkrpb(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dav_tiled5x5_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 10, 10, 32, 5, 2
+        _priv_test_gradcheck_natten2dav(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dqkrpb_tiled7x7_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 14, 14, 32, 7, 2
+        _priv_test_gradcheck_natten2dqkrpb(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dav_tiled7x7_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 14, 14, 32, 7, 2
+        _priv_test_gradcheck_natten2dav(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dqkrpb_tiled9x9_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 18, 18, 32, 9, 2
+        _priv_test_gradcheck_natten2dqkrpb(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dav_tiled9x9_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 18, 18, 32, 9, 2
+        _priv_test_gradcheck_natten2dav(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, False)
+
+    def test_natten2dqkrpb_tiled11x11_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 22, 22, 32, 11, 2
+        # TODO: Disable FAST MODE
+        # Presently we do fast mode because otherwise this test will throw an OOM
+        # Tested on an 80GB A100
+        _priv_test_gradcheck_natten2dqkrpb(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, 
+                                     #False
+                                     True)
+
+    def test_natten2dav_tiled11x11_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 22, 22, 32, 11, 2
+        # TODO: Disable FAST MODE
+        # Presently we do fast mode because otherwise this test will throw an OOM
+        # Tested on an 80GB A100
+        _priv_test_gradcheck_natten2dav(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, 
+                                     #False
+                                     True)
+
+    def test_natten2dqkrpb_tiled13x13_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 26, 26, 32, 13, 2
+        # TODO: Disable FAST MODE
+        # Presently we do fast mode because otherwise this test will throw an OOM
+        # Tested on an 80GB A100
+        _priv_test_gradcheck_natten2dqkrpb(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, 
+                                     #False
+                                     True)
+
+    def test_natten2dav_tiled13x13_gradcheck_cuda(self):
+        if not HAS_CUDA:
+            self.skipTest("CUDA not available.")
+        b, h, li, lj, d, k, di = 1, 1, 26, 26, 32, 13, 2
+        # TODO: Disable FAST MODE
+        # Presently we do fast mode because otherwise this test will throw an OOM
+        # Tested on an 80GB A100
+        _priv_test_gradcheck_natten2dav(b, h, li, lj, d, k, di, torch.float64, 'cuda',
+                                     1e-6, 1e-5, 1e-3, 1e-8, 
+                                     #False
+                                     True)
+
 if __name__ == "__main__":
     unittest.main()

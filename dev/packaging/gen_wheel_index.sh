@@ -1,7 +1,6 @@
 #!/bin/bash -e
 # Based on detectron2 
 # github.com/facebookresearch/detectron2
-# Copyright (c) Facebook, Inc. and its affiliates.
 
 
 root=$(readlink -f $1)

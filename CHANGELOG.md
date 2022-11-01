@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.14.4] - 2022-10-31
+ 
+### Added
+- Python 3.10 and 3.11 wheels!
+  - Only for supported torch versions.
+- Support torch 1.13.
+- Tiled NA2D for 3x3 kernels.
+
+### Changed
+- Minor changes to the setup script to fix `pip install natten`.
+
 ## [0.14.2] - 2022-10-15
  
 ### Added
