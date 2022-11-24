@@ -37,11 +37,9 @@ class NeighborhoodAttention2D(nn.Module):
         self.with_rpb = with_rpb
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
+        self.rpb = nn.Parameter(torch.zeros(num_heads, (2 * kernel_size - 1), (2 * kernel_size - 1)), requires_grad=with_rpb)
         if with_rpb:
-            self.rpb = nn.Parameter(torch.zeros(num_heads, (2 * kernel_size - 1), (2 * kernel_size - 1)))
             trunc_normal_(self.rpb, std=.02, mean=0., a=-2., b=2.)
-        else:
-            self.register_buffer('rpb', torch.zeros(num_heads, (2 * kernel_size - 1), (2 * kernel_size - 1)))
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
