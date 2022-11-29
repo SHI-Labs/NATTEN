@@ -223,6 +223,7 @@ std::vector<torch::Tensor> natten1dqkrpb_cpu_backward(
     const torch::Tensor &d_attn,
     const torch::Tensor &query,
     const torch::Tensor &key,
+    const bool biasEnabled,
     const int dilation) {
     int batch_size = query.size(0);
     int heads = query.size(1);
@@ -234,7 +235,9 @@ std::vector<torch::Tensor> natten1dqkrpb_cpu_backward(
    
     auto d_query = torch::zeros_like(query);
     auto d_key = torch::zeros_like(key);
-    auto d_rpb = torch::zeros({heads, RPB_MAX}, d_attn.options());
+    at::Tensor d_rpb;
+    if (biasEnabled)
+        d_rpb = torch::zeros({heads, RPB_MAX}, d_attn.options());
 
     AT_DISPATCH_FLOATING_TYPES(d_query.scalar_type(), "natten1dqkrpb_backward_cpu", ([&] {
         const auto d_attn_a = d_attn.accessor<scalar_t, 4>();
@@ -242,9 +245,11 @@ std::vector<torch::Tensor> natten1dqkrpb_cpu_backward(
         const auto key_a = key.accessor<scalar_t, 4>();
         auto d_query_a = d_query.accessor<scalar_t, 4>();
         auto d_key_a = d_key.accessor<scalar_t, 4>();
-        auto d_rpb_a = d_rpb.accessor<scalar_t, 2>();
-        LAUNCH_DNA_KNS(kernel_size, dilation, natten1drpb_cpu_backward_kernel, 
-                d_rpb_a, d_attn_a, length, heads, kernel_size, dilation, batch_size);
+        if (biasEnabled) {
+            auto d_rpb_a = d_rpb.accessor<scalar_t, 2>();
+            LAUNCH_DNA_KNS(kernel_size, dilation, natten1drpb_cpu_backward_kernel, 
+                    d_rpb_a, d_attn_a, length, heads, kernel_size, dilation, batch_size);
+        }
         LAUNCH_DNA_KNS(kernel_size, dilation, natten1dq_cpu_backward_kernel, 
                 d_query_a, d_attn_a, key_a, length, heads, kernel_size, dilation, dim, batch_size);
         LAUNCH_DNA_KNS(kernel_size, dilation, natten1dk_cpu_backward_kernel, 
