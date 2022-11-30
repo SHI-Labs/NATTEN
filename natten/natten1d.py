@@ -74,4 +74,3 @@ class NeighborhoodAttention1D(nn.Module):
         return f'head_dim={self.head_dim}, num_heads={self.num_heads}, ' + \
         f'kernel_size={self.kernel_size}, dilation={self.dilation}, ' + \
         f'rel_pos_bias={self.rpb is not None}'
-

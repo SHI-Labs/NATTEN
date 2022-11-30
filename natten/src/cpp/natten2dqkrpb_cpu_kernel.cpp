@@ -62,10 +62,11 @@ void natten2dqkrpb_cpu_forward_kernel(
             int64_t d1 = 0;
             for (; d1 < dim - (dim % Vec::size()); d1+=Vec::size())
                 updt = at::vec::fmadd(Vec::loadu(_qaddr + d1), Vec::loadu(_kaddr + d1), updt);
+            scalar_t sum_val = at::vec::vec_reduce_all([](Vec& x, Vec& y) { return x + y; }, updt, Vec::size());
             for (; d1 < dim; ++d1)
-                updt[d1] += _qaddr[d1] * _kaddr[d1];
+                sum_val += _qaddr[d1] * _kaddr[d1];
             const int rpbIndex = h * rpb.stride(0) + (pi+ki) * rpb.stride(1) + (pj+kj) * rpb.stride(2);
-            attn.data()[index] = rpb.data()[rpbIndex] + at::vec::vec_reduce_all([](Vec& x, Vec& y) { return x + y; }, updt, Vec::size());
+            attn.data()[index] = rpb.data()[rpbIndex] + sum_val;
             index++;
         }}
     }});
