@@ -17,7 +17,7 @@ class NeighborhoodAttention1D(nn.Module):
     """
     def __init__(self, dim, kernel_size, num_heads,
                  qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0.,
-                 dilation=None, with_rpb=True):
+                 dilation=None, bias=True):
         super().__init__()
         self.num_heads = num_heads
         self.head_dim = dim // self.num_heads
@@ -27,11 +27,10 @@ class NeighborhoodAttention1D(nn.Module):
         self.kernel_size = kernel_size
         self.dilation = dilation or 1
         self.window_size = self.kernel_size * self.dilation
-        self.with_rpb = with_rpb
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
-        self.rpb = nn.Parameter(torch.zeros(num_heads, (2 * kernel_size - 1)), requires_grad=with_rpb)
-        if with_rpb:
+        self.rpb = nn.Parameter(torch.zeros(num_heads, (2 * kernel_size - 1)), requires_grad=bias)
+        if bias:
             trunc_normal_(self.rpb, std=.02, mean=0., a=-2., b=2.)
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
@@ -59,4 +58,4 @@ class NeighborhoodAttention1D(nn.Module):
         return self.proj_drop(self.proj(x))
 
     def extra_repr(self) -> str:
-        return f'kernel_size={self.kernel_size}, dilation={self.dilation}, head_dim={self.head_dim}, num_heads={self.num_heads}, with_rpb={self.with_rpb}'
+        return f'kernel_size={self.kernel_size}, dilation={self.dilation}, head_dim={self.head_dim}, num_heads={self.num_heads}, bias={self.rpb.requires_grad}'
