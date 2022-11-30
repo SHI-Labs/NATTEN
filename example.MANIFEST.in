@@ -1,0 +1,3 @@
+recursive-include natten *.cpp *.cuh *.cu *.h 
+prune tests/
+graft assets/
