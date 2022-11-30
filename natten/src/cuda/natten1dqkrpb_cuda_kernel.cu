@@ -417,6 +417,7 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward(
     const torch::Tensor &d_attn,
     const torch::Tensor &query,
     const torch::Tensor &key,
+    const bool biasEnabled,
     const int dilation) {
     int64_t batch_size = query.size(0);
     int64_t heads = query.size(1);
@@ -428,8 +429,9 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward(
    
     auto d_query = torch::zeros_like(query);
     auto d_key = torch::zeros_like(key);
-    auto d_rpb = torch::zeros({heads, RPB_MAX}, d_attn.options());
-
+    at::Tensor d_rpb;
+    if (biasEnabled)
+        d_rpb = torch::zeros({heads, RPB_MAX}, d_attn.options());
     int32_t n_rpb = heads * length * kernel_size;
     int blocks_rpb = GET_BLOCKS(n_rpb, CUDA_NUM_THREADS_RPB);
     dim3 grid_rpb(blocks_rpb);
@@ -444,14 +446,16 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward(
     dim3 blockk(CUDA_NUM_THREADS_K);
     const auto stream = c10::cuda::getCurrentCUDAStream();
     AT_DISPATCH_FLOATING_TYPES(d_query.scalar_type(), "natten1dqkrpb_backward_cuda", ([&] {
-        auto d_rpb_a = d_rpb.packed_accessor32<scalar_t,2,torch::DefaultPtrTraits>();
-        auto d_query_a = d_query.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        auto d_key_a = d_key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         const auto d_attn_a = d_attn.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         const auto query_a = query.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         const auto key_a = key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1drpb_cuda_backward_kernel, grid_rpb, blockr, 0, stream, 
-                d_rpb_a, d_attn_a, length, kernel_size, dilation, batch_size, d_rpb.numel(), n_rpb);
+        auto d_query_a = d_query.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        auto d_key_a = d_key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        if (biasEnabled) {
+            auto d_rpb_a = d_rpb.packed_accessor32<scalar_t,2,torch::DefaultPtrTraits>();
+            LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1drpb_cuda_backward_kernel, grid_rpb, blockr, 0, stream, 
+                    d_rpb_a, d_attn_a, length, kernel_size, dilation, batch_size, d_rpb.numel(), n_rpb);
+        }
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1dq_cuda_backward_kernel_fp32, grid_query, blockq, 0, stream, 
                 d_query_a, d_attn_a, key_a, length, heads, kernel_size, dilation, dim, n_query);
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1dk_cuda_backward_kernel_fp32, grid_key, blockk, 0, stream, 
@@ -464,6 +468,7 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
     const torch::Tensor &d_attn,
     const torch::Tensor &query,
     const torch::Tensor &key,
+    const bool biasEnabled,
     const int dilation) {
     int64_t batch_size = query.size(0);
     int64_t heads = query.size(1);
@@ -476,7 +481,9 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
    
     auto d_query = torch::zeros_like(query);
     auto d_key = torch::zeros_like(key);
-    auto d_rpb = torch::zeros({heads, RPB_MAX}, d_attn.options());
+    at::Tensor d_rpb;
+    if (biasEnabled)
+        d_rpb = torch::zeros({heads, RPB_MAX}, d_attn.options());
 
     int32_t n_rpb = heads * length * kernel_size;
     int blocks_rpb = GET_BLOCKS(n_rpb, CUDA_NUM_THREADS_RPB16);
@@ -492,14 +499,16 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
     dim3 blockk(CUDA_NUM_THREADS_K16);
     const auto stream = c10::cuda::getCurrentCUDAStream();
     AT_DISPATCH_HALF_TYPES(at::kHalf, d_query.scalar_type(), "natten1dqkrpb_backward_cuda_fp16", ([&] {
-        auto d_rpb_a = d_rpb.packed_accessor32<scalar_t,2,torch::DefaultPtrTraits>();
-        auto d_query_a = d_query.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        auto d_key_a = d_key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         const auto d_attn_a = d_attn.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         const auto query_a = query.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         const auto key_a = key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1drpb_cuda_backward_kernel_fp16, grid_rpb, blockr, 0, stream, 
-                d_rpb_a, d_attn_a, length, kernel_size, dilation, batch_size, d_rpb.numel(), n_rpb);
+        auto d_query_a = d_query.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        auto d_key_a = d_key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        if (biasEnabled) {
+            auto d_rpb_a = d_rpb.packed_accessor32<scalar_t,2,torch::DefaultPtrTraits>();
+            LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1drpb_cuda_backward_kernel_fp16, grid_rpb, blockr, 0, stream, 
+                    d_rpb_a, d_attn_a, length, kernel_size, dilation, batch_size, d_rpb.numel(), n_rpb);
+        }
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1dq_cuda_backward_kernel_fp16, grid_query, blockq, 0, stream, 
                 d_query_a, d_attn_a, key_a, length, heads, kernel_size, dilation, dimhalf, nhalf_query);
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, natten1dk_cuda_backward_kernel_fp16, grid_key, blockk, 0, stream, 

@@ -10,8 +10,8 @@ import unittest
 import torch
 from torch.utils.cpp_extension import CUDA_HOME
 from torch.autograd import gradcheck
-from natten import NeighborhoodAttention2D as NeighborhoodAttention
-from natten.functional import NATTEN2DAVFunction, NATTEN2DQKRPBFunction
+from natten import NeighborhoodAttention2D
+from natten.functional import natten2dqkrpb, natten2dav
 
 
 HAS_CUDA = (torch.cuda.is_available() and (CUDA_HOME is not None) or os.getenv("FORCE_CUDA", "0") == "1")
@@ -31,10 +31,10 @@ def _priv_test_gradcheck_natten2dqkrpb(
     query = torch.randn((batch_size, heads, height, width, dim), **kwargs)
     key = torch.randn((batch_size, heads, height, width, dim), **kwargs)
     rpb = torch.randn((heads, 2 * kernel_size - 1, 2 * kernel_size - 1), **kwargs)
-    variables = [query, key, rpb, dilation]
+    variables = [query, key, rpb, kernel_size, dilation]
 
     assert gradcheck(
-            NATTEN2DQKRPBFunction.apply, 
+            natten2dqkrpb, 
             variables, 
             eps=eps, 
             atol=atol, 
@@ -58,7 +58,7 @@ def _priv_test_gradcheck_natten2dav(
     variables = [attn, value, dilation]
 
     assert gradcheck(
-            NATTEN2DAVFunction.apply, 
+            natten2dav, 
             variables, 
             eps=eps, 
             atol=atol, 
@@ -82,15 +82,15 @@ def _priv_test_allclose_cpu_cuda(batch_size, height, width,
                     'qkv_bias': True,
                 }
 
-                base_state_dict = NeighborhoodAttention(**model_kwargs).state_dict()
+                base_state_dict = NeighborhoodAttention2D(**model_kwargs).state_dict()
 
                 x1 = torch.randn((batch_size, height, width, dim * num_heads))
                 x2 = x1.clone().detach().cuda(0)
 
-                nat1 = NeighborhoodAttention(**model_kwargs).eval()
+                nat1 = NeighborhoodAttention2D(**model_kwargs).eval()
                 nat1.load_state_dict(base_state_dict, strict=False)
 
-                nat2 = NeighborhoodAttention(**model_kwargs).cuda(0).eval()
+                nat2 = NeighborhoodAttention2D(**model_kwargs).cuda(0).eval()
                 nat2.load_state_dict(base_state_dict, strict=False)
 
                 y1 = nat1(x1)

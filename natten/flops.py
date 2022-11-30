@@ -20,11 +20,21 @@ def qk_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
-    assert len(input_shapes[0]) == 5, f"Query must be a 5-dim tensor, got {len(input_shapes[0])}"
-    assert len(input_shapes[1]) == 5, f"Key must be a 5-dim tensor, got {len(input_shapes[1])}"
-    assert len(input_shapes[2]) == 3, f"RelPosBias must be a 3-dim tensor, got {len(input_shapes[2])}"
-    assert len(output_shapes[0]) == 5, f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
-    assert input_shapes[0] == input_shapes[1], f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
+    assert (
+        len(input_shapes[0]) == 5
+    ), f"Query must be a 5-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 5
+    ), f"Key must be a 5-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(input_shapes[2]) == 3
+    ), f"RelPosBias must be a 3-dim tensor, got {len(input_shapes[2])}"
+    assert (
+        len(output_shapes[0]) == 5
+    ), f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
+    assert (
+        input_shapes[0] == input_shapes[1]
+    ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
     batch_size, heads, height, width, dim = input_shapes[0]
     batch_size, heads, height, width, kernel_size_sq = output_shapes[0]
 
@@ -41,10 +51,19 @@ def av_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
-    assert len(input_shapes[0]) == 5, f"Attn must be a 5-dim tensor, got {len(input_shapes[0])}"
-    assert len(input_shapes[1]) == 5, f"Value must be a 5-dim tensor, got {len(input_shapes[1])}"
-    assert len(output_shapes[0]) == 5, f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
-    assert output_shapes[0] == input_shapes[1], f"Out and Value shapes did not match! O: {output_shapes[0]}, V: {input_shapes[1]}"
+    assert (
+        len(input_shapes[0]) == 5
+    ), f"Attn must be a 5-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 5
+    ), f"Value must be a 5-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(output_shapes[0]) == 5
+    ), f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
+    assert output_shapes[0] == input_shapes[1], (
+        f"Out and Value shapes did not match! O: {output_shapes[0]}, V:"
+        f" {input_shapes[1]}"
+    )
     batch_size, heads, height, width, kernel_size_sq = input_shapes[0]
     batch_size, heads, height, width, dim = output_shapes[0]
     flops = batch_size * heads * height * width * dim * kernel_size_sq
@@ -59,11 +78,21 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
-    assert len(input_shapes[0]) == 4, f"Query must be a 4-dim tensor, got {len(input_shapes[0])}"
-    assert len(input_shapes[1]) == 4, f"Key must be a 4-dim tensor, got {len(input_shapes[1])}"
-    assert len(input_shapes[2]) == 2, f"RelPosBias must be a 2-dim tensor, got {len(input_shapes[2])}"
-    assert len(output_shapes[0]) == 4, f"Output must be a 4-dim tensor, got {len(output_shapes[0])}"
-    assert input_shapes[0] == input_shapes[1], f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
+    assert (
+        len(input_shapes[0]) == 4
+    ), f"Query must be a 4-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 4
+    ), f"Key must be a 4-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(input_shapes[2]) == 2
+    ), f"RelPosBias must be a 2-dim tensor, got {len(input_shapes[2])}"
+    assert (
+        len(output_shapes[0]) == 4
+    ), f"Output must be a 4-dim tensor, got {len(output_shapes[0])}"
+    assert (
+        input_shapes[0] == input_shapes[1]
+    ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
     batch_size, heads, length, dim = input_shapes[0]
     batch_size, heads, length, kernel_size = output_shapes[0]
 
@@ -80,10 +109,19 @@ def av_1d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
-    assert len(input_shapes[0]) == 4, f"Attn must be a 4-dim tensor, got {len(input_shapes[0])}"
-    assert len(input_shapes[1]) == 4, f"Value must be a 4-dim tensor, got {len(input_shapes[1])}"
-    assert len(output_shapes[0]) == 4, f"Output must be a 4-dim tensor, got {len(output_shapes[0])}"
-    assert output_shapes[0] == input_shapes[1], f"Out and Value shapes did not match! O: {output_shapes[0]}, V: {input_shapes[1]}"
+    assert (
+        len(input_shapes[0]) == 4
+    ), f"Attn must be a 4-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 4
+    ), f"Value must be a 4-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(output_shapes[0]) == 4
+    ), f"Output must be a 4-dim tensor, got {len(output_shapes[0])}"
+    assert output_shapes[0] == input_shapes[1], (
+        f"Out and Value shapes did not match! O: {output_shapes[0]}, V:"
+        f" {input_shapes[1]}"
+    )
     batch_size, heads, length, kernel_size = input_shapes[0]
     batch_size, heads, length, dim = output_shapes[0]
     flops = batch_size * heads * length * dim * kernel_size
@@ -97,7 +135,8 @@ def add_natten_handle(flop_ctr):
             "prim::PythonOp.NATTEN2DAVFunction": av_flop,
             "prim::PythonOp.NATTEN1DQKRPBFunction": qk_1d_rpb_flop,
             "prim::PythonOp.NATTEN1DAVFunction": av_1d_flop,
-        })
+        }
+    )
 
 
 def get_flops(model, input, disable_warnings=False):
@@ -106,4 +145,3 @@ def get_flops(model, input, disable_warnings=False):
     if disable_warnings:
         flop_ctr = flop_ctr.unsupported_ops_warnings(False)
     return flop_ctr.total()
-
