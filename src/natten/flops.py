@@ -8,6 +8,7 @@ LICENSE file in the root directory of this source tree.
 """
 from numbers import Number
 from typing import Any, List
+
 from fvcore.nn import FlopCountAnalysis
 from fvcore.nn.jit_handles import get_shape
 

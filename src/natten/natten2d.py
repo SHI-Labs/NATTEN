@@ -1,5 +1,5 @@
 """
-Neighborhood Attention 1D PyTorch Module
+Neighborhood Attention 2D PyTorch Module
 
 This source code is licensed under the license found in the
 LICENSE file in the root directory of this source tree.
@@ -8,12 +8,13 @@ import torch
 from torch import nn
 from torch.nn.functional import pad
 from torch.nn.init import trunc_normal_
-from .functional import natten1dqkrpb, natten1dav
+
+from .functional import natten2dav, natten2dqkrpb
 
 
-class NeighborhoodAttention1D(nn.Module):
+class NeighborhoodAttention2D(nn.Module):
     """
-    Neighborhood Attention 1D Module
+    Neighborhood Attention 2D Module
     """
 
     def __init__(
@@ -44,7 +45,9 @@ class NeighborhoodAttention1D(nn.Module):
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         if bias:
-            self.rpb = nn.Parameter(torch.zeros(num_heads, (2 * kernel_size - 1)))
+            self.rpb = nn.Parameter(
+                torch.zeros(num_heads, (2 * kernel_size - 1), (2 * kernel_size - 1))
+            )
             trunc_normal_(self.rpb, std=0.02, mean=0.0, a=-2.0, b=2.0)
         else:
             self.register_parameter("rpb", None)
@@ -53,27 +56,29 @@ class NeighborhoodAttention1D(nn.Module):
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
-        B, Lp, C = x.shape
-        L = Lp
-        pad_l = pad_r = 0
-        if L < self.window_size:
-            pad_r = max(0, self.window_size - L)
-            x = pad(x, (0, 0, pad_l, pad_r))
-            _, L, _ = x.shape
+        B, Hp, Wp, C = x.shape
+        H, W = int(Hp), int(Wp)
+        pad_l = pad_t = pad_r = pad_b = 0
+        if H < self.window_size or W < self.window_size:
+            pad_l = pad_t = 0
+            pad_r = max(0, self.window_size - W)
+            pad_b = max(0, self.window_size - H)
+            x = pad(x, (0, 0, pad_l, pad_r, pad_t, pad_b))
+            _, H, W, _ = x.shape
         qkv = (
             self.qkv(x)
-            .reshape(B, L, 3, self.num_heads, self.head_dim)
-            .permute(2, 0, 3, 1, 4)
+            .reshape(B, H, W, 3, self.num_heads, self.head_dim)
+            .permute(3, 0, 4, 1, 2, 5)
         )
         q, k, v = qkv[0], qkv[1], qkv[2]
         q = q * self.scale
-        attn = natten1dqkrpb(q, k, self.rpb, self.kernel_size, self.dilation)
+        attn = natten2dqkrpb(q, k, self.rpb, self.kernel_size, self.dilation)
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        x = natten1dav(attn, v, self.dilation)
-        x = x.permute(0, 2, 1, 3).reshape(B, L, C)
-        if pad_r:
-            x = x[:, :Lp, :]
+        x = natten2dav(attn, v, self.dilation)
+        x = x.permute(0, 2, 3, 1, 4).reshape(B, H, W, C)
+        if pad_r or pad_b:
+            x = x[:, :Hp, :Wp, :]
 
         return self.proj_drop(self.proj(x))
 

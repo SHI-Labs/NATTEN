@@ -2,6 +2,10 @@
 
 Simply run:
 ```
+make test
+```
+or:
+```
 python -m unittest discover -v -s ./tests
 ```
 
