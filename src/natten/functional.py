@@ -6,7 +6,7 @@ LICENSE file in the root directory of this source tree.
 """
 import torch
 from torch.autograd import Function
-from torch.cuda.amp import custom_fwd, custom_bwd
+from torch.cuda.amp import custom_bwd, custom_fwd
 
 try:
     from natten import _C

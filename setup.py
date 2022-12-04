@@ -37,7 +37,7 @@ NATTEN_VERSION_SUFFIX = os.getenv("NATTEN_VERSION_SUFFIX", "")
 
 
 def get_version():
-    init_py_path = path.join(path.abspath(path.dirname(__file__)), "natten", "__init__.py")
+    init_py_path = path.join(path.abspath(path.dirname(__file__)), "src/natten", "__init__.py")
     init_py = open(init_py_path, "r").readlines()
     version_line = [l.strip() for l in init_py if l.startswith("__version__")][0]
     version = version_line.split("=")[-1].strip().strip("'\"")
@@ -57,10 +57,12 @@ def get_version():
 
 def get_extension():
     this_dir = path.dirname(path.abspath(__file__))
-    extensions_dir = path.join(this_dir, "natten", "src")
+    extensions_dir = path.join(this_dir, "src", "natten", "csrc")
 
     main_source = path.join(extensions_dir, "natten.cpp")
-    sources = glob.glob(path.join(extensions_dir, "**", "*.cpp"))
+    sources_cpu = glob.glob(path.join(extensions_dir, "cpu", "*.cpp"))
+    source_cuda = glob.glob(path.join(extensions_dir, "cuda", "*.cu"))
+    sources = [main_source] + sources_cpu
 
     from torch.utils.cpp_extension import ROCM_HOME
 
@@ -68,11 +70,6 @@ def get_extension():
         True if ((torch.version.hip is not None) and (ROCM_HOME is not None)) else False
     )
     assert not is_rocm_pytorch, "Unfortunately NATTEN does not support ROCM."
-
-    source_cuda = glob.glob(path.join(extensions_dir, "**", "*.cu")) + glob.glob(
-        path.join(extensions_dir, "*.cu")
-    )
-    sources = [main_source] + sources
 
     extension = CppExtension
     extra_compile_args = {"cxx": ["-O3"]}
@@ -113,6 +110,7 @@ setup(
     description="Neighborhood Attention Extension.",
     long_description=long_description,
     long_description_content_type='text/markdown',
+    package_dir={"": "src"},
     packages=['natten/'],
     python_requires=">=3.7",
     install_requires=[
@@ -125,6 +123,7 @@ setup(
         ],
         # dev dependencies. Install them by `pip install 'natten[dev]'`
         "dev": [
+            "fvcore>=0.1.5,<0.1.6",  # required like this to make it pip installable
         ],
     },
     ext_modules=get_extension(),
