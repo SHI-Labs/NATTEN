@@ -80,7 +80,7 @@ torch::Tensor natten2dqkrpb_forward(
     CHECK_CONTIGUOUS(query);
     CHECK_CONTIGUOUS(key);
     const int heads = query.size(1);
-    auto rpb = rpb_opt.has_value() ? rpb_opt.value() : torch::zeros({heads, kernel_size, kernel_size}, query.options()); 
+    auto rpb = rpb_opt.has_value() ? rpb_opt.value() : torch::zeros({heads, 2 * kernel_size - 1, 2 * kernel_size - 1}, query.options());
     CHECK_CONTIGUOUS(rpb);
     assert(query.device().is_cuda() == key.device().is_cuda() && rpb.device().is_cuda() == key.device().is_cuda());
     if (query.device().is_cuda()) {
