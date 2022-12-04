@@ -81,12 +81,13 @@ torch::Tensor natten2dqkrpb_forward(
     CHECK_CONTIGUOUS(key);
     const int heads = query.size(1);
     auto rpb = rpb_opt.has_value() ? rpb_opt.value() : torch::zeros({heads, 2 * kernel_size - 1, 2 * kernel_size - 1}, query.options());
+    int exp_kernel_size = (rpb.size(1) + 1) / 2;
+    assert(exp_kernel_size == kernel_size);
     CHECK_CONTIGUOUS(rpb);
     assert(query.device().is_cuda() == key.device().is_cuda() && rpb.device().is_cuda() == key.device().is_cuda());
     if (query.device().is_cuda()) {
 #if defined(WITH_CUDA)
         int dim = query.size(4);
-        int kernel_size = (rpb.size(1) + 1) / 2;
         bool half = ::detail::scalar_type(query.scalar_type()) == at::ScalarType::Half;
         if ((
             kernel_size == 7 || kernel_size == 3 || kernel_size == 5 ||
