@@ -35,8 +35,8 @@ class NATTEN1DQKRPBFunction(Function):
     def backward(ctx, grad_out):
         outputs = backend.natten1dqkrpb_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
             ctx.bias,
             ctx.dilation,
         )
@@ -66,8 +66,8 @@ class NATTEN1DAVFunction(Function):
     def backward(ctx, grad_out):
         outputs = backend.natten1dav_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
             ctx.dilation,
         )
         d_attn, d_value = outputs
@@ -98,8 +98,8 @@ class NATTEN2DQKRPBFunction(Function):
     def backward(ctx, grad_out):
         outputs = backend.natten2dqkrpb_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
             ctx.bias,
             ctx.dilation,
         )
@@ -129,8 +129,8 @@ class NATTEN2DAVFunction(Function):
     def backward(ctx, grad_out):
         outputs = backend.natten2dav_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
             ctx.dilation,
         )
         d_attn, d_value = outputs
