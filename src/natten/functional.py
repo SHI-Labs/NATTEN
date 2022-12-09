@@ -8,16 +8,7 @@ import torch
 from torch.autograd import Function
 from torch.cuda.amp import custom_bwd, custom_fwd
 
-try:
-    from natten import _C
-except ImportError:
-    raise ImportError(
-        f"Failed to import NATTEN's CPP backend. "
-        + f"This could be due to an invalid/incomplete install. "
-        + f"Please uninstall NATTEN (pip uninstall natten) and re-install with the"
-        f" correct torch build: "
-        + f"natten.shi-labs.com."
-    )
+from . import backend
 
 
 class NATTEN1DQKRPBFunction(Function):
@@ -33,7 +24,7 @@ class NATTEN1DQKRPBFunction(Function):
     def forward(ctx, query, key, rpb, kernel_size, dilation):
         query = query.contiguous()
         key = key.contiguous()
-        attn = _C.natten1dqkrpb_forward(query, key, rpb, kernel_size, dilation)
+        attn = backend.natten1dqkrpb_forward(query, key, rpb, kernel_size, dilation)
         ctx.save_for_backward(query, key)
         ctx.dilation = dilation
         ctx.bias = rpb is not None
@@ -42,7 +33,7 @@ class NATTEN1DQKRPBFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten1dqkrpb_backward(
+        outputs = backend.natten1dqkrpb_backward(
             grad_out.contiguous(),
             ctx.saved_variables[0],
             ctx.saved_variables[1],
@@ -65,7 +56,7 @@ class NATTEN1DAVFunction(Function):
     def forward(ctx, attn, value, dilation):
         attn = attn.contiguous()
         value = value.contiguous()
-        out = _C.natten1dav_forward(attn, value, dilation)
+        out = backend.natten1dav_forward(attn, value, dilation)
         ctx.save_for_backward(attn, value)
         ctx.dilation = dilation
         return out
@@ -73,7 +64,7 @@ class NATTEN1DAVFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten1dav_backward(
+        outputs = backend.natten1dav_backward(
             grad_out.contiguous(),
             ctx.saved_variables[0],
             ctx.saved_variables[1],
@@ -96,7 +87,7 @@ class NATTEN2DQKRPBFunction(Function):
     def forward(ctx, query, key, rpb, kernel_size, dilation):
         query = query.contiguous()
         key = key.contiguous()
-        attn = _C.natten2dqkrpb_forward(query, key, rpb, kernel_size, dilation)
+        attn = backend.natten2dqkrpb_forward(query, key, rpb, kernel_size, dilation)
         ctx.save_for_backward(query, key)
         ctx.dilation = dilation
         ctx.bias = rpb is not None
@@ -105,7 +96,7 @@ class NATTEN2DQKRPBFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten2dqkrpb_backward(
+        outputs = backend.natten2dqkrpb_backward(
             grad_out.contiguous(),
             ctx.saved_variables[0],
             ctx.saved_variables[1],
@@ -128,7 +119,7 @@ class NATTEN2DAVFunction(Function):
     def forward(ctx, attn, value, dilation):
         attn = attn.contiguous()
         value = value.contiguous()
-        out = _C.natten2dav_forward(attn, value, dilation)
+        out = backend.natten2dav_forward(attn, value, dilation)
         ctx.save_for_backward(attn, value)
         ctx.dilation = dilation
         return out
@@ -136,7 +127,7 @@ class NATTEN2DAVFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten2dav_backward(
+        outputs = backend.natten2dav_backward(
             grad_out.contiguous(),
             ctx.saved_variables[0],
             ctx.saved_variables[1],
