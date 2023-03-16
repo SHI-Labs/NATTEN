@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.14.5] - 2023-03-16
+ 
+### Added
+- Torch 2.0 support
+- Optional RPB.
+
 ## [0.14.4] - 2022-10-31
  
 ### Added
