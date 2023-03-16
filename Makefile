@@ -1,4 +1,4 @@
-.PHONY: clean uninstall install test style quality
+.PHONY: clean uninstall install install-cutlass test style quality
 
 check_dirs := src tests
 
