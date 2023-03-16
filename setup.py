@@ -1,15 +1,26 @@
 #!/usr/bin/env python
-"""
-Neighborhood Attention Extension (NATTEN) 
-
-Setup file
-
-Heavily borrowed from detectron2 setup:
-github.com/facebookresearch/detectron2
-
-This source code is licensed under the license found in the
-LICENSE file in the root directory of this source tree.
-"""
+#################################################################################################
+# Copyright (c) 2023 Ali Hassani.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+#################################################################################################
 
 import warnings
 import glob
@@ -20,8 +31,8 @@ from setuptools import find_packages, setup
 from typing import List
 import torch
 from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension
-
 from pathlib import Path
+
 this_directory = Path(__file__).parent
 try:
     long_description = (this_directory / "assets/README_pypi.md").read_text()
@@ -62,19 +73,21 @@ def get_extension():
     main_source = path.join(extensions_dir, "natten.cpp")
     sources_cpu = glob.glob(path.join(extensions_dir, "cpu", "*.cpp"))
     source_cuda = glob.glob(path.join(extensions_dir, "cuda", "*.cu"))
-    sources = [main_source] + sources_cpu
+    sources_base = [main_source] + sources_cpu
+    sources = sources_base.copy()
 
     from torch.utils.cpp_extension import ROCM_HOME
 
     is_rocm_pytorch = (
         True if ((torch.version.hip is not None) and (ROCM_HOME is not None)) else False
     )
-    assert not is_rocm_pytorch, "Unfortunately NATTEN does not support ROCM."
+    assert not is_rocm_pytorch, "NATTEN does not support ROCM."
 
     extension = CppExtension
     extra_compile_args = {"cxx": ["-O3"]}
     define_macros = []
     if TORCH_113:
+        # Torch 1.13 and above have a new dispatcher template
         define_macros += [("TORCH_113", 1)]
     if AVX_INT:
         define_macros += [("AVX_INT", 1)]

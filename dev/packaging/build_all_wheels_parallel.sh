@@ -28,7 +28,9 @@ build_one() {
   echo "Launching container $container_name ..."
   container_id="$container_name"_"$cu"_"$pytorch_ver"
 
-  if [ $cp310 -eq 2 ]; then
+  if [ $cp310 -eq 3 ]; then
+    py_versions=(3.8 3.9 3.10 3.11)
+  elif [ $cp310 -eq 2 ]; then
     py_versions=(3.7 3.8 3.9 3.10 3.11)
   elif [ $cp310 -eq 1 ]; then
     py_versions=(3.7 3.8 3.9 3.10)
@@ -57,6 +59,9 @@ EOF
 if [[ -n "$1" ]] && [[ -n "$2" ]]; then
   build_one "$1" "$2"
 else
+  # 2.0 and newer -- build 3.8 <= python <= 3.11 wheels
+  build_one cu118 2.0.0 3 & build_one cu117 2.0.0 3 &  build_one cpu 2.0.0 3
+
   # 1.13 and newer -- build python 3.11 wheels
   build_one cu117 1.13 2 & build_one cu116 1.13 2 &  build_one cpu 1.13 2
 
