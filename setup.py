@@ -125,6 +125,9 @@ setup(
     long_description_content_type='text/markdown',
     package_dir={"": "src"},
     packages=['natten/'],
+    package_data={
+            '': ['csrc/*', 'csrc/cpu/*', 'csrc/cuda/*'],
+            },
     python_requires=">=3.7",
     install_requires=[
         "packaging",

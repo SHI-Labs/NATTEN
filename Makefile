@@ -1,8 +1,12 @@
-.PHONY: clean uninstall install install-cutlass test style quality
+.PHONY: clean uninstall install test style quality
 
 check_dirs := src tests
 
 all: clean uninstall install
+
+sdist:
+	@echo "Generating source dist"
+	python3 setup.py sdist
 
 clean: 
 	@echo "Cleaning up"
