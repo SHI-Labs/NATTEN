@@ -1,9 +1,25 @@
-"""
-Neighborhood Attention Autograd Functions
-
-This source code is licensed under the license found in the
-LICENSE file in the root directory of this source tree.
-"""
+#################################################################################################
+# Copyright (c) 2023 Ali Hassani.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+#################################################################################################
 import torch
 from torch.autograd import Function
 from torch.cuda.amp import custom_bwd, custom_fwd
@@ -16,7 +32,7 @@ except ImportError:
         + f"This could be due to an invalid/incomplete install. "
         + f"Please uninstall NATTEN (pip uninstall natten) and re-install with the"
         f" correct torch build: "
-        + f"natten.shi-labs.com."
+        + f"shi-labs.com/natten"
     )
 
 
@@ -35,6 +51,7 @@ class NATTEN1DQKRPBFunction(Function):
         key = key.contiguous()
         attn = _C.natten1dqkrpb_forward(query, key, rpb, kernel_size, dilation)
         ctx.save_for_backward(query, key)
+        ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         ctx.bias = rpb is not None
         return attn
@@ -44,9 +61,10 @@ class NATTEN1DQKRPBFunction(Function):
     def backward(ctx, grad_out):
         outputs = _C.natten1dqkrpb_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
             ctx.bias,
+            ctx.kernel_size,
             ctx.dilation,
         )
         d_query, d_key, d_rpb = outputs
@@ -62,11 +80,12 @@ class NATTEN1DAVFunction(Function):
 
     @staticmethod
     @custom_fwd(cast_inputs=torch.float16)
-    def forward(ctx, attn, value, dilation):
+    def forward(ctx, attn, value, kernel_size, dilation):
         attn = attn.contiguous()
         value = value.contiguous()
-        out = _C.natten1dav_forward(attn, value, dilation)
+        out = _C.natten1dav_forward(attn, value, kernel_size, dilation)
         ctx.save_for_backward(attn, value)
+        ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         return out
 
@@ -75,12 +94,13 @@ class NATTEN1DAVFunction(Function):
     def backward(ctx, grad_out):
         outputs = _C.natten1dav_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
+            ctx.kernel_size,
             ctx.dilation,
         )
         d_attn, d_value = outputs
-        return d_attn, d_value, None
+        return d_attn, d_value, None, None
 
 
 class NATTEN2DQKRPBFunction(Function):
@@ -98,6 +118,7 @@ class NATTEN2DQKRPBFunction(Function):
         key = key.contiguous()
         attn = _C.natten2dqkrpb_forward(query, key, rpb, kernel_size, dilation)
         ctx.save_for_backward(query, key)
+        ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         ctx.bias = rpb is not None
         return attn
@@ -107,9 +128,10 @@ class NATTEN2DQKRPBFunction(Function):
     def backward(ctx, grad_out):
         outputs = _C.natten2dqkrpb_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
             ctx.bias,
+            ctx.kernel_size,
             ctx.dilation,
         )
         d_query, d_key, d_rpb = outputs
@@ -125,11 +147,12 @@ class NATTEN2DAVFunction(Function):
 
     @staticmethod
     @custom_fwd(cast_inputs=torch.float16)
-    def forward(ctx, attn, value, dilation):
+    def forward(ctx, attn, value, kernel_size, dilation):
         attn = attn.contiguous()
         value = value.contiguous()
-        out = _C.natten2dav_forward(attn, value, dilation)
+        out = _C.natten2dav_forward(attn, value, kernel_size, dilation)
         ctx.save_for_backward(attn, value)
+        ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         return out
 
@@ -138,25 +161,34 @@ class NATTEN2DAVFunction(Function):
     def backward(ctx, grad_out):
         outputs = _C.natten2dav_backward(
             grad_out.contiguous(),
-            ctx.saved_variables[0],
-            ctx.saved_variables[1],
+            ctx.saved_tensors[0],
+            ctx.saved_tensors[1],
+            ctx.kernel_size,
             ctx.dilation,
         )
         d_attn, d_value = outputs
-        return d_attn, d_value, None
+        return d_attn, d_value, None, None
 
 
 def natten1dqkrpb(query, key, rpb, kernel_size, dilation):
     return NATTEN1DQKRPBFunction.apply(query, key, rpb, kernel_size, dilation)
 
 
-def natten1dav(attn, value, dilation):
-    return NATTEN1DAVFunction.apply(attn, value, dilation)
+def natten1dqk(query, key, kernel_size, dilation):
+    return NATTEN1DQKRPBFunction.apply(query, key, None, kernel_size, dilation)
+
+
+def natten1dav(attn, value, kernel_size, dilation):
+    return NATTEN1DAVFunction.apply(attn, value, kernel_size, dilation)
 
 
 def natten2dqkrpb(query, key, rpb, kernel_size, dilation):
     return NATTEN2DQKRPBFunction.apply(query, key, rpb, kernel_size, dilation)
 
 
-def natten2dav(attn, value, dilation):
-    return NATTEN2DAVFunction.apply(attn, value, dilation)
+def natten2dqk(query, key, kernel_size, dilation):
+    return NATTEN2DQKRPBFunction.apply(query, key, None, kernel_size, dilation)
+
+
+def natten2dav(attn, value, kernel_size, dilation):
+    return NATTEN2DAVFunction.apply(attn, value, kernel_size, dilation)

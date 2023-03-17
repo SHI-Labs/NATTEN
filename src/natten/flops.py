@@ -1,11 +1,25 @@
-"""
-Neighborhood Attention FLOP counter
-Because we're using a custom CPP backend, FVCore won't recognize it and count flops, so we have
-to manually define flop counters for each extension.
-
-This source code is licensed under the license found in the
-LICENSE file in the root directory of this source tree.
-"""
+#################################################################################################
+# Copyright (c) 2023 Ali Hassani.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+#################################################################################################
 from numbers import Number
 from typing import Any, List
 
@@ -17,7 +31,7 @@ def qk_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the QKRPB kernel.
     """
-    assert len(inputs) == 3, f"Expected 3 inputs (query, key, rpb), got {len(inputs)}"
+    assert len(inputs) >= 3, f"Expected 3 inputs (query, key, rpb), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -48,7 +62,7 @@ def av_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the AV kernel.
     """
-    assert len(inputs) == 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
+    assert len(inputs) >= 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -75,7 +89,7 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the 1D QKRPB kernel.
     """
-    assert len(inputs) == 3, f"Expected 3 inputs (query, key, rpb), got {len(inputs)}"
+    assert len(inputs) >= 3, f"Expected 3 inputs (query, key, rpb), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -106,7 +120,7 @@ def av_1d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Count flops for the 1D AV kernel.
     """
-    assert len(inputs) == 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
+    assert len(inputs) >= 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]

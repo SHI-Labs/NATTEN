@@ -139,14 +139,11 @@ NATTEN is released under the [MIT License](LICENSE).
 
 ## Citation
 ```bibtex
-@article{hassani2022neighborhood,
+@inproceedings{hassani2023neighborhood,
 	title        = {Neighborhood Attention Transformer},
 	author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
-	year         = 2022,
-	url          = {https://arxiv.org/abs/2204.07143},
-	eprint       = {2204.07143},
-	archiveprefix = {arXiv},
-	primaryclass = {cs.CV}
+	year         = 2023,
+        booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
 }
 @article{hassani2022dilated,
 	title        = {Dilated Neighborhood Attention Transformer},
