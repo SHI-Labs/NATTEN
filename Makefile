@@ -1,8 +1,10 @@
-.PHONY: clean uninstall install test style quality
+.PHONY: sdist clean uninstall install-deps install test style quality
 
 check_dirs := src tests
 
 all: clean uninstall install
+
+full: clean uninstall install-deps install
 
 sdist:
 	@echo "Generating source dist"
@@ -32,7 +34,6 @@ install-deps:
 
 install: 
 	@echo "Installing NATTEN from source"
-	${MAKE} install-deps
 	pip install -e . 2>&1 | tee install.out
 
 test:

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.14.6] - 2023-03-21
+Just a really small update that syncs the changes to the private branch.
+It's mostly about the changed signature in both QK and AV (both 1D and 2D), where we now take in both kernel size and dilation.
+Up to 0.14.4 we only took in dilation because QK always took in RPB, and RPB's shape is a function of kernel size, and AV took 
+in attention weights, whose last axis is of size kernel size (kernel size squared in 2D).
+As of 0.14.5, we support optional RPB, which means now we have to take in kernel size in QK. To make the signatures consistent,
+we added kernel size to AV as well, along with assertions that kernel sizes match up, but that was not synced from the private
+branch when we pushed out 0.14.5 because we wanted to support PyTorch 2.0 as soon as possible.
+0.14.6 is just mostly to keep the master branch consistent with the latest release, since the signature difference would create
+an inconsistency between the pip package and the master branch.
+
 ## [0.14.5] - 2023-03-16
  
 ### Added

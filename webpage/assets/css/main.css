@@ -1,0 +1,132 @@
+body{
+  max-width: 120ch !important;
+}
+
+.paper-title a{
+  font-size: 18.5px;
+  font-weight: bolder;
+}
+
+.position-title a, .position-title{
+  font-size: 18.5px;
+  font-weight: bolder;
+}
+
+.logo{
+  color: transparent;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center center;
+  min-height: 180px;
+  max-width: 500px;
+}
+
+.tight{
+  padding: 5px 5px !important;
+}
+pre{
+  white-space: pre-wrap;
+}
+.pre-wrapper{
+  position:relative;
+}
+.pre-wrapper pre{
+  padding-top: 25px;
+}
+.pre-wrapper .copy-snippet {
+  border-radius: 0;
+  min-width:55px;
+  border: 1px solid #db6060;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1.42rem;
+  margin: 0;
+  padding: 0px 5px;
+  position:absolute;
+  top:0;
+  right:0;
+}
+.pre-wrapper .copy-snippet:disabled{
+  color:#555;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #ffffff;
+    color: #000000;
+  }
+  pre
+  {
+    background: hsl(210,28%,93%) !important;
+  }
+  .nav-pills .nav-link.active
+  {
+    background-color: #ffffff !important;
+  }
+  .nav-link.disabled{
+    color: #000000 !important;
+  }
+  a, .nav-link{
+    color: #a00 !important;
+  }
+  .paper-title a{
+    color: #000000 !important;
+  }
+  .position-title a, .position-title{
+    color: #000000 !important;
+  }
+  .logo{
+    background-image: url(../img/natten_light.png);
+  }
+  .pre-wrapper .copy-snippet {
+    color: #fff;
+    background: #000;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #000000;
+    color: #ffffff;
+  }
+  pre
+  {
+    background: hsl(210,28%,7%) !important;
+  }
+  .nav-pills .nav-link.active
+  {
+    background-color: #ffffff !important;
+  }
+  .nav-link.disabled{
+    color: #ffffff !important;
+  }
+  a, .nav-link{
+    color: #db6060 !important;
+  }
+  .paper-title a{
+    color: #ffffff !important;
+  }
+
+  .position-title a, .position-title{
+    color: #ffffff !important;
+  }
+  .logo{
+    background-image: url(../img/natten_dark.png);
+  }
+  .pre-wrapper .copy-snippet {
+    color: #000;
+    background: #fff;
+  }
+}
+
+@media screen and (min-device-width: 640px){
+    .nav-pills .nav-link.active
+    {
+        min-width: 120px;
+    }
+}
+
+@media screen and (max-device-width: 767px){
+    pre{
+        max-width: 50vw !important;
+    }
+}

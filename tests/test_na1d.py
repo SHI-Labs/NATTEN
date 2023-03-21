@@ -1,9 +1,26 @@
-"""
-Neighborhood Attention 1D Unit Tests 
+#################################################################################################
+# Copyright (c) 2023 Ali Hassani.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+#################################################################################################
 
-This source code is licensed under the license found in the
-LICENSE file in the root directory of this source tree.
-"""
 import logging
 import os
 import unittest
@@ -111,7 +128,7 @@ def _priv_test_gradcheck_natten1dav(
     kwargs = {"dtype": dtype, "device": device, "requires_grad": True}
     attn = torch.randn((batch_size, heads, length, kernel_size), **kwargs)
     value = torch.randn((batch_size, heads, length, dim), **kwargs)
-    variables = [attn, value, dilation]
+    variables = [attn, value, kernel_size, dilation]
 
     assert gradcheck(
         natten1dav,
@@ -130,7 +147,7 @@ def _priv_test_allclose_cpu_cuda(
     kernel_sizes=[3, 5, 7, 9, 11, 13],
     dims=[4, 16, 32],
     heads=[1, 2, 3, 4],
-    tol=1e-8,
+    tol=1e-6,
 ):
     for kernel_size in kernel_sizes:
         for dim in dims:

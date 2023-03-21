@@ -50,9 +50,9 @@ We also welcome contributions in all forms.
 Just refer to our website, [shi-labs.com/natten](https://www.shi-labs.com/natten/), select your PyTorch version and the CUDA
 version it was compiled with, copy-paste the command and install in seconds!
 
-For example, if you're on `torch==1.12.1+cu116`, you should install NATTEN using the following wheel:
+For example, if you're on `torch==2.0.0+cu118`, you should install NATTEN using the following wheel:
 ```bash
-pip3 install natten -f https://shi-labs.com/natten/wheels/cu116/torch1.12.1/index.html
+pip3 install natten -f https://shi-labs.com/natten/wheels/cu118/torch2.0.0/index.html
 ```
 
 More generally:
@@ -60,8 +60,16 @@ More generally:
 pip3 install natten -f https://shi-labs.com/natten/wheels/{cu_version}/torch{torch_version}/index.html
 ```
 
-**NOTE:** If you do not specify a wheel URL, you will install a "placeholder" version of NATTEN, which is not usable.
-We strongly recommend using our website, or building from source.
+**NOTE:** If you do not specify a wheel URL, pip will collect NATTEN and try to compile on locally, which depending
+on your system might take up to 30 minutes.
+We strongly recommend using our website if you're a Linux user.
+
+### Mac
+Unfortunately we are not yet able to build Mac wheels, but you can compile on install, so just run:
+
+```bash
+pip3 install natten
+```
 
 ### Windows
 NATTEN should support Windows devices with CUDA, but does not yet have Windows wheels.
@@ -74,7 +82,13 @@ Once you've set up your Python environment and installed PyTorch with CUDA, simp
 pip install ninja # Recommended, not required
 git clone https://github.com/SHI-Labs/NATTEN
 cd NATTEN
-pip install -e .
+make
+```
+
+#### Optional: run unit tests
+You can optionally run unit tests to verify building from source finished successfully:
+```bash
+make test
 ```
 
 
@@ -133,14 +147,11 @@ NATTEN is released under the [MIT License](https://github.com/SHI-Labs/NATTEN/bl
 
 ## Citation
 ```bibtex
-@article{hassani2022neighborhood,
+@inproceedings{hassani2023neighborhood,
 	title        = {Neighborhood Attention Transformer},
 	author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
-	year         = 2022,
-	url          = {https://arxiv.org/abs/2204.07143},
-	eprint       = {2204.07143},
-	archiveprefix = {arXiv},
-	primaryclass = {cs.CV}
+	year         = 2023,
+        booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
 }
 @article{hassani2022dilated,
 	title        = {Dilated Neighborhood Attention Transformer},
