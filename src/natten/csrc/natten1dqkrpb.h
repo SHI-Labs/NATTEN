@@ -108,6 +108,7 @@ std::vector<torch::Tensor> natten1dqkrpb_backward(
     const torch::Tensor &query,
     const torch::Tensor &key,
     const bool biasEnabled,
+    const int kernel_size,
     const int dilation) {
     CHECK_CONTIGUOUS(d_attn);
     CHECK_CONTIGUOUS(query);
