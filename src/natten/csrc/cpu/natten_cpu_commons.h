@@ -21,6 +21,10 @@
  *
  **************************************************************************************************/
 
+#ifndef NATTEN_CPU_COMMONS
+
+#define NATTEN_CPU_COMMONS
+
 inline int get_backward_window_start(const int index, const int KERNEL_SIZE, const int NEIGHBORHOOD_SIZE, const int dilation)
 {
     return (index < KERNEL_SIZE * dilation) ? (index % dilation) : index - NEIGHBORHOOD_SIZE * dilation;
@@ -150,3 +154,5 @@ inline int get_pb_start(const int index, const int length, const int KERNEL_SIZE
             break;                                                                                   \
     }                                                                                                \
 })
+
+#endif
