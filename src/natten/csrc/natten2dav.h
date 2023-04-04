@@ -49,11 +49,13 @@ std::vector<torch::Tensor> natten2dav_cpu_backward(
 torch::Tensor natten2dav_cuda_forward(
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 torch::Tensor natten2dav_cuda_forward_fp16(
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 // CUDA backward declarations
@@ -61,24 +63,28 @@ std::vector<torch::Tensor> natten2dav_cuda_backward(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 std::vector<torch::Tensor> natten2dav_cuda_backward_fp16(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 std::vector<torch::Tensor> natten2dav_cuda_backward_tiled_32(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 std::vector<torch::Tensor> natten2dav_cuda_backward_fp16_tiled_32(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 #endif
@@ -100,8 +106,8 @@ torch::Tensor natten2dav_forward(
 #if defined(WITH_CUDA)
         bool half = ::detail::scalar_type(value.scalar_type()) == at::ScalarType::Half;
         if (half)
-            return natten2dav_cuda_forward_fp16(attn, value, dilation);
-        return natten2dav_cuda_forward(attn, value, dilation);
+            return natten2dav_cuda_forward_fp16(attn, value, kernel_size, dilation);
+        return natten2dav_cuda_forward(attn, value, kernel_size, dilation);
 #else
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif
@@ -129,12 +135,12 @@ std::vector<torch::Tensor> natten2dav_backward(
             kernel_size == 9 || kernel_size == 11 || kernel_size == 13
             ) && dim == 32){
             if (half)
-                return natten2dav_cuda_backward_fp16_tiled_32(d_out, attn, value, dilation);
-            return natten2dav_cuda_backward_tiled_32(d_out, attn, value, dilation);
+                return natten2dav_cuda_backward_fp16_tiled_32(d_out, attn, value, kernel_size, dilation);
+            return natten2dav_cuda_backward_tiled_32(d_out, attn, value, kernel_size, dilation);
         }
         if (half)
-            return natten2dav_cuda_backward_fp16(d_out, attn, value, dilation);
-        return natten2dav_cuda_backward(d_out, attn, value, dilation);
+            return natten2dav_cuda_backward_fp16(d_out, attn, value, kernel_size, dilation);
+        return natten2dav_cuda_backward(d_out, attn, value, kernel_size, dilation);
 #else
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif

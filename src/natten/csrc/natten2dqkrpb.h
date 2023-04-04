@@ -51,25 +51,29 @@ std::vector<torch::Tensor> natten2dqkrpb_cpu_backward(
 torch::Tensor natten2dqkrpb_cuda_forward(
     const torch::Tensor &query,
     const torch::Tensor &key,
-    const torch::Tensor &rpb,
+    const at::optional<at::Tensor> &rpb,
+    const int kernel_size,
     const int dilation);
 
 torch::Tensor natten2dqkrpb_cuda_forward_fp16(
     const torch::Tensor &query,
     const torch::Tensor &key,
-    const torch::Tensor &rpb,
+    const at::optional<at::Tensor> &rpb,
+    const int kernel_size,
     const int dilation);
 
 torch::Tensor natten2dqkrpb_cuda_forward_tiled_32(
     const torch::Tensor &query,
     const torch::Tensor &key,
-    const torch::Tensor &rpb,
+    const at::optional<at::Tensor> &rpb,
+    const int kernel_size,
     const int dilation);
 
 torch::Tensor natten2dqkrpb_cuda_forward_fp16_tiled_32(
     const torch::Tensor &query,
     const torch::Tensor &key,
-    const torch::Tensor &rpb,
+    const at::optional<at::Tensor> &rpb,
+    const int kernel_size,
     const int dilation);
 
 // CUDA backward declarations
@@ -78,6 +82,7 @@ std::vector<torch::Tensor> natten2dqkrpb_cuda_backward(
     const torch::Tensor &query,
     const torch::Tensor &key,
     const bool biasEnabled,
+    const int kernel_size,
     const int dilation);
 
 std::vector<torch::Tensor> natten2dqkrpb_cuda_backward_fp16(
@@ -85,6 +90,7 @@ std::vector<torch::Tensor> natten2dqkrpb_cuda_backward_fp16(
     const torch::Tensor &query,
     const torch::Tensor &key,
     const bool biasEnabled,
+    const int kernel_size,
     const int dilation);
 
 #endif
@@ -96,17 +102,18 @@ std::vector<torch::Tensor> natten2dqkrpb_cuda_backward_fp16(
 torch::Tensor natten2dqkrpb_forward(
     const torch::Tensor &query,
     const torch::Tensor &key,
-    const at::optional<at::Tensor> &rpb_opt,
+    const at::optional<at::Tensor> &rpb,
     const int kernel_size,
     const int dilation) {
     CHECK_CONTIGUOUS(query);
     CHECK_CONTIGUOUS(key);
     const int heads = query.size(1);
-    auto rpb = rpb_opt.has_value() ? rpb_opt.value() : torch::zeros({heads, 2 * kernel_size - 1, 2 * kernel_size - 1}, query.options());
-    int exp_kernel_size = (rpb.size(1) + 1) / 2;
-    assert(exp_kernel_size == kernel_size);
-    CHECK_CONTIGUOUS(rpb);
-    assert(query.device().is_cuda() == key.device().is_cuda() && rpb.device().is_cuda() == key.device().is_cuda());
+    assert(query.device().is_cuda() == key.device().is_cuda());
+    if (rpb.has_value()) {
+        assert(rpb.value().device().is_cuda() == key.device().is_cuda());
+        CHECK_CONTIGUOUS(rpb.value());
+        assert(int((rpb.value().size(1) + 1) / 2) == kernel_size);
+    }
     if (query.device().is_cuda()) {
 #if defined(WITH_CUDA)
         int dim = query.size(4);
@@ -116,12 +123,12 @@ torch::Tensor natten2dqkrpb_forward(
             kernel_size == 9 || kernel_size == 11 || kernel_size == 13
             ) && dim == 32){
             if (half)
-                return natten2dqkrpb_cuda_forward_fp16_tiled_32(query, key, rpb, dilation);
-            return natten2dqkrpb_cuda_forward_tiled_32(query, key, rpb, dilation);
+                return natten2dqkrpb_cuda_forward_fp16_tiled_32(query, key, rpb, kernel_size, dilation);
+            return natten2dqkrpb_cuda_forward_tiled_32(query, key, rpb, kernel_size, dilation);
         }
         if (half)
-            return natten2dqkrpb_cuda_forward_fp16(query, key, rpb, dilation);
-        return natten2dqkrpb_cuda_forward(query, key, rpb, dilation);
+            return natten2dqkrpb_cuda_forward_fp16(query, key, rpb, kernel_size, dilation);
+        return natten2dqkrpb_cuda_forward(query, key, rpb, kernel_size, dilation);
 #else
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif
@@ -145,8 +152,8 @@ std::vector<torch::Tensor> natten2dqkrpb_backward(
 #if defined(WITH_CUDA)
         bool half = ::detail::scalar_type(query.scalar_type()) == at::ScalarType::Half;
         if (half)
-            return natten2dqkrpb_cuda_backward_fp16(d_attn, query, key, biasEnabled, dilation);
-        return natten2dqkrpb_cuda_backward(d_attn, query, key, biasEnabled, dilation);
+            return natten2dqkrpb_cuda_backward_fp16(d_attn, query, key, biasEnabled, kernel_size, dilation);
+        return natten2dqkrpb_cuda_backward(d_attn, query, key, biasEnabled, kernel_size, dilation);
 #else
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif

@@ -245,6 +245,34 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
     return {d_query, d_key, d_rpb};
 }
 
+torch::Tensor natten1dav_cuda_forward(
+    const torch::Tensor &attn,
+    const torch::Tensor &value,
+    const int kernel_size,
+    const int dilation) {
+    int batch_size = value.size(0);
+    int heads = value.size(1);
+    int length = value.size(2);
+    int dim = value.size(3);
+    CHECK_SEQUENCE(length, kernel_size, dilation);
+
+    auto out = torch::zeros_like(value);
+
+    int32_t n = out.numel();
+    int blocks = GET_BLOCKS(n, CUDA_NUM_THREADS_F);
+    dim3 grid(blocks);
+    dim3 block(CUDA_NUM_THREADS_F);
+    const auto stream = c10::cuda::getCurrentCUDAStream();
+    AT_DISPATCH_FLOATING_TYPES(value.scalar_type(), "natten1dav_forward_cuda", ([&] {
+        const auto attn_a = attn.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        const auto value_a = value.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        auto out_a = out.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
+        LAUNCH_DNA_KNS_1D(kernel_size, dilation, neighborhood_neighborhood_1d, grid, block, 0, stream, 
+                attn_a, value_a, out_a, length, heads, kernel_size, dilation, dim, n);
+    }));
+    return out;
+}
+
 torch::Tensor natten1dav_cuda_forward_fp16(
     const torch::Tensor &attn,
     const torch::Tensor &value,
@@ -270,34 +298,6 @@ torch::Tensor natten1dav_cuda_forward_fp16(
         auto out_a = out.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, neighborhood_neighborhood_1d_fp16, grid, block, 0, stream, 
                 attn_a, value_a, out_a, length, heads, kernel_size, dilation, dimhalf, nhalf);
-    }));
-    return out;
-}
-
-torch::Tensor natten1dav_cuda_forward(
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
-    const int kernel_size,
-    const int dilation) {
-    int batch_size = value.size(0);
-    int heads = value.size(1);
-    int length = value.size(2);
-    int dim = value.size(3);
-    CHECK_SEQUENCE(length, kernel_size, dilation);
-
-    auto out = torch::zeros_like(value);
-
-    int32_t n = out.numel();
-    int blocks = GET_BLOCKS(n, CUDA_NUM_THREADS_F);
-    dim3 grid(blocks);
-    dim3 block(CUDA_NUM_THREADS_F);
-    const auto stream = c10::cuda::getCurrentCUDAStream();
-    AT_DISPATCH_FLOATING_TYPES(value.scalar_type(), "natten1dav_forward_cuda", ([&] {
-        const auto attn_a = attn.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        const auto value_a = value.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        auto out_a = out.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
-        LAUNCH_DNA_KNS_1D(kernel_size, dilation, neighborhood_neighborhood_1d, grid, block, 0, stream, 
-                attn_a, value_a, out_a, length, heads, kernel_size, dilation, dim, n);
     }));
     return out;
 }
