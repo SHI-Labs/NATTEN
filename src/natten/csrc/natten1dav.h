@@ -20,6 +20,9 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Neighborhood Attention 1D - AV (attention * value) bindings
+*/
 
 #include <torch/extension.h>
 #include <vector>

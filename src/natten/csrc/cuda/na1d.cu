@@ -181,7 +181,7 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward(
         auto d_key_a = d_key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         if (biasEnabled) {
             auto d_rpb_a = d_rpb.packed_accessor32<scalar_t,2,torch::DefaultPtrTraits>();
-            LAUNCH_DNA_KNS_1D(kernel_size, dilation, rel_pos_bias_1d, grid_rpb, blockr, 0, stream, 
+            LAUNCH_DNA_KNS_1D(kernel_size, dilation, rel_pos_bias_gradient_1d, grid_rpb, blockr, 0, stream, 
                     d_rpb_a, d_attn_a, length, kernel_size, dilation, batch_size, d_rpb.numel(), n_rpb);
         }
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, neighborhood_neighborhood_1d, grid_query, blockq, 0, stream, 
@@ -234,7 +234,7 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
         auto d_key_a = d_key.packed_accessor32<scalar_t,4,torch::DefaultPtrTraits>();
         if (biasEnabled) {
             auto d_rpb_a = d_rpb.packed_accessor32<scalar_t,2,torch::DefaultPtrTraits>();
-            LAUNCH_DNA_KNS_1D(kernel_size, dilation, rel_pos_bias_1d_fp16, grid_rpb, blockr, 0, stream, 
+            LAUNCH_DNA_KNS_1D(kernel_size, dilation, rel_pos_bias_gradient_1d_fp16, grid_rpb, blockr, 0, stream, 
                     d_rpb_a, d_attn_a, length, kernel_size, dilation, batch_size, d_rpb.numel(), n_rpb);
         }
         LAUNCH_DNA_KNS_1D(kernel_size, dilation, neighborhood_neighborhood_1d_fp16, grid_query, blockq, 0, stream, 

@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Relative positional bias backward pass CPU kernel for 1D data.
+    \brief Relative positional bias backward pass CPU kernel for 2D data.
 */
 
 #include <torch/extension.h>
@@ -43,10 +43,11 @@ namespace natten {
 // TODO: AVX
 
 template <int KS, int NS, int DILATION, typename scalar_t>
-void rel_pos_bias_gradient_1d(
-    at::TensorAccessor<scalar_t, 2> d_bias,
-    const at::TensorAccessor<scalar_t, 4> d_attn,
-    const int length,
+void rel_pos_bias_gradient_2d(
+    at::TensorAccessor<scalar_t, 3> d_bias,
+    const at::TensorAccessor<scalar_t, 5> d_attn,
+    const int height, 
+    const int width,
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
@@ -56,19 +57,22 @@ void rel_pos_bias_gradient_1d(
     const int dilation = (DILATION>0) ? DILATION : dilation_in;
     at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
     for (int h = start; h < end; h++) {
-        for (int i = 0; i < length; i++) {
-            const int pi = get_pb_start(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        for (int i = 0; i < height; i++) {
+        const int pi = get_pb_start(i, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        for (int j = 0; j < width; j++) {
+            const int pj = get_pb_start(j, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
             for (int ki = 0; ki < KERNEL_SIZE; ki++) {
+            for (int kj = 0; kj < KERNEL_SIZE; kj++) {
                 scalar_t d_bias_update = scalar_t(0);
-                int attnOffset = h * d_attn.stride(1) + i * d_attn.stride(2) + ki;
+                int attnOffset = h * d_attn.stride(1) + i * d_attn.stride(2) + j * d_attn.stride(3) + ki*KERNEL_SIZE+kj;
                 for (int b=0; b < batch_size; ++b){
                     d_bias_update += d_attn.data()[attnOffset];
                     attnOffset += d_attn.stride(0);
                 }
-                const int index = h * d_bias.stride(0) + (pi+ki) * d_bias.stride(1);
+                const int index = h * d_bias.stride(0) + (pi+ki) * d_bias.stride(1) + (pj+kj) * d_bias.stride(2);
                 d_bias.data()[index] += d_bias_update;
-            }
-        }
+            }}
+        }}
     }});
 }
 

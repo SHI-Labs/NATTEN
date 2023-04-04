@@ -20,6 +20,9 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Neighborhood Attention 2D - QK (query * key) bindings
+*/
 
 #include <torch/extension.h>
 #include <vector>
@@ -30,7 +33,8 @@ namespace natten {
 torch::Tensor natten2dqkrpb_cpu_forward(
     const torch::Tensor &query,
     const torch::Tensor &key,
-    const torch::Tensor &rpb,
+    const at::optional<at::Tensor> &rpb,
+    const int kernel_size,
     const int dilation);
 
 // CPU backward declarations
@@ -39,6 +43,7 @@ std::vector<torch::Tensor> natten2dqkrpb_cpu_backward(
     const torch::Tensor &query,
     const torch::Tensor &key,
     const bool biasEnabled,
+    const int kernel_size,
     const int dilation);
 
 #if defined(WITH_CUDA)
@@ -121,7 +126,7 @@ torch::Tensor natten2dqkrpb_forward(
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif
     }
-    return natten2dqkrpb_cpu_forward(query, key, rpb, dilation);
+    return natten2dqkrpb_cpu_forward(query, key, rpb, kernel_size, dilation);
 }
 
 std::vector<torch::Tensor> natten2dqkrpb_backward(
@@ -146,6 +151,6 @@ std::vector<torch::Tensor> natten2dqkrpb_backward(
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif
     }
-    return natten2dqkrpb_cpu_backward(d_attn, query, key, biasEnabled, dilation);
+    return natten2dqkrpb_cpu_backward(d_attn, query, key, biasEnabled, kernel_size, dilation);
 }
 } // namespace natten

@@ -20,6 +20,9 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Neighborhood Attention 1D - QK (query * key) bindings
+*/
 
 #include <torch/extension.h>
 #include <vector>

@@ -96,7 +96,7 @@ std::vector<torch::Tensor> natten1dqkrpb_cpu_backward(
         auto d_key_a = d_key.accessor<scalar_t, 4>();
         if (biasEnabled) {
             auto d_rpb_a = d_rpb.accessor<scalar_t, 2>();
-            LAUNCH_DNA_KNS(kernel_size, dilation, rel_pos_bias_1d, 
+            LAUNCH_DNA_KNS(kernel_size, dilation, rel_pos_bias_gradient_1d, 
                     d_rpb_a, d_attn_a, length, heads, kernel_size, dilation, batch_size);
         }
         LAUNCH_DNA_KNS(kernel_size, dilation, neighborhood_neighborhood_1d, 

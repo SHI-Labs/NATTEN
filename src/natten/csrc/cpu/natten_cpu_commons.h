@@ -20,6 +20,9 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Holds dispatchers, and common functions shared between ops.
+*/
 
 #ifndef NATTEN_CPU_COMMONS
 

@@ -20,6 +20,9 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Neighborhood Attention 2D - AV (attention * value) bindings
+*/
 
 #include <torch/extension.h>
 #include <vector>
@@ -30,6 +33,7 @@ namespace natten {
 torch::Tensor natten2dav_cpu_forward(
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 // CPU backward declarations
@@ -37,6 +41,7 @@ std::vector<torch::Tensor> natten2dav_cpu_backward(
     const torch::Tensor &d_out,
     const torch::Tensor &attn,
     const torch::Tensor &value,
+    const int kernel_size,
     const int dilation);
 
 #if defined(WITH_CUDA)
@@ -101,7 +106,7 @@ torch::Tensor natten2dav_forward(
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif
     }
-    return natten2dav_cpu_forward(attn, value, dilation);
+    return natten2dav_cpu_forward(attn, value, kernel_size, dilation);
 }
 
 std::vector<torch::Tensor> natten2dav_backward(
@@ -134,6 +139,6 @@ std::vector<torch::Tensor> natten2dav_backward(
     AT_ERROR("NATTEN is not compiled with CUDA! Please make sure you installed correctly by referring to shi-labs.com/natten.");
 #endif
     }
-    return natten2dav_cpu_backward(d_out, attn, value, dilation);
+    return natten2dav_cpu_backward(d_out, attn, value, kernel_size, dilation);
 }
 } // namespace natten
