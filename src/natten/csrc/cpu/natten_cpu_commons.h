@@ -20,6 +20,13 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Holds dispatchers, and common functions shared between ops.
+*/
+
+#ifndef NATTEN_CPU_COMMONS
+
+#define NATTEN_CPU_COMMONS
 
 inline int get_backward_window_start(const int index, const int KERNEL_SIZE, const int NEIGHBORHOOD_SIZE, const int dilation)
 {
@@ -150,3 +157,5 @@ inline int get_pb_start(const int index, const int length, const int KERNEL_SIZE
             break;                                                                                   \
     }                                                                                                \
 })
+
+#endif
