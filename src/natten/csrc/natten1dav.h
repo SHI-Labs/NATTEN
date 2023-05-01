@@ -86,7 +86,7 @@ torch::Tensor natten1dav_forward(
     const int dilation) {
     CHECK_CONTIGUOUS(attn);
     CHECK_CONTIGUOUS(value);
-    assert(int(sqrt(attn.size(4))) == kernel_size);
+    assert(int(sqrt(attn.size(3))) == kernel_size);
     assert(attn.device().is_cuda() == value.device().is_cuda());
     if (attn.device().is_cuda()) {
 #if defined(WITH_CUDA)
@@ -110,7 +110,7 @@ std::vector<torch::Tensor> natten1dav_backward(
     CHECK_CONTIGUOUS(d_out);
     CHECK_CONTIGUOUS(attn);
     CHECK_CONTIGUOUS(value);
-    assert(int(sqrt(attn.size(4))) == kernel_size);
+    assert(int(sqrt(attn.size(3))) == kernel_size);
     assert(attn.device().is_cuda() == value.device().is_cuda() && d_out.device().is_cuda() == value.device().is_cuda());
     if (attn.device().is_cuda()) {
 #if defined(WITH_CUDA)
