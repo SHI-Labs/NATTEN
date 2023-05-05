@@ -102,7 +102,10 @@ def _priv_test_gradcheck_natten3dqkrpb(
     kwargs = {"dtype": dtype, "device": device, "requires_grad": True}
     query = torch.randn((batch_size, heads, depth, height, width, dim), **kwargs)
     key = torch.randn((batch_size, heads, depth, height, width, dim), **kwargs)
-    rpb = torch.randn((heads, 2 * kernel_size_d - 1, 2 * kernel_size - 1, 2 * kernel_size - 1), **kwargs)
+    rpb = torch.randn(
+        (heads, 2 * kernel_size_d - 1, 2 * kernel_size - 1, 2 * kernel_size - 1),
+        **kwargs,
+    )
     variables = [query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation]
 
     assert gradcheck(
@@ -138,7 +141,17 @@ def _priv_test_gradcheck_natten3dav(
     torch.manual_seed(42)
     md = "FAST" if fast_mode else "SLOW"
     kwargs = {"dtype": dtype, "device": device, "requires_grad": True}
-    attn = torch.randn((batch_size, heads, depth, height, width, kernel_size_d * kernel_size * kernel_size), **kwargs)
+    attn = torch.randn(
+        (
+            batch_size,
+            heads,
+            depth,
+            height,
+            width,
+            kernel_size_d * kernel_size * kernel_size,
+        ),
+        **kwargs,
+    )
     value = torch.randn((batch_size, heads, depth, height, width, dim), **kwargs)
     variables = [attn, value, kernel_size_d, kernel_size, dilation_d, dilation]
 
@@ -182,7 +195,9 @@ def _priv_test_allclose_cpu_cuda(
                             **model_kwargs
                         ).state_dict()
 
-                        x1 = torch.randn((batch_size, depth, height, width, dim * num_heads))
+                        x1 = torch.randn(
+                            (batch_size, depth, height, width, dim * num_heads)
+                        )
                         x2 = x1.clone().detach().cuda(0)
 
                         nat1 = NeighborhoodAttention3D(**model_kwargs).eval()
@@ -199,93 +214,319 @@ def _priv_test_allclose_cpu_cuda(
                         assert forward_mse < tol, (
                             f"FAIL: Forward MSE ({forward_mse}) was above the specified"
                             f" tolerance (tol) for heads={num_heads}, dim={dim},"
-                            f" kernel_size_d={kernel_size_d}, kernel_size={kernel_size}, rpb={rpb}."
+                            f" kernel_size_d={kernel_size_d},"
+                            f" kernel_size={kernel_size}, rpb={rpb}."
                         )
 
 
 class NA3DTest(unittest.TestCase):
-    def test_natten3dqk_gradcheck_cpu_slow(self):
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 4, 3, 5, 2, 3
-        _priv_test_gradcheck_natten3dqk(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, False
-        )
-
     def test_natten3dqk_gradcheck_cpu_fast(self):
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 32, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 32, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dqk(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, True
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cpu",
+            1e-6,
+            1e-5,
+            1e-3,
+            0,
+            True,
         )
 
     def test_natten3dqk_gradcheck_cuda_slow(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 4, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 4, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dqk(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, False
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cuda",
+            1e-6,
+            1e-5,
+            1e-3,
+            1e-8,
+            False,
         )
 
     def test_natten3dqk_gradcheck_cuda_fast(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 32, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 32, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dqk(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, True
-        )
-
-    def test_natten3dqkrpb_gradcheck_cpu_slow(self):
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 4, 3, 5, 2, 3
-        _priv_test_gradcheck_natten3dqkrpb(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, False
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cuda",
+            1e-6,
+            1e-5,
+            1e-3,
+            1e-8,
+            True,
         )
 
     def test_natten3dqkrpb_gradcheck_cpu_fast(self):
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 32, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 32, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dqkrpb(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, True
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cpu",
+            1e-6,
+            1e-5,
+            1e-3,
+            0,
+            True,
         )
 
     def test_natten3dqkrpb_gradcheck_cuda_slow(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 4, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 4, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dqkrpb(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, False
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cuda",
+            1e-6,
+            1e-5,
+            1e-3,
+            1e-8,
+            False,
         )
 
     def test_natten3dqkrpb_gradcheck_cuda_fast(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 32, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 32, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dqkrpb(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, True
-        )
-
-    def test_natten3dav_gradcheck_cpu_slow(self):
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 4, 3, 5, 2, 3
-        _priv_test_gradcheck_natten3dav(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, False
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cuda",
+            1e-6,
+            1e-5,
+            1e-3,
+            1e-8,
+            True,
         )
 
     def test_natten3dav_gradcheck_cpu_fast(self):
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 32, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 32, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dav(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, True
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cpu",
+            1e-6,
+            1e-5,
+            1e-3,
+            0,
+            True,
         )
 
     def test_natten3dav_gradcheck_cuda_slow(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 4, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 4, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dav(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, False
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cuda",
+            1e-6,
+            1e-5,
+            1e-3,
+            1e-8,
+            False,
         )
 
     def test_natten3dav_gradcheck_cuda_fast(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
-        batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation = 1, 2, 15, 16, 17, 32, 3, 5, 2, 3
+        (
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+        ) = (1, 2, 15, 16, 17, 32, 3, 5, 2, 3)
         _priv_test_gradcheck_natten3dav(
-            batch, heads, depth, height, width, dim, kernel_d, kernel, dilation_d, dilation, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, True
+            batch,
+            heads,
+            depth,
+            height,
+            width,
+            dim,
+            kernel_d,
+            kernel,
+            dilation_d,
+            dilation,
+            torch.float64,
+            "cuda",
+            1e-6,
+            1e-5,
+            1e-3,
+            1e-8,
+            True,
         )
 
     def test_cpu_cuda_allclose(self):

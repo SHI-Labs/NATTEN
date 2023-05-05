@@ -31,7 +31,9 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Counts flops for the 1D QK operation.
     """
-    assert len(inputs) >= 2, f"Expected at least 2 inputs (query, key), got {len(inputs)}"
+    assert (
+        len(inputs) >= 2
+    ), f"Expected at least 2 inputs (query, key), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -53,6 +55,7 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops = batch_size * heads * length * dim * kernel_size
     flops += batch_size * heads * length * kernel_size
     return flops
+
 
 def av_1d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
@@ -80,11 +83,14 @@ def av_1d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops = batch_size * heads * length * dim * kernel_size
     return flops
 
+
 def qk_2d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Counts flops for the 2D QK operation.
     """
-    assert len(inputs) >= 2, f"Expected at least 2 inputs (query, key), got {len(inputs)}"
+    assert (
+        len(inputs) >= 2
+    ), f"Expected at least 2 inputs (query, key), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -106,6 +112,7 @@ def qk_2d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops = batch_size * heads * height * width * dim * kernel_size_sq
     flops += batch_size * heads * height * width * kernel_size_sq
     return flops
+
 
 def av_2d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
@@ -133,11 +140,14 @@ def av_2d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops = batch_size * heads * height * width * dim * kernel_size_sq
     return flops
 
+
 def qk_3d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
     Counts flops for the 3D QK operation.
     """
-    assert len(inputs) >= 2, f"Expected at least 2 inputs (query, key), got {len(inputs)}"
+    assert (
+        len(inputs) >= 2
+    ), f"Expected at least 2 inputs (query, key), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -159,6 +169,7 @@ def qk_3d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops = batch_size * heads * depth * height * width * dim * kernel_size_cu
     flops += batch_size * heads * depth * height * width * kernel_size_cu
     return flops
+
 
 def av_3d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """

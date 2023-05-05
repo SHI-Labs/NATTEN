@@ -63,15 +63,20 @@ class NeighborhoodAttention3D(nn.Module):
         assert (
             dilation_d >= 1
         ), f"Dilation (depth) must be greater than or equal to 1, got {dilation_d}."
-        self.kernel_size   = kernel_size
+        self.kernel_size = kernel_size
         self.kernel_size_d = kernel_size_d
-        self.dilation      = dilation
-        self.dilation_d    = dilation_d
+        self.dilation = dilation
+        self.dilation_d = dilation_d
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         if bias:
             self.rpb = nn.Parameter(
-                torch.zeros(num_heads, (2 * kernel_size_d - 1), (2 * kernel_size - 1), (2 * kernel_size - 1))
+                torch.zeros(
+                    num_heads,
+                    (2 * kernel_size_d - 1),
+                    (2 * kernel_size - 1),
+                    (2 * kernel_size - 1),
+                )
             )
             trunc_normal_(self.rpb, std=0.02, mean=0.0, a=-2.0, b=2.0)
         else:
@@ -89,10 +94,25 @@ class NeighborhoodAttention3D(nn.Module):
         )
         q, k, v = qkv[0], qkv[1], qkv[2]
         q = q * self.scale
-        attn = natten3dqkrpb(q, k, self.rpb, self.kernel_size_d, self.kernel_size, self.dilation_d, self.dilation)
+        attn = natten3dqkrpb(
+            q,
+            k,
+            self.rpb,
+            self.kernel_size_d,
+            self.kernel_size,
+            self.dilation_d,
+            self.dilation,
+        )
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        x = natten3dav(attn, v, self.kernel_size_d, self.kernel_size, self.dilation_d, self.dilation)
+        x = natten3dav(
+            attn,
+            v,
+            self.kernel_size_d,
+            self.kernel_size,
+            self.dilation_d,
+            self.dilation,
+        )
         x = x.permute(0, 2, 3, 4, 1, 5).reshape(B, D, H, W, C)
 
         return self.proj_drop(self.proj(x))
