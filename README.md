@@ -95,10 +95,10 @@ make test
 ## Catalog
 - [x] Neighborhood Attention 1D (CUDA)
 - [x] Neighborhood Attention 2D (CUDA)
-- [ ] Neighborhood Attention 3D (CUDA)
+- [x] Neighborhood Attention 3D (CUDA)
 - [x] Neighborhood Attention 1D (CPU)
 - [x] Neighborhood Attention 2D (CPU)
-- [ ] Neighborhood Attention 3D (CPU)
+- [x] Neighborhood Attention 3D (CPU)
 - [x] Dilation support
 - [x] Float16 support and utilization
 - [ ] BFloat16 support
@@ -106,14 +106,33 @@ make test
 - [ ] Windows builds
 
 ## Usage
-Simply import `NeighborhoodAttention1D` or `NeighborhoodAttention2D` from `natten`:
+Simply import `NeighborhoodAttention1D`, `NeighborhoodAttention2D`, or `NeighborhoodAttention3D` from `natten`:
 ```python
 from natten import NeighborhoodAttention1D
 from natten import NeighborhoodAttention2D
+from natten import NeighborhoodAttention3D
 
 na1d = NeighborhoodAttention1D(dim=128, kernel_size=7, dilation=2, num_heads=4)
 na2d = NeighborhoodAttention2D(dim=128, kernel_size=7, dilation=2, num_heads=4)
+na3d = NeighborhoodAttention3D(dim=128, kernel_size=7, dilation=2, num_heads=4)
 ```
+
+NA3D also supports different kernel size and dilation values for depth:
+```python
+na3d = NeighborhoodAttention3D(
+	dim=128,
+	kernel_size=7,
+	kernel_size_d=5,
+	dilation=2,
+	dilation_d=3,
+	num_heads=4)
+```
+
+Modules expect inputs of shape `[batch_size, *, dim]`:
+* NA1D: `[batch_size, sequence_length, dim]`
+* NA2D: `[batch_size, height, width, dim]`
+* NA3D: `[batch_size, depth, height, width, dim]`
+
 
 ### FLOPs
 We recommend counting flops through [fvcore](https://github.com/facebookresearch/fvcore).

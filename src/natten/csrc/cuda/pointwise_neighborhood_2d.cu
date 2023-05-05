@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Pointwise-Neighborhood kernel for 1D data.
+    \brief Pointwise-Neighborhood kernel for 2D data.
            Computes attention weights between query points and their corresponding
            key neighborhood.
            Extra kernel with fused bias (relative positional bias.)
