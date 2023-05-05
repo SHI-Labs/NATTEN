@@ -72,6 +72,10 @@ inline int get_pb_start(const int index, const int length, const int KERNEL_SIZE
 
 #define CHECK_SEQUENCE(length, kernel_size, dilation) TORCH_CHECK(length >= kernel_size*dilation, "Input sequence length must be greater than or equal to kernel size x dilation.")
 #define CHECK_FEATMAP(height, width, kernel_size, dilation) TORCH_CHECK(height >= kernel_size*dilation && width >= kernel_size*dilation, "Input resolution must be greater than or equal to kernel size x dilation.")
+#define CHECK_3DFEATMAP(depth, height, width, kernel_size, kernel_size_d, dilation, dilation_d) { \
+    CHECK_SEQUENCE(depth, kernel_size_d, dilation_d);                                             \
+    CHECK_FEATMAP(height, width, kernel_size, dilation);                                          \
+}                                                                                                 \
 
 
 #define _IN_LAUNCH_DNA_KNS(KS, NS, dilation, NAME, ...)                     \
@@ -156,6 +160,61 @@ inline int get_pb_start(const int index, const int length, const int KERNEL_SIZE
             _IN_LAUNCH_DNA_KNS(-1, -1, dilation, NAME, __VA_ARGS__);        \
             break;                                                                                   \
     }                                                                                                \
+})
+
+// 3D KERNEL LAUNCHER
+#define LAUNCH_NA_KDNDS_INN(kernel_size, KERNEL_SIZE_DPTH, NEIGH_SIZE_DPTH, NAME, ...)   \
+({                                                                                       \
+    switch (kernel_size) {                                                               \
+        case 3:                                                                          \
+            NAME<3, KERNEL_SIZE_DPTH, 1, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
+            break;                                                                       \
+        case 5:                                                                          \
+            NAME<5, KERNEL_SIZE_DPTH, 2, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
+            break;                                                                       \
+        case 7:                                                                          \
+            NAME<7, KERNEL_SIZE_DPTH, 3, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
+            break;                                                                       \
+        case 9:                                                                          \
+            NAME<9, KERNEL_SIZE_DPTH, 4, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
+            break;                                                                       \
+        case 11:                                                                         \
+            NAME<11, KERNEL_SIZE_DPTH, 5, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);       \
+            break;                                                                       \
+        case 13:                                                                         \
+            NAME<13, KERNEL_SIZE_DPTH, 6, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);       \
+            break;                                                                       \
+        default:                                                                         \
+            NAME<-1, KERNEL_SIZE_DPTH, -1, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);      \
+            break;                                                                       \
+    }                                                                                    \
+})
+
+#define LAUNCH_NA_KDNDS(kernel_size, kernel_size_d, NAME, ...)              \
+({                                                                          \
+    switch (kernel_size_d) {                                                \
+        case 3:                                                             \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 3, 1, NAME, __VA_ARGS__);      \
+            break;                                                          \
+        case 5:                                                             \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 5, 2, NAME, __VA_ARGS__);      \
+            break;                                                          \
+        case 7:                                                             \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 7, 3, NAME, __VA_ARGS__);      \
+            break;                                                          \
+        case 9:                                                             \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 9, 4, NAME, __VA_ARGS__);      \
+            break;                                                          \
+        case 11:                                                            \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 11, 5, NAME, __VA_ARGS__);     \
+            break;                                                          \
+        case 13:                                                            \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 13, 6, NAME, __VA_ARGS__);     \
+            break;                                                          \
+        default:                                                            \
+            LAUNCH_NA_KDNDS_INN(kernel_size, -1, -1, NAME, __VA_ARGS__);    \
+            break;                                                          \
+    }                                                                       \
 })
 
 #endif

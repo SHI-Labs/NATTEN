@@ -112,7 +112,7 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
 
 #define CHECK_SEQUENCE(length, kernel_size, dilation) TORCH_CHECK(length >= kernel_size*dilation, "Input sequence length must be greater than or equal to kernel size x dilation.")
 #define CHECK_FEATMAP(height, width, kernel_size, dilation) TORCH_CHECK(height >= kernel_size*dilation && width >= kernel_size*dilation, "Input resolution must be greater than or equal to kernel size x dilation.")
-#define CHECK_3DFEATMAP(depth, height, width, kernel_size_d, kernel_size, dilation_d, dilation) TORCH_CHECK(depth >= kernel_size_d*dilation_d && height >= kernel_size*dilation && width >= kernel_size*dilation, "Input resolution must be greater than or equal to kernel size x dilation.")
+#define CHECK_3DFEATMAP(depth, height, width, kernel_size, kernel_size_d, dilation, dilation_d) TORCH_CHECK(depth >= kernel_size_d*dilation_d && height >= kernel_size*dilation && width >= kernel_size*dilation, "Input resolution must be greater than or equal to kernel size x dilation.")
 
 // 2D Neighborhood Attention
 
