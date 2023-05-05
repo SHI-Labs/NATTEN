@@ -88,13 +88,14 @@ std::vector<torch::Tensor> natten3dqkrpb_cpu_backward(
     int width = query.size(4);
     int dim = query.size(5);
     CHECK_3DFEATMAP(depth, height, width, kernel_size, kernel_size_d, dilation, dilation_d);
+    int RPB_MAX_D = kernel_size_d * 2 - 1;
     int RPB_MAX = kernel_size * 2 - 1;
    
     auto d_query = torch::zeros_like(query);
     auto d_key = torch::zeros_like(key);
     at::Tensor d_rpb;
     if (biasEnabled)
-        d_rpb = torch::zeros({heads, RPB_MAX, RPB_MAX, RPB_MAX}, d_attn.options());
+        d_rpb = torch::zeros({heads, RPB_MAX_D, RPB_MAX, RPB_MAX}, d_attn.options());
 
     AT_DISPATCH_FLOATING_TYPES(d_query.scalar_type(), "natten3dqkrpb_backward_cpu", ([&] {
         const auto d_attn_a = d_attn.accessor<scalar_t, 6>();
