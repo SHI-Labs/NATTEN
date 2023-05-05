@@ -27,69 +27,11 @@ from fvcore.nn import FlopCountAnalysis
 from fvcore.nn.jit_handles import get_shape
 
 
-def qk_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
-    """
-    Count flops for the QKRPB kernel.
-    """
-    assert len(inputs) >= 3, f"Expected 3 inputs (query, key, rpb), got {len(inputs)}"
-    assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
-    input_shapes = [get_shape(v) for v in inputs]
-    output_shapes = [get_shape(v) for v in outputs]
-    assert (
-        len(input_shapes[0]) == 5
-    ), f"Query must be a 5-dim tensor, got {len(input_shapes[0])}"
-    assert (
-        len(input_shapes[1]) == 5
-    ), f"Key must be a 5-dim tensor, got {len(input_shapes[1])}"
-    assert (
-        len(input_shapes[2]) == 3
-    ), f"RelPosBias must be a 3-dim tensor, got {len(input_shapes[2])}"
-    assert (
-        len(output_shapes[0]) == 5
-    ), f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
-    assert (
-        input_shapes[0] == input_shapes[1]
-    ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
-    batch_size, heads, height, width, dim = input_shapes[0]
-    batch_size, heads, height, width, kernel_size_sq = output_shapes[0]
-
-    flops = batch_size * heads * height * width * dim * kernel_size_sq
-    flops += batch_size * heads * height * width * kernel_size_sq
-    return flops
-
-
-def av_flop(inputs: List[Any], outputs: List[Any]) -> Number:
-    """
-    Count flops for the AV kernel.
-    """
-    assert len(inputs) >= 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
-    assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
-    input_shapes = [get_shape(v) for v in inputs]
-    output_shapes = [get_shape(v) for v in outputs]
-    assert (
-        len(input_shapes[0]) == 5
-    ), f"Attn must be a 5-dim tensor, got {len(input_shapes[0])}"
-    assert (
-        len(input_shapes[1]) == 5
-    ), f"Value must be a 5-dim tensor, got {len(input_shapes[1])}"
-    assert (
-        len(output_shapes[0]) == 5
-    ), f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
-    assert output_shapes[0] == input_shapes[1], (
-        f"Out and Value shapes did not match! O: {output_shapes[0]}, V:"
-        f" {input_shapes[1]}"
-    )
-    batch_size, heads, height, width, kernel_size_sq = input_shapes[0]
-    batch_size, heads, height, width, dim = output_shapes[0]
-    flops = batch_size * heads * height * width * dim * kernel_size_sq
-    return flops
-
-
 def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
-    Count flops for the 1D QKRPB kernel.
+    Counts flops for the 1D QK operation.
     """
-    assert len(inputs) >= 3, f"Expected 3 inputs (query, key, rpb), got {len(inputs)}"
+    assert len(inputs) >= 2, f"Expected at least 2 inputs (query, key), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -99,9 +41,6 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     assert (
         len(input_shapes[1]) == 4
     ), f"Key must be a 4-dim tensor, got {len(input_shapes[1])}"
-    assert (
-        len(input_shapes[2]) == 2
-    ), f"RelPosBias must be a 2-dim tensor, got {len(input_shapes[2])}"
     assert (
         len(output_shapes[0]) == 4
     ), f"Output must be a 4-dim tensor, got {len(output_shapes[0])}"
@@ -115,12 +54,11 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops += batch_size * heads * length * kernel_size
     return flops
 
-
 def av_1d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     """
-    Count flops for the 1D AV kernel.
+    Counts flops for the 1D AV operation.
     """
-    assert len(inputs) >= 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
+    assert len(inputs) == 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
     assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
     output_shapes = [get_shape(v) for v in outputs]
@@ -142,14 +80,122 @@ def av_1d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     flops = batch_size * heads * length * dim * kernel_size
     return flops
 
+def qk_2d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
+    """
+    Counts flops for the 2D QK operation.
+    """
+    assert len(inputs) >= 2, f"Expected at least 2 inputs (query, key), got {len(inputs)}"
+    assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
+    input_shapes = [get_shape(v) for v in inputs]
+    output_shapes = [get_shape(v) for v in outputs]
+    assert (
+        len(input_shapes[0]) == 5
+    ), f"Query must be a 5-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 5
+    ), f"Key must be a 5-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(output_shapes[0]) == 5
+    ), f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
+    assert (
+        input_shapes[0] == input_shapes[1]
+    ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
+    batch_size, heads, height, width, dim = input_shapes[0]
+    batch_size, heads, height, width, kernel_size_sq = output_shapes[0]
+
+    flops = batch_size * heads * height * width * dim * kernel_size_sq
+    flops += batch_size * heads * height * width * kernel_size_sq
+    return flops
+
+def av_2d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
+    """
+    Counts flops for the 2D AV operation.
+    """
+    assert len(inputs) == 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
+    assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
+    input_shapes = [get_shape(v) for v in inputs]
+    output_shapes = [get_shape(v) for v in outputs]
+    assert (
+        len(input_shapes[0]) == 5
+    ), f"Attn must be a 5-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 5
+    ), f"Value must be a 5-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(output_shapes[0]) == 5
+    ), f"Output must be a 5-dim tensor, got {len(output_shapes[0])}"
+    assert output_shapes[0] == input_shapes[1], (
+        f"Out and Value shapes did not match! O: {output_shapes[0]}, V:"
+        f" {input_shapes[1]}"
+    )
+    batch_size, heads, height, width, kernel_size_sq = input_shapes[0]
+    batch_size, heads, height, width, dim = output_shapes[0]
+    flops = batch_size * heads * height * width * dim * kernel_size_sq
+    return flops
+
+def qk_3d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
+    """
+    Counts flops for the 3D QK operation.
+    """
+    assert len(inputs) >= 2, f"Expected at least 2 inputs (query, key), got {len(inputs)}"
+    assert len(outputs) == 1, f"Expected 1 output (attn), got {len(outputs)}"
+    input_shapes = [get_shape(v) for v in inputs]
+    output_shapes = [get_shape(v) for v in outputs]
+    assert (
+        len(input_shapes[0]) == 6
+    ), f"Query must be a 6-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 6
+    ), f"Key must be a 6-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(output_shapes[0]) == 6
+    ), f"Output must be a 6-dim tensor, got {len(output_shapes[0])}"
+    assert (
+        input_shapes[0] == input_shapes[1]
+    ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
+    batch_size, heads, depth, height, width, dim = input_shapes[0]
+    batch_size, heads, depth, height, width, kernel_size_cu = output_shapes[0]
+
+    flops = batch_size * heads * depth * height * width * dim * kernel_size_cu
+    flops += batch_size * heads * depth * height * width * kernel_size_cu
+    return flops
+
+def av_3d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
+    """
+    Counts flops for the 3D AV operation.
+    """
+    assert len(inputs) == 2, f"Expected 2 inputs (attn and value), got {len(inputs)}"
+    assert len(outputs) == 1, f"Expected 1 output (out), got {len(outputs)}"
+    input_shapes = [get_shape(v) for v in inputs]
+    output_shapes = [get_shape(v) for v in outputs]
+    assert (
+        len(input_shapes[0]) == 6
+    ), f"Attn must be a 6-dim tensor, got {len(input_shapes[0])}"
+    assert (
+        len(input_shapes[1]) == 6
+    ), f"Value must be a 6-dim tensor, got {len(input_shapes[1])}"
+    assert (
+        len(output_shapes[0]) == 6
+    ), f"Output must be a 6-dim tensor, got {len(output_shapes[0])}"
+    assert output_shapes[0] == input_shapes[1], (
+        f"Out and Value shapes did not match! O: {output_shapes[0]}, V:"
+        f" {input_shapes[1]}"
+    )
+    batch_size, heads, depth, height, width, kernel_size_cu = input_shapes[0]
+    batch_size, heads, depth, height, width, dim = output_shapes[0]
+    flops = batch_size * heads * depth * height * width * dim * kernel_size_cu
+    return flops
+
 
 def add_natten_handle(flop_ctr):
     return flop_ctr.set_op_handle(
         **{
-            "prim::PythonOp.NATTEN2DQKRPBFunction": qk_rpb_flop,
-            "prim::PythonOp.NATTEN2DAVFunction": av_flop,
             "prim::PythonOp.NATTEN1DQKRPBFunction": qk_1d_rpb_flop,
             "prim::PythonOp.NATTEN1DAVFunction": av_1d_flop,
+            "prim::PythonOp.NATTEN2DQKRPBFunction": qk_2d_rpb_flop,
+            "prim::PythonOp.NATTEN2DAVFunction": av_2d_flop,
+            "prim::PythonOp.NATTEN3DQKRPBFunction": qk_3d_rpb_flop,
+            "prim::PythonOp.NATTEN3DAVFunction": av_3d_flop,
         }
     )
 

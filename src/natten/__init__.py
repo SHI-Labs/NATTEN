@@ -23,5 +23,6 @@
 
 from .natten1d import NeighborhoodAttention1D
 from .natten2d import NeighborhoodAttention2D
+from .natten3d import NeighborhoodAttention3D
 
 __version__ = "0.14.7.dev"
