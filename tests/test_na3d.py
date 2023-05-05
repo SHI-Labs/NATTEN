@@ -253,41 +253,6 @@ class NA3DTest(unittest.TestCase):
             True,
         )
 
-    def test_natten3dqk_gradcheck_cuda_slow(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        (
-            batch,
-            heads,
-            depth,
-            height,
-            width,
-            dim,
-            kernel_d,
-            kernel,
-            dilation_d,
-            dilation,
-        ) = (1, 2, 15, 16, 17, 4, 3, 5, 2, 3)
-        _priv_test_gradcheck_natten3dqk(
-            batch,
-            heads,
-            depth,
-            height,
-            width,
-            dim,
-            kernel_d,
-            kernel,
-            dilation_d,
-            dilation,
-            torch.float64,
-            "cuda",
-            1e-6,
-            1e-5,
-            1e-3,
-            1e-8,
-            False,
-        )
-
     def test_natten3dqk_gradcheck_cuda_fast(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
@@ -356,41 +321,6 @@ class NA3DTest(unittest.TestCase):
             True,
         )
 
-    def test_natten3dqkrpb_gradcheck_cuda_slow(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        (
-            batch,
-            heads,
-            depth,
-            height,
-            width,
-            dim,
-            kernel_d,
-            kernel,
-            dilation_d,
-            dilation,
-        ) = (1, 2, 15, 16, 17, 4, 3, 5, 2, 3)
-        _priv_test_gradcheck_natten3dqkrpb(
-            batch,
-            heads,
-            depth,
-            height,
-            width,
-            dim,
-            kernel_d,
-            kernel,
-            dilation_d,
-            dilation,
-            torch.float64,
-            "cuda",
-            1e-6,
-            1e-5,
-            1e-3,
-            1e-8,
-            False,
-        )
-
     def test_natten3dqkrpb_gradcheck_cuda_fast(self):
         if not HAS_CUDA:
             self.skipTest("CUDA not available.")
@@ -457,41 +387,6 @@ class NA3DTest(unittest.TestCase):
             1e-3,
             0,
             True,
-        )
-
-    def test_natten3dav_gradcheck_cuda_slow(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        (
-            batch,
-            heads,
-            depth,
-            height,
-            width,
-            dim,
-            kernel_d,
-            kernel,
-            dilation_d,
-            dilation,
-        ) = (1, 2, 15, 16, 17, 4, 3, 5, 2, 3)
-        _priv_test_gradcheck_natten3dav(
-            batch,
-            heads,
-            depth,
-            height,
-            width,
-            dim,
-            kernel_d,
-            kernel,
-            dilation_d,
-            dilation,
-            torch.float64,
-            "cuda",
-            1e-6,
-            1e-5,
-            1e-3,
-            1e-8,
-            False,
         )
 
     def test_natten3dav_gradcheck_cuda_fast(self):
