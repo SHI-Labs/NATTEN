@@ -24,9 +24,7 @@
     \brief Holds dispatchers, and common functions shared between ops.
 */
 
-#ifndef NATTEN_CUDA_COMMONS
-
-#define NATTEN_CUDA_COMMONS
+#pragma once
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -465,4 +463,3 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
     }                                                                                                \
 })
 
-#endif
