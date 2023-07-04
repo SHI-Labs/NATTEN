@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Neighborhood-Neighborhood kernel for 2D data.
+    \brief Neighborhood-Neighborhood kernel for 1D data.
            Applies neighborhood attention weights to neighborhood values.
 */
 
@@ -36,67 +36,65 @@
 #include <ATen/AccumulateType.h>
 #include <cuda_fp16.h>
 
-#include "natten_commons.cuh"
+#include "cuda/natten_commons.cuh"
 
 namespace natten {
 
 template<class scalar_t>
-using Tensor5D = typename torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits>;
+using Tensor4D = typename torch::PackedTensorAccessor32<scalar_t,4,torch::DefaultPtrTraits>;
 
-template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void neighborhood_neighborhood_2d(           // AV     / Q-grad
-    const Tensor5D<scalar_t> weights,                   // attn   / d_attn
-    const Tensor5D<scalar_t> values,                    // value  / key
-    Tensor5D<scalar_t> output,                          // output / d_query
-    const int height,
-    const int width,
+template <int KS, int NS, int DILATION, typename scalar_t>
+__global__ void neighborhood_neighborhood_1d(           // AV     / Q-grad
+    const Tensor4D<scalar_t> weights,                   // attn   / d_attn
+    const Tensor4D<scalar_t> values,                    // value  / key
+    Tensor4D<scalar_t> output,                          // output / d_query
+    const int length,
     const int heads,
+    const int kernel_size_in,
     const int dilation_in,
     const int dim,
     const int totalElements) {
+    const int KERNEL_SIZE = (KS>1) ? KS : kernel_size_in;
+    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
     const int dilation = (DILATION>0) ? DILATION : dilation_in;
     const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < totalElements){
         int indtmp1 = linearIndex/dim;
         const int d = linearIndex - indtmp1 * dim;
-        int indtmp2 = indtmp1/width;
-        const int j = indtmp1 - indtmp2 * width;
-        indtmp1 = indtmp2;
-        indtmp2 = indtmp1/height;
-        const int i = indtmp1 - indtmp2 * height;
+        int indtmp2 = indtmp1/length;
+        const int i = indtmp1 - indtmp2 * length;
         indtmp1 = indtmp2;
         indtmp2 = indtmp1/heads;
         const int h = indtmp1 - indtmp2 * heads;
         const int b = indtmp2;
 
-        const int ni = get_window_start(i, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int nj = get_window_start(j, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int ni = get_window_start(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
         scalar_t updt = scalar_t(0);
-        int weightsOffset = b * weights.stride(0) + h * weights.stride(1) + i * weights.stride(2) + j * weights.stride(3);
+        int weightsOffset = b * weights.stride(0) + h * weights.stride(1) + i * weights.stride(2);
         const int valuesOffset = b * values.stride(0) + h * values.stride(1) + d;
         #pragma unroll
-        for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation)
-            #pragma unroll
-            for (int xj=nj; xj < nj + KERNEL_SIZE * dilation; xj+=dilation){
-                const int valuesIndex = valuesOffset + xi * values.stride(2) + xj * values.stride(3);
-                updt += weights.data()[weightsOffset] * values.data()[valuesIndex];
-                ++weightsOffset;
-            }
+        for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation){
+            const int valuesIndex = valuesOffset + xi * values.stride(2);
+            updt += weights.data()[weightsOffset] * values.data()[valuesIndex];
+            ++weightsOffset;
+        }
         output.data()[linearIndex] = updt;
     }
 }
 
-template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
-__global__ void neighborhood_neighborhood_2d_fp16(      // AV     / Q-grad
-    const Tensor5D<scalar_t> weights,                   // attn   / d_attn
-    const Tensor5D<scalar_t> values,                    // value  / key
-    Tensor5D<scalar_t> output,                          // output / d_query
-    const int height,
-    const int width,
+template <int KS, int NS, int DILATION, typename scalar_t>
+__global__ void neighborhood_neighborhood_1d_fp16(           // AV     / Q-grad
+    const Tensor4D<scalar_t> weights,                        // attn   / d_attn
+    const Tensor4D<scalar_t> values,                         // value  / key
+    Tensor4D<scalar_t> output,                               // output / d_query
+    const int length,
     const int heads,
+    const int kernel_size_in,
     const int dilation_in,
     const int dimhalf,
     const int totalElements) {
+    const int KERNEL_SIZE = (KS>1) ? KS : kernel_size_in;
+    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
     const int dilation = (DILATION>0) ? DILATION : dilation_in;
     const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < totalElements){
@@ -104,31 +102,24 @@ __global__ void neighborhood_neighborhood_2d_fp16(      // AV     / Q-grad
         __half2* output2 = reinterpret_cast<__half2*>(output.data());
         int indtmp1 = linearIndex/dimhalf;
         const int d = linearIndex - indtmp1 * dimhalf;
-        int indtmp2 = indtmp1/width;
-        const int j = indtmp1 - indtmp2 * width;
-        indtmp1 = indtmp2;
-        indtmp2 = indtmp1/height;
-        const int i = indtmp1 - indtmp2 * height;
+        int indtmp2 = indtmp1/length;
+        const int i = indtmp1 - indtmp2 * length;
         indtmp1 = indtmp2;
         indtmp2 = indtmp1/heads;
         const int h = indtmp1 - indtmp2 * heads;
         const int b = indtmp2;
 
-        const int ni = get_window_start(i, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int nj = get_window_start(j, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int ni = get_window_start(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
         __half2 updt = __float2half2_rn(0.f);
-        int weightsOffset = b * weights.stride(0) + h * weights.stride(1) + i * weights.stride(2) + j * weights.stride(3);
-        const int stride2 = dimhalf * width;
-        const int valuesOffset = b * (stride2 * height * heads) + h * (stride2 * height) + d;
+        int weightsOffset = b * weights.stride(0) + h * weights.stride(1) + i * weights.stride(2);
+        const int valuesOffset = b * (dimhalf * length * heads) + h * (dimhalf * length) + d;
         #pragma unroll
-        for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation)
-            #pragma unroll
-            for (int xj=nj; xj < nj + KERNEL_SIZE * dilation; xj+=dilation){
-                const int valuesIndex = valuesOffset + xi * stride2 + xj * dimhalf;
-                scalar_t a = weights.data()[weightsOffset];
-                updt = __hfma2(__halves2half2(a, a), values2[valuesIndex], updt);
-                ++weightsOffset;
-            }
+        for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation){
+            const int valuesIndex = valuesOffset + xi * dimhalf;
+            scalar_t a = weights.data()[weightsOffset];
+            updt = __hfma2(__halves2half2(a, a), values2[valuesIndex], updt);
+            ++weightsOffset;
+        }
         output2[linearIndex] = updt;
     }
 }

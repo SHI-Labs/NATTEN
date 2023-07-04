@@ -21,51 +21,30 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Relative positional bias backward pass CPU kernel for 3D data.
+    \brief Inverse-Neighborhood-Neighborhood CPU kernel for 2D data.
+           Applies inverse neighborhood attention weights to inverse neighborhood values.
+           Used to compute key and value grads.
 */
 
+#pragma once
 #include <torch/extension.h>
-#include <vector>
-#include <ATen/ATen.h>
-#include <ATen/AccumulateType.h>
-
-#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 
-template <int KS, int NS, int DILATION, typename scalar_t>
-void rel_pos_bias_gradient_1d(
-    at::TensorAccessor<scalar_t, 2> d_bias,
-    const at::TensorAccessor<scalar_t, 4> d_attn,
-    const int length,
-    const int heads,
-    const int kernel_size_in,
-    const int dilation_in,
-    const int batch_size);
+template<class scalar_t>
+using Tensor5D = typename at::TensorAccessor<scalar_t, 5>;
 
 template <int KS, int NS, int DILATION, typename scalar_t>
-void rel_pos_bias_gradient_2d(
-    at::TensorAccessor<scalar_t, 3> d_bias,
-    const at::TensorAccessor<scalar_t, 5> d_attn,
+void inverse_neighborhood_2d(          // K-grad / V-grad
+    const Tensor5D<scalar_t> weights,  // d_attn / attn
+    const Tensor5D<scalar_t> values,   // query  / d_out
+    Tensor5D<scalar_t> output,         // d_key  / d_value
     const int height, 
     const int width,
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
-    const int batch_size);
-
-template <int KS, int DKS, int NS, int DNS, typename scalar_t>
-void rel_pos_bias_gradient_3d(
-    at::TensorAccessor<scalar_t, 4> d_bias,
-    const at::TensorAccessor<scalar_t, 6> d_attn,
-    const int depth, 
-    const int height, 
-    const int width,
-    const int heads,
-    const int kernel_size_in,
-    const int kernel_size_d_in,
-    const int dilation,
-    const int dilation_d,
+    const int dim,
     const int batch_size);
 
 } // namespace natten

@@ -21,62 +21,21 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Pointwise-Neighborhood CPU kernel for 1D data.
+    \brief Pointwise-Neighborhood CPU kernel for 2D data.
            Computes attention weights between query points and their corresponding
            key neighborhood.
            Extra kernel with fused bias (relative positional bias.)
 */
 
+#pragma once
 #include <torch/extension.h>
-#include <vector>
-#include <ATen/ATen.h>
-#include <ATen/AccumulateType.h>
-
-#if defined(AVX_INT)
-#include <ATen/cpu/vec/functional.h>
-#include <ATen/cpu/vec/vec.h>
-#endif
-
-#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 
 template<class scalar_t>
-using Tensor2D = typename at::TensorAccessor<scalar_t, 2>;
-template<class scalar_t>
 using Tensor3D = typename at::TensorAccessor<scalar_t, 3>;
 template<class scalar_t>
-using Tensor4D = typename at::TensorAccessor<scalar_t, 4>;
-template<class scalar_t>
 using Tensor5D = typename at::TensorAccessor<scalar_t, 5>;
-template<class scalar_t>
-using Tensor6D = typename at::TensorAccessor<scalar_t, 6>;
-
-template <int KS, int NS, int DILATION, typename scalar_t>
-void pointwise_neighborhood_1d(     // QK    / A-grad
-    const Tensor4D<scalar_t> query, // query / d_out
-    const Tensor4D<scalar_t> key,   // key   / value
-    Tensor4D<scalar_t> attn,        // attn  / d_attn
-    const int length, 
-    const int heads,
-    const int kernel_size_in,
-    const int dilation_in,
-    const int dim,
-    const int batch_size);
-
-template <int KS, int NS, int DILATION, typename scalar_t>
-void pointwise_neighborhood_1d_bias( // QK   
-    const Tensor4D<scalar_t> query,  // query
-    const Tensor4D<scalar_t> key,    // key  
-    const Tensor2D<scalar_t> bias,   // relative positional bias tensor
-    Tensor4D<scalar_t> attn,         // attn
-    const int length, 
-    const int heads,
-    const int kernel_size_in,
-    const int dilation_in,
-    const int dim,
-    const int batch_size);
-
 
 template <int KS, int NS, int DILATION, typename scalar_t>
 void pointwise_neighborhood_2d(     // QK    / A-grad
@@ -91,6 +50,7 @@ void pointwise_neighborhood_2d(     // QK    / A-grad
     const int dim,
     const int batch_size);
 
+
 template <int KS, int NS, int DILATION, typename scalar_t>
 void pointwise_neighborhood_2d_bias( // QK    / A-grad
     const Tensor5D<scalar_t> query,  // query / d_out
@@ -102,40 +62,6 @@ void pointwise_neighborhood_2d_bias( // QK    / A-grad
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
-    const int dim,
-    const int batch_size);
-
-
-template <int KS, int DKS, int NS, int DNS, typename scalar_t>
-void pointwise_neighborhood_3d(     // QK    / A-grad
-    const Tensor6D<scalar_t> query, // query / d_out
-    const Tensor6D<scalar_t> key,   // key   / value
-    Tensor6D<scalar_t> attn,        // attn  / d_attn
-    const int depth, 
-    const int height, 
-    const int width,
-    const int heads,
-    const int kernel_size_in,
-    const int kernel_size_d_in,
-    const int dilation,
-    const int dilation_d,
-    const int dim,
-    const int batch_size);
-
-template <int KS, int DKS, int NS, int DNS, typename scalar_t>
-void pointwise_neighborhood_3d_bias( // QK    / A-grad
-    const Tensor6D<scalar_t> query,  // query / d_out
-    const Tensor6D<scalar_t> key,    // key   / value
-    const Tensor4D<scalar_t> bias,   // relative positional bias tensor
-    Tensor6D<scalar_t> attn,         // attn  / d_attn
-    const int depth, 
-    const int height, 
-    const int width,
-    const int heads,
-    const int kernel_size_in,
-    const int kernel_size_d_in,
-    const int dilation,
-    const int dilation_d,
     const int dim,
     const int batch_size);
 

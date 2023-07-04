@@ -21,74 +21,50 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Inverse-Neighborhood-Neighborhood CPU kernel for 1D data.
-           Applies inverse neighborhood attention weights to inverse neighborhood values.
-           Used to compute key and value grads.
+    \brief Pointwise-Neighborhood CPU kernel for 1D data.
+           Computes attention weights between query points and their corresponding
+           key neighborhood.
+           Extra kernel with fused bias (relative positional bias.)
 */
 
+#pragma once
+#ifndef NATTEN_CPU_PN_1D_H
+#define NATTEN_CPU_PN_1D_H
+
 #include <torch/extension.h>
-#include <vector>
-#include <ATen/ATen.h>
-#include <ATen/AccumulateType.h>
-
-#if defined(AVX_INT)
-#include <ATen/cpu/vec/functional.h>
-#include <ATen/cpu/vec/vec.h>
-#endif
-
-#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 
 template<class scalar_t>
+using Tensor2D = typename at::TensorAccessor<scalar_t, 2>;
+template<class scalar_t>
 using Tensor4D = typename at::TensorAccessor<scalar_t, 4>;
-template<class scalar_t>
-using Tensor5D = typename at::TensorAccessor<scalar_t, 5>;
-template<class scalar_t>
-using Tensor6D = typename at::TensorAccessor<scalar_t, 6>;
-
 
 template <int KS, int NS, int DILATION, typename scalar_t>
-void inverse_neighborhood_1d(          // K-grad / V-grad
-    const Tensor4D<scalar_t> weights,  // d_attn / attn
-    const Tensor4D<scalar_t> values,   // query  / d_out
-    Tensor4D<scalar_t> output,         // d_key  / d_value
-    const int length,
+void pointwise_neighborhood_1d(     // QK    / A-grad
+    const Tensor4D<scalar_t> query, // query / d_out
+    const Tensor4D<scalar_t> key,   // key   / value
+    Tensor4D<scalar_t> attn,        // attn  / d_attn
+    const int length, 
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
     const int dim,
     const int batch_size);
 
-
 template <int KS, int NS, int DILATION, typename scalar_t>
-void inverse_neighborhood_2d(          // K-grad / V-grad
-    const Tensor5D<scalar_t> weights,  // d_attn / attn
-    const Tensor5D<scalar_t> values,   // query  / d_out
-    Tensor5D<scalar_t> output,         // d_key  / d_value
-    const int height, 
-    const int width,
+void pointwise_neighborhood_1d_bias( // QK   
+    const Tensor4D<scalar_t> query,  // query
+    const Tensor4D<scalar_t> key,    // key  
+    const Tensor2D<scalar_t> bias,   // relative positional bias tensor
+    Tensor4D<scalar_t> attn,         // attn
+    const int length, 
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
-    const int dim,
-    const int batch_size);
-
-
-template <int KS, int DKS, int NS, int DNS, typename scalar_t>
-void inverse_neighborhood_3d(          // K-grad / V-grad
-    const Tensor6D<scalar_t> weights,  // d_attn / attn
-    const Tensor6D<scalar_t> values,   // query  / d_out
-    Tensor6D<scalar_t> output,         // d_key  / d_value
-    const int depth, 
-    const int height, 
-    const int width,
-    const int heads,
-    const int kernel_size_in,
-    const int kernel_size_d_in,
-    const int dilation,
-    const int dilation_d,
     const int dim,
     const int batch_size);
 
 } // namespace natten
+
+#endif

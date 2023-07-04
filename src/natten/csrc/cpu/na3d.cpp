@@ -30,10 +30,10 @@
 #include <ATen/AccumulateType.h>
 
 #include "cpu/natten_cpu_commons.h"
-#include "cpu/pointwise_neighborhood.h"
-#include "cpu/neighborhood_neighborhood.h"
-#include "cpu/inverse_neighborhood.h"
-#include "cpu/rel_pos_bias.h"
+#include "cpu/pointwise_neighborhood_3d.hpp"
+#include "cpu/neighborhood_neighborhood_3d.hpp"
+#include "cpu/inverse_neighborhood_3d.hpp"
+#include "cpu/rel_pos_bias_3d.hpp"
 
 namespace natten {
 

@@ -21,58 +21,17 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Neighborhood-Neighborhood CPU kernel for 1D data.
+    \brief Neighborhood-Neighborhood CPU kernel for 3D data.
            Applies neighborhood attention weights to neighborhood values.
 */
 
+#pragma once
 #include <torch/extension.h>
-#include <vector>
-#include <ATen/ATen.h>
-#include <ATen/AccumulateType.h>
-
-#if defined(AVX_INT)
-#include <ATen/cpu/vec/functional.h>
-#include <ATen/cpu/vec/vec.h>
-#endif
-
-#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 
 template<class scalar_t>
-using Tensor4D = typename at::TensorAccessor<scalar_t, 4>;
-template<class scalar_t>
-using Tensor5D = typename at::TensorAccessor<scalar_t, 5>;
-template<class scalar_t>
 using Tensor6D = typename at::TensorAccessor<scalar_t, 6>;
-
-
-template <int KS, int NS, int DILATION, typename scalar_t>
-void neighborhood_neighborhood_1d(           // AV     / Q-grad
-    const Tensor4D<scalar_t> weights,        // attn   / d_attn
-    const Tensor4D<scalar_t> values,         // value  / key
-    Tensor4D<scalar_t> output,               // output / d_query
-    const int length,
-    const int heads,
-    const int kernel_size_in,
-    const int dilation_in,
-    const int dim,
-    const int batch_size);
-
-
-template <int KS, int NS, int DILATION, typename scalar_t>
-void neighborhood_neighborhood_2d(           // AV     / Q-grad
-    const Tensor5D<scalar_t> weights,        // attn   / d_attn
-    const Tensor5D<scalar_t> values,         // value  / key
-    Tensor5D<scalar_t> output,               // output / d_query
-    const int height, 
-    const int width,
-    const int heads,
-    const int kernel_size_in,
-    const int dilation_in,
-    const int dim,
-    const int batch_size);
-
 
 template <int KS, int DKS, int NS, int DNS, typename scalar_t>
 void neighborhood_neighborhood_3d(           // AV     / Q-grad

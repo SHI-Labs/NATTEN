@@ -40,8 +40,8 @@
 #include <ATen/AccumulateType.h>
 #include <cuda_fp16.h>
 
-#include "natten_commons.cuh"
-#include "natten_tiled_macros.cuh"
+#include "cuda/natten_commons.cuh"
+#include "cuda/natten_tiled_macros.cuh"
 
 namespace natten {
 

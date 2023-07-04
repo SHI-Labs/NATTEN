@@ -24,10 +24,7 @@
     \brief Holds common macros for tiled implementations.
 */
 
-#ifndef NATTEN_TILED_MACROS
-
-#define NATTEN_TILED_MACROS
-
+#pragma once
 
 
 #define KERNEL_SIZE_13 13
@@ -107,4 +104,3 @@
 #define QITERS_3_HALF 2
 #define QSTRIDE_3_HALF 8
 
-#endif

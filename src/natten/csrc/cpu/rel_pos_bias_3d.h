@@ -20,36 +20,27 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Relative positional bias backward pass CPU kernel for 3D data.
+*/
 
+#pragma once
 #include <torch/extension.h>
-#include <vector>
-
-#include "context.h"
-
-#include "natten1dav.h"
-#include "natten1dqkrpb.h"
-#include "natten2dav.h"
-#include "natten2dqkrpb.h"
-#include "natten3dav.h"
-#include "natten3dqkrpb.h"
 
 namespace natten {
 
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("natten1dqkrpb_forward", &natten1dqkrpb_forward, "NATTEN1DQK+RPB forward");
-  m.def("natten1dqkrpb_backward", &natten1dqkrpb_backward, "NATTEN1DQK+RPB backward");
-  m.def("natten1dav_forward", &natten1dav_forward, "NATTEN1DAV forward");
-  m.def("natten1dav_backward", &natten1dav_backward, "NATTEN1DAV backward");
-
-  m.def("natten2dqkrpb_forward", &natten2dqkrpb_forward, "NATTEN2DQK+RPB forward");
-  m.def("natten2dqkrpb_backward", &natten2dqkrpb_backward, "NATTEN2DQK+RPB backward");
-  m.def("natten2dav_forward", &natten2dav_forward, "NATTEN2DAV forward");
-  m.def("natten2dav_backward", &natten2dav_backward, "NATTEN2DAV backward");
-
-  m.def("natten3dqkrpb_forward", &natten3dqkrpb_forward, "NATTEN3DQK+RPB forward");
-  m.def("natten3dqkrpb_backward", &natten3dqkrpb_backward, "NATTEN3DQK+RPB backward");
-  m.def("natten3dav_forward", &natten3dav_forward, "NATTEN3DAV forward");
-  m.def("natten3dav_backward", &natten3dav_backward, "NATTEN3DAV backward");
-}
+template <int KS, int DKS, int NS, int DNS, typename scalar_t>
+void rel_pos_bias_gradient_3d(
+    at::TensorAccessor<scalar_t, 4> d_bias,
+    const at::TensorAccessor<scalar_t, 6> d_attn,
+    const int depth, 
+    const int height, 
+    const int width,
+    const int heads,
+    const int kernel_size_in,
+    const int kernel_size_d_in,
+    const int dilation,
+    const int dilation_d,
+    const int batch_size);
 
 } // namespace natten

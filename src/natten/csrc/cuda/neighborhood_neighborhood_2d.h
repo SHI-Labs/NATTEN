@@ -20,36 +20,41 @@
  * SOFTWARE.
  *
  **************************************************************************************************/
+/*! \file
+    \brief Neighborhood-Neighborhood kernel for 2D data.
+           Applies neighborhood attention weights to neighborhood values.
+*/
 
+#include <cuda.h>
 #include <torch/extension.h>
-#include <vector>
-
-#include "context.h"
-
-#include "natten1dav.h"
-#include "natten1dqkrpb.h"
-#include "natten2dav.h"
-#include "natten2dqkrpb.h"
-#include "natten3dav.h"
-#include "natten3dqkrpb.h"
 
 namespace natten {
 
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("natten1dqkrpb_forward", &natten1dqkrpb_forward, "NATTEN1DQK+RPB forward");
-  m.def("natten1dqkrpb_backward", &natten1dqkrpb_backward, "NATTEN1DQK+RPB backward");
-  m.def("natten1dav_forward", &natten1dav_forward, "NATTEN1DAV forward");
-  m.def("natten1dav_backward", &natten1dav_backward, "NATTEN1DAV backward");
+template<class scalar_t>
+using Tensor5D = typename torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits>;
 
-  m.def("natten2dqkrpb_forward", &natten2dqkrpb_forward, "NATTEN2DQK+RPB forward");
-  m.def("natten2dqkrpb_backward", &natten2dqkrpb_backward, "NATTEN2DQK+RPB backward");
-  m.def("natten2dav_forward", &natten2dav_forward, "NATTEN2DAV forward");
-  m.def("natten2dav_backward", &natten2dav_backward, "NATTEN2DAV backward");
+template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
+__global__ void neighborhood_neighborhood_2d(           // AV     / Q-grad
+    const Tensor5D<scalar_t> weights,                   // attn   / d_attn
+    const Tensor5D<scalar_t> values,                    // value  / key
+    Tensor5D<scalar_t> output,                          // output / d_query
+    const int height,
+    const int width,
+    const int heads,
+    const int dilation_in,
+    const int dim,
+    const int totalElements);
 
-  m.def("natten3dqkrpb_forward", &natten3dqkrpb_forward, "NATTEN3DQK+RPB forward");
-  m.def("natten3dqkrpb_backward", &natten3dqkrpb_backward, "NATTEN3DQK+RPB backward");
-  m.def("natten3dav_forward", &natten3dav_forward, "NATTEN3DAV forward");
-  m.def("natten3dav_backward", &natten3dav_backward, "NATTEN3DAV backward");
-}
+template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
+__global__ void neighborhood_neighborhood_2d_fp16(      // AV     / Q-grad
+    const Tensor5D<scalar_t> weights,                   // attn   / d_attn
+    const Tensor5D<scalar_t> values,                    // value  / key
+    Tensor5D<scalar_t> output,                          // output / d_query
+    const int height,
+    const int width,
+    const int heads,
+    const int dilation_in,
+    const int dimhalf,
+    const int totalElements);
 
 } // namespace natten
