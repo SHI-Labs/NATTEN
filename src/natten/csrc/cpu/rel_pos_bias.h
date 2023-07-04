@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Relative positional bias backward pass CPU kernel for 1D data.
+    \brief Relative positional bias backward pass CPU kernel for 3D data.
 */
 
 #include <torch/extension.h>
@@ -29,18 +29,9 @@
 #include <ATen/ATen.h>
 #include <ATen/AccumulateType.h>
 
-#if defined(AVX_INT)
-#include <ATen/cpu/vec/functional.h>
-#include <ATen/cpu/vec/vec.h>
-#endif
-
 #include "cpu/natten_cpu_commons.h"
 
 namespace natten {
-
-#define GRAIN_SIZE 0
-
-// TODO: AVX
 
 template <int KS, int NS, int DILATION, typename scalar_t>
 void rel_pos_bias_gradient_1d(
@@ -50,26 +41,31 @@ void rel_pos_bias_gradient_1d(
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
-    const int batch_size) {
-    const int KERNEL_SIZE = (KS>1) ? KS : kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION>0) ? DILATION : dilation_in;
-    at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
-    for (int h = start; h < end; h++) {
-        for (int i = 0; i < length; i++) {
-            const int pi = get_pb_start(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            for (int ki = 0; ki < KERNEL_SIZE; ki++) {
-                scalar_t d_bias_update = scalar_t(0);
-                int attnOffset = h * d_attn.stride(1) + i * d_attn.stride(2) + ki;
-                for (int b=0; b < batch_size; ++b){
-                    d_bias_update += d_attn.data()[attnOffset];
-                    attnOffset += d_attn.stride(0);
-                }
-                const int index = h * d_bias.stride(0) + (pi+ki) * d_bias.stride(1);
-                d_bias.data()[index] += d_bias_update;
-            }
-        }
-    }});
-}
+    const int batch_size);
+
+template <int KS, int NS, int DILATION, typename scalar_t>
+void rel_pos_bias_gradient_2d(
+    at::TensorAccessor<scalar_t, 3> d_bias,
+    const at::TensorAccessor<scalar_t, 5> d_attn,
+    const int height, 
+    const int width,
+    const int heads,
+    const int kernel_size_in,
+    const int dilation_in,
+    const int batch_size);
+
+template <int KS, int DKS, int NS, int DNS, typename scalar_t>
+void rel_pos_bias_gradient_3d(
+    at::TensorAccessor<scalar_t, 4> d_bias,
+    const at::TensorAccessor<scalar_t, 6> d_attn,
+    const int depth, 
+    const int height, 
+    const int width,
+    const int heads,
+    const int kernel_size_in,
+    const int kernel_size_d_in,
+    const int dilation,
+    const int dilation_d,
+    const int batch_size);
 
 } // namespace natten
