@@ -76,142 +76,142 @@ inline int get_pb_start(const int index, const int length, const int KERNEL_SIZE
 }                                                                                                 \
 
 
-#define _IN_LAUNCH_DNA_KNS(KS, NS, dilation, NAME, ...)                     \
-({                                                                                                   \
+#define _IN_LAUNCH_DNA_KNS(KS, NS, dilation, NAME, ...)                                              \
+  [&] {                                                                                              \
     switch (dilation) {                                                                              \
         case 1:                                                                                      \
-            NAME<KS, NS, 1, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 1, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 2:                                                                                      \
-            NAME<KS, NS, 2, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 2, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 3:                                                                                      \
-            NAME<KS, NS, 3, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 3, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 4:                                                                                      \
-            NAME<KS, NS, 4, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 4, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 5:                                                                                      \
-            NAME<KS, NS, 5, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 5, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 6:                                                                                      \
-            NAME<KS, NS, 6, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 6, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 7:                                                                                      \
-            NAME<KS, NS, 7, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 7, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 8:                                                                                      \
-            NAME<KS, NS, 8, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 8, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 9:                                                                                      \
-            NAME<KS, NS, 9, scalar_t>(__VA_ARGS__);                     \
+            NAME<KS, NS, 9, scalar_t>(__VA_ARGS__);                                                  \
             break;                                                                                   \
         case 10:                                                                                     \
-            NAME<KS, NS, 10, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 10, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         case 11:                                                                                     \
-            NAME<KS, NS, 11, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 11, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         case 12:                                                                                     \
-            NAME<KS, NS, 12, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 12, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         case 13:                                                                                     \
-            NAME<KS, NS, 13, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 13, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         case 14:                                                                                     \
-            NAME<KS, NS, 14, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 14, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         case 15:                                                                                     \
-            NAME<KS, NS, 15, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 15, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         case 16:                                                                                     \
-            NAME<KS, NS, 16, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, 16, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
         default:                                                                                     \
-            NAME<KS, NS, -1, scalar_t>(__VA_ARGS__);                    \
+            NAME<KS, NS, -1, scalar_t>(__VA_ARGS__);                                                 \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
-#define LAUNCH_DNA_KNS(kernel_size, dilation, NAME, ...)                 \
-({                                                                                                   \
+#define LAUNCH_DNA_KNS(kernel_size, dilation, NAME, ...)                                             \
+  [&] {                                                                                              \
     switch (kernel_size) {                                                                           \
         case 3:                                                                                      \
-            _IN_LAUNCH_DNA_KNS(3, 1, dilation, NAME, __VA_ARGS__);          \
+            _IN_LAUNCH_DNA_KNS(3, 1, dilation, NAME, __VA_ARGS__);                                   \
             break;                                                                                   \
         case 5:                                                                                      \
-            _IN_LAUNCH_DNA_KNS(5, 2, dilation, NAME, __VA_ARGS__);          \
+            _IN_LAUNCH_DNA_KNS(5, 2, dilation, NAME, __VA_ARGS__);                                   \
             break;                                                                                   \
         case 7:                                                                                      \
-            _IN_LAUNCH_DNA_KNS(7, 3, dilation, NAME, __VA_ARGS__);          \
+            _IN_LAUNCH_DNA_KNS(7, 3, dilation, NAME, __VA_ARGS__);                                   \
             break;                                                                                   \
         case 9:                                                                                      \
-            _IN_LAUNCH_DNA_KNS(9, 4, dilation, NAME, __VA_ARGS__);          \
+            _IN_LAUNCH_DNA_KNS(9, 4, dilation, NAME, __VA_ARGS__);                                   \
             break;                                                                                   \
         case 11:                                                                                     \
-            _IN_LAUNCH_DNA_KNS(11, 5, dilation, NAME, __VA_ARGS__);         \
+            _IN_LAUNCH_DNA_KNS(11, 5, dilation, NAME, __VA_ARGS__);                                  \
             break;                                                                                   \
         case 13:                                                                                     \
-            _IN_LAUNCH_DNA_KNS(13, 6, dilation, NAME, __VA_ARGS__);         \
+            _IN_LAUNCH_DNA_KNS(13, 6, dilation, NAME, __VA_ARGS__);                                  \
             break;                                                                                   \
         default:                                                                                     \
-            _IN_LAUNCH_DNA_KNS(-1, -1, dilation, NAME, __VA_ARGS__);        \
+            _IN_LAUNCH_DNA_KNS(-1, -1, dilation, NAME, __VA_ARGS__);                                 \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
 // 3D KERNEL LAUNCHER
-#define LAUNCH_NA_KDNDS_INN(kernel_size, KERNEL_SIZE_DPTH, NEIGH_SIZE_DPTH, NAME, ...)   \
-({                                                                                       \
-    switch (kernel_size) {                                                               \
-        case 3:                                                                          \
-            NAME<3, KERNEL_SIZE_DPTH, 1, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
-            break;                                                                       \
-        case 5:                                                                          \
-            NAME<5, KERNEL_SIZE_DPTH, 2, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
-            break;                                                                       \
-        case 7:                                                                          \
-            NAME<7, KERNEL_SIZE_DPTH, 3, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
-            break;                                                                       \
-        case 9:                                                                          \
-            NAME<9, KERNEL_SIZE_DPTH, 4, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);        \
-            break;                                                                       \
-        case 11:                                                                         \
-            NAME<11, KERNEL_SIZE_DPTH, 5, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);       \
-            break;                                                                       \
-        case 13:                                                                         \
-            NAME<13, KERNEL_SIZE_DPTH, 6, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);       \
-            break;                                                                       \
-        default:                                                                         \
-            NAME<-1, KERNEL_SIZE_DPTH, -1, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);      \
-            break;                                                                       \
-    }                                                                                    \
-})
+#define LAUNCH_NA_KDNDS_INN(kernel_size, KERNEL_SIZE_DPTH, NEIGH_SIZE_DPTH, NAME, ...)               \
+  [&] {                                                                                              \
+    switch (kernel_size) {                                                                           \
+        case 3:                                                                                      \
+            NAME<3, KERNEL_SIZE_DPTH, 1, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                    \
+            break;                                                                                   \
+        case 5:                                                                                      \
+            NAME<5, KERNEL_SIZE_DPTH, 2, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                    \
+            break;                                                                                   \
+        case 7:                                                                                      \
+            NAME<7, KERNEL_SIZE_DPTH, 3, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                    \
+            break;                                                                                   \
+        case 9:                                                                                      \
+            NAME<9, KERNEL_SIZE_DPTH, 4, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                    \
+            break;                                                                                   \
+        case 11:                                                                                     \
+            NAME<11, KERNEL_SIZE_DPTH, 5, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                   \
+            break;                                                                                   \
+        case 13:                                                                                     \
+            NAME<13, KERNEL_SIZE_DPTH, 6, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                   \
+            break;                                                                                   \
+        default:                                                                                     \
+            NAME<-1, KERNEL_SIZE_DPTH, -1, NEIGH_SIZE_DPTH, scalar_t>(__VA_ARGS__);                  \
+            break;                                                                                   \
+    }                                                                                                \
+  }()
 
-#define LAUNCH_NA_KDNDS(kernel_size, kernel_size_d, NAME, ...)              \
-({                                                                          \
-    switch (kernel_size_d) {                                                \
-        case 3:                                                             \
-            LAUNCH_NA_KDNDS_INN(kernel_size, 3, 1, NAME, __VA_ARGS__);      \
-            break;                                                          \
-        case 5:                                                             \
-            LAUNCH_NA_KDNDS_INN(kernel_size, 5, 2, NAME, __VA_ARGS__);      \
-            break;                                                          \
-        case 7:                                                             \
-            LAUNCH_NA_KDNDS_INN(kernel_size, 7, 3, NAME, __VA_ARGS__);      \
-            break;                                                          \
-        case 9:                                                             \
-            LAUNCH_NA_KDNDS_INN(kernel_size, 9, 4, NAME, __VA_ARGS__);      \
-            break;                                                          \
-        case 11:                                                            \
-            LAUNCH_NA_KDNDS_INN(kernel_size, 11, 5, NAME, __VA_ARGS__);     \
-            break;                                                          \
-        case 13:                                                            \
-            LAUNCH_NA_KDNDS_INN(kernel_size, 13, 6, NAME, __VA_ARGS__);     \
-            break;                                                          \
-        default:                                                            \
-            LAUNCH_NA_KDNDS_INN(kernel_size, -1, -1, NAME, __VA_ARGS__);    \
-            break;                                                          \
-    }                                                                       \
-})
+#define LAUNCH_NA_KDNDS(kernel_size, kernel_size_d, NAME, ...)                                       \
+  [&] {                                                                                              \
+    switch (kernel_size_d) {                                                                         \
+        case 3:                                                                                      \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 3, 1, NAME, __VA_ARGS__);                               \
+            break;                                                                                   \
+        case 5:                                                                                      \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 5, 2, NAME, __VA_ARGS__);                               \
+            break;                                                                                   \
+        case 7:                                                                                      \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 7, 3, NAME, __VA_ARGS__);                               \
+            break;                                                                                   \
+        case 9:                                                                                      \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 9, 4, NAME, __VA_ARGS__);                               \
+            break;                                                                                   \
+        case 11:                                                                                     \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 11, 5, NAME, __VA_ARGS__);                              \
+            break;                                                                                   \
+        case 13:                                                                                     \
+            LAUNCH_NA_KDNDS_INN(kernel_size, 13, 6, NAME, __VA_ARGS__);                              \
+            break;                                                                                   \
+        default:                                                                                     \
+            LAUNCH_NA_KDNDS_INN(kernel_size, -1, -1, NAME, __VA_ARGS__);                             \
+            break;                                                                                   \
+    }                                                                                                \
+  }()
 

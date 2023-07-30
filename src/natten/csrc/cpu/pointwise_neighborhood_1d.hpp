@@ -38,7 +38,6 @@
 #endif
 
 #include "cpu/natten_cpu_commons.h"
-#include "cpu/pointwise_neighborhood_1d.h"
 
 namespace natten {
 

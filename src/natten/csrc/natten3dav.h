@@ -24,25 +24,25 @@
     \brief Neighborhood Attention 3D - AV (attention * value) bindings
 */
 
-#include <torch/extension.h>
+#include <ATen/ATen.h>
 #include <vector>
 
 namespace natten {
 
 // CPU forward declarations
-torch::Tensor natten3dav_cpu_forward(
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+at::Tensor natten3dav_cpu_forward(
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
     const int dilation);
 
 // CPU backward declarations
-std::vector<torch::Tensor> natten3dav_cpu_backward(
-    const torch::Tensor &d_out,
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+std::vector<at::Tensor> natten3dav_cpu_backward(
+    const at::Tensor &d_out,
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
@@ -50,36 +50,36 @@ std::vector<torch::Tensor> natten3dav_cpu_backward(
 
 #if defined(WITH_CUDA)
 // CUDA forward declarations
-torch::Tensor natten3dav_cuda_forward(
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+at::Tensor natten3dav_cuda_forward(
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
     const int dilation);
 
-torch::Tensor natten3dav_cuda_forward_fp16(
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+at::Tensor natten3dav_cuda_forward_fp16(
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
     const int dilation);
 
 // CUDA backward declarations
-std::vector<torch::Tensor> natten3dav_cuda_backward(
-    const torch::Tensor &d_out,
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+std::vector<at::Tensor> natten3dav_cuda_backward(
+    const at::Tensor &d_out,
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
     const int dilation);
 
-std::vector<torch::Tensor> natten3dav_cuda_backward_fp16(
-    const torch::Tensor &d_out,
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+std::vector<at::Tensor> natten3dav_cuda_backward_fp16(
+    const at::Tensor &d_out,
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
@@ -91,9 +91,9 @@ std::vector<torch::Tensor> natten3dav_cuda_backward_fp16(
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 
-torch::Tensor natten3dav_forward(
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+at::Tensor natten3dav_forward(
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,
@@ -115,10 +115,10 @@ torch::Tensor natten3dav_forward(
     return natten3dav_cpu_forward(attn, value, kernel_size_d, kernel_size, dilation_d, dilation);
 }
 
-std::vector<torch::Tensor> natten3dav_backward(
-    const torch::Tensor &d_out,
-    const torch::Tensor &attn,
-    const torch::Tensor &value,
+std::vector<at::Tensor> natten3dav_backward(
+    const at::Tensor &d_out,
+    const at::Tensor &attn,
+    const at::Tensor &value,
     const int kernel_size_d,
     const int kernel_size,
     const int dilation_d,

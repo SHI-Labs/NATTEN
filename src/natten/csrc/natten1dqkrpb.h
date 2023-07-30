@@ -24,57 +24,57 @@
     \brief Neighborhood Attention 1D - QK (query * key) bindings
 */
 
-#include <torch/extension.h>
+#include <ATen/ATen.h>
 #include <vector>
 
 namespace natten {
 
 // CPU forward declarations
-torch::Tensor natten1dqkrpb_cpu_forward(
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+at::Tensor natten1dqkrpb_cpu_forward(
+    const at::Tensor &query,
+    const at::Tensor &key,
     const at::optional<at::Tensor> &rpb,
     const int kernel_size,
     const int dilation);
 
 // CPU backward declarations
-std::vector<torch::Tensor> natten1dqkrpb_cpu_backward(
-    const torch::Tensor &d_attn,
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+std::vector<at::Tensor> natten1dqkrpb_cpu_backward(
+    const at::Tensor &d_attn,
+    const at::Tensor &query,
+    const at::Tensor &key,
     const bool biasEnabled,
     const int kernel_size,
     const int dilation);
 
 #if defined(WITH_CUDA)
 // CUDA forward declarations
-torch::Tensor natten1dqkrpb_cuda_forward(
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+at::Tensor natten1dqkrpb_cuda_forward(
+    const at::Tensor &query,
+    const at::Tensor &key,
     const at::optional<at::Tensor> &rpb,
     const int kernel_size,
     const int dilation);
 
-torch::Tensor natten1dqkrpb_cuda_forward_fp16(
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+at::Tensor natten1dqkrpb_cuda_forward_fp16(
+    const at::Tensor &query,
+    const at::Tensor &key,
     const at::optional<at::Tensor> &rpb,
     const int kernel_size,
     const int dilation);
 
 // CUDA backward declarations
-std::vector<torch::Tensor> natten1dqkrpb_cuda_backward(
-    const torch::Tensor &d_attn,
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+std::vector<at::Tensor> natten1dqkrpb_cuda_backward(
+    const at::Tensor &d_attn,
+    const at::Tensor &query,
+    const at::Tensor &key,
     const bool biasEnabled,
     const int kernel_size,
     const int dilation);
 
-std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
-    const torch::Tensor &d_attn,
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+std::vector<at::Tensor> natten1dqkrpb_cuda_backward_fp16(
+    const at::Tensor &d_attn,
+    const at::Tensor &query,
+    const at::Tensor &key,
     const bool biasEnabled,
     const int kernel_size,
     const int dilation);
@@ -85,9 +85,9 @@ std::vector<torch::Tensor> natten1dqkrpb_cuda_backward_fp16(
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 
-torch::Tensor natten1dqkrpb_forward(
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+at::Tensor natten1dqkrpb_forward(
+    const at::Tensor &query,
+    const at::Tensor &key,
     const at::optional<at::Tensor> &rpb,
     const int kernel_size,
     const int dilation) {
@@ -113,10 +113,10 @@ torch::Tensor natten1dqkrpb_forward(
     return natten1dqkrpb_cpu_forward(query, key, rpb, kernel_size, dilation);
 }
 
-std::vector<torch::Tensor> natten1dqkrpb_backward(
-    const torch::Tensor &d_attn,
-    const torch::Tensor &query,
-    const torch::Tensor &key,
+std::vector<at::Tensor> natten1dqkrpb_backward(
+    const at::Tensor &d_attn,
+    const at::Tensor &query,
+    const at::Tensor &key,
     const bool biasEnabled,
     const int kernel_size,
     const int dilation) {
