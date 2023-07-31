@@ -21,8 +21,9 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Neighborhood-Neighborhood CPU kernel for 1D data.
-           Applies neighborhood attention weights to neighborhood values.
+    \brief Inverse-Neighborhood-Neighborhood CPU kernel for 2D data.
+           Applies inverse neighborhood attention weights to inverse neighborhood values.
+           Used to compute key and value grads.
 */
 
 #include <torch/extension.h>
@@ -35,23 +36,24 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten_cpu_commons.h"
+#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 
 template<class scalar_t>
-using Tensor4D = typename at::TensorAccessor<scalar_t, 4>;
+using Tensor5D = typename at::TensorAccessor<scalar_t, 5>;
 
 #define GRAIN_SIZE 0
 
 // TODO: AVX
 
 template <int KS, int NS, int DILATION, typename scalar_t>
-void neighborhood_neighborhood_1d(           // AV     / Q-grad
-    const Tensor4D<scalar_t> weights,        // attn   / d_attn
-    const Tensor4D<scalar_t> values,         // value  / key
-    Tensor4D<scalar_t> output,               // output / d_query
-    const int length,
+void inverse_neighborhood_2d(          // K-grad / V-grad
+    const Tensor5D<scalar_t> weights,  // d_attn / attn
+    const Tensor5D<scalar_t> values,   // query  / d_out
+    Tensor5D<scalar_t> output,         // d_key  / d_value
+    const int height, 
+    const int width,
     const int heads,
     const int kernel_size_in,
     const int dilation_in,
@@ -63,21 +65,28 @@ void neighborhood_neighborhood_1d(           // AV     / Q-grad
     for (int b = 0; b < batch_size; b++) {
         at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
         for (int h = start; h < end; h++) {
-            for (int i = 0; i < length; i++) {
-                const int ni = get_window_start(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+            for (int i = 0; i < height; i++) {
+            const int ni = get_backward_window_start(i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+            const int ei = get_backward_window_end(i, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+            for (int j = 0; j < width; j++) {
+                const int nj = get_backward_window_start(j, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                const int ej = get_backward_window_end(j, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
                 for (int d = 0; d < dim; d++) {
+                    const int weightsOffset = b * weights.stride(0) + h * weights.stride(1);
+                    const int outOffset = b * values.stride(0) + h * values.stride(1) + d;
                     scalar_t output_update = scalar_t(0);
-                    int attnOffset = b * weights.stride(0) + h * weights.stride(1) + i * weights.stride(2);
-                    const int valuesOffset = b * values.stride(0) + h * values.stride(1) + d;
-                    for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation){
-                        const int valuesIndex = valuesOffset + xi * values.stride(2);
-                        output_update += weights.data()[attnOffset] * values.data()[valuesIndex];
-                        ++attnOffset;
-                    }
-                    const int linearIndex = b * output.stride(0) + h * output.stride(1) +i * output.stride(2) + d;
+                    for (int xi=ni; xi < ei; xi+=dilation){
+                    const int oni = get_window_start(xi, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                    for (int xj=nj; xj < ej; xj+=dilation){
+                        const int onj = get_window_start(xj, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                        const int outIndex = outOffset + xi * values.stride(2) + xj * values.stride(3);
+                        const int weightsIndex = weightsOffset + xi * weights.stride(2) + xj * weights.stride(3) + int((i-oni)/dilation)*KERNEL_SIZE + int((j-onj)/dilation);
+                        output_update += values.data()[outIndex] * weights.data()[weightsIndex];
+                    }}
+                    const int linearIndex = b*output.stride(0) + h*output.stride(1) + i*output.stride(2) + j*output.stride(3) + d;
                     output.data()[linearIndex] = output_update;
                 }
-            }
+            }}
         }});
     }
 }

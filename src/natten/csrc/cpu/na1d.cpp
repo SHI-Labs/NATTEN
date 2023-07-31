@@ -29,11 +29,11 @@
 #include <ATen/ATen.h>
 #include <ATen/AccumulateType.h>
 
-#include "natten_cpu_commons.h"
-#include "pointwise_neighborhood_1d.cpp"
-#include "neighborhood_neighborhood_1d.cpp"
-#include "inverse_neighborhood_1d.cpp"
-#include "rel_pos_bias_1d.cpp"
+#include "cpu/natten_cpu_commons.h"
+#include "cpu/pointwise_neighborhood_1d.hpp"
+#include "cpu/neighborhood_neighborhood_1d.hpp"
+#include "cpu/inverse_neighborhood_1d.hpp"
+#include "cpu/rel_pos_bias_1d.hpp"
 
 namespace natten {
 

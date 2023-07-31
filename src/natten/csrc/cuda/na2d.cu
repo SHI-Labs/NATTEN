@@ -31,16 +31,15 @@
 #include <vector>
 #include <ATen/cuda/CUDAContext.h>
 #include <ATen/ATen.h>
-#include <ATen/native/cuda/KernelUtils.cuh>
 #include <ATen/AccumulateType.h>
 #include <cuda_fp16.h>
 
-#include "natten_commons.cuh"
-#include "natten_tiled_macros.cuh"
-#include "pointwise_neighborhood_2d.cu"
-#include "neighborhood_neighborhood_2d.cu"
-#include "inverse_neighborhood_2d.cu"
-#include "rel_pos_bias_2d.cu"
+#include "cuda/natten_commons.cuh"
+#include "cuda/natten_tiled_macros.cuh"
+#include "cuda/pointwise_neighborhood_2d.cuh"
+#include "cuda/neighborhood_neighborhood_2d.cuh"
+#include "cuda/inverse_neighborhood_2d.cuh"
+#include "cuda/rel_pos_bias_2d.cuh"
 
 #define CUDA_NUM_THREADS_Q 512
 #define CUDA_NUM_THREADS_K 512

@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Inverse-Neighborhood-Neighborhood kernel for 1D data.
+    \brief Inverse-Neighborhood-Neighborhood kernel for 2D data.
            Applies inverse neighborhood attention weights to inverse neighborhood values.
            Used to compute key and value grads.
 */
@@ -37,66 +37,71 @@
 #include <ATen/AccumulateType.h>
 #include <cuda_fp16.h>
 
-#include "natten_commons.cuh"
+#include "cuda/natten_commons.cuh"
 
 namespace natten {
 
 template<class scalar_t>
-using Tensor4D = typename torch::PackedTensorAccessor32<scalar_t,4,torch::DefaultPtrTraits>;
+using Tensor5D = typename torch::PackedTensorAccessor32<scalar_t,5,torch::DefaultPtrTraits>;
 
-template <int KS, int NS, int DILATION, typename scalar_t>
-__global__ void inverse_neighborhood_1d(           // K-grad / V-grad
-    const Tensor4D<scalar_t> weights,              // d_attn / attn
-    const Tensor4D<scalar_t> values,               // query  / d_out
-    Tensor4D<scalar_t> output,                     // d_key  / d_value
-    const int length,
+template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
+__global__ void inverse_neighborhood_2d(           // K-grad / V-grad
+    const Tensor5D<scalar_t> weights,              // d_attn / attn
+    const Tensor5D<scalar_t> values,               // query  / d_out
+    Tensor5D<scalar_t> output,                     // d_key  / d_value
+    const int height,
+    const int width,
     const int heads,
-    const int kernel_size_in,
     const int dilation_in,
     const int dim,
     const int output_numel) {
-    const int KERNEL_SIZE = (KS>1) ? KS : kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
     const int dilation = (DILATION>0) ? DILATION : dilation_in;
     const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < output_numel){
         int indtmp1 = linearIndex/dim;
         const int d = linearIndex - indtmp1 * dim;
-        int indtmp2 = indtmp1/length;
-        const int i = indtmp1 - indtmp2 * length;
+        int indtmp2 = indtmp1/width;
+        const int j = indtmp1 - indtmp2 * width;
+        indtmp1 = indtmp2;
+        indtmp2 = indtmp1/height;
+        const int i = indtmp1 - indtmp2 * height;
         indtmp1 = indtmp2;
         indtmp2 = indtmp1/heads;
         const int h = indtmp1 - indtmp2 * heads;
         const int b = indtmp2;
         const int ni = get_backward_window_start(i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int ei = get_backward_window_end(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int nj = get_backward_window_start(j, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int ei = get_backward_window_end(i, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int ej = get_backward_window_end(j, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
         const int weightsOffset = b * weights.stride(0) + h * weights.stride(1);
-        const int valuesOffset = b * values.stride(0) + h * values.stride(1) + d;
+        const int outOffset = b * values.stride(0) + h * values.stride(1) + d;
         scalar_t output_update = scalar_t(0);
         #pragma unroll
         for (int xi=ni; xi < ei; xi+=dilation){
-            const int oni = get_window_start(xi, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            const int valuesIndex = valuesOffset + xi * values.stride(2);
-            const int weightsIndex = weightsOffset + xi * weights.stride(2) + int((i-oni)/dilation);
-            output_update += values.data()[valuesIndex] * weights.data()[weightsIndex];
+            const int oni = get_window_start(xi, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+            #pragma unroll
+            for (int xj=nj; xj < ej; xj+=dilation){
+                const int onj = get_window_start(xj, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                const int outIndex = outOffset + xi * values.stride(2) + xj * values.stride(3);
+                const int weightsIndex = weightsOffset + xi * weights.stride(2) + xj * weights.stride(3) + int((i-oni)/dilation)*KERNEL_SIZE+int((j-onj)/dilation);
+                output_update += values.data()[outIndex] * weights.data()[weightsIndex];
+            }
         }
         output.data()[linearIndex] = output_update;
     }
 }
 
-template <int KS, int NS, int DILATION, typename scalar_t>
-__global__ void inverse_neighborhood_1d_fp16(           // K-grad / V-grad
-    const Tensor4D<scalar_t> weights,                   // d_attn / attn
-    const Tensor4D<scalar_t> values,                    // query  / d_out
-    Tensor4D<scalar_t> output,                          // d_key  / d_value
-    const int length,
+template <int KERNEL_SIZE, int NEIGHBORHOOD_SIZE, int DILATION, typename scalar_t>
+__global__ void inverse_neighborhood_2d_fp16(      // K-grad / V-grad
+    const Tensor5D<scalar_t> weights,              // d_attn / attn
+    const Tensor5D<scalar_t> values,               // query  / d_out
+    Tensor5D<scalar_t> output,                     // d_key  / d_value
+    const int height,
+    const int width,
     const int heads,
-    const int kernel_size_in,
     const int dilation_in,
     const int dimhalf,
     const int output_numel) {
-    const int KERNEL_SIZE = (KS>1) ? KS : kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
     const int dilation = (DILATION>0) ? DILATION : dilation_in;
     const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < output_numel){
@@ -104,24 +109,34 @@ __global__ void inverse_neighborhood_1d_fp16(           // K-grad / V-grad
         __half2* output2 = reinterpret_cast<__half2*>(output.data());
         int indtmp1 = linearIndex/dimhalf;
         const int d = linearIndex - indtmp1 * dimhalf;
-        int indtmp2 = indtmp1/length;
-        const int i = indtmp1 - indtmp2 * length;
+        int indtmp2 = indtmp1/width;
+        const int j = indtmp1 - indtmp2 * width;
+        indtmp1 = indtmp2;
+        indtmp2 = indtmp1/height;
+        const int i = indtmp1 - indtmp2 * height;
         indtmp1 = indtmp2;
         indtmp2 = indtmp1/heads;
         const int h = indtmp1 - indtmp2 * heads;
         const int b = indtmp2;
         const int ni = get_backward_window_start(i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int ei = get_backward_window_end(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int nj = get_backward_window_start(j, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int ei = get_backward_window_end(i, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+        const int ej = get_backward_window_end(j, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
         const int weightsOffset = b * weights.stride(0) + h * weights.stride(1);
-        const int valuesOffset = b * (dimhalf * length * heads) + h * (dimhalf * length) + d;
+        const int stride2 = dimhalf * width;
+        const int outOffset = b * (stride2 * height * heads) + h * (stride2 * height) + d;
         __half2 output_update = __float2half2_rn(0.f);
         #pragma unroll
         for (int xi=ni; xi < ei; xi+=dilation){
-            const int oni = get_window_start(xi, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            const int valuesIndex = valuesOffset + xi * dimhalf;
-            const int weightsIndex = weightsOffset + xi * weights.stride(2) + int((i-oni)/dilation);
-            scalar_t a = weights.data()[weightsIndex];
-            output_update = __hfma2(values2[valuesIndex], __halves2half2(a, a), output_update);
+            const int oni = get_window_start(xi, height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+            #pragma unroll
+            for (int xj=nj; xj < ej; xj+=dilation){
+                const int onj = get_window_start(xj, width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                const int outIndex = outOffset + xi * stride2 + xj * dimhalf;
+                const int weightsIndex = weightsOffset + xi * weights.stride(2) + xj * weights.stride(3) + int((i-oni)/dilation)*KERNEL_SIZE+int((j-onj)/dilation);
+                scalar_t a = weights.data()[weightsIndex];
+                output_update = __hfma2(values2[outIndex], __halves2half2(a, a), output_update);
+            }
         }
         output2[linearIndex] = output_update;
     }
