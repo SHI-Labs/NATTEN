@@ -35,7 +35,7 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten_cpu_commons.h"
+#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 

@@ -72,8 +72,8 @@ pip3 install natten
 ```
 
 ### Windows
-NATTEN should support Windows devices with CUDA, but does not yet have Windows wheels.
-You can try and build NATTEN from source (see below).
+NATTEN now supports Windows devices with CUDA, but does not yet have Windows wheels.
+This means you need to clone this repository, and build NATTEN from source, as instructed below.
 
 ### Build from source
 Once you've set up your Python environment and installed PyTorch with CUDA, simply clone and build:

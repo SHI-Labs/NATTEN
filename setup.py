@@ -24,6 +24,7 @@
 
 import warnings
 import glob
+import sys
 import os
 import shutil
 from os import path
@@ -71,8 +72,8 @@ def get_extension():
     extensions_dir = path.join(this_dir, "src", "natten", "csrc")
 
     main_source = path.join(extensions_dir, "natten.cpp")
-    sources_cpu = glob.glob(path.join(extensions_dir, "cpu", "*.cpp"))
-    source_cuda = glob.glob(path.join(extensions_dir, "cuda", "*.cu"))
+    sources_cpu  = glob.glob(path.join(extensions_dir, "cpu", "*.cpp"))
+    sources_cuda = glob.glob(path.join(extensions_dir, "cuda", "*.cu"))
     sources_base = [main_source] + sources_cpu
     sources = sources_base.copy()
 
@@ -96,9 +97,19 @@ def get_extension():
 
     if HAS_CUDA:
         extension = CUDAExtension
-        sources += source_cuda
+        sources += sources_cuda
         define_macros += [("WITH_CUDA", 1)]
         extra_compile_args["nvcc"] = ["-O3"]
+
+        if sys.platform == "win32":
+            # Inspired by  xFormers setup script
+            extra_compile_args["nvcc"] += [
+                "-std=c++17",
+                "-Xcompiler",
+                "/Zc:lambda",
+                "-Xcompiler",
+                "/Zc:preprocessor",
+            ]
 
     include_dirs = [extensions_dir]
 

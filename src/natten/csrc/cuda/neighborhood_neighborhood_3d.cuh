@@ -36,7 +36,7 @@
 #include <ATen/AccumulateType.h>
 #include <cuda_fp16.h>
 
-#include "natten_commons.cuh"
+#include "cuda/natten_commons.cuh"
 
 namespace natten {
 

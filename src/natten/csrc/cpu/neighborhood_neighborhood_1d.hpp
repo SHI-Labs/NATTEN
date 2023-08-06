@@ -21,9 +21,8 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Inverse-Neighborhood-Neighborhood CPU kernel for 1D data.
-           Applies inverse neighborhood attention weights to inverse neighborhood values.
-           Used to compute key and value grads.
+    \brief Neighborhood-Neighborhood CPU kernel for 1D data.
+           Applies neighborhood attention weights to neighborhood values.
 */
 
 #include <torch/extension.h>
@@ -36,7 +35,7 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten_cpu_commons.h"
+#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 
@@ -48,10 +47,10 @@ using Tensor4D = typename at::TensorAccessor<scalar_t, 4>;
 // TODO: AVX
 
 template <int KS, int NS, int DILATION, typename scalar_t>
-void inverse_neighborhood_1d(          // K-grad / V-grad
-    const Tensor4D<scalar_t> weights,  // d_attn / attn
-    const Tensor4D<scalar_t> values,   // query  / d_out
-    Tensor4D<scalar_t> output,         // d_key  / d_value
+void neighborhood_neighborhood_1d(           // AV     / Q-grad
+    const Tensor4D<scalar_t> weights,        // attn   / d_attn
+    const Tensor4D<scalar_t> values,         // value  / key
+    Tensor4D<scalar_t> output,               // output / d_query
     const int length,
     const int heads,
     const int kernel_size_in,
@@ -65,19 +64,17 @@ void inverse_neighborhood_1d(          // K-grad / V-grad
         at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
         for (int h = start; h < end; h++) {
             for (int i = 0; i < length; i++) {
-                const int ni = get_backward_window_start(i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-                const int ei = get_backward_window_end(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                const int ni = get_window_start(i, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
                 for (int d = 0; d < dim; d++) {
-                    const int weightsOffset = b * weights.stride(0) + h * weights.stride(1);
-                    const int valuesOffset = b * values.stride(0) + h * values.stride(1) + d;
                     scalar_t output_update = scalar_t(0);
-                    for (int xi=ni; xi < ei; xi+=dilation){
-                        const int oni = get_window_start(xi, length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+                    int attnOffset = b * weights.stride(0) + h * weights.stride(1) + i * weights.stride(2);
+                    const int valuesOffset = b * values.stride(0) + h * values.stride(1) + d;
+                    for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation){
                         const int valuesIndex = valuesOffset + xi * values.stride(2);
-                        const int weightsIndex = weightsOffset + xi * weights.stride(2) + int((i-oni)/dilation);
-                        output_update += values.data()[valuesIndex] * weights.data()[weightsIndex];
+                        output_update += weights.data()[attnOffset] * values.data()[valuesIndex];
+                        ++attnOffset;
                     }
-                    const int linearIndex = b*output.stride(0) + h*output.stride(1) + i*output.stride(2) + d;
+                    const int linearIndex = b * output.stride(0) + h * output.stride(1) +i * output.stride(2) + d;
                     output.data()[linearIndex] = output_update;
                 }
             }

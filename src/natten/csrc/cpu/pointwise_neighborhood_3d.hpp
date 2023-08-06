@@ -32,7 +32,7 @@
 #include <ATen/ATen.h>
 #include <ATen/AccumulateType.h>
 
-#include "natten_cpu_commons.h"
+#include "cpu/natten_cpu_commons.h"
 
 namespace natten {
 

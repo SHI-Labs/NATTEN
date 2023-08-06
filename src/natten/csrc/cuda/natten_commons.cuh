@@ -24,9 +24,7 @@
     \brief Holds dispatchers, and common functions shared between ops.
 */
 
-#ifndef NATTEN_CUDA_COMMONS
-
-#define NATTEN_CUDA_COMMONS
+#pragma once
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -126,7 +124,7 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
 
 // First number is the kernel size itself, second is floor(kernel_size / 2) aka neighborhood radius.
 #define LAUNCH_DNA_KNS(kernel_size, dilation, NAME, BLK, TPB, SMEM, CSTREAM, ...)                    \
-({                                                                                                   \
+  [&] {                                                                                              \
     switch (kernel_size) {                                                                           \
         case 3:                                                                                      \
             _IN_LAUNCH_DNA_KNS(3, 1, dilation, NAME, BLK, TPB, SMEM, CSTREAM, __VA_ARGS__);          \
@@ -150,10 +148,10 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             TORCH_INTERNAL_ASSERT(false);                                                            \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
 #define _IN_LAUNCH_DNA_KNS(KS, NS, dilation, NAME, BLK, TPB, SMEM, CSTREAM, ...)                     \
-({                                                                                                   \
+  [&] {                                                                                              \
     switch (dilation) {                                                                              \
         case 1:                                                                                      \
             NAME<KS, NS, 1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
@@ -207,10 +205,10 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             NAME<KS, NS, -1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
 #define LAUNCH_DNA_KNS_TILED79(TILE, KTILE, KS, NS, dilation, NAME, BLK, TPB, SMEM, CSTREAM, ...)    \
-({                                                                                                   \
+  [&] {                                                                                              \
     switch (dilation) {                                                                              \
         case 1:                                                                                      \
             NAME<TILE, KTILE, KS, NS, 1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);        \
@@ -264,10 +262,10 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             NAME<TILE, KTILE, KS, NS, -1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);       \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
 #define LAUNCH_DNA_KNS_TILED1113(TX, TY, KX, KY, KS, NS, dilation, TMP, NAME, BLK, TPB, SMEM, CSTREAM, ...)  \
-({                                                                                                           \
+  [&] {                                                                                                      \
     switch (dilation) {                                                                                      \
         case 1:                                                                                              \
             NAME<TX, TY, KX, KY, KS, NS, 1, scalar_t, TMP><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);        \
@@ -321,70 +319,70 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             NAME<TX, TY, KX, KY, KS, NS, -1, scalar_t, TMP><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);       \
             break;                                                                                           \
     }                                                                                                        \
-})
+  }()
 
-#define LAUNCH_DNA_DS(dilation, NAME, BLK, TPB, SMEM, CSTREAM, ...)                     \
-({                                                                                                   \
+#define LAUNCH_DNA_DS(dilation, NAME, BLK, TPB, SMEM, CSTREAM, ...)                                  \
+  [&] {                                                                                              \
     switch (dilation) {                                                                              \
         case 1:                                                                                      \
-            NAME<1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 2:                                                                                      \
-            NAME<2, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<2, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 3:                                                                                      \
-            NAME<3, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<3, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 4:                                                                                      \
-            NAME<4, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<4, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 5:                                                                                      \
-            NAME<5, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<5, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 6:                                                                                      \
-            NAME<6, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<6, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 7:                                                                                      \
-            NAME<7, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<7, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 8:                                                                                      \
-            NAME<8, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<8, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 9:                                                                                      \
-            NAME<9, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                     \
+            NAME<9, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                             \
             break;                                                                                   \
         case 10:                                                                                     \
-            NAME<10, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<10, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         case 11:                                                                                     \
-            NAME<11, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<11, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         case 12:                                                                                     \
-            NAME<12, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<12, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         case 13:                                                                                     \
-            NAME<13, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<13, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         case 14:                                                                                     \
-            NAME<14, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<14, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         case 15:                                                                                     \
-            NAME<15, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<15, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         case 16:                                                                                     \
-            NAME<16, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<16, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
         default:                                                                                     \
-            NAME<-1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                    \
+            NAME<-1, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);                            \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
 
 // 1D KERNEL LAUNCHER
 // First number is the kernel size itself, second is floor(kernel_size / 2) aka neighborhood radius.
 #define LAUNCH_DNA_KNS_1D(kernel_size, dilation, NAME, BLK, TPB, SMEM, CSTREAM, ...)                 \
-({                                                                                                   \
+  [&] {                                                                                              \
     switch (kernel_size) {                                                                           \
         case 3:                                                                                      \
             _IN_LAUNCH_DNA_KNS(3, 1, dilation, NAME, BLK, TPB, SMEM, CSTREAM, __VA_ARGS__);          \
@@ -408,11 +406,11 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             _IN_LAUNCH_DNA_KNS(-1, -1, dilation, NAME, BLK, TPB, SMEM, CSTREAM, __VA_ARGS__);        \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
 // 3D KERNEL LAUNCHER
 #define LAUNCH_NA_KDNDS_INN(kernel_size, KERNEL_SIZE_DPTH, NEIGH_SIZE_DPTH, NAME, BLK, TPB, SMEM, CSTREAM, ...)       \
-({                                                                                                                    \
+  [&] {                                                                                                               \
     switch (kernel_size) {                                                                                            \
         case 3:                                                                                                       \
             NAME<3, KERNEL_SIZE_DPTH, 1, NEIGH_SIZE_DPTH, scalar_t><<<BLK, TPB, SMEM, CSTREAM>>>(__VA_ARGS__);        \
@@ -436,10 +434,10 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             TORCH_INTERNAL_ASSERT(false);                                                                             \
             break;                                                                                                    \
     }                                                                                                                 \
-})
+  }()
 
 #define LAUNCH_NA_KDNDS(kernel_size, kernel_size_d, NAME, BLK, TPB, SMEM, CSTREAM, ...)              \
-({                                                                                                   \
+  [&] {                                                                                              \
     switch (kernel_size_d) {                                                                         \
         case 3:                                                                                      \
             LAUNCH_NA_KDNDS_INN(kernel_size, 3, 1, NAME, BLK, TPB, SMEM, CSTREAM, __VA_ARGS__);      \
@@ -463,6 +461,5 @@ inline __host__ __device__ int get_pb_start(const int index, const int length, c
             TORCH_INTERNAL_ASSERT(false);                                                            \
             break;                                                                                   \
     }                                                                                                \
-})
+  }()
 
-#endif
