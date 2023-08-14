@@ -8,6 +8,10 @@ Bringing attention to a neighborhood near you!
 
 NATTEN is an open-source project aimed at providing an interface to neighborhood attention, and more generally sliding window
 attention.
+If you're not familiar with neighborhood attention, we recommend referring to 
+[our papers](https://github.com/SHI-Labs/Neighborhood-Attention-Transformer), or watching our 
+presentation on [YouTube](https://www.youtube.com/watch?v=Ya4BfioxIHA).
+
 NATTEN currently works as an extension to PyTorch, but we plan to reduce dependency on the torch API and possibly support other
 deep learning frameworks in the future.
 NATTEN provides <a href="https://arxiv.org/abs/2204.07143">Neighborhood Attention</a> (local attention)
@@ -254,3 +258,8 @@ NATTEN is released under the [MIT License](LICENSE).
 	primaryclass = {cs.CV}
 }
 ```
+
+## Acknowledgements
+We would like to thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/) and team for their efforts in
+creating and open-sourcing CUTLASS. We would also like to thank Haicheng Wu for his valuable feedback and comments which led to
+the creation of Implicit GEMM NA.

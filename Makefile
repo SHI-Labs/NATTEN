@@ -5,9 +5,13 @@ WORKERS=
 
 check_dirs := src tests
 
-all: clean uninstall install
+all: clean uninstall fetch-submodules install
 
-full: clean uninstall install-deps install
+full: clean uninstall install-deps fetch-submodules install
+
+fetch-submodules:
+	@echo "Fetching all third party submodules"
+	git submodule update --init --recursive
 
 sdist:
 	@echo "Generating source dist"
