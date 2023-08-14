@@ -28,7 +28,13 @@ structure. We plan to write new kernels based on CUTLASS 3.X and CUTE in the nea
 
 ### What does this mean?
 It means that if you're running on SM80 or higher (Ampere, Ada Lovelace, Hopper), you can start using our GEMM based kernels
-and see up to 10X improvement in latency.
+and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 implementations do not typically
+result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
+
+![GEMMvsNaive](assets/gemm_vs_naive.png)
+
+NOTE: the table presents the average improvement in latency over different problem sizes with full precision (tfloat32).
+
 Volta and earlier are not supported at this time, but feel free to open an issue if you're interested.
 
 The new NATTEN is also heavily refactored to both continue to support older architectures with our naive kernels, and to
@@ -263,3 +269,6 @@ NATTEN is released under the [MIT License](LICENSE).
 We would like to thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/) and team for their efforts in
 creating and open-sourcing CUTLASS. We would also like to thank Haicheng Wu for his valuable feedback and comments which led to
 the creation of Implicit GEMM NA.
+We also thank Meta, and the [PyTorch](https://github.com/pytorch/pytorch/) project, 
+specifically [Shen Li](https://mrshenli.github.io/) for his early contributions to Neighborhood Attention Transformer, 
+and the development of the initial NA kernels.
