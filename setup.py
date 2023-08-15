@@ -34,7 +34,7 @@ from setuptools import find_packages, setup
 from setuptools.command.build_ext import build_ext
 from typing import List
 import torch
-from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension
+from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, IS_MACOS, IS_WINDOWS, _nt_quote_args, SHARED_FLAG
 from pathlib import Path
 
 this_directory = Path(__file__).parent
@@ -80,6 +80,10 @@ else:
     print(f"Building NATTEN for CPU ONLY.")
 
 print(f"Number of workers: {n_workers}")
+
+# TODO: pretty sure this means nothing with the latest CMake config.
+# We should be getting all of torch's additional compiler flags.
+torch_ext_fn = CUDAExtension if HAS_CUDA else CppExtension
 
 
 def get_version():
@@ -130,6 +134,7 @@ class BuildExtension(build_ext):
         except OSError:
             raise RuntimeError('Cannot find CMake executable')
 
+        # TODO: fix this!!!
         # This is where it gets super hacky
         # We're cutting off whatever compiler setuptools picks right here.
         # What's worse is that we're taking the path where it --would-- dump the final
@@ -147,21 +152,23 @@ class BuildExtension(build_ext):
             torch_cuda_arch_list = cuda_arch # Expects x.x -- i.e. 8.6
             cuda_arch_list, n_arch = get_cuda_arch_list(cuda_arch) # Expects xx -- i.e. 86
 
-        # TODO: this assertion prevents building binaries that target multiple architectures,
-        # a.k.a. wheels. The reason for it is that we need to separate builds by architecture now
-        # with the bfloat16 support, and the GEMM kernels which target SM80.
-        # This should be resolved before our next release, and the assertion will be removed or
-        # made conditional.
-        assert n_arch == 1, f"This commit does not yet support building NATTEN for multiple architectures. " + \
-            f"You selected {n_arch} architectures: {cuda_arch_list}. " + \
-            f"Please select only one architecture."
-        current_arch = int(cuda_arch_list)
-        print(f"Current arch: {current_arch}")
+            # TODO: this assertion prevents building binaries that target multiple architectures,
+            # a.k.a. wheels. The reason for it is that we need to separate builds by architecture now
+            # with the bfloat16 support, and the GEMM kernels which target SM80.
+            # This should be resolved before our next release, and the assertion will be removed or
+            # made conditional.
+            assert n_arch == 1, f"This commit does not yet support building NATTEN for multiple architectures. " + \
+                f"You selected {n_arch} architectures: {cuda_arch_list}. " + \
+                f"Please select only one architecture."
+            current_arch = int(cuda_arch_list)
+            print(f"Current arch: {current_arch}")
 
         cmake_args = [
             f"-DOUTPUT_FILE_NAME={output_so_name}",
             f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list}",
             f"-DNATTEN_TORCH_CUDA_ARCH_LIST={torch_cuda_arch_list}",
+            f"-DNATTEN_IS_WINDOWS={int(IS_WINDOWS)}",
+            f"-DNATTEN_IS_MAC={int(IS_MACOS)}",
         ]
 
         if AVX_INT:
@@ -176,6 +183,14 @@ class BuildExtension(build_ext):
                 cmake_args.append("-DNATTEN_WITH_CUDA_BF16=1")
             if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
+
+        extra_compile_args = ""
+        for name in ["COMPILER_TYPE", "STDLIB", "BUILD_ABI"]:
+            val = getattr(torch._C, f"_PYBIND11_{name}")
+            if val is not None and not IS_WINDOWS:
+                extra_compile_args += f'-DPYBIND11_{name}=\"{val}\" '
+        extra_compile_args += '-D_GLIBCXX_USE_CXX11_ABI=' + str(int(torch._C._GLIBCXX_USE_CXX11_ABI))
+        cmake_args.append(f"-DNATTEN_EXTRA_ARGS={extra_compile_args}")
 
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)
@@ -216,6 +231,6 @@ setup(
             "fvcore>=0.1.5,<0.1.6",  # required like this to make it pip installable
         ],
     },
-    ext_modules=[CUDAExtension("natten._C", [])],
+    ext_modules=[torch_ext_fn("natten._C", [])],
     cmdclass={'build_ext': BuildExtension},
 )

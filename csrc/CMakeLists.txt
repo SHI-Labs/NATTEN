@@ -61,9 +61,12 @@ if(${NATTEN_WITH_CUDA})
 endif()
 
 # Compiler flags
-# Mostly adopted from FT, adjusted to make sure GLIBCXX ABI is disabled.
-# Torch releases do not support that, and undefined symbols will prevent
-# the compiled library from loading.
+if(${NATTEN_IS_MAC})
+	message("Building NATTEN on MacOS.")
+	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+	set(CMAKE_SHARED_LIBRARY_SUFFIX_C ".so")
+	set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX ".so")
+endif()
 
 set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17")
@@ -89,14 +92,11 @@ if(${NATTEN_WITH_CUDA})
 	message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
 endif()
 
-set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-
-# So there's no room for error
-add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
+set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} ${NATTEN_EXTRA_ARGS}")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${NATTEN_EXTRA_ARGS}")
+set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} ${NATTEN_EXTRA_ARGS}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${NATTEN_EXTRA_ARGS}")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${NATTEN_EXTRA_ARGS}")
 
 if(${NATTEN_WITH_CUDA})
 # CUDA flags
@@ -183,6 +183,10 @@ if(${NATTEN_WITH_CUDA})
 	set_target_properties(natten PROPERTIES CUDA_ARCHITECTURES ${NATTEN_CUDA_ARCH_LIST})
 endif()
 
+if(${NATTEN_IS_MAC})
+	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,dynamic_lookup")
+endif()
+
 # TODO: figure out how to do this right
 # Context: FT links to cudart and ${TORCH_LIBRARIES} (from torch cmake)
 # However, that just doesn't work. ${TORCH_LIBRARIES} does not include c10 and torch_python,
@@ -193,5 +197,3 @@ target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python -l
 else()
 target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python")
 endif()
-
-
