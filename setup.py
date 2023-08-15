@@ -34,7 +34,7 @@ from setuptools import find_packages, setup
 from setuptools.command.build_ext import build_ext
 from typing import List
 import torch
-from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, IS_MACOS, IS_WINDOWS, _nt_quote_args, SHARED_FLAG
+from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, IS_MACOS, IS_WINDOWS, _nt_quote_args, SHARED_FLAG, LIB_EXT
 from pathlib import Path
 
 this_directory = Path(__file__).parent
@@ -141,7 +141,7 @@ class BuildExtension(build_ext):
         # library, and passing it down to CMake so that it dumps it there.
 
         output_so_name = self.get_ext_filename(ext.name) # i.e. _C.cpython-VERSION-ARCH-OS.so
-        output_so_name = output_so_name.replace('.so', '')
+        output_so_name = output_so_name.replace(LIB_EXT, '')
 
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
@@ -183,14 +183,6 @@ class BuildExtension(build_ext):
                 cmake_args.append("-DNATTEN_WITH_CUDA_BF16=1")
             if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
-
-        extra_compile_args = ""
-        for name in ["COMPILER_TYPE", "STDLIB", "BUILD_ABI"]:
-            val = getattr(torch._C, f"_PYBIND11_{name}")
-            if val is not None and not IS_WINDOWS:
-                extra_compile_args += f'-DPYBIND11_{name}=\"{val}\" '
-        extra_compile_args += '-D_GLIBCXX_USE_CXX11_ABI=' + str(int(torch._C._GLIBCXX_USE_CXX11_ABI))
-        cmake_args.append(f"-DNATTEN_EXTRA_ARGS={extra_compile_args}")
 
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)

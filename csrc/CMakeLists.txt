@@ -66,6 +66,11 @@ if(${NATTEN_IS_MAC})
 	set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
 	set(CMAKE_SHARED_LIBRARY_SUFFIX_C ".so")
 	set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX ".so")
+elseif(${NATTEN_IS_WINDOWS})
+	message("Building NATTEN on Windows.")
+	set(CMAKE_SHARED_LIBRARY_SUFFIX ".pyd")
+	set(CMAKE_SHARED_LIBRARY_SUFFIX_C ".pyd")
+	set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX ".pyd")
 endif()
 
 set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}")
@@ -92,11 +97,14 @@ if(${NATTEN_WITH_CUDA})
 	message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
 endif()
 
-set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} ${NATTEN_EXTRA_ARGS}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${NATTEN_EXTRA_ARGS}")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} ${NATTEN_EXTRA_ARGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${NATTEN_EXTRA_ARGS}")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${NATTEN_EXTRA_ARGS}")
+set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -D_GLIBCXX_USE_CXX11_ABI=0")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_GLIBCXX_USE_CXX11_ABI=0")
+set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -D_GLIBCXX_USE_CXX11_ABI=0")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_USE_CXX11_ABI=0")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
+
+# So there's no room for error
+add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
 
 if(${NATTEN_WITH_CUDA})
 # CUDA flags
@@ -187,11 +195,6 @@ if(${NATTEN_IS_MAC})
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,dynamic_lookup")
 endif()
 
-# TODO: figure out how to do this right
-# Context: FT links to cudart and ${TORCH_LIBRARIES} (from torch cmake)
-# However, that just doesn't work. ${TORCH_LIBRARIES} does not include c10 and torch_python,
-# and without those PyBind sources aren't linked and we hit undefined symbols.
-# NOTE: FT does not use PyBind directly; they appear to be linking through torch's just-in-time API.
 if(${NATTEN_WITH_CUDA})
 target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda")
 else()
