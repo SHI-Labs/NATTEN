@@ -29,281 +29,269 @@ import torch
 from torch.autograd import gradcheck
 from torch.utils.cpp_extension import CUDA_HOME
 
-from natten import NeighborhoodAttention1D
+from natten import (disable_gemm_na, disable_tf32, disable_tiled_na,
+                    enable_gemm_na, enable_tf32, enable_tiled_na, has_bfloat,
+                    has_cuda, has_gemm, has_half)
 from natten.functional import natten1dav, natten1dqkrpb
 
-HAS_CUDA = (
-    torch.cuda.is_available()
-    and (CUDA_HOME is not None)
-    or os.getenv("FORCE_CUDA", "0") == "1"
-)
+HAS_CUDA = torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
+HAS_GEMM = has_gemm()
+HAS_HALF = has_half()
+HAS_BFLOAT = has_bfloat()
 logger = logging.getLogger(__name__)
 
 
-def _priv_test_gradcheck_natten1dqk(
-    batch_size,
-    heads,
-    length,
-    dim,
-    kernel_size,
-    dilation,
-    dtype,
-    device,
-    eps,
-    atol,
-    rtol,
-    ndtol,
-    fast_mode,
-):
-    torch.manual_seed(42)
-    md = "FAST" if fast_mode else "SLOW"
-    kwargs = {"dtype": dtype, "device": device, "requires_grad": True}
-    query = torch.randn((batch_size, heads, length, dim), **kwargs)
-    key = torch.randn((batch_size, heads, length, dim), **kwargs)
-    rpb = None
-    variables = [query, key, rpb, kernel_size, dilation]
-
-    assert gradcheck(
-        natten1dqkrpb,
-        variables,
-        eps=eps,
-        atol=atol,
-        rtol=rtol,
-        nondet_tol=ndtol,
-        fast_mode=fast_mode,
-    ), f"Gradcheck failed for `NATTEN1D-QK` with {dtype} on {device}, {md} MODE."
-
-
-def _priv_test_gradcheck_natten1dqkrpb(
-    batch_size,
-    heads,
-    length,
-    dim,
-    kernel_size,
-    dilation,
-    dtype,
-    device,
-    eps,
-    atol,
-    rtol,
-    ndtol,
-    fast_mode,
-):
-    torch.manual_seed(42)
-    md = "FAST" if fast_mode else "SLOW"
-    kwargs = {"dtype": dtype, "device": device, "requires_grad": True}
-    query = torch.randn((batch_size, heads, length, dim), **kwargs)
-    key = torch.randn((batch_size, heads, length, dim), **kwargs)
-    rpb = torch.randn((heads, 2 * kernel_size - 1), **kwargs)
-    variables = [query, key, rpb, kernel_size, dilation]
-
-    assert gradcheck(
-        natten1dqkrpb,
-        variables,
-        eps=eps,
-        atol=atol,
-        rtol=rtol,
-        nondet_tol=ndtol,
-        fast_mode=fast_mode,
-    ), f"Gradcheck failed for `NATTEN1D-QKRPB` with {dtype} on {device}, {md} MODE."
-
-
-def _priv_test_gradcheck_natten1dav(
-    batch_size,
-    heads,
-    length,
-    dim,
-    kernel_size,
-    dilation,
-    dtype,
-    device,
-    eps,
-    atol,
-    rtol,
-    ndtol,
-    fast_mode,
-):
-    torch.manual_seed(42)
-    md = "FAST" if fast_mode else "SLOW"
-    kwargs = {"dtype": dtype, "device": device, "requires_grad": True}
-    attn = torch.randn((batch_size, heads, length, kernel_size), **kwargs)
-    value = torch.randn((batch_size, heads, length, dim), **kwargs)
-    variables = [attn, value, kernel_size, dilation]
-
-    assert gradcheck(
-        natten1dav,
-        variables,
-        eps=eps,
-        atol=atol,
-        rtol=rtol,
-        nondet_tol=ndtol,
-        fast_mode=fast_mode,
-    ), f"Gradcheck failed for `NATTEN1D-AV` with {dtype} on {device}, {md} MODE."
-
-
-def _priv_test_allclose_cpu_cuda(
-    batch_size,
-    length,
-    kernel_sizes=[3, 5, 7, 9, 11, 13],
-    dims=[4, 16, 32],
-    heads=[1, 2, 3, 4],
-    tol=1e-6,
-):
-    for kernel_size in kernel_sizes:
-        for dim in dims:
-            for num_heads in heads:
-                for rpb in [True, False]:
-                    model_kwargs = {
-                        "dim": dim * num_heads,
-                        "kernel_size": kernel_size,
-                        "num_heads": num_heads,
-                        "qkv_bias": True,
-                        "bias": rpb,
-                    }
-
-                    base_state_dict = NeighborhoodAttention1D(
-                        **model_kwargs
-                    ).state_dict()
-
-                    x1 = torch.randn((batch_size, length, dim * num_heads))
-                    x2 = x1.clone().detach().cuda(0)
-
-                    nat1 = NeighborhoodAttention1D(**model_kwargs).eval()
-                    nat1.load_state_dict(base_state_dict, strict=False)
-
-                    nat2 = NeighborhoodAttention1D(**model_kwargs).cuda(0).eval()
-                    nat2.load_state_dict(base_state_dict, strict=False)
-
-                    y1 = nat1(x1)
-                    y2 = nat2(x2)
-
-                    forward_mse = ((y1.data - y2.cpu().data) ** 2).mean()
-
-                    assert forward_mse < tol, (
-                        f"FAIL: Forward MSE ({forward_mse}) was above the specified"
-                        f" tolerance (tol) for heads={heads}, dim={dim},"
-                        f" kernel_size={kernel_size}."
-                    )
-
-                    y1.sum().backward()
-                    y2.sum().backward()
-
-                    for name, n1w in nat1.named_modules():
-                        if type(n1w) is not torch.nn.Linear:
-                            continue
-                        for name2, n2w in nat2.named_modules():
-                            if name != name2:
-                                continue
-                            if n1w.weight.grad is None or n2w.weight.grad is None:
-                                continue
-                            mse = (
-                                (n1w.weight.grad - n2w.weight.grad.cpu()) ** 2
-                            ).mean()
-                            if hasattr(n1w, "bias") and n1w.bias is not None:
-                                if hasattr(n1w.bias, "grad") and hasattr(
-                                    n2w.bias, "grad"
-                                ):
-                                    mse += (
-                                        (n1w.bias.grad - n2w.bias.grad.cpu()) ** 2
-                                    ).mean()
-
-                            assert mse < tol, (
-                                f"FAIL: {name} gradient MSE ({mse}) was above the"
-                                f" specified tolerance ({tol}) for heads={heads},"
-                                f" dim={dim}, kernel_size={kernel_size}."
-                            )
-
-
-class NA1DTest(unittest.TestCase):
-    def test_natten1dqk_gradcheck_cpu_slow(self):
-        b, h, l, d, k, di = 1, 2, 14, 4, 7, 2
-        _priv_test_gradcheck_natten1dqk(
-            b, h, l, d, k, di, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, False
-        )
-
-    def test_natten1dqk_gradcheck_cpu_fast(self):
-        b, h, l, d, k, di = 1, 2, 14, 32, 7, 2
-        _priv_test_gradcheck_natten1dqk(
-            b, h, l, d, k, di, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, True
-        )
-
-    def test_natten1dqk_gradcheck_cuda_slow(self):
+class NA1DTests(unittest.TestCase):
+    def _test_against_cpu(
+        self, B, H, L, D, kernel_size, dilation, has_bias, dtype, eps
+    ):
         if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, h, l, d, k, di = 1, 2, 14, 4, 7, 2
-        _priv_test_gradcheck_natten1dqk(
-            b, h, l, d, k, di, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, False
+            self.skipTest("NATTEN not compiled with CUDA.")
+        with torch.no_grad():
+            q, k, v = (
+                torch.randn((B, H, L, D)) * (D**-0.5),
+                torch.randn((B, H, L, D)),
+                torch.randn((B, H, L, D)),
+            )
+            rpb = None
+            if has_bias:
+                rpb = torch.randn(H, 2 * kernel_size - 1)
+            q_, k_, v_ = (
+                q.clone().cuda().to(dtype),
+                k.clone().cuda().to(dtype),
+                v.clone().cuda().to(dtype),
+            )
+            rpb_ = None if rpb is None else rpb.clone().cuda().to(dtype)
+
+            attn_ref = natten1dqkrpb(q, k, rpb, kernel_size, dilation)
+            attn_ref = attn_ref.softmax(dim=-1)
+            out_ref = natten1dav(attn_ref, v, kernel_size, dilation)
+
+            attn = natten1dqkrpb(q_, k_, rpb_, kernel_size, dilation)
+            attn = attn.softmax(dim=-1)
+            out = natten1dav(attn, v_, kernel_size, dilation)
+
+            torch.testing.assert_close(attn.float().cpu(), attn_ref, atol=eps, rtol=0)
+            torch.testing.assert_close(out.float().cpu(), out_ref, atol=eps, rtol=0)
+
+    def _test_all_dtypes_against_cpu(
+        self, B, H, L, D, kernel_size, dilation, has_bias=False
+    ):
+        # Test naive kernels
+        disable_gemm_na()
+        disable_tf32()
+        self._test_against_cpu(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            has_bias=has_bias,
+            dtype=torch.float32,
+            eps=1e-4,
+        )
+        if HAS_HALF:
+            self._test_against_cpu(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.float16,
+                eps=1e-1,
+            )
+        if HAS_BFLOAT:
+            self._test_against_cpu(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.bfloat16,
+                eps=1e-1,
+            )
+        if HAS_GEMM:
+            # Test GEMM-based kernels
+            enable_gemm_na()
+            self._test_against_cpu(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.float32,
+                eps=1e-2,
+            )
+            enable_tf32()
+            self._test_against_cpu(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.float32,
+                eps=1e-2,
+            )
+            if HAS_HALF:
+                self._test_against_cpu(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    has_bias=has_bias,
+                    dtype=torch.float16,
+                    eps=1e-1,
+                )
+            if HAS_BFLOAT:
+                self._test_against_cpu(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    has_bias=has_bias,
+                    dtype=torch.bfloat16,
+                    eps=1e-1,
+                )
+
+    def test_cpu_vs_cuda(self):
+        torch.manual_seed(42)
+        self._test_all_dtypes_against_cpu(
+            B=1, H=1, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_all_dtypes_against_cpu(
+            B=2, H=1, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_all_dtypes_against_cpu(
+            B=2, H=2, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_all_dtypes_against_cpu(
+            B=4, H=4, L=100, D=32, kernel_size=3, dilation=1
+        )
+        self._test_all_dtypes_against_cpu(
+            B=4, H=8, L=100, D=32, kernel_size=3, dilation=4
+        )
+        self._test_all_dtypes_against_cpu(
+            B=4, H=4, L=100, D=32, kernel_size=13, dilation=1
+        )
+        self._test_all_dtypes_against_cpu(
+            B=4, H=8, L=100, D=32, kernel_size=13, dilation=2
+        )
+        self._test_all_dtypes_against_cpu(
+            B=4, H=8, L=100, D=32, has_bias=True, kernel_size=13, dilation=2
         )
 
-    def test_natten1dqk_gradcheck_cuda_fast(self):
+    def _test_autograd_qk(self, B, H, L, D, kernel_size, dilation, eps, device):
+        torch.manual_seed(42)
+        kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
+        query = torch.randn((B, H, L, D), **kwargs)
+        key = torch.randn((B, H, L, D), **kwargs)
+        rpb = torch.randn((H, 2 * kernel_size - 1), **kwargs)
+        variables = [query, key, rpb, kernel_size, dilation]
+
+        assert gradcheck(
+            natten1dqkrpb,
+            variables,
+            eps=1e-6,
+            atol=eps,
+            rtol=1e-4,
+            nondet_tol=0,
+            fast_mode=False,
+        ), f"Autograd check failed for NA1D: QK."
+
+    def _test_autograd_av(self, B, H, L, D, kernel_size, dilation, eps, device):
+        torch.manual_seed(42)
+        kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
+        attn = torch.randn((B, H, L, kernel_size), **kwargs)
+        value = torch.randn((B, H, L, D), **kwargs)
+        variables = [attn, value, kernel_size, dilation]
+
+        assert gradcheck(
+            natten1dav,
+            variables,
+            eps=1e-6,
+            atol=eps,
+            rtol=1e-4,
+            nondet_tol=0,
+            fast_mode=False,
+        ), f"Autograd check failed for NA1D: AV."
+
+    def _test_autograd(self, B, H, L, D, kernel_size, dilation, eps, device):
+        self._test_autograd_qk(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            eps=eps,
+            device=device,
+        )
+        self._test_autograd_av(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            eps=eps,
+            device=device,
+        )
+
+    def test_autograd_cpu(self):
+        self._test_autograd(
+            B=2, H=2, L=16, D=8, kernel_size=5, dilation=1, eps=1e-6, device="cpu"
+        )
+        self._test_autograd(
+            B=2, H=2, L=16, D=8, kernel_size=5, dilation=3, eps=1e-6, device="cpu"
+        )
+        self._test_autograd(
+            B=2, H=2, L=7, D=4, kernel_size=3, dilation=2, eps=1e-6, device="cpu"
+        )
+
+    def test_autograd_cuda_naive(self):
         if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, h, l, d, k, di = 1, 2, 14, 32, 7, 2
-        _priv_test_gradcheck_natten1dqk(
-            b, h, l, d, k, di, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, True
+            self.skipTest("NATTEN not compiled with CUDA.")
+        disable_gemm_na()
+        disable_tf32()
+        self._test_autograd(
+            B=1, H=2, L=32, D=8, kernel_size=15, dilation=1, eps=1e-6, device="cuda"
+        )
+        self._test_autograd(
+            B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, eps=1e-6, device="cuda"
+        )
+        self._test_autograd(
+            B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, eps=1e-6, device="cuda"
         )
 
-    def test_natten1dqkrpb_gradcheck_cpu_slow(self):
-        b, h, l, d, k, di = 1, 2, 14, 4, 7, 2
-        _priv_test_gradcheck_natten1dqkrpb(
-            b, h, l, d, k, di, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, False
-        )
-
-    def test_natten1dqkrpb_gradcheck_cpu_fast(self):
-        b, h, l, d, k, di = 1, 2, 14, 32, 7, 2
-        _priv_test_gradcheck_natten1dqkrpb(
-            b, h, l, d, k, di, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, True
-        )
-
-    def test_natten1dqkrpb_gradcheck_cuda_slow(self):
+    def test_autograd_cuda_gemm(self):
         if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, h, l, d, k, di = 1, 2, 14, 4, 7, 2
-        _priv_test_gradcheck_natten1dqkrpb(
-            b, h, l, d, k, di, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, False
+            self.skipTest("NATTEN not compiled with CUDA.")
+        if not HAS_GEMM:
+            self.skipTest("NATTEN not compiled with GEMM kernels.")
+        enable_gemm_na()
+        enable_tf32()
+        self._test_autograd(
+            B=1, H=2, L=32, D=8, kernel_size=15, dilation=1, eps=1e-6, device="cuda"
         )
-
-    def test_natten1dqkrpb_gradcheck_cuda_fast(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, h, l, d, k, di = 1, 2, 14, 32, 7, 2
-        _priv_test_gradcheck_natten1dqkrpb(
-            b, h, l, d, k, di, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, True
+        self._test_autograd(
+            B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, eps=1e-6, device="cuda"
         )
-
-    def test_natten1dav_gradcheck_cpu_slow(self):
-        b, h, l, d, k, di = 1, 2, 14, 4, 7, 2
-        _priv_test_gradcheck_natten1dav(
-            b, h, l, d, k, di, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, False
+        self._test_autograd(
+            B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, eps=1e-6, device="cuda"
         )
-
-    def test_natten1dav_gradcheck_cpu_fast(self):
-        b, h, l, d, k, di = 1, 2, 14, 32, 7, 2
-        _priv_test_gradcheck_natten1dav(
-            b, h, l, d, k, di, torch.float64, "cpu", 1e-6, 1e-5, 1e-3, 0, True
-        )
-
-    def test_natten1dav_gradcheck_cuda_slow(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, h, l, d, k, di = 1, 2, 14, 4, 7, 2
-        _priv_test_gradcheck_natten1dav(
-            b, h, l, d, k, di, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, False
-        )
-
-    def test_natten1dav_gradcheck_cuda_fast(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, h, l, d, k, di = 1, 2, 14, 32, 7, 2
-        _priv_test_gradcheck_natten1dav(
-            b, h, l, d, k, di, torch.float64, "cuda", 1e-6, 1e-5, 1e-3, 1e-8, True
-        )
-
-    def test_cpu_cuda_allclose(self):
-        if not HAS_CUDA:
-            self.skipTest("CUDA not available.")
-        b, l = 4, 16
-        _priv_test_allclose_cpu_cuda(b, l)
 
 
 if __name__ == "__main__":

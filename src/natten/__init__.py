@@ -21,6 +21,9 @@
 #
 #################################################################################################
 
+from .functional import (disable_gemm_na, disable_tf32, disable_tiled_na,
+                         enable_gemm_na, enable_tf32, enable_tiled_na,
+                         has_bfloat, has_cuda, has_gemm, has_half)
 from .natten1d import NeighborhoodAttention1D
 from .natten2d import NeighborhoodAttention2D
 from .natten3d import NeighborhoodAttention3D

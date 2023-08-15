@@ -1,10 +1,17 @@
 .PHONY: sdist clean uninstall install-deps install test style quality
 
+CUDA_ARCH=
+WORKERS=
+
 check_dirs := src tests
 
-all: clean uninstall install
+all: clean uninstall fetch-submodules install
 
-full: clean uninstall install-deps install
+full: clean uninstall install-deps fetch-submodules install
+
+fetch-submodules:
+	@echo "Fetching all third party submodules"
+	git submodule update --init --recursive
 
 sdist:
 	@echo "Generating source dist"
@@ -34,7 +41,7 @@ install-deps:
 
 install: 
 	@echo "Installing NATTEN from source"
-	pip install -e . 2>&1 | tee install.out
+	NATTEN_CUDA_ARCH="${CUDA_ARCH}" NATTEN_N_WORKERS="${WORKERS}" pip install -v -e . 2>&1 | tee install.out
 
 test:
 	@echo "Running unit tests"

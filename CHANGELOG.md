@@ -1,11 +1,14 @@
 # Changelog
 
-## [0.14.7]
+## Main branch
 * Refactored kernels
   * The backend is messy, particularly the CUDA backend. A step in the right direction is at least factoring out duplicated.
   * Out of the 7 operations in NATTEN's backend, 6 have duplicates (really 3 underlying ops with different inputs.)
   * See #26 for more details.
-* 3D NA
+* 3D Neighborhood Attention: naive CPU and CUDA kernels were added.
+* Windows users can finally compile from source.
+* Major refactoring of the C++ API.
+* GEMM kernels (more details to come soon)
 
 ## [0.14.6] - 2023-03-21
 Just a really small update that syncs the changes to the private branch.

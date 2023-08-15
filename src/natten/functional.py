@@ -36,20 +36,53 @@ except ImportError:
     )
 
 
-class NATTEN1DQKRPBFunction(Function):
-    """
-    1D QK+RPB autograd function
-    Computes neighborhood attention weights given queries and keys,
-    and adds relative positional biases.
-    This calls the `QKRPB` kernel.
-    """
+def has_cuda():
+    return _C.has_cuda()
 
+
+def has_half():
+    return _C.has_half()
+
+
+def has_bfloat():
+    return _C.has_bfloat()
+
+
+def has_gemm():
+    return _C.has_gemm()
+
+
+def enable_tf32():
+    return _C.set_gemm_tf32(True)
+
+
+def disable_tf32():
+    return _C.set_gemm_tf32(False)
+
+
+def enable_tiled_na():
+    return _C.set_tiled_na(True)
+
+
+def disable_tiled_na():
+    return _C.set_tiled_na(False)
+
+
+def enable_gemm_na():
+    return _C.set_gemm_na(True)
+
+
+def disable_gemm_na():
+    return _C.set_gemm_na(False)
+
+
+class NeighborhoodAttention1DQKAutogradFunction(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.float16)
+    @custom_fwd
     def forward(ctx, query, key, rpb, kernel_size, dilation):
         query = query.contiguous()
         key = key.contiguous()
-        attn = _C.natten1dqkrpb_forward(query, key, rpb, kernel_size, dilation)
+        attn = _C.na1d_qk_forward(query, key, rpb, kernel_size, dilation)
         ctx.save_for_backward(query, key)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -59,7 +92,7 @@ class NATTEN1DQKRPBFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten1dqkrpb_backward(
+        outputs = _C.na1d_qk_backward(
             grad_out.contiguous(),
             ctx.saved_tensors[0],
             ctx.saved_tensors[1],
@@ -71,19 +104,13 @@ class NATTEN1DQKRPBFunction(Function):
         return d_query, d_key, d_rpb, None, None
 
 
-class NATTEN1DAVFunction(Function):
-    """
-    1D AV autograd function
-    Computes neighborhood attention outputs given attention weights, and values.
-    This calls the `AV` kernel.
-    """
-
+class NeighborhoodAttention1DAVAutogradFunction(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.float16)
+    @custom_fwd
     def forward(ctx, attn, value, kernel_size, dilation):
         attn = attn.contiguous()
         value = value.contiguous()
-        out = _C.natten1dav_forward(attn, value, kernel_size, dilation)
+        out = _C.na1d_av_forward(attn, value, kernel_size, dilation)
         ctx.save_for_backward(attn, value)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -92,7 +119,7 @@ class NATTEN1DAVFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten1dav_backward(
+        outputs = _C.na1d_av_backward(
             grad_out.contiguous(),
             ctx.saved_tensors[0],
             ctx.saved_tensors[1],
@@ -103,20 +130,15 @@ class NATTEN1DAVFunction(Function):
         return d_attn, d_value, None, None
 
 
-class NATTEN2DQKRPBFunction(Function):
-    """
-    2D QK+RPB autograd function
-    Computes neighborhood attention weights given queries and keys,
-    and adds relative positional biases.
-    This calls the `QKRPB` kernel.
-    """
-
+class NeighborhoodAttention2DQKAutogradFunction(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.float16)
+    @custom_fwd
     def forward(ctx, query, key, rpb, kernel_size, dilation):
         query = query.contiguous()
         key = key.contiguous()
-        attn = _C.natten2dqkrpb_forward(query, key, rpb, kernel_size, dilation)
+        if rpb is not None:
+            rpb = rpb.to(key.dtype)
+        attn = _C.na2d_qk_forward(query, key, rpb, kernel_size, dilation)
         ctx.save_for_backward(query, key)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -126,7 +148,7 @@ class NATTEN2DQKRPBFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten2dqkrpb_backward(
+        outputs = _C.na2d_qk_backward(
             grad_out.contiguous(),
             ctx.saved_tensors[0],
             ctx.saved_tensors[1],
@@ -138,19 +160,13 @@ class NATTEN2DQKRPBFunction(Function):
         return d_query, d_key, d_rpb, None, None
 
 
-class NATTEN2DAVFunction(Function):
-    """
-    2D AV autograd function
-    Computes neighborhood attention outputs given attention weights, and values.
-    This calls the `AV` kernel.
-    """
-
+class NeighborhoodAttention2DAVAutogradFunction(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.float16)
+    @custom_fwd
     def forward(ctx, attn, value, kernel_size, dilation):
-        attn = attn.contiguous()
+        attn = attn.contiguous().to(value.dtype)
         value = value.contiguous()
-        out = _C.natten2dav_forward(attn, value, kernel_size, dilation)
+        out = _C.na2d_av_forward(attn, value, kernel_size, dilation)
         ctx.save_for_backward(attn, value)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -159,7 +175,7 @@ class NATTEN2DAVFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten2dav_backward(
+        outputs = _C.na2d_av_backward(
             grad_out.contiguous(),
             ctx.saved_tensors[0],
             ctx.saved_tensors[1],
@@ -170,21 +186,14 @@ class NATTEN2DAVFunction(Function):
         return d_attn, d_value, None, None
 
 
-class NATTEN3DQKRPBFunction(Function):
-    """
-    3D QK+RPB autograd function
-    Computes neighborhood attention weights given queries and keys,
-    and adds relative positional biases.
-    This calls the `QKRPB` kernel.
-    """
-
+class NeighborhoodAttention3DQKAutogradFunction(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.float16)
+    @custom_fwd
     def forward(ctx, query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation):
         query = query.contiguous()
         key = key.contiguous()
-        attn = _C.natten3dqkrpb_forward(
-            query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation
+        attn = _C.na3d_qk_forward(
+            query, key, rpb, kernel_size, dilation, kernel_size_d, dilation_d
         )
         ctx.save_for_backward(query, key)
         ctx.kernel_size_d = kernel_size_d
@@ -197,34 +206,28 @@ class NATTEN3DQKRPBFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten3dqkrpb_backward(
+        outputs = _C.na3d_qk_backward(
             grad_out.contiguous(),
             ctx.saved_tensors[0],
             ctx.saved_tensors[1],
             ctx.bias,
-            ctx.kernel_size_d,
             ctx.kernel_size,
-            ctx.dilation_d,
             ctx.dilation,
+            ctx.kernel_size_d,
+            ctx.dilation_d,
         )
         d_query, d_key, d_rpb = outputs
         return d_query, d_key, d_rpb, None, None, None, None
 
 
-class NATTEN3DAVFunction(Function):
-    """
-    3D AV autograd function
-    Computes neighborhood attention outputs given attention weights, and values.
-    This calls the `AV` kernel.
-    """
-
+class NeighborhoodAttention3DAVAutogradFunction(Function):
     @staticmethod
-    @custom_fwd(cast_inputs=torch.float16)
+    @custom_fwd
     def forward(ctx, attn, value, kernel_size_d, kernel_size, dilation_d, dilation):
         attn = attn.contiguous()
         value = value.contiguous()
-        out = _C.natten3dav_forward(
-            attn, value, kernel_size_d, kernel_size, dilation_d, dilation
+        out = _C.na3d_av_forward(
+            attn, value, kernel_size, dilation, kernel_size_d, dilation_d
         )
         ctx.save_for_backward(attn, value)
         ctx.kernel_size_d = kernel_size_d
@@ -236,56 +239,68 @@ class NATTEN3DAVFunction(Function):
     @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
-        outputs = _C.natten3dav_backward(
+        outputs = _C.na3d_av_backward(
             grad_out.contiguous(),
             ctx.saved_tensors[0],
             ctx.saved_tensors[1],
-            ctx.kernel_size_d,
             ctx.kernel_size,
-            ctx.dilation_d,
             ctx.dilation,
+            ctx.kernel_size_d,
+            ctx.dilation_d,
         )
         d_attn, d_value = outputs
         return d_attn, d_value, None, None, None, None
 
 
 def natten1dqkrpb(query, key, rpb, kernel_size, dilation):
-    return NATTEN1DQKRPBFunction.apply(query, key, rpb, kernel_size, dilation)
+    return NeighborhoodAttention1DQKAutogradFunction.apply(
+        query, key, rpb, kernel_size, dilation
+    )
 
 
 def natten1dqk(query, key, kernel_size, dilation):
-    return NATTEN1DQKRPBFunction.apply(query, key, None, kernel_size, dilation)
+    return NeighborhoodAttention1DQKAutogradFunction.apply(
+        query, key, None, kernel_size, dilation
+    )
 
 
 def natten1dav(attn, value, kernel_size, dilation):
-    return NATTEN1DAVFunction.apply(attn, value, kernel_size, dilation)
+    return NeighborhoodAttention1DAVAutogradFunction.apply(
+        attn, value, kernel_size, dilation
+    )
 
 
 def natten2dqkrpb(query, key, rpb, kernel_size, dilation):
-    return NATTEN2DQKRPBFunction.apply(query, key, rpb, kernel_size, dilation)
+    return NeighborhoodAttention2DQKAutogradFunction.apply(
+        query, key, rpb, kernel_size, dilation
+    )
 
 
 def natten2dqk(query, key, kernel_size, dilation):
-    return NATTEN2DQKRPBFunction.apply(query, key, None, kernel_size, dilation)
+    return NeighborhoodAttention2DQKAutogradFunction.apply(
+        query, key, None, kernel_size, dilation
+    )
 
 
 def natten2dav(attn, value, kernel_size, dilation):
-    return NATTEN2DAVFunction.apply(attn, value, kernel_size, dilation)
+    return NeighborhoodAttention2DAVAutogradFunction.apply(
+        attn, value, kernel_size, dilation
+    )
 
 
 def natten3dqkrpb(query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation):
-    return NATTEN3DQKRPBFunction.apply(
+    return NeighborhoodAttention3DQKAutogradFunction.apply(
         query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation
     )
 
 
 def natten3dqk(query, key, kernel_size_d, kernel_size, dilation_d, dilation):
-    return NATTEN3DQKRPBFunction.apply(
+    return NeighborhoodAttention3DQKAutogradFunction.apply(
         query, key, None, kernel_size_d, kernel_size, dilation_d, dilation
     )
 
 
 def natten3dav(attn, value, kernel_size_d, kernel_size, dilation_d, dilation):
-    return NATTEN3DAVFunction.apply(
+    return NeighborhoodAttention3DAVAutogradFunction.apply(
         attn, value, kernel_size_d, kernel_size, dilation_d, dilation
     )
