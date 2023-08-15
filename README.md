@@ -72,7 +72,7 @@ In addition, we will be adding scripts that allow you to profile and observe lat
 available.
 
 ### What else is new?
-With the latest code refactor, naive kernels now support arbitrary kernel sizes, and support for bfloat16 was also added.
+With the latest code refactor, naive kernels now support arbitrary kernel sizes, and support for bfloat16 (BF16) was also added.
 
 ## About NATTEN
 Sliding window self attention mechanisms have been relatively overlooked, in part due to implementation difficulties.
@@ -146,12 +146,15 @@ Once you've set up your Python environment and installed PyTorch with CUDA, simp
 ```bash
 git clone https://github.com/SHI-Labs/NATTEN
 cd NATTEN
+
+pip install -r requirements.txt
+
 make
 ```
 
 NOTE: NATTEN will use the PyTorch API to detect your GPU architecture, and will by default attempt to use 1/4th of the number
 of processes your system allows to build. You can override them by passing in the following arguments:
-```
+```bash
 # Build with 2 workers/processes
 make WORKERS=2
 
@@ -165,6 +168,7 @@ more workers (at the expense of generating a larger binary), but that option wil
 
 #### Optional: run unit tests
 You can optionally run unit tests to verify building from source finished successfully:
+
 ```bash
 make test
 ```
@@ -269,6 +273,4 @@ NATTEN is released under the [MIT License](LICENSE).
 We would like to thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/) and team for their efforts in
 creating and open-sourcing CUTLASS. We would also like to thank Haicheng Wu for his valuable feedback and comments which led to
 the creation of Implicit GEMM NA.
-We also thank Meta, and the [PyTorch](https://github.com/pytorch/pytorch/) project, 
-specifically [Shen Li](https://mrshenli.github.io/) for his early contributions to Neighborhood Attention Transformer, 
-and the development of the initial NA kernels.
+We also thank Meta, and the [PyTorch](https://github.com/pytorch/pytorch/) project and team.

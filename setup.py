@@ -73,8 +73,12 @@ n_workers = os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)
 if n_workers == "":
     n_workers = DEFAULT_N_WORKERS
 
-print(f"Building NATTEN with CUDA {CUDA_TAG}")
-print(f"Building NATTEN for SM: {cuda_arch}")
+if HAS_CUDA:
+    print(f"Building NATTEN with CUDA {CUDA_TAG}")
+    print(f"Building NATTEN for SM: {cuda_arch}")
+else:
+    print(f"Building NATTEN for CPU ONLY.")
+
 print(f"Number of workers: {n_workers}")
 
 
@@ -168,7 +172,7 @@ class BuildExtension(build_ext):
             # TODO: this is connected to the assertion above; this is wrong, but temporary.
             if current_arch >= 60:
                 cmake_args.append("-DNATTEN_WITH_CUDA_FP16=1")
-            if current_arch >= 60:
+            if current_arch >= 60 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUDA_BF16=1")
             if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
