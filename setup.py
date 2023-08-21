@@ -107,8 +107,8 @@ def get_version():
 def _check_cuda_arch(arch):
     try:
        arch = float(arch)
-       assert arch >= 8.0 and arch < 10, f"Only SM80 and above is supported at this time, got {arch}."
        arch = arch * 10 # 8.6 => 86
+       assert arch >= 30 and arch < 100, f"Only SM30 and above are supported at this time, got {arch}."
        return str(int(arch))
     except ValueError:
         raise ValueError(f"Invalid architecture list {cuda_arch_list}.")

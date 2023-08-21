@@ -6,14 +6,14 @@ project(natten LANGUAGES CXX)
 endif()
 
 if(${NATTEN_WITH_CUDA})
-find_package(CUDA 11.8 REQUIRED)
+find_package(CUDA 10.2 REQUIRED)
 message("Building NATTEN with CUDA.")
 endif()
 set(CXX_STD "17" CACHE STRING "C++ standard")
 
 
 # Find Python
-find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+find_package(Python 3.7 COMPONENTS Interpreter Development REQUIRED)
 set(PYTHON_PATH "python" CACHE STRING "Python path")
 
 ## Python includes 
