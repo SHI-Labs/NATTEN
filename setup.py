@@ -34,8 +34,12 @@ from setuptools import find_packages, setup
 from setuptools.command.build_ext import build_ext
 from typing import List
 import torch
-from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, IS_MACOS, IS_WINDOWS, _nt_quote_args, SHARED_FLAG, LIB_EXT
+from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, _nt_quote_args, SHARED_FLAG, LIB_EXT
 from pathlib import Path
+
+IS_WINDOWS = sys.platform == 'win32'
+IS_MACOS = sys.platform.startswith('darwin')
+IS_LINUX = sys.platform.startswith('linux')
 
 this_directory = Path(__file__).parent
 try:
@@ -179,7 +183,7 @@ class BuildExtension(build_ext):
             # TODO: this is connected to the assertion above; this is wrong, but temporary.
             if current_arch >= 60:
                 cmake_args.append("-DNATTEN_WITH_CUDA_FP16=1")
-            if current_arch >= 60 and CUDA_VERSION >= [11, 0]:
+            if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUDA_BF16=1")
             if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
