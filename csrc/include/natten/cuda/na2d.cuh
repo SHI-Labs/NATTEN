@@ -27,7 +27,13 @@
 #pragma once
 #include <natten_autogen/cuda/naive/interface.h> 
 #ifdef NATTEN_WITH_CUTLASS
-#include <natten_autogen/cuda/gemm/2d/interface.h> 
+#if (NATTEN_CUTLASS_TARGET_SM >= 80)
+#include <natten_autogen/cuda/gemm/2d/sm80/interface.h> 
+#elif (NATTEN_CUTLASS_TARGET_SM >= 75)
+#include <natten_autogen/cuda/gemm/2d/sm75/interface.h> 
+#elif (NATTEN_CUTLASS_TARGET_SM >= 70)
+#include <natten_autogen/cuda/gemm/2d/sm70/interface.h> 
+#endif
 #endif
 
 namespace natten {
@@ -47,7 +53,11 @@ void na2d_qk_forward(
   int kernel_size,
   int dilation) {
   #ifdef NATTEN_WITH_CUTLASS
+  #if (NATTEN_CUTLASS_TARGET_SM >= 80)
   if (natten::kEnableGemmNA) {
+  #elif (NATTEN_CUTLASS_TARGET_SM >= 70)
+  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
+  #endif
     DISPATCH_DTYPE_na2d_pn_cuda_gemm(T, kernel_size, dim,
       query_ptr, key_ptr, attn_ptr, bias_ptr,
       batch_size, heads, height, width, dim, 
@@ -88,7 +98,11 @@ void na2d_qk_backward(
   int kernel_size,
   int dilation) {
   #ifdef NATTEN_WITH_CUTLASS
+  #if (NATTEN_CUTLASS_TARGET_SM >= 80)
   if (natten::kEnableGemmNA) {
+  #elif (NATTEN_CUTLASS_TARGET_SM >= 70)
+  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
+  #endif
     DISPATCH_DTYPE_na2d_nn_cuda_gemm(T, kernel_size, dim,
       d_attn_ptr, key_ptr, d_query_ptr,
       batch_size, heads, height, width, dim, 
@@ -132,7 +146,11 @@ void na2d_av_forward(
   int kernel_size,
   int dilation) {
   #ifdef NATTEN_WITH_CUTLASS
+  #if (NATTEN_CUTLASS_TARGET_SM >= 80)
   if (natten::kEnableGemmNA) {
+  #elif (NATTEN_CUTLASS_TARGET_SM >= 70)
+  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
+  #endif
     DISPATCH_DTYPE_na2d_nn_cuda_gemm(T, kernel_size, dim,
       attn_ptr, value_ptr, output_ptr,
       batch_size, heads, height, width, dim, 
@@ -164,7 +182,11 @@ void na2d_av_backward(
   int kernel_size,
   int dilation) {
   #ifdef NATTEN_WITH_CUTLASS
+  #if (NATTEN_CUTLASS_TARGET_SM >= 80)
   if (natten::kEnableGemmNA) {
+  #elif (NATTEN_CUTLASS_TARGET_SM >= 70)
+  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
+  #endif
     DISPATCH_DTYPE_na2d_pn_cuda_gemm(T, kernel_size, dim,
       d_output_ptr, value_ptr, d_attn_ptr, nullptr,
       batch_size, heads, height, width, dim, 

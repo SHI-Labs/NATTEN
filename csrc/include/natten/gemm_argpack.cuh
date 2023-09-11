@@ -26,6 +26,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cutlass/cutlass.h>
+#include <cutlass/arch/arch.h>
+#include <cutlass/arch/mma.h>
 #include <cutlass/half.h>
 #include <cutlass/bfloat16.h>
 #include <cutlass/tfloat32.h>
@@ -157,6 +159,39 @@ struct GemmConfig2D {
   static constexpr int kTile          = _kTile;
   static constexpr int kExt           = _kExt;
   static constexpr int kNeighborhood  = _kNeighborhood;
+};
+
+template <int SM, typename T>
+struct ArchArgs;
+
+template <typename T>
+struct ArchArgs<80, T> {
+  using OpClass = typename cutlass::arch::OpClassTensorOp;
+  using Tag = typename cutlass::arch::Sm80;
+};
+
+template <typename T>
+struct ArchArgs<75, T> {
+  using OpClass = typename cutlass::arch::OpClassSimt;
+  using Tag = typename cutlass::arch::Sm75;
+};
+
+template <typename T>
+struct ArchArgs<70, T> {
+  using OpClass = typename cutlass::arch::OpClassSimt;
+  using Tag = typename cutlass::arch::Sm70;
+};
+
+template <>
+struct ArchArgs<75, natten::float16> {
+  using OpClass = typename cutlass::arch::OpClassTensorOp;
+  using Tag = typename cutlass::arch::Sm75;
+};
+
+template <>
+struct ArchArgs<70, natten::float16> {
+  using OpClass = typename cutlass::arch::OpClassTensorOp;
+  using Tag = typename cutlass::arch::Sm70;
 };
 
 } // namespace detail

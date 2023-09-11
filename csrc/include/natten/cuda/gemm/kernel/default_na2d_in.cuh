@@ -40,10 +40,12 @@
 #pragma once
 
 #include <cutlass/cutlass.h>
+#include <cutlass/epilogue/threadblock/default_thread_map_simt.h>
 #include <cutlass/epilogue/threadblock/default_thread_map_tensor_op.h>
 
 #include "natten/cuda/gemm/kernel/default_na.cuh"
 
+#include "natten/cuda/gemm/threadblock/default_epilogue_simt.cuh"
 #include "natten/cuda/gemm/threadblock/default_epilogue_tensor_op.cuh"
 #include "natten/cuda/gemm/threadblock/na2d_in_input_tile_iterator.cuh"
 #include "natten/cuda/gemm/threadblock/na2d_in_value_tile_iterator.cuh"
@@ -127,6 +129,8 @@ struct DefaultNA2dIN <
   AlignmentA,
   AlignmentB
 > {
+
+  static_assert(AlignmentA == 1); // NA requirement for IN
 
   // Define the core components from GEMM
   using MmaCore = typename cutlass::gemm::threadblock::DefaultMmaCore<
@@ -214,6 +218,437 @@ struct DefaultNA2dIN <
     ThreadblockShape,
     WarpMmaTensorOp,
     kPartitionsK,
+    EpilogueOutputOp,
+    EpilogueOutputOp::kCount,
+    OutputTileIterator
+  >::Epilogue;
+
+  // Define the kernel
+  using Kernel = ImplicitGemmNA2d<
+    Operator::kIN,
+    NAShape,
+    Mma,
+    Epilogue,
+    ThreadblockSwizzle
+  >;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//                         Pipelined implicit gemm
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <
+  typename ElementA,
+  typename LayoutA,
+  typename ElementB,
+  typename LayoutB,
+  typename ElementC,
+  typename LayoutC,
+  typename ElementAccumulator,
+  typename ArchTag,
+  typename NAShape,
+  typename ThreadblockShape,
+  typename WarpShape,
+  typename InstructionShape,
+  typename EpilogueOutputOp,
+  typename ThreadblockSwizzle,
+  typename MathOperatorTag,
+  int AlignmentA,
+  int AlignmentB
+>
+struct DefaultNA2dIN <
+  ElementA,
+  LayoutA,
+  ElementB,
+  LayoutB,
+  ElementC,
+  LayoutC,
+  ElementAccumulator,
+  cutlass::arch::OpClassTensorOp,
+  ArchTag,
+  NAShape,
+  ThreadblockShape,
+  WarpShape,
+  InstructionShape,
+  EpilogueOutputOp,
+  ThreadblockSwizzle,
+  2,
+  MathOperatorTag,
+  AlignmentA,
+  AlignmentB
+> {
+  static_assert(AlignmentA == 1); // NA requirement for IN
+
+
+  // Define the core components from GEMM
+  using MmaCore = typename cutlass::gemm::threadblock::DefaultMmaCore<
+      ThreadblockShape, WarpShape, InstructionShape, ElementA, cutlass::layout::ColumnMajor,
+      ElementB, cutlass::layout::RowMajor, ElementAccumulator, cutlass::layout::RowMajor, cutlass::arch::OpClassTensorOp,
+      2, MathOperatorTag>;
+
+  // Define iterators over tiles from the A operand
+  using ThreadMapA = typename MmaCore::IteratorThreadMapA;
+  using AccessTypeA = cutlass::AlignedArray<ElementA, AlignmentA>;
+  using IteratorA =
+    natten::cuda::gemm::threadblock::TileIterator<
+      natten::cuda::gemm::threadblock::NA2dINInputTileIterator<
+        NAShape,
+        cutlass::MatrixShape<ThreadblockShape::kM, ThreadblockShape::kK>,
+        ElementA, LayoutA,
+        ThreadMapA,
+        AccessTypeA
+      >, 2
+    >;
+
+  using SmemIteratorA = typename MmaCore::SmemIteratorA;
+
+  // Define iterators over tiles from the B operand
+  using ThreadMapB = typename MmaCore::IteratorThreadMapB;
+  using AccessTypeB = cutlass::AlignedArray<ElementB, AlignmentB>;
+  using IteratorB =
+    natten::cuda::gemm::threadblock::TileIterator<
+      natten::cuda::gemm::threadblock::NA2dINValueTileIterator<
+        NAShape,
+        cutlass::MatrixShape<ThreadblockShape::kN, ThreadblockShape::kK>,
+        ElementB, LayoutB,
+        ThreadMapB,
+        AccessTypeB
+      >, 2
+    >;
+  
+  using SmemIteratorB = typename MmaCore::SmemIteratorB;
+
+  // Warp-level GEMM components
+  using WarpMmaTensorOp = typename MmaCore::MmaTensorOp;
+  using MmaPolicy = typename MmaCore::MmaPolicy;
+
+  // Define the Mma
+  using Mma = cutlass::conv::threadblock::ImplicitGemmPipelined<
+    ThreadblockShape,
+    IteratorA,
+    SmemIteratorA,
+    IteratorB,
+    SmemIteratorB,
+    ElementC,
+    LayoutC,
+    MmaPolicy
+  >;
+
+  static const int kPartitionsK = ThreadblockShape::kK / WarpShape::kK;
+
+  using EpilogueElementOutput = typename EpilogueOutputOp::ElementOutput;
+
+  // Threadmap and output iterator were moved out of the default epilogue,
+  // which may seem counter-intuitive, but it was all done pretty lazily to
+  // allow different kernels to have their correct output iterator instantiated
+  // at the kernel level.
+  // May move this back and customize the epilogue in the future.
+  using OutputTileThreadMap = typename cutlass::epilogue::threadblock::DefaultThreadMapTensorOp<
+    ThreadblockShape,
+    typename WarpMmaTensorOp::Shape,
+    kPartitionsK,
+    EpilogueElementOutput,
+    EpilogueOutputOp::kCount
+  >::Type;
+
+  static bool const UseCUDAStore = cutlass::platform::is_same<EpilogueElementOutput, double>::value;
+
+  using OutputTileIterator = natten::cuda::gemm::threadblock::NA2dINOutputTileIterator<
+    NAShape,
+    OutputTileThreadMap,
+    EpilogueElementOutput
+  >;
+
+  // Define the epilogue
+  using Epilogue = typename natten::cuda::gemm::threadblock::DefaultEpilogueTensorOp<
+    ThreadblockShape,
+    WarpMmaTensorOp,
+    kPartitionsK,
+    EpilogueOutputOp,
+    EpilogueOutputOp::kCount,
+    OutputTileIterator
+  >::Epilogue;
+
+  // Define the kernel
+  using Kernel = ImplicitGemmNA2d<
+    Operator::kIN,
+    NAShape,
+    Mma,
+    Epilogue,
+    ThreadblockSwizzle
+  >;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//                         SIMT implicit gemm
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <
+  typename ElementA,
+  typename LayoutA,
+  typename ElementB,
+  typename LayoutB,
+  typename ElementC,
+  typename LayoutC,
+  typename ElementAccumulator,
+  typename ArchTag,
+  typename NAShape,
+  typename ThreadblockShape,
+  typename WarpShape,
+  typename InstructionShape,
+  typename EpilogueOutputOp,
+  typename ThreadblockSwizzle,
+  int Stages,
+  typename MathOperatorTag,
+  int AlignmentA,
+  int AlignmentB
+>
+struct DefaultNA2dIN <
+  ElementA,
+  LayoutA,
+  ElementB,
+  LayoutB,
+  ElementC,
+  LayoutC,
+  ElementAccumulator,
+  cutlass::arch::OpClassSimt,
+  ArchTag,
+  NAShape,
+  ThreadblockShape,
+  WarpShape,
+  InstructionShape,
+  EpilogueOutputOp,
+  ThreadblockSwizzle,
+  Stages,
+  MathOperatorTag,
+  AlignmentA,
+  AlignmentB
+> {
+  static_assert(AlignmentA == 1 && AlignmentB == 1);
+
+  // Define the core components from GEMM
+  using MmaCore = typename cutlass::gemm::threadblock::DefaultMmaCore<
+      ThreadblockShape, WarpShape, InstructionShape, ElementA, cutlass::layout::ColumnMajor,
+      ElementB, cutlass::layout::RowMajor, ElementAccumulator, cutlass::layout::RowMajor, cutlass::arch::OpClassSimt,
+      Stages, MathOperatorTag>;
+
+  // Define iterators over tiles from the A operand
+  using ThreadMapA = typename MmaCore::IteratorThreadMapA;
+  using IteratorA =
+    natten::cuda::gemm::threadblock::NA2dINInputTileIterator<
+      NAShape,
+      cutlass::MatrixShape<ThreadblockShape::kM, ThreadblockShape::kK>,
+      ElementA, LayoutA,
+      ThreadMapA
+    >;
+
+  using SmemIteratorA = typename MmaCore::SmemIteratorA;
+
+  // Define iterators over tiles from the B operand
+  using ThreadMapB = typename MmaCore::IteratorThreadMapB;
+  using IteratorB =
+    natten::cuda::gemm::threadblock::NA2dINValueTileIterator<
+      NAShape,
+      cutlass::MatrixShape<ThreadblockShape::kN, ThreadblockShape::kK>,
+      ElementB, LayoutB,
+      ThreadMapB
+    >;
+  
+  using SmemIteratorB = typename MmaCore::SmemIteratorB;
+
+  // Warp-level GEMM components
+  using WarpMmaSimt = typename MmaCore::MmaWarpSimt;
+  using MmaPolicy = typename MmaCore::MmaPolicy;
+
+  static cutlass::arch::CacheOperation::Kind const CacheOpB =
+      ((cutlass::sizeof_bits<ElementB>::value * AlignmentB) == 128)
+          ? cutlass::arch::CacheOperation::Global
+          : cutlass::arch::CacheOperation::Always;
+
+  // Define the Mma
+  using Mma = natten::cuda::gemm::threadblock::ImplicitGemmMultistage<
+    ThreadblockShape,
+    IteratorA,
+    SmemIteratorA,
+    cutlass::arch::CacheOperation::Always,
+    IteratorB,
+    SmemIteratorB,
+    CacheOpB,
+    MmaPolicy,
+    Stages 
+  >;
+
+  static const int kPartitionsK = ThreadblockShape::kK / WarpShape::kK;
+
+  using EpilogueElementOutput = typename EpilogueOutputOp::ElementOutput;
+
+  // Threadmap and output iterator were moved out of the default epilogue,
+  // which may seem counter-intuitive, but it was all done pretty lazily to
+  // allow different kernels to have their correct output iterator instantiated
+  // at the kernel level.
+  // May move this back and customize the epilogue in the future.
+  using OutputTileThreadMap = typename cutlass::epilogue::threadblock::DefaultThreadMapSimt<
+    ThreadblockShape,
+    typename WarpMmaSimt::Shape,
+    typename WarpMmaSimt::Policy,
+    kPartitionsK,
+    EpilogueElementOutput,
+    EpilogueOutputOp::kCount
+  >::Type;
+
+  static bool const UseCUDAStore = cutlass::platform::is_same<EpilogueElementOutput, double>::value;
+
+  using OutputTileIterator = natten::cuda::gemm::threadblock::NA2dINOutputTileIterator<
+    NAShape,
+    OutputTileThreadMap,
+    EpilogueElementOutput
+  >;
+
+  // Define the epilogue
+  using Epilogue = typename natten::cuda::gemm::threadblock::DefaultEpilogueSimt<
+    ThreadblockShape,
+    WarpMmaSimt,
+    EpilogueOutputOp,
+    EpilogueOutputOp::kCount,
+    OutputTileIterator
+  >::Epilogue;
+
+  // Define the kernel
+  using Kernel = ImplicitGemmNA2d<
+    Operator::kIN,
+    NAShape,
+    Mma,
+    Epilogue,
+    ThreadblockSwizzle
+  >;
+};
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+//                         Pipelined SIMT implicit gemm
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <
+  typename ElementA,
+  typename LayoutA,
+  typename ElementB,
+  typename LayoutB,
+  typename ElementC,
+  typename LayoutC,
+  typename ElementAccumulator,
+  typename ArchTag,
+  typename NAShape,
+  typename ThreadblockShape,
+  typename WarpShape,
+  typename InstructionShape,
+  typename EpilogueOutputOp,
+  typename ThreadblockSwizzle,
+  typename MathOperatorTag,
+  int AlignmentA,
+  int AlignmentB
+>
+struct DefaultNA2dIN <
+  ElementA,
+  LayoutA,
+  ElementB,
+  LayoutB,
+  ElementC,
+  LayoutC,
+  ElementAccumulator,
+  cutlass::arch::OpClassSimt,
+  ArchTag,
+  NAShape,
+  ThreadblockShape,
+  WarpShape,
+  InstructionShape,
+  EpilogueOutputOp,
+  ThreadblockSwizzle,
+  2,
+  MathOperatorTag,
+  AlignmentA,
+  AlignmentB
+> {
+  static_assert(AlignmentA == 1 && AlignmentB == 1);
+
+  // Define the core components from GEMM
+  using MmaCore = typename cutlass::gemm::threadblock::DefaultMmaCore<
+      ThreadblockShape, WarpShape, InstructionShape, ElementA, cutlass::layout::ColumnMajor,
+      ElementB, cutlass::layout::RowMajor, ElementAccumulator, cutlass::layout::RowMajor, cutlass::arch::OpClassSimt,
+      2, MathOperatorTag>;
+
+  // Define iterators over tiles from the A operand
+  using ThreadMapA = typename MmaCore::IteratorThreadMapA;
+  using IteratorA =
+    natten::cuda::gemm::threadblock::TileIterator<
+      natten::cuda::gemm::threadblock::NA2dINInputTileIterator<
+        NAShape,
+        cutlass::MatrixShape<ThreadblockShape::kM, ThreadblockShape::kK>,
+        ElementA, LayoutA,
+        ThreadMapA
+      >, 2
+    >;
+
+  using SmemIteratorA = typename MmaCore::SmemIteratorA;
+
+  // Define iterators over tiles from the B operand
+  using ThreadMapB = typename MmaCore::IteratorThreadMapB;
+  using IteratorB =
+    natten::cuda::gemm::threadblock::TileIterator<
+      natten::cuda::gemm::threadblock::NA2dINValueTileIterator<
+        NAShape,
+        cutlass::MatrixShape<ThreadblockShape::kN, ThreadblockShape::kK>,
+        ElementB, LayoutB,
+        ThreadMapB
+      >, 2
+    >;
+  
+  using SmemIteratorB = typename MmaCore::SmemIteratorB;
+
+  // Warp-level GEMM components
+  using WarpMmaSimt = typename MmaCore::MmaWarpSimt;
+  using MmaPolicy = typename MmaCore::MmaPolicy;
+
+  // Define the Mma
+  using Mma = cutlass::conv::threadblock::ImplicitGemmPipelined<
+    ThreadblockShape,
+    IteratorA,
+    SmemIteratorA,
+    IteratorB,
+    SmemIteratorB,
+    ElementC,
+    LayoutC,
+    MmaPolicy
+  >;
+
+  static const int kPartitionsK = ThreadblockShape::kK / WarpShape::kK;
+
+  using EpilogueElementOutput = typename EpilogueOutputOp::ElementOutput;
+
+  // Threadmap and output iterator were moved out of the default epilogue,
+  // which may seem counter-intuitive, but it was all done pretty lazily to
+  // allow different kernels to have their correct output iterator instantiated
+  // at the kernel level.
+  // May move this back and customize the epilogue in the future.
+  using OutputTileThreadMap = typename cutlass::epilogue::threadblock::DefaultThreadMapSimt<
+    ThreadblockShape,
+    typename WarpMmaSimt::Shape,
+    typename WarpMmaSimt::Policy,
+    kPartitionsK,
+    EpilogueElementOutput,
+    EpilogueOutputOp::kCount
+  >::Type;
+
+  static bool const UseCUDAStore = cutlass::platform::is_same<EpilogueElementOutput, double>::value;
+
+  using OutputTileIterator = natten::cuda::gemm::threadblock::NA2dINOutputTileIterator<
+    NAShape,
+    OutputTileThreadMap,
+    EpilogueElementOutput
+  >;
+
+  // Define the epilogue
+  using Epilogue = typename natten::cuda::gemm::threadblock::DefaultEpilogueSimt<
+    ThreadblockShape,
+    WarpMmaSimt,
     EpilogueOutputOp,
     EpilogueOutputOp::kCount,
     OutputTileIterator

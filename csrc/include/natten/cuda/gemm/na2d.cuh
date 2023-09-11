@@ -158,7 +158,8 @@ struct NA2DLauncher {
 template <
     typename GemmConfig,
     typename AlignmentConfig,
-    typename DTypeConfig> 
+    typename DTypeConfig,
+    typename Arch> 
 struct PointwiseNeighborhood2D {
 
   static constexpr int NATile             = GemmConfig::kTile;
@@ -192,8 +193,8 @@ struct PointwiseNeighborhood2D {
     ElementOperand, LayoutOperand,
     ElementOutput, LayoutOperand,
     ElementAccumulator,
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::Sm80,
+    typename Arch::OpClass,
+    typename Arch::Tag,
     MultiAxisParams,
     ThreadblockShape,
     WarpShape,
@@ -269,7 +270,8 @@ struct PointwiseNeighborhood2D {
 template <
     typename GemmConfig,
     typename AlignmentConfig,
-    typename DTypeConfig> 
+    typename DTypeConfig,
+    typename Arch> 
 struct NeighborhoodNeighborhood2D {
 
   static constexpr int NATile             = GemmConfig::kTile;
@@ -301,8 +303,8 @@ struct NeighborhoodNeighborhood2D {
     ElementOperand, LayoutOperand,
     ElementOutput, LayoutOperand,
     ElementAccumulator,
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::Sm80,
+    typename Arch::OpClass,
+    typename Arch::Tag,
     MultiAxisParams,
     ThreadblockShape,
     WarpShape,
@@ -362,7 +364,8 @@ struct NeighborhoodNeighborhood2D {
 template <
     typename GemmConfig,
     typename AlignmentConfig,
-    typename DTypeConfig> 
+    typename DTypeConfig,
+    typename Arch> 
 struct InverseNeighborhood2D {
 
   static constexpr int NATile             = GemmConfig::kTile;
@@ -394,8 +397,8 @@ struct InverseNeighborhood2D {
     ElementOperand, LayoutOperand,
     ElementOutput,  LayoutOperand,
     ElementAccumulator,
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::Sm80,
+    typename Arch::OpClass,
+    typename Arch::Tag,
     MultiAxisParams,
     ThreadblockShape,
     WarpShape,

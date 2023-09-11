@@ -41,7 +41,10 @@
 #include "natten/cuda/gemm/kernel/implicit_gemm_na1d.cuh"
 #include "natten/cuda/gemm/kernel/implicit_gemm_na2d.cuh"
 #include "natten/cuda/gemm/threadblock/threadblock_swizzle.cuh"
+#include "natten/cuda/gemm/threadblock/na_tile_iterator.cuh"
 
+// Pipelined supports 16-bit alignment, so we don't have to modify it
+#include "cutlass/conv/threadblock/implicit_gemm_pipelined.h"
 
 namespace natten {
 namespace cuda {
