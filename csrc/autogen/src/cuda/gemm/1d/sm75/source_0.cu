@@ -1,8 +1,8 @@
 #include <cuda_runtime.h>
 #include <natten/dtypes.cuh>
 #include <natten/cuda/gemm/na1d.cuh>
-#include <natten/config.h>
 #include <natten/gemm_argpack.cuh>
+#include <natten/config.h>
 namespace natten { 
 namespace cuda { 
 namespace gemm { 

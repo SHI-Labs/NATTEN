@@ -1,13 +1,13 @@
 #include <cuda_runtime.h>
 #include <natten/dtypes.cuh>
 #include <natten/cuda/gemm/na1d.cuh>
-#include <natten/config.h>
 #include <natten/gemm_argpack.cuh>
+#include <natten/config.h>
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
 
-void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align8(
+void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_align8(
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -21,7 +21,7 @@ void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align8(
   float scale) {
 
 #ifdef NATTEN_ENABLE_FP16
-  using GConfig = natten::gemm::detail::GemmConfig<128, 128, 32, 64, 64, 32, 16, 8, 8, 2>;
+  using GConfig = natten::gemm::detail::GemmConfig<128, 128, 32, 64, 64, 32, 8, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<70, half>;
   using AConfig = natten::gemm::detail::AlignmentConfig<8, 8, 1>;
   using DConfig = natten::gemm::detail::DTypeConfig<natten::float16>;
@@ -37,7 +37,7 @@ exit(EXIT_FAILURE);
 #endif
 }
 
-void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align4(
+void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_align4(
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -51,7 +51,7 @@ void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align4(
   float scale) {
 
 #ifdef NATTEN_ENABLE_FP16
-  using GConfig = natten::gemm::detail::GemmConfig<128, 128, 32, 64, 64, 32, 16, 8, 8, 2>;
+  using GConfig = natten::gemm::detail::GemmConfig<128, 128, 32, 64, 64, 32, 8, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<70, half>;
   using AConfig = natten::gemm::detail::AlignmentConfig<4, 4, 1>;
   using DConfig = natten::gemm::detail::DTypeConfig<natten::float16>;
@@ -67,7 +67,7 @@ exit(EXIT_FAILURE);
 #endif
 }
 
-void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align2(
+void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_align2(
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -81,7 +81,7 @@ void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align2(
   float scale) {
 
 #ifdef NATTEN_ENABLE_FP16
-  using GConfig = natten::gemm::detail::GemmConfig<128, 128, 32, 64, 64, 32, 16, 8, 8, 2>;
+  using GConfig = natten::gemm::detail::GemmConfig<128, 128, 32, 64, 64, 32, 8, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<70, half>;
   using AConfig = natten::gemm::detail::AlignmentConfig<2, 2, 1>;
   using DConfig = natten::gemm::detail::DTypeConfig<natten::float16>;
@@ -97,7 +97,7 @@ exit(EXIT_FAILURE);
 #endif
 }
 
-void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align8(
+void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align8(
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -110,7 +110,7 @@ void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align8(
   float scale) {
 
 #ifdef NATTEN_ENABLE_FP16
-  using GConfig = natten::gemm::detail::GemmConfig<64, 64, 32, 32, 32, 32, 16, 8, 8, 2>;
+  using GConfig = natten::gemm::detail::GemmConfig<64, 64, 32, 32, 32, 32, 8, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<70, half>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 8, 8>;
   using DConfig = natten::gemm::detail::DTypeConfig<natten::float16>;
@@ -126,7 +126,7 @@ exit(EXIT_FAILURE);
 #endif
 }
 
-void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align4(
+void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align4(
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -139,7 +139,7 @@ void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align4(
   float scale) {
 
 #ifdef NATTEN_ENABLE_FP16
-  using GConfig = natten::gemm::detail::GemmConfig<64, 64, 32, 32, 32, 32, 16, 8, 8, 2>;
+  using GConfig = natten::gemm::detail::GemmConfig<64, 64, 32, 32, 32, 32, 8, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<70, half>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 4, 4>;
   using DConfig = natten::gemm::detail::DTypeConfig<natten::float16>;
@@ -155,7 +155,7 @@ exit(EXIT_FAILURE);
 #endif
 }
 
-void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align2(
+void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align2(
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -168,7 +168,7 @@ void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align2(
   float scale) {
 
 #ifdef NATTEN_ENABLE_FP16
-  using GConfig = natten::gemm::detail::GemmConfig<64, 64, 32, 32, 32, 32, 16, 8, 8, 2>;
+  using GConfig = natten::gemm::detail::GemmConfig<64, 64, 32, 32, 32, 32, 8, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<70, half>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 2, 2>;
   using DConfig = natten::gemm::detail::DTypeConfig<natten::float16>;

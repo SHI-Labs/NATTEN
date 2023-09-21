@@ -13,13 +13,13 @@ namespace gemm {
 #define DISPATCH_ALIGNMENT_na1d_pn_cuda_gemm_half(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
-      natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align8(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_align8(__VA_ARGS__); \
     } \
     else if (dim % 4 == 0) { \
-      natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align4(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_align4(__VA_ARGS__); \
     } \
     else if (dim % 2 == 0) { \
-      natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm70_align2(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_align2(__VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -33,13 +33,13 @@ namespace gemm {
 #define DISPATCH_ALIGNMENT_na1d_nn_cuda_gemm_half(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
-      natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align8(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align8(__VA_ARGS__); \
     } \
     else if (dim % 4 == 0) { \
-      natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align4(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align4(__VA_ARGS__); \
     } \
     else if (dim % 2 == 0) { \
-      natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align2(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align2(__VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -53,13 +53,13 @@ namespace gemm {
 #define DISPATCH_ALIGNMENT_na1d_in_cuda_gemm_half(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
-      natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align8(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align8(__VA_ARGS__); \
     } \
     else if (dim % 4 == 0) { \
-      natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align4(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align4(__VA_ARGS__); \
     } \
     else if (dim % 2 == 0) { \
-      natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm70_align2(__VA_ARGS__); \
+      natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_align2(__VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
