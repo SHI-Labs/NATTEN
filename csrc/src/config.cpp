@@ -65,7 +65,6 @@ bool has_gemm() {
 
 bool kEnableTiledNA  = true;
 bool kEnableGemmNA   = true;
-bool kEnableGemmTF32 = true;
 
 bool get_tiled_na() {
   return kEnableTiledNA;
@@ -73,10 +72,6 @@ bool get_tiled_na() {
 
 bool get_gemm_na() {
   return kEnableGemmNA;
-}
-
-bool get_gemm_tf32() {
-  return kEnableGemmTF32;
 }
 
 void set_tiled_na(bool v) {
@@ -87,9 +82,26 @@ void set_gemm_na(bool v) {
   kEnableGemmNA = v;
 }
 
+#if (NATTEN_CUTLASS_TARGET_SM >= 80)
+bool kEnableGemmTF32 = true;
+
+bool get_gemm_tf32() {
+  return kEnableGemmTF32;
+}
+
 void set_gemm_tf32(bool v) {
   kEnableGemmTF32 = v;
 }
+#else
+bool kEnableGemmTF32 = false;
+
+bool get_gemm_tf32() {
+  return false;
+}
+
+void set_gemm_tf32(bool v) {
+}
+#endif
 
 } // namespace natten
 

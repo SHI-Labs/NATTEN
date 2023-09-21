@@ -185,8 +185,18 @@ class BuildExtension(build_ext):
                 cmake_args.append("-DNATTEN_WITH_CUDA_FP16=1")
             if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUDA_BF16=1")
-            if current_arch >= 80 and CUDA_VERSION >= [11, 0]:
+            if current_arch >= 70 and CUDA_VERSION >= [11, 0]:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
+                if current_arch >= 80:
+                    cmake_args.append("-DNATTEN_CUTLASS_TARGET_SM=80")
+                elif current_arch >= 75:
+                    cmake_args.append("-DNATTEN_CUTLASS_TARGET_SM=75")
+                elif current_arch >= 70:
+                    cmake_args.append("-DNATTEN_CUTLASS_TARGET_SM=70")
+                else:
+                    raise ValueError(f"This should not have happened. "
+                                     "NATTEN can only be built with CUTLASS on SM70 and above, "
+                                     f"got {current_arch}.")
 
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)

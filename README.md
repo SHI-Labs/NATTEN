@@ -27,20 +27,33 @@ Note that these kernels were developed before the CUTLASS 3.0 release, and are t
 structure. We plan to write new kernels based on CUTLASS 3.X and CUTE in the near future.
 
 ### What does this mean?
-It means that if you're running on SM80 or higher (Ampere, Ada Lovelace, Hopper), you can start using our GEMM based kernels
-and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 implementations do not typically
-result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
+It means that if you're running CUDA 11 and above on SM70 or higher (Volta, Turing, Ampere, Ada Lovelace, Hopper), you can start 
+using our GEMM based kernels and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 
+implementations do not typically result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
 
 ![GEMMvsNaive](assets/gemm_vs_naive.png)
 
 NOTE: the table presents the average improvement in latency over different problem sizes with full precision (tfloat32).
 
-Volta and earlier are not supported at this time, but feel free to open an issue if you're interested.
-
 The new NATTEN is also heavily refactored to both continue to support older architectures with our naive kernels, and to
-accommodate our new kernels which only target SM80 and above.
+accommodate our new kernels which only target SM70 (Volta) and above.
 
-### How do I use the new kernels if I'm on SM80 or above?
+### How do I tell if I'm on SM70 or above?
+Simple, just Google your GPU model, and check its compute capability.
+If you've already set up PyTorch, you could also run:
+```python
+import torch
+
+cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
+sm = cuda_device.major * 10 + cuda_device.minor
+
+print(f"Your main GPU is SM{sm}")
+```
+
+Note: SM70 and SM75 Tensor Cores only support FP16 math, which means you only observe the speedup when you're using mixed precision,
+or manually casting to half precision. Full and double precision fall back to naive kernels.
+
+### How do I use the new kernels if I'm on SM70 or above?
 We're still in the process of deciding the best way to roll out the new kernels via PyPi, which means you can't get these new
 kernels via pip.
 However, you can build NATTEN from source! Just look at the [instructions below on building from source](#build-from-source).

@@ -160,7 +160,8 @@ struct NA1DLauncher {
 template <
     typename GemmConfig,
     typename AlignmentConfig,
-    typename DTypeConfig> 
+    typename DTypeConfig,
+    typename Arch> 
 struct PointwiseNeighborhood1D {
 
   using ThreadblockShape = cutlass::gemm::GemmShape<GemmConfig::kM, GemmConfig::kN, GemmConfig::kK>;
@@ -189,8 +190,8 @@ struct PointwiseNeighborhood1D {
     ElementOperand, LayoutOperand,
     ElementOutput, LayoutOperand,
     ElementAccumulator,
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::Sm80,
+    typename Arch::OpClass,
+    typename Arch::Tag,
     ThreadblockShape,
     WarpShape,
     InstructionShape,
@@ -266,7 +267,8 @@ struct PointwiseNeighborhood1D {
 template <
     typename GemmConfig,
     typename AlignmentConfig,
-    typename DTypeConfig> 
+    typename DTypeConfig,
+    typename Arch> 
 struct NeighborhoodNeighborhood1D {
 
   using ThreadblockShape = cutlass::gemm::GemmShape<GemmConfig::kM, GemmConfig::kN, GemmConfig::kK>;
@@ -293,8 +295,8 @@ struct NeighborhoodNeighborhood1D {
     ElementOperand, LayoutOperand,
     ElementOutput, LayoutOperand,
     ElementAccumulator,
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::Sm80,
+    typename Arch::OpClass,
+    typename Arch::Tag,
     ThreadblockShape,
     WarpShape,
     InstructionShape,
@@ -352,7 +354,8 @@ struct NeighborhoodNeighborhood1D {
 template <
     typename GemmConfig,
     typename AlignmentConfig,
-    typename DTypeConfig> 
+    typename DTypeConfig,
+    typename Arch> 
 struct InverseNeighborhood1D {
 
   using ThreadblockShape = cutlass::gemm::GemmShape<GemmConfig::kM, GemmConfig::kN, GemmConfig::kK>;
@@ -379,8 +382,8 @@ struct InverseNeighborhood1D {
     ElementOperand, LayoutOperand,
     ElementOutput,  LayoutOperand,
     ElementAccumulator,
-    cutlass::arch::OpClassTensorOp,
-    cutlass::arch::Sm80,
+    typename Arch::OpClass,
+    typename Arch::Tag,
     ThreadblockShape,
     WarpShape,
     InstructionShape,
