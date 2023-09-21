@@ -31,17 +31,27 @@ It means that if you're running on SM70 or higher (Volta, Turing, Ampere, Ada Lo
 and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 implementations do not typically
 result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
 
-Also note on SM70 (Volta) and SM75 (Turing), GEMM kernels do not support FP32 (float) and FP64 (double).
-In addition, only SM80 (Ampere) and later support BF16.
-
 ![GEMMvsNaive](assets/gemm_vs_naive.png)
 
 NOTE: the table presents the average improvement in latency over different problem sizes with full precision (tfloat32).
 
-Volta and earlier are not supported at this time, but feel free to open an issue if you're interested.
-
 The new NATTEN is also heavily refactored to both continue to support older architectures with our naive kernels, and to
-accommodate our new kernels which only target SM70 and above.
+accommodate our new kernels which only target SM70 (Volta) and above.
+
+### How do I tell if I'm on SM70 or above?
+Simple, just Google your GPU model, and check its compute capability.
+If you've already set up PyTorch, you could also run:
+```python
+import torch
+
+cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
+sm = cuda_device.major * 10 + cuda_device.minor
+
+print(f"Your main GPU is SM{sm}")
+```
+
+Note: SM70 and SM75 Tensor Cores only support FP16 math, which means you only observe the speedup when you're using mixed precision,
+or manually casting to half precision. Full and double precision fall back to naive kernels.
 
 ### How do I use the new kernels if I'm on SM70 or above?
 We're still in the process of deciding the best way to roll out the new kernels via PyPi, which means you can't get these new
@@ -184,8 +194,8 @@ make test
 - [x] Neighborhood Attention 1D (CUDA, naive)
 - [x] Neighborhood Attention 2D (CUDA, naive)
 - [x] Neighborhood Attention 3D (CUDA, naive)
-- [x] Neighborhood Attention 1D (CUDA, gemm-based, SM70 and above)
-- [x] Neighborhood Attention 2D (CUDA, gemm-based, SM70 and above)
+- [x] Neighborhood Attention 1D (CUDA, gemm-based, SM80 and above)
+- [x] Neighborhood Attention 2D (CUDA, gemm-based, SM80 and above)
 - [x] Dilation support
 - [x] Float16 support and utilization
 - [x] BFloat16 support
