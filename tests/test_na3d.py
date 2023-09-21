@@ -233,6 +233,36 @@ class NA3DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @unittest.expectedFailure
+    def test_invalid_kernel_size(self):
+        self._test_autograd(
+            B=1,
+            H=2,
+            X=6,
+            Y=3,
+            Z=8,
+            D=8,
+            kernel_size=2,
+            dilation=1,
+            eps=1e-6,
+            device="cuda",
+        )
+
+    @unittest.expectedFailure
+    def test_invalid_dilation(self):
+        self._test_autograd(
+            B=1,
+            H=2,
+            X=6,
+            Y=3,
+            Z=8,
+            D=8,
+            kernel_size=3,
+            dilation=0,
+            eps=1e-6,
+            device="cuda",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

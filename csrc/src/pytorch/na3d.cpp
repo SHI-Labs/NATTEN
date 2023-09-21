@@ -45,6 +45,9 @@ at::Tensor na3d_qk_forward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
+    TORCH_CHECK(kernel_size > 1 && kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(depth_kernel_size > 1 && depth_kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(dilation >= 1 && depth_dilation, "Dilation must be a nonnegative integer.");
     CHECK_CONTIGUOUS(query);
     CHECK_CONTIGUOUS(key);
     TORCH_CHECK(query.scalar_type() == key.scalar_type(), "Query and key tensors must match in dtype.");
@@ -97,6 +100,9 @@ std::vector<at::Tensor> na3d_qk_backward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
+    TORCH_CHECK(kernel_size > 1 && kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(depth_kernel_size > 1 && depth_kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(dilation >= 1 && depth_dilation, "Dilation must be a nonnegative integer.");
     CHECK_CONTIGUOUS(query);
     CHECK_CONTIGUOUS(key);
     CHECK_CONTIGUOUS(d_attn);
@@ -155,6 +161,9 @@ at::Tensor na3d_av_forward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
+    TORCH_CHECK(kernel_size > 1 && kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(depth_kernel_size > 1 && depth_kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(dilation >= 1 && depth_dilation, "Dilation must be a nonnegative integer.");
     CHECK_CONTIGUOUS(attn);
     CHECK_CONTIGUOUS(value);
     TORCH_CHECK(attn.scalar_type() == value.scalar_type(), "Attention and value tensors must match in dtype.");
@@ -193,6 +202,9 @@ std::vector<at::Tensor> na3d_av_backward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
+    TORCH_CHECK(kernel_size > 1 && kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(depth_kernel_size > 1 && depth_kernel_size % 2 == 1, "Kernel size must be an odd number greater than 1.");
+    TORCH_CHECK(dilation >= 1 && depth_dilation, "Dilation must be a nonnegative integer.");
     CHECK_CONTIGUOUS(attn);
     CHECK_CONTIGUOUS(value);
     CHECK_CONTIGUOUS(d_out);

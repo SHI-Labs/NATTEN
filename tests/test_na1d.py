@@ -293,6 +293,18 @@ class NA1DTests(unittest.TestCase):
             B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, eps=1e-6, device="cuda"
         )
 
+    @unittest.expectedFailure
+    def test_invalid_kernel_size(self):
+        self._test_autograd(
+            B=2, H=2, L=16, D=8, kernel_size=8, dilation=1, eps=1e-6, device="cpu"
+        )
+
+    @unittest.expectedFailure
+    def test_invalid_dilation(self):
+        self._test_autograd(
+            B=2, H=2, L=16, D=8, kernel_size=5, dilation=0, eps=1e-6, device="cpu"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
