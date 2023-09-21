@@ -27,9 +27,9 @@ Note that these kernels were developed before the CUTLASS 3.0 release, and are t
 structure. We plan to write new kernels based on CUTLASS 3.X and CUTE in the near future.
 
 ### What does this mean?
-It means that if you're running on SM70 or higher (Volta, Turing, Ampere, Ada Lovelace, Hopper), you can start using our GEMM based kernels
-and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 implementations do not typically
-result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
+It means that if you're running CUDA 11 and above on SM70 or higher (Volta, Turing, Ampere, Ada Lovelace, Hopper), you can start 
+using our GEMM based kernels and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 
+implementations do not typically result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
 
 ![GEMMvsNaive](assets/gemm_vs_naive.png)
 
