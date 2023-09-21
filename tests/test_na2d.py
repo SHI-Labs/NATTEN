@@ -373,6 +373,18 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=7, Y=6, D=8, kernel_size=3, dilation=2, eps=1e-6, device="cuda"
         )
 
+    @unittest.expectedFailure
+    def test_invalid_kernel_size(self):
+        self._test_autograd(
+            B=1, H=1, X=8, Y=9, D=8, kernel_size=8, dilation=1, eps=1e-6, device="cuda"
+        )
+
+    @unittest.expectedFailure
+    def test_invalid_dilation(self):
+        self._test_autograd(
+            B=1, H=1, X=8, Y=9, D=8, kernel_size=5, dilation=0, eps=1e-6, device="cuda"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
