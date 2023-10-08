@@ -207,6 +207,13 @@ def add_natten_handle(flop_ctr):
             "prim::PythonOp.NATTEN2DAVFunction": av_2d_flop,
             "prim::PythonOp.NATTEN3DQKRPBFunction": qk_3d_rpb_flop,
             "prim::PythonOp.NATTEN3DAVFunction": av_3d_flop,
+
+            "prim::PythonOp.NeighborhoodAttention1DQKAutogradFunction": qk_1d_rpb_flop,
+            "prim::PythonOp.NeighborhoodAttention1DAVAutogradFunction": av_1d_flop,
+            "prim::PythonOp.NeighborhoodAttention2DQKAutogradFunction": qk_2d_rpb_flop,
+            "prim::PythonOp.NeighborhoodAttention2DAVAutogradFunction": av_2d_flop,
+            "prim::PythonOp.NeighborhoodAttention3DQKAutogradFunction": qk_3d_rpb_flop,
+            "prim::PythonOp.NeighborhoodAttention3DAVAutogradFunction": av_3d_flop,
         }
     )
 
