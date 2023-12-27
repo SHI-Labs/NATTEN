@@ -305,6 +305,85 @@ class NA1DTests(unittest.TestCase):
             B=2, H=2, L=16, D=8, kernel_size=5, dilation=0, eps=1e-6, device="cpu"
         )
 
+    def _test_fwad_qk(self, B, H, L, D, kernel_size, dilation, device):
+        torch.manual_seed(42)
+        kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
+        query = torch.randn((B, H, L, D), **kwargs)
+        key = torch.randn((B, H, L, D), **kwargs)
+
+        variables = [query, key, None, kernel_size, dilation]
+        assert gradcheck(
+            natten1dqkrpb,
+            variables,
+            check_forward_ad=True,
+            check_backward_ad=False,
+            check_undefined_grad=False,
+            check_batched_grad=False,
+            check_grad_dtypes=False,
+        ), f"Forward mode autograd check failed for NA1D: QK."
+
+    def _test_fwad_av(self, B, H, L, D, kernel_size, dilation, device):
+        torch.manual_seed(42)
+        kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
+        attn = torch.randn((B, H, L, kernel_size), **kwargs)
+        value = torch.randn((B, H, L, D), **kwargs)
+        variables = [attn, value, kernel_size, dilation]
+
+        assert gradcheck(
+            natten1dav,
+            variables,
+            check_forward_ad=True,
+            check_backward_ad=False,
+            check_undefined_grad=False,
+            check_batched_grad=False,
+            check_grad_dtypes=False,
+        ), f"Forward mode autograd check failed for NA1D: AV."
+
+    def _test_fwad(self, B, H, L, D, kernel_size, dilation, device):
+        self._test_fwad_qk(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            device=device,
+        )
+        self._test_fwad_av(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            device=device,
+        )
+
+    def test_fwad_cpu(self):
+        self._test_fwad(B=2, H=2, L=16, D=8, kernel_size=5, dilation=1, device="cpu")
+        self._test_fwad(B=2, H=2, L=16, D=8, kernel_size=5, dilation=3, device="cpu")
+        self._test_fwad(B=2, H=2, L=7, D=4, kernel_size=3, dilation=2, device="cpu")
+
+    def test_fwad_cuda_naive(self):
+        if not HAS_CUDA:
+            self.skipTest("NATTEN not compiled with CUDA.")
+        disable_gemm_na()
+        disable_tf32()
+        self._test_fwad(B=1, H=2, L=32, D=8, kernel_size=15, dilation=1, device="cuda")
+        self._test_fwad(B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, device="cuda")
+        self._test_fwad(B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, device="cuda")
+
+    def test_fwad_cuda_gemm(self):
+        if not HAS_CUDA:
+            self.skipTest("NATTEN not compiled with CUDA.")
+        if not HAS_GEMM:
+            self.skipTest("NATTEN not compiled with GEMM kernels.")
+        enable_gemm_na()
+        enable_tf32()
+        self._test_fwad(B=1, H=2, L=32, D=8, kernel_size=15, dilation=1, device="cuda")
+        self._test_fwad(B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, device="cuda")
+        self._test_fwad(B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, device="cuda")
+
 
 if __name__ == "__main__":
     unittest.main()

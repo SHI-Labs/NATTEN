@@ -199,23 +199,20 @@ def av_3d_flop(inputs: List[Any], outputs: List[Any]) -> Number:
 
 
 def add_natten_handle(flop_ctr):
-    return flop_ctr.set_op_handle(
-        **{
-            "prim::PythonOp.NATTEN1DQKRPBFunction": qk_1d_rpb_flop,
-            "prim::PythonOp.NATTEN1DAVFunction": av_1d_flop,
-            "prim::PythonOp.NATTEN2DQKRPBFunction": qk_2d_rpb_flop,
-            "prim::PythonOp.NATTEN2DAVFunction": av_2d_flop,
-            "prim::PythonOp.NATTEN3DQKRPBFunction": qk_3d_rpb_flop,
-            "prim::PythonOp.NATTEN3DAVFunction": av_3d_flop,
-
-            "prim::PythonOp.NeighborhoodAttention1DQKAutogradFunction": qk_1d_rpb_flop,
-            "prim::PythonOp.NeighborhoodAttention1DAVAutogradFunction": av_1d_flop,
-            "prim::PythonOp.NeighborhoodAttention2DQKAutogradFunction": qk_2d_rpb_flop,
-            "prim::PythonOp.NeighborhoodAttention2DAVAutogradFunction": av_2d_flop,
-            "prim::PythonOp.NeighborhoodAttention3DQKAutogradFunction": qk_3d_rpb_flop,
-            "prim::PythonOp.NeighborhoodAttention3DAVAutogradFunction": av_3d_flop,
-        }
-    )
+    return flop_ctr.set_op_handle(**{
+        "prim::PythonOp.NATTEN1DQKRPBFunction": qk_1d_rpb_flop,
+        "prim::PythonOp.NATTEN1DAVFunction": av_1d_flop,
+        "prim::PythonOp.NATTEN2DQKRPBFunction": qk_2d_rpb_flop,
+        "prim::PythonOp.NATTEN2DAVFunction": av_2d_flop,
+        "prim::PythonOp.NATTEN3DQKRPBFunction": qk_3d_rpb_flop,
+        "prim::PythonOp.NATTEN3DAVFunction": av_3d_flop,
+        "prim::PythonOp.NeighborhoodAttention1DQKAutogradFunction": qk_1d_rpb_flop,
+        "prim::PythonOp.NeighborhoodAttention1DAVAutogradFunction": av_1d_flop,
+        "prim::PythonOp.NeighborhoodAttention2DQKAutogradFunction": qk_2d_rpb_flop,
+        "prim::PythonOp.NeighborhoodAttention2DAVAutogradFunction": av_2d_flop,
+        "prim::PythonOp.NeighborhoodAttention3DQKAutogradFunction": qk_3d_rpb_flop,
+        "prim::PythonOp.NeighborhoodAttention3DAVAutogradFunction": av_3d_flop,
+    })
 
 
 def get_flops(model, input, disable_warnings=False):
