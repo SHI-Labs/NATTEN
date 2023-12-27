@@ -90,6 +90,25 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         return attn
 
     @staticmethod
+    def jvp(ctx, query_t, key_t, rpb, kernel_size, dilation):
+        """
+        Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
+        The Jacobian vector product of the QK operation is:
+        qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
+        """
+        if rpb is not None:
+            raise ValueError(
+                "Positional biases are currently not supported "
+                "in forward mode autodiff."
+            )
+        query_p, key_p = ctx.to_save
+        query_t = query_t.contiguous()
+        key_t = key_t.contiguous()
+        return _C.na1d_qk_forward(
+            query_t, key_p, None, ctx.kernel_size, ctx.dilation
+        ) + _C.na1d_qk_forward(query_p, key_t, None, ctx.kernel_size, ctx.dilation)
+
+    @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
         outputs = _C.na1d_qk_backward(
@@ -115,6 +134,20 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         return out
+
+    @staticmethod
+    def jvp(ctx, attn_t, value_t, kernel_size, dilation):
+        """
+        Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
+        The Jacobian vector product of the AV operation is:
+        av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
+        """
+        attn_p, value_p = ctx.to_save
+        attn_t = attn_t.contiguous()
+        value_t = value_t.contiguous()
+        return _C.na1d_av_forward(
+            attn_t, value_p, ctx.kernel_size, ctx.dilation
+        ) + _C.na1d_av_forward(attn_p, value_t, ctx.kernel_size, ctx.dilation)
 
     @staticmethod
     @custom_bwd
@@ -146,6 +179,25 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         return attn
 
     @staticmethod
+    def jvp(ctx, query_t, key_t, rpb, kernel_size, dilation):
+        """
+        Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
+        The Jacobian vector product of the QK operation is:
+        qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
+        """
+        if rpb is not None:
+            raise ValueError(
+                "Positional biases are currently not supported "
+                "in forward mode autodiff."
+            )
+        query_p, key_p = ctx.to_save
+        query_t = query_t.contiguous()
+        key_t = key_t.contiguous()
+        return _C.na2d_qk_forward(
+            query_t, key_p, None, ctx.kernel_size, ctx.dilation
+        ) + _C.na2d_qk_forward(query_p, key_t, None, ctx.kernel_size, ctx.dilation)
+
+    @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
         outputs = _C.na2d_qk_backward(
@@ -171,6 +223,20 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         return out
+
+    @staticmethod
+    def jvp(ctx, attn_t, value_t, kernel_size, dilation):
+        """
+        Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
+        The Jacobian vector product of the AV operation is:
+        av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
+        """
+        attn_p, value_p = ctx.to_save
+        attn_t = attn_t.contiguous()
+        value_t = value_t.contiguous()
+        return _C.na2d_av_forward(
+            attn_t, value_p, ctx.kernel_size, ctx.dilation
+        ) + _C.na2d_av_forward(attn_p, value_t, ctx.kernel_size, ctx.dilation)
 
     @staticmethod
     @custom_bwd
@@ -204,6 +270,39 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         return attn
 
     @staticmethod
+    def jvp(ctx, query_t, key_t, rpb, kernel_size_d, kernel_size, dilation_d, dilation):
+        """
+        Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
+        The Jacobian vector product of the QK operation is:
+        qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
+        """
+        if rpb is not None:
+            raise ValueError(
+                "Positional biases are currently not supported "
+                "in forward mode autodiff."
+            )
+        query_p, key_p = ctx.to_save
+        query_t = query_t.contiguous()
+        key_t = key_t.contiguous()
+        return _C.na3d_qk_forward(
+            query_t,
+            key_p,
+            None,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.kernel_size_d,
+            ctx.dilation_d,
+        ) + _C.na3d_qk_forward(
+            query_p,
+            key_t,
+            None,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.kernel_size_d,
+            ctx.dilation_d,
+        )
+
+    @staticmethod
     @custom_bwd
     def backward(ctx, grad_out):
         outputs = _C.na3d_qk_backward(
@@ -235,6 +334,32 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         ctx.dilation_d = dilation_d
         ctx.dilation = dilation
         return out
+
+    @staticmethod
+    def jvp(ctx, attn_t, value_t, kernel_size_d, kernel_size, dilation_d, dilation):
+        """
+        Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
+        The Jacobian vector product of the AV operation is:
+        av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
+        """
+        attn_p, value_p = ctx.to_save
+        attn_t = attn_t.contiguous()
+        value_t = value_t.contiguous()
+        return _C.na3d_av_forward(
+            attn_t,
+            value_p,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.kernel_size_d,
+            ctx.dilation_d,
+        ) + _C.na3d_av_forward(
+            attn_p,
+            value_t,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.kernel_size_d,
+            ctx.dilation_d,
+        )
 
     @staticmethod
     @custom_bwd
