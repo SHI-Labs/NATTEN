@@ -50,7 +50,7 @@ void na2d_qk_backward(
     const at::Tensor &key,
     at::Tensor &d_query,
     at::Tensor &d_key,
-    at::Tensor &d_bias,
+    at::optional<at::Tensor> &d_bias,
     const int batch_size,
     const int heads,
     const int height,

@@ -34,6 +34,7 @@ from natten import (disable_gemm_na, disable_tf32, disable_tiled_na,
                     has_cuda, has_gemm, has_half)
 from natten.functional import natten1dav, natten1dqkrpb
 
+SKIP_NESTED_TESTS = [int(x) for x in torch.__version__.split(".")[:2]] < [2, 1]
 HAS_CUDA = torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
 HAS_GEMM = has_gemm()
 HAS_HALF = has_half()
@@ -383,6 +384,76 @@ class NA1DTests(unittest.TestCase):
         self._test_fwad(B=1, H=2, L=32, D=8, kernel_size=15, dilation=1, device="cuda")
         self._test_fwad(B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, device="cuda")
         self._test_fwad(B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, device="cuda")
+
+    def _test_nested_qk_forward(self, dtype, device):
+        torch.manual_seed(42)
+        kernel_size, dilation = 7, 2
+        kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
+        query = torch.nested.nested_tensor(
+            [
+                torch.randn(1, 2, 14, 16),
+                torch.randn(2, 8, 16, 32),
+                torch.randn(4, 1, 32, 16),
+            ],
+            **kwargs,
+        )
+        key = torch.nested.nested_tensor(
+            [
+                torch.randn(1, 2, 14, 16),
+                torch.randn(2, 8, 16, 32),
+                torch.randn(4, 1, 32, 16),
+            ],
+            **kwargs,
+        )
+        out_nested = natten1dqkrpb(query, key, None, kernel_size, dilation)
+        out_ref = []
+        for q, k in zip(query, key):
+            out_ref.append(natten1dqkrpb(q, k, None, kernel_size, dilation))
+
+        for o, o_ref in zip(out_nested, out_ref):
+            torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
+
+    def _test_nested_av_forward(self, dtype, device):
+        torch.manual_seed(42)
+        kernel_size, dilation = 7, 2
+        kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
+        attn = torch.nested.nested_tensor(
+            [
+                torch.randn(1, 2, 14, kernel_size),
+                torch.randn(2, 8, 16, kernel_size),
+                torch.randn(4, 1, 32, kernel_size),
+            ],
+            **kwargs,
+        )
+        value = torch.nested.nested_tensor(
+            [
+                torch.randn(1, 2, 14, 16),
+                torch.randn(2, 8, 16, 32),
+                torch.randn(4, 1, 32, 16),
+            ],
+            **kwargs,
+        )
+        out_nested = natten1dav(attn, value, kernel_size, dilation)
+        out_ref = []
+        for a, v in zip(attn, value):
+            out_ref.append(natten1dav(a, v, kernel_size, dilation))
+
+        for o, o_ref in zip(out_nested, out_ref):
+            torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
+
+    def test_nested_forward_cpu(self):
+        if SKIP_NESTED_TESTS:
+            self.skipTest("Nested tensors are only supported with torch >= 2.1.")
+        self._test_nested_qk_forward(dtype=torch.float32, device="cpu")
+        self._test_nested_av_forward(dtype=torch.float32, device="cpu")
+
+    def test_nested_forward_cuda(self):
+        if SKIP_NESTED_TESTS:
+            self.skipTest("Nested tensors are only supported with torch >= 2.1.")
+        if not HAS_CUDA:
+            self.skipTest("NATTEN not compiled with CUDA.")
+        self._test_nested_qk_forward(dtype=torch.float16, device="cuda")
+        self._test_nested_av_forward(dtype=torch.float16, device="cuda")
 
 
 if __name__ == "__main__":
