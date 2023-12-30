@@ -65,7 +65,7 @@ void na3d_qk_backward(
     const at::Tensor &key,
     at::Tensor &d_query,
     at::Tensor &d_key,
-    at::Tensor &d_bias,
+    at::optional<at::Tensor> &d_bias,
     const int batch_size,
     const int heads,
     const int depth,
@@ -82,7 +82,7 @@ void na3d_qk_backward(
             static_cast<void *>(d_attn.data_ptr()),
             static_cast<void *>(d_query.data_ptr()),
             static_cast<void *>(d_key.data_ptr()),
-            d_bias.has_storage() ? static_cast<void *>(d_bias.data_ptr()) : nullptr,
+            d_bias.has_value() ? static_cast<void *>(d_bias.value().data_ptr()) : nullptr,
             batch_size, heads, depth, height, width, dim,
             kernel_size, dilation, depth_kernel_size, depth_dilation);
 }

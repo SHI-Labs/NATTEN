@@ -26,12 +26,12 @@
 
 #pragma once
 #include <ATen/ATen.h>
-#include <vector>
 
 namespace natten {
 namespace pytorch {
 
-at::Tensor na3d_qk_forward(
+void na3d_qk_forward(
+    at::Tensor &attn,
     const at::Tensor &query,
     const at::Tensor &key,
     const at::optional<at::Tensor> &bias,
@@ -40,17 +40,20 @@ at::Tensor na3d_qk_forward(
     const int depth_kernel_size,
     const int depth_dilation);
 
-std::vector<at::Tensor> na3d_qk_backward(
+void na3d_qk_backward(
+    at::Tensor &d_query,
+    at::Tensor &d_key,
+    at::optional<at::Tensor> &d_bias,
     const at::Tensor &d_attn,
     const at::Tensor &query,
     const at::Tensor &key,
-    const bool has_bias,
     const int kernel_size,
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation);
 
-at::Tensor na3d_av_forward(
+void na3d_av_forward(
+    at::Tensor &out,
     const at::Tensor &attn,
     const at::Tensor &value,
     const int kernel_size,
@@ -58,7 +61,9 @@ at::Tensor na3d_av_forward(
     const int depth_kernel_size,
     const int depth_dilation);
 
-std::vector<at::Tensor> na3d_av_backward(
+void na3d_av_backward(
+    at::Tensor &d_attn,
+    at::Tensor &d_value,
     const at::Tensor &d_out,
     const at::Tensor &attn,
     const at::Tensor &value,
@@ -69,4 +74,3 @@ std::vector<at::Tensor> na3d_av_backward(
 
 } // namespace pytorch
 } // namespace natten
-

@@ -26,33 +26,38 @@
 
 #pragma once
 #include <ATen/ATen.h>
-#include <vector>
 
 namespace natten {
 namespace pytorch {
 
-at::Tensor na1d_qk_forward(
+void na1d_qk_forward(
+    at::Tensor &attn,
     const at::Tensor &query,
     const at::Tensor &key,
     const at::optional<at::Tensor> &bias,
     const int kernel_size,
     const int dilation);
 
-std::vector<at::Tensor> na1d_qk_backward(
+void na1d_qk_backward(
+    at::Tensor &d_query,
+    at::Tensor &d_key,
+    at::optional<at::Tensor> &d_bias,
     const at::Tensor &d_attn,
     const at::Tensor &query,
     const at::Tensor &key,
-    const bool has_bias,
     const int kernel_size,
     const int dilation);
 
-at::Tensor na1d_av_forward(
+void na1d_av_forward(
+    at::Tensor &out,
     const at::Tensor &attn,
     const at::Tensor &value,
     const int kernel_size,
     const int dilation);
 
-std::vector<at::Tensor> na1d_av_backward(
+void na1d_av_backward(
+    at::Tensor &d_attn,
+    at::Tensor &d_value,
     const at::Tensor &d_out,
     const at::Tensor &attn,
     const at::Tensor &value,
