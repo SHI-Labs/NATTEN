@@ -20,94 +20,115 @@
 # SOFTWARE.
 #
 #################################################################################################
+from typing import Any, Optional, Tuple
+
 import torch
 from torch import Tensor
 from torch.autograd import Function
 from torch.cuda.amp import custom_bwd, custom_fwd
 
 try:
-    from natten import _C
+    from natten import _C  # type: ignore
 except ImportError:
     raise ImportError(
-        f"Failed to import NATTEN's CPP backend. "
-        + f"This could be due to an invalid/incomplete install. "
-        + f"Please uninstall NATTEN (pip uninstall natten) and re-install with the"
-        f" correct torch build: "
-        + f"shi-labs.com/natten"
+        "Failed to import NATTEN's CPP backend. "
+        "This could be due to an invalid/incomplete install. "
+        "Please uninstall NATTEN (pip uninstall natten) and re-install with the"
+        " correct torch build: shi-labs.com/natten ."
     )
 
-from .nested import (na1d_av_nested, na1d_qk_nested, na2d_av_nested,
-                     na2d_qk_nested, na3d_av_nested, na3d_qk_nested)
-from .utils import make_attn_tensor_from_input
+from .nested import (
+    na1d_av_nested,
+    na1d_qk_nested,
+    na2d_av_nested,
+    na2d_qk_nested,
+    na3d_av_nested,
+    na3d_qk_nested,
+)
+from .utils.tensor import make_attn_tensor_from_input
+from .utils.typing import NoneType
 
 
-def has_cuda():
+def has_cuda() -> bool:
     return _C.has_cuda()
 
 
-def has_half():
+def has_half() -> bool:
     return _C.has_half()
 
 
-def has_bfloat():
+def has_bfloat() -> bool:
     return _C.has_bfloat()
 
 
-def has_gemm():
+def has_gemm() -> bool:
     return _C.has_gemm()
 
 
 def enable_tf32():
-    return _C.set_gemm_tf32(True)
+    _C.set_gemm_tf32(True)
 
 
 def disable_tf32():
-    return _C.set_gemm_tf32(False)
+    _C.set_gemm_tf32(False)
 
 
 def enable_tiled_na():
-    return _C.set_tiled_na(True)
+    _C.set_tiled_na(True)
 
 
 def disable_tiled_na():
-    return _C.set_tiled_na(False)
+    _C.set_tiled_na(False)
 
 
 def enable_gemm_na():
-    return _C.set_gemm_na(True)
+    _C.set_gemm_na(True)
 
 
 def disable_gemm_na():
-    return _C.set_gemm_na(False)
+    _C.set_gemm_na(False)
 
 
 class NeighborhoodAttention1DQKAutogradFunction(Function):
     @staticmethod
     @custom_fwd
-    def forward(ctx, query, key, rpb, kernel_size, dilation):
+    def forward(
+        ctx,
+        query: Tensor,
+        key: Tensor,
+        bias: Optional[Tensor],
+        kernel_size: int,
+        dilation: int,
+    ) -> Tensor:
         query = query.contiguous()
         key = key.contiguous()
-        if rpb is not None:
-            rpb = rpb.to(key.dtype)
+        if bias is not None:
+            bias = bias.to(key.dtype)
         attn = make_attn_tensor_from_input(query, kernel_size)
-        _C.na1d_qk_forward(attn, query, key, rpb, kernel_size, dilation)
-        ctx.save_for_backward(query, key, rpb)
+        _C.na1d_qk_forward(attn, query, key, bias, kernel_size, dilation)
+        ctx.save_for_backward(query, key, bias)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         return attn
 
     @staticmethod
-    def jvp(ctx, query_t, key_t, rpb, kernel_size, dilation):
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
         """
         Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
-        if rpb is not None:
+        assert len(grad_inputs) == 5
+        query_t: Tensor = grad_inputs[0]
+        key_t: Tensor = grad_inputs[1]
+        bias: Optional[Tensor] = grad_inputs[2]
+
+        if bias is not None:
             raise ValueError(
                 "Positional biases are currently not supported "
                 "in forward mode autodiff."
             )
+
         query_p, key_p, _ = ctx.to_save
         query_t = query_t.contiguous()
         key_t = key_t.contiguous()
@@ -119,23 +140,25 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
 
     @staticmethod
     @custom_bwd
-    def backward(ctx, grad_out):
-        query, key, rpb = ctx.saved_tensors
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType]:
+        query, key, bias = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
-        # dRPB has to be zero filled
-        d_rpb = None if rpb is None else torch.zeros_like(rpb)
+        # dbias has to be zero filled
+        d_bias = None if bias is None else torch.zeros_like(bias)
         _C.na1d_qk_backward(
             d_query,
             d_key,
-            d_rpb,
+            d_bias,
             grad_out.contiguous(),
             query,
             key,
             ctx.kernel_size,
             ctx.dilation,
         )
-        return d_query, d_key, d_rpb, None, None
+        return d_query, d_key, d_bias, None, None
 
 
 class NeighborhoodAttention1DAVAutogradFunction(Function):
@@ -152,12 +175,16 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         return out
 
     @staticmethod
-    def jvp(ctx, attn_t, value_t, kernel_size, dilation):
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
         """
         Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
+        assert len(grad_inputs) == 4
+        attn_t: Tensor = grad_inputs[0]
+        value_t: Tensor = grad_inputs[1]
+
         attn_p, value_p = ctx.to_save
         attn_t = attn_t.contiguous()
         value_t = value_t.contiguous()
@@ -169,7 +196,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
 
     @staticmethod
     @custom_bwd
-    def backward(ctx, grad_out):
+    def backward(ctx, grad_out: Tensor) -> Tuple[Tensor, Tensor, NoneType, NoneType]:
         attn, value = ctx.saved_tensors
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
@@ -188,26 +215,38 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
 class NeighborhoodAttention2DQKAutogradFunction(Function):
     @staticmethod
     @custom_fwd
-    def forward(ctx, query, key, rpb, kernel_size, dilation):
+    def forward(
+        ctx,
+        query: Tensor,
+        key: Tensor,
+        bias: Optional[Tensor],
+        kernel_size: int,
+        dilation: int,
+    ):
         query = query.contiguous()
         key = key.contiguous()
-        if rpb is not None:
-            rpb = rpb.to(key.dtype)
+        if bias is not None:
+            bias = bias.to(key.dtype)
         attn = make_attn_tensor_from_input(query, kernel_size**2)
-        _C.na2d_qk_forward(attn, query, key, rpb, kernel_size, dilation)
-        ctx.save_for_backward(query, key, rpb)
+        _C.na2d_qk_forward(attn, query, key, bias, kernel_size, dilation)
+        ctx.save_for_backward(query, key, bias)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
         return attn
 
     @staticmethod
-    def jvp(ctx, query_t, key_t, rpb, kernel_size, dilation):
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
         """
         Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
-        if rpb is not None:
+        assert len(grad_inputs) == 5
+        query_t: Tensor = grad_inputs[0]
+        key_t: Tensor = grad_inputs[1]
+        bias: Optional[Tensor] = grad_inputs[2]
+
+        if bias is not None:
             raise ValueError(
                 "Positional biases are currently not supported "
                 "in forward mode autodiff."
@@ -223,29 +262,33 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
 
     @staticmethod
     @custom_bwd
-    def backward(ctx, grad_out):
-        query, key, rpb = ctx.saved_tensors
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType]:
+        query, key, bias = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
-        # dRPB has to be zero filled
-        d_rpb = None if rpb is None else torch.zeros_like(rpb)
+        # dbias has to be zero filled
+        d_bias = None if bias is None else torch.zeros_like(bias)
         _C.na2d_qk_backward(
             d_query,
             d_key,
-            d_rpb,
+            d_bias,
             grad_out.contiguous(),
             query,
             key,
             ctx.kernel_size,
             ctx.dilation,
         )
-        return d_query, d_key, d_rpb, None, None
+        return d_query, d_key, d_bias, None, None
 
 
 class NeighborhoodAttention2DAVAutogradFunction(Function):
     @staticmethod
     @custom_fwd
-    def forward(ctx, attn, value, kernel_size, dilation):
+    def forward(
+        ctx, attn: Tensor, value: Tensor, kernel_size: int, dilation: int
+    ) -> Tensor:
         attn = attn.contiguous()
         value = value.contiguous()
         out = torch.empty_like(value)
@@ -256,12 +299,16 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         return out
 
     @staticmethod
-    def jvp(ctx, attn_t, value_t, kernel_size, dilation):
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
         """
         Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
+        assert len(grad_inputs) == 4
+        attn_t: Tensor = grad_inputs[0]
+        value_t: Tensor = grad_inputs[1]
+
         attn_p, value_p = ctx.to_save
         attn_t = attn_t.contiguous()
         value_t = value_t.contiguous()
@@ -273,7 +320,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
 
     @staticmethod
     @custom_bwd
-    def backward(ctx, grad_out):
+    def backward(ctx, grad_out: Tensor) -> Tuple[Tensor, Tensor, NoneType, NoneType]:
         attn, value = ctx.saved_tensors
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
@@ -292,18 +339,27 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
 class NeighborhoodAttention3DQKAutogradFunction(Function):
     @staticmethod
     @custom_fwd
-    def forward(ctx, query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation):
+    def forward(
+        ctx,
+        query: Tensor,
+        key: Tensor,
+        bias: Optional[Tensor],
+        kernel_size_d: int,
+        kernel_size: int,
+        dilation_d: int,
+        dilation: int,
+    ) -> Tensor:
         query = query.contiguous()
         key = key.contiguous()
-        if rpb is not None:
-            rpb = rpb.to(key.dtype)
+        if bias is not None:
+            bias = bias.to(key.dtype)
         attn = make_attn_tensor_from_input(
             query, kernel_size * kernel_size * kernel_size_d
         )
         _C.na3d_qk_forward(
-            attn, query, key, rpb, kernel_size, dilation, kernel_size_d, dilation_d
+            attn, query, key, bias, kernel_size, dilation, kernel_size_d, dilation_d
         )
-        ctx.save_for_backward(query, key, rpb)
+        ctx.save_for_backward(query, key, bias)
         ctx.kernel_size_d = kernel_size_d
         ctx.kernel_size = kernel_size
         ctx.dilation_d = dilation_d
@@ -311,13 +367,18 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         return attn
 
     @staticmethod
-    def jvp(ctx, query_t, key_t, rpb, kernel_size_d, kernel_size, dilation_d, dilation):
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
         """
         Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
-        if rpb is not None:
+        assert len(grad_inputs) == 7
+        query_t: Tensor = grad_inputs[0]
+        key_t: Tensor = grad_inputs[1]
+        bias: Optional[Tensor] = grad_inputs[2]
+
+        if bias is not None:
             raise ValueError(
                 "Positional biases are currently not supported "
                 "in forward mode autodiff."
@@ -353,16 +414,20 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
 
     @staticmethod
     @custom_bwd
-    def backward(ctx, grad_out):
-        query, key, rpb = ctx.saved_tensors
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[
+        Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType, NoneType
+    ]:
+        query, key, bias = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
-        # dRPB has to be zero filled
-        d_rpb = None if rpb is None else torch.zeros_like(rpb)
+        # dbias has to be zero filled
+        d_bias = None if bias is None else torch.zeros_like(bias)
         _C.na3d_qk_backward(
             d_query,
             d_key,
-            d_rpb,
+            d_bias,
             grad_out.contiguous(),
             query,
             key,
@@ -371,13 +436,21 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             ctx.kernel_size_d,
             ctx.dilation_d,
         )
-        return d_query, d_key, d_rpb, None, None, None, None
+        return d_query, d_key, d_bias, None, None, None, None
 
 
 class NeighborhoodAttention3DAVAutogradFunction(Function):
     @staticmethod
     @custom_fwd
-    def forward(ctx, attn, value, kernel_size_d, kernel_size, dilation_d, dilation):
+    def forward(
+        ctx,
+        attn: Tensor,
+        value: Tensor,
+        kernel_size_d: int,
+        kernel_size: int,
+        dilation_d: int,
+        dilation: int,
+    ) -> Tensor:
         attn = attn.contiguous()
         value = value.contiguous()
         out = torch.empty_like(value)
@@ -392,12 +465,16 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         return out
 
     @staticmethod
-    def jvp(ctx, attn_t, value_t, kernel_size_d, kernel_size, dilation_d, dilation):
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
         """
         Forward-mode AD support was contributed by @crowsonkb and @Birch-san.
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
+        assert len(grad_inputs) == 6
+        attn_t: Tensor = grad_inputs[0]
+        value_t: Tensor = grad_inputs[1]
+
         attn_p, value_p = ctx.to_save
         attn_t = attn_t.contiguous()
         value_t = value_t.contiguous()
@@ -425,7 +502,9 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
 
     @staticmethod
     @custom_bwd
-    def backward(ctx, grad_out):
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[Tensor, Tensor, NoneType, NoneType, NoneType, NoneType]:
         attn, value = ctx.saved_tensors
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
@@ -443,15 +522,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         return d_attn, d_value, None, None, None, None
 
 
-def natten1dqkrpb(query, key, rpb, kernel_size, dilation):
-    if query.is_nested or key.is_nested:
-        return na1d_qk_nested(query, key, rpb, kernel_size, dilation)
-    return NeighborhoodAttention1DQKAutogradFunction.apply(
-        query, key, rpb, kernel_size, dilation
-    )
-
-
-def natten1dqk(query, key, kernel_size, dilation):
+def na1d_qk(query: Tensor, key: Tensor, kernel_size: int, dilation: int) -> Tensor:
     if query.is_nested or key.is_nested:
         return na1d_qk_nested(query, key, None, kernel_size, dilation)
     return NeighborhoodAttention1DQKAutogradFunction.apply(
@@ -459,7 +530,17 @@ def natten1dqk(query, key, kernel_size, dilation):
     )
 
 
-def natten1dav(attn, value, kernel_size, dilation):
+def na1d_qk_with_bias(
+    query: Tensor, key: Tensor, bias: Optional[Tensor], kernel_size: int, dilation: int
+) -> Tensor:
+    if query.is_nested or key.is_nested:
+        return na1d_qk_nested(query, key, bias, kernel_size, dilation)
+    return NeighborhoodAttention1DQKAutogradFunction.apply(
+        query, key, bias, kernel_size, dilation
+    )
+
+
+def na1d_av(attn: Tensor, value: Tensor, kernel_size: int, dilation: int) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na1d_av_nested(attn, value, kernel_size, dilation)
     return NeighborhoodAttention1DAVAutogradFunction.apply(
@@ -467,15 +548,7 @@ def natten1dav(attn, value, kernel_size, dilation):
     )
 
 
-def natten2dqkrpb(query, key, rpb, kernel_size, dilation):
-    if query.is_nested or key.is_nested:
-        return na2d_qk_nested(query, key, rpb, kernel_size, dilation)
-    return NeighborhoodAttention2DQKAutogradFunction.apply(
-        query, key, rpb, kernel_size, dilation
-    )
-
-
-def natten2dqk(query, key, kernel_size, dilation):
+def na2d_qk(query: Tensor, key: Tensor, kernel_size: int, dilation: int) -> Tensor:
     if query.is_nested or key.is_nested:
         return na2d_qk_nested(query, key, None, kernel_size, dilation)
     return NeighborhoodAttention2DQKAutogradFunction.apply(
@@ -483,7 +556,17 @@ def natten2dqk(query, key, kernel_size, dilation):
     )
 
 
-def natten2dav(attn, value, kernel_size, dilation):
+def na2d_qk_with_bias(
+    query: Tensor, key: Tensor, bias: Optional[Tensor], kernel_size: int, dilation: int
+) -> Tensor:
+    if query.is_nested or key.is_nested:
+        return na2d_qk_nested(query, key, bias, kernel_size, dilation)
+    return NeighborhoodAttention2DQKAutogradFunction.apply(
+        query, key, bias, kernel_size, dilation
+    )
+
+
+def na2d_av(attn: Tensor, value: Tensor, kernel_size: int, dilation: int) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na2d_av_nested(attn, value, kernel_size, dilation)
     return NeighborhoodAttention2DAVAutogradFunction.apply(
@@ -491,17 +574,32 @@ def natten2dav(attn, value, kernel_size, dilation):
     )
 
 
-def natten3dqkrpb(query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation):
+def na3d_qk_with_bias(
+    query: Tensor,
+    key: Tensor,
+    bias: Optional[Tensor],
+    kernel_size_d: int,
+    kernel_size: int,
+    dilation_d: int,
+    dilation: int,
+) -> Tensor:
     if query.is_nested or key.is_nested:
         return na3d_qk_nested(
-            query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation
+            query, key, bias, kernel_size_d, kernel_size, dilation_d, dilation
         )
     return NeighborhoodAttention3DQKAutogradFunction.apply(
-        query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation
+        query, key, bias, kernel_size_d, kernel_size, dilation_d, dilation
     )
 
 
-def natten3dqk(query, key, kernel_size_d, kernel_size, dilation_d, dilation):
+def na3d_qk(
+    query: Tensor,
+    key: Tensor,
+    kernel_size_d: int,
+    kernel_size: int,
+    dilation_d: int,
+    dilation: int,
+) -> Tensor:
     if query.is_nested or key.is_nested:
         return na3d_qk_nested(
             query, key, None, kernel_size_d, kernel_size, dilation_d, dilation
@@ -511,7 +609,14 @@ def natten3dqk(query, key, kernel_size_d, kernel_size, dilation_d, dilation):
     )
 
 
-def natten3dav(attn, value, kernel_size_d, kernel_size, dilation_d, dilation):
+def na3d_av(
+    attn: Tensor,
+    value: Tensor,
+    kernel_size_d: int,
+    kernel_size: int,
+    dilation_d: int,
+    dilation: int,
+) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na3d_av_nested(
             attn, value, kernel_size_d, kernel_size, dilation_d, dilation
@@ -519,3 +624,42 @@ def natten3dav(attn, value, kernel_size_d, kernel_size, dilation_d, dilation):
     return NeighborhoodAttention3DAVAutogradFunction.apply(
         attn, value, kernel_size_d, kernel_size, dilation_d, dilation
     )
+
+
+#################################################################################################
+# Soon to be deprecated functions
+#################################################################################################
+
+
+def natten1dqkrpb(
+    query: Tensor, key: Tensor, rpb: Optional[Tensor], kernel_size: int, dilation: int
+) -> Tensor:
+    return na1d_qk_with_bias(query, key, rpb, kernel_size, dilation)
+
+
+def natten2dqkrpb(
+    query: Tensor, key: Tensor, rpb: Optional[Tensor], kernel_size: int, dilation: int
+) -> Tensor:
+    return na2d_qk_with_bias(query, key, rpb, kernel_size, dilation)
+
+
+def natten3dqkrpb(
+    query: Tensor,
+    key: Tensor,
+    rpb: Optional[Tensor],
+    kernel_size_d: int,
+    kernel_size: int,
+    dilation_d: int,
+    dilation: int,
+) -> Tensor:
+    return na3d_qk_with_bias(
+        query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation
+    )
+
+
+natten1dqk = na1d_qk
+natten1dav = na1d_av
+natten2dqk = na2d_qk
+natten2dav = na2d_av
+natten3dqk = na3d_qk
+natten3dav = na3d_av

@@ -20,12 +20,14 @@
 # SOFTWARE.
 #
 #################################################################################################
+from typing import Optional
+
 import torch
-from torch import nn
+from torch import nn, Tensor
 from torch.nn.functional import pad
 from torch.nn.init import trunc_normal_
 
-from .functional import natten2dav, natten2dqkrpb
+from .functional import na2d_av, na2d_qk_with_bias
 
 
 class NeighborhoodAttention2D(nn.Module):
@@ -35,15 +37,15 @@ class NeighborhoodAttention2D(nn.Module):
 
     def __init__(
         self,
-        dim,
-        num_heads,
-        kernel_size,
-        dilation=1,
-        bias=True,
-        qkv_bias=True,
-        qk_scale=None,
-        attn_drop=0.0,
-        proj_drop=0.0,
+        dim: int,
+        num_heads: int,
+        kernel_size: int,
+        dilation: int = 1,
+        bias: bool = True,
+        qkv_bias: bool = True,
+        qk_scale: Optional[float] = None,
+        attn_drop: float = 0.0,
+        proj_drop: float = 0.0,
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -71,30 +73,38 @@ class NeighborhoodAttention2D(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x):
-        B, Hp, Wp, C = x.shape
-        H, W = int(Hp), int(Wp)
-        pad_l = pad_t = pad_r = pad_b = 0
+    def forward(self, x: Tensor) -> Tensor:
+        if x.dim() != 4:
+            raise ValueError(
+                f"NeighborhoodAttention2D expected a rank-4 input tensor; got {x.dim()=}."
+            )
+
+        B, H, W, C = x.shape
+        # Pad if the input is small than the minimum supported size
+        H_padded, W_padded = H, W
+        padding_h = padding_w = 0
         if H < self.window_size or W < self.window_size:
-            pad_l = pad_t = 0
-            pad_r = max(0, self.window_size - W)
-            pad_b = max(0, self.window_size - H)
-            x = pad(x, (0, 0, pad_l, pad_r, pad_t, pad_b))
-            _, H, W, _ = x.shape
+            padding_h = max(0, self.window_size - H_padded)
+            padding_w = max(0, self.window_size - W_padded)
+            x = pad(x, (0, 0, 0, padding_w, 0, padding_h))
+            _, H_padded, W_padded, _ = x.shape
+
         qkv = (
             self.qkv(x)
-            .reshape(B, H, W, 3, self.num_heads, self.head_dim)
+            .reshape(B, H_padded, W_padded, 3, self.num_heads, self.head_dim)
             .permute(3, 0, 4, 1, 2, 5)
         )
         q, k, v = qkv[0], qkv[1], qkv[2]
         q = q * self.scale
-        attn = natten2dqkrpb(q, k, self.rpb, self.kernel_size, self.dilation)
+        attn = na2d_qk_with_bias(q, k, self.rpb, self.kernel_size, self.dilation)
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        x = natten2dav(attn, v, self.kernel_size, self.dilation)
-        x = x.permute(0, 2, 3, 1, 4).reshape(B, H, W, C)
-        if pad_r or pad_b:
-            x = x[:, :Hp, :Wp, :]
+        x = na2d_av(attn, v, self.kernel_size, self.dilation)
+        x = x.permute(0, 2, 3, 1, 4).reshape(B, H_padded, W_padded, C)
+
+        # Remove padding, if added any
+        if padding_h or padding_w:
+            x = x[:, :H, :W, :]
 
         return self.proj_drop(self.proj(x))
 
@@ -102,5 +112,5 @@ class NeighborhoodAttention2D(nn.Module):
         return (
             f"head_dim={self.head_dim}, num_heads={self.num_heads}, "
             + f"kernel_size={self.kernel_size}, dilation={self.dilation}, "
-            + f"rel_pos_bias={self.rpb is not None}"
+            + f"has_bias={self.rpb is not None}"
         )

@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -40,7 +40,6 @@ namespace naive {
 
 template <typename scalar_t>
 struct NeighborhoodNeighborhood2DBase {
-
   struct Params {
     scalar_t* weights;
     scalar_t* values;
@@ -52,40 +51,43 @@ struct NeighborhoodNeighborhood2DBase {
     const int dilation_in;
     const int dim;
     const int64_t problem_size;
-    const int weights_stride_0, weights_stride_1, weights_stride_2, weights_stride_3;
-    const int values_stride_0, values_stride_1, values_stride_2, values_stride_3;
+    const int weights_stride_0, weights_stride_1, weights_stride_2,
+        weights_stride_3;
+    const int values_stride_0, values_stride_1, values_stride_2,
+        values_stride_3;
 
-    __device__  __host__ Params() {}
+    __device__ __host__ Params() {}
 
-    __device__  __host__ Params(// AV     / Q-grad
-      scalar_t* weights,        // attn   / d_attn
-      scalar_t* values,         // value  / key
-      scalar_t* output,         // output / d_query
-      const int height,
-      const int width,
-      const int heads,
-      const int kernel_size_in,
-      const int dilation_in,
-      const int dim,
-      const int problem_size): 
-      weights(weights),
-      values(values),
-      output(output),
-      height(height),
-      width(width),
-      heads(heads),
-      kernel_size_in(kernel_size_in),
-      dilation_in(dilation_in),
-      dim(dim),
-      problem_size(problem_size),
-      weights_stride_3(kernel_size_in * kernel_size_in),
-      weights_stride_2(kernel_size_in * kernel_size_in * width),
-      weights_stride_1(kernel_size_in * kernel_size_in * width * height),
-      weights_stride_0(kernel_size_in * kernel_size_in * width * height * heads),
-      values_stride_3(dim),
-      values_stride_2(dim * width),
-      values_stride_1(dim * width * height),
-      values_stride_0(dim * width * height * heads) {}
+    __device__ __host__ Params( // AV     / Q-grad
+        scalar_t* weights, // attn   / d_attn
+        scalar_t* values, // value  / key
+        scalar_t* output, // output / d_query
+        const int height,
+        const int width,
+        const int heads,
+        const int kernel_size_in,
+        const int dilation_in,
+        const int dim,
+        const int problem_size)
+        : weights(weights),
+          values(values),
+          output(output),
+          height(height),
+          width(width),
+          heads(heads),
+          kernel_size_in(kernel_size_in),
+          dilation_in(dilation_in),
+          dim(dim),
+          problem_size(problem_size),
+          weights_stride_3(kernel_size_in * kernel_size_in),
+          weights_stride_2(kernel_size_in * kernel_size_in * width),
+          weights_stride_1(kernel_size_in * kernel_size_in * width * height),
+          weights_stride_0(
+              kernel_size_in * kernel_size_in * width * height * heads),
+          values_stride_3(dim),
+          values_stride_2(dim * width),
+          values_stride_1(dim * width * height),
+          values_stride_0(dim * width * height * heads) {}
   };
 
   __device__ __host__ NeighborhoodNeighborhood2DBase() {}
@@ -101,46 +103,51 @@ struct NeighborhoodNeighborhood2DBase {
   }
 };
 
-
 template <typename scalar_t, int KS, int NS, int DILATION>
-struct NeighborhoodNeighborhood2DFull: NeighborhoodNeighborhood2DBase<scalar_t> {
-  using Base   = NeighborhoodNeighborhood2DBase<scalar_t>;
+struct NeighborhoodNeighborhood2DFull
+    : NeighborhoodNeighborhood2DBase<scalar_t> {
+  using Base = NeighborhoodNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
 
-  __device__ __host__ NeighborhoodNeighborhood2DFull(): Base() {}
+  __device__ __host__ NeighborhoodNeighborhood2DFull() : Base() {}
 
   static __host__ int get_dim(int dim) {
     return dim;
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS>1) ? KS : p.kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION>0) ? DILATION : p.dilation_in;
+    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
+    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
+    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if (linearIndex < p.problem_size){
-      int indtmp1 = linearIndex/p.dim;
+    if (linearIndex < p.problem_size) {
+      int indtmp1 = linearIndex / p.dim;
       const int d = linearIndex - indtmp1 * p.dim;
-      int indtmp2 = indtmp1/p.width;
+      int indtmp2 = indtmp1 / p.width;
       const int j = indtmp1 - indtmp2 * p.width;
       indtmp1 = indtmp2;
-      indtmp2 = indtmp1/p.height;
+      indtmp2 = indtmp1 / p.height;
       const int i = indtmp1 - indtmp2 * p.height;
       indtmp1 = indtmp2;
-      indtmp2 = indtmp1/p.heads;
+      indtmp2 = indtmp1 / p.heads;
       const int h = indtmp1 - indtmp2 * p.heads;
       const int b = indtmp2;
 
-      const int ni = get_window_start(i, p.height, KERNEL_SIZE,   NEIGHBORHOOD_SIZE,   dilation);
-      const int nj = get_window_start(j, p.width,  KERNEL_SIZE,   NEIGHBORHOOD_SIZE,   dilation);
+      const int ni = get_window_start(
+          i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+      const int nj = get_window_start(
+          j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
       scalar_t updt = scalar_t(0);
-      int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 + i * p.weights_stride_2 + j * p.weights_stride_3;
-      const int valuesOffset = b * p.values_stride_0 + h * p.values_stride_1 + d;
-      #pragma unroll
-      for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation) {
-        #pragma unroll
-        for (int xj=nj; xj < nj + KERNEL_SIZE * dilation; xj+=dilation) {
-          const int valuesIndex = valuesOffset + xi * p.values_stride_2 + xj * p.values_stride_3;
+      int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
+          i * p.weights_stride_2 + j * p.weights_stride_3;
+      const int valuesOffset =
+          b * p.values_stride_0 + h * p.values_stride_1 + d;
+#pragma unroll
+      for (int xi = ni; xi < ni + KERNEL_SIZE * dilation; xi += dilation) {
+#pragma unroll
+        for (int xj = nj; xj < nj + KERNEL_SIZE * dilation; xj += dilation) {
+          const int valuesIndex =
+              valuesOffset + xi * p.values_stride_2 + xj * p.values_stride_3;
           updt += p.weights[weightsOffset] * p.values[valuesIndex];
           ++weightsOffset;
         }
@@ -151,55 +158,63 @@ struct NeighborhoodNeighborhood2DFull: NeighborhoodNeighborhood2DBase<scalar_t> 
 };
 
 template <typename scalar_t, int KS, int NS, int DILATION>
-struct NeighborhoodNeighborhood2DHalf: NeighborhoodNeighborhood2DBase<scalar_t> {
-  using Base   = NeighborhoodNeighborhood2DBase<scalar_t>;
+struct NeighborhoodNeighborhood2DHalf
+    : NeighborhoodNeighborhood2DBase<scalar_t> {
+  using Base = NeighborhoodNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
 
-  __device__  __host__ NeighborhoodNeighborhood2DHalf(): Base() {}
+  __device__ __host__ NeighborhoodNeighborhood2DHalf() : Base() {}
 
   using HalfHelper = typename HalfArray<scalar_t>::Base;
 
   static __host__ int get_dim(int dim) {
     if (dim % 2 != 0) {
-      std::cerr << "Naive NATTEN half-precision kernels only support 32-bit alignment. "
-                << "Hint: Make sure dimensions per head are multiples of 2."
-                << std::endl;
+      std::cerr
+          << "Naive NATTEN half-precision kernels only support 32-bit alignment. "
+          << "Hint: Make sure dimensions per head are multiples of 2."
+          << std::endl;
       exit(EXIT_FAILURE);
     }
     return dim / 2;
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS>1) ? KS : p.kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS>0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION>0) ? DILATION : p.dilation_in;
+    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
+    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
+    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
-    if (linearIndex < p.problem_size){
+    if (linearIndex < p.problem_size) {
       auto values2 = HalfHelper::typecast(p.values);
       auto output2 = HalfHelper::typecast(p.output);
-      int indtmp1 = linearIndex/p.dim;
+      int indtmp1 = linearIndex / p.dim;
       const int d = linearIndex - indtmp1 * p.dim;
-      int indtmp2 = indtmp1/p.width;
+      int indtmp2 = indtmp1 / p.width;
       const int j = indtmp1 - indtmp2 * p.width;
       indtmp1 = indtmp2;
-      indtmp2 = indtmp1/p.height;
+      indtmp2 = indtmp1 / p.height;
       const int i = indtmp1 - indtmp2 * p.height;
       indtmp1 = indtmp2;
-      indtmp2 = indtmp1/p.heads;
+      indtmp2 = indtmp1 / p.heads;
       const int h = indtmp1 - indtmp2 * p.heads;
       const int b = indtmp2;
 
-      const int ni = get_window_start(i, p.height, KERNEL_SIZE,   NEIGHBORHOOD_SIZE,   dilation);
-      const int nj = get_window_start(j, p.width,  KERNEL_SIZE,   NEIGHBORHOOD_SIZE,   dilation);
+      const int ni = get_window_start(
+          i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+      const int nj = get_window_start(
+          j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
       auto updt = HalfHelper::zero();
-      int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 + i * p.weights_stride_2 + j * p.weights_stride_3;
-      const int valuesOffset = b * p.values_stride_0 + h * p.values_stride_1 + d;
-      #pragma unroll
-      for (int xi=ni; xi < ni + KERNEL_SIZE * dilation; xi+=dilation)
-        #pragma unroll
-        for (int xj=nj; xj < nj + KERNEL_SIZE * dilation; xj+=dilation) {
-          const int valuesIndex = valuesOffset + xi * p.values_stride_2 + xj * p.values_stride_3;
-          updt = HalfHelper::fma(values2[valuesIndex], p.weights[weightsOffset], updt);
+      int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
+          i * p.weights_stride_2 + j * p.weights_stride_3;
+      const int valuesOffset =
+          b * p.values_stride_0 + h * p.values_stride_1 + d;
+#pragma unroll
+      for (int xi = ni; xi < ni + KERNEL_SIZE * dilation; xi += dilation)
+#pragma unroll
+        for (int xj = nj; xj < nj + KERNEL_SIZE * dilation; xj += dilation) {
+          const int valuesIndex =
+              valuesOffset + xi * p.values_stride_2 + xj * p.values_stride_3;
+          updt = HalfHelper::fma(
+              values2[valuesIndex], p.weights[weightsOffset], updt);
           ++weightsOffset;
         }
       output2[linearIndex] = updt;
@@ -215,40 +230,41 @@ struct NeighborhoodNeighborhood2D {
   static constexpr int DILATION = Args::Dilation;
   using scalar_t = typename Args::Dtype;
   using Kernel = typename std::conditional<
-    sizeof(scalar_t) >= 4, 
-    NeighborhoodNeighborhood2DFull<scalar_t, KS, NS, DILATION>, 
-    NeighborhoodNeighborhood2DHalf<scalar_t, KS, NS, DILATION>
-  >::type;
+      sizeof(scalar_t) >= 4,
+      NeighborhoodNeighborhood2DFull<scalar_t, KS, NS, DILATION>,
+      NeighborhoodNeighborhood2DHalf<scalar_t, KS, NS, DILATION>>::type;
   using Params = typename Kernel::Params;
 
   void operator()(
-    void * attn_ptr,
-    void * value_ptr,
-    void * output_ptr,
-    int batch_size,
-    int heads,
-    int height,
-    int width,
-    int dim,
-    int kernel_size,
-    int dilation) {
+      void* attn_ptr,
+      void* value_ptr,
+      void* output_ptr,
+      int batch_size,
+      int heads,
+      int height,
+      int width,
+      int dim,
+      int kernel_size,
+      int dilation) {
     dim = Kernel::get_dim(dim);
     int64_t problem_size = batch_size * heads * height * width * dim;
-    auto grid  = Kernel::Base::get_grid(problem_size);
+    auto grid = Kernel::Base::get_grid(problem_size);
     auto block = Kernel::Base::get_block();
     const auto stream = c10::cuda::getCurrentCUDAStream();
     auto params = Params(
-      reinterpret_cast<scalar_t*>(attn_ptr),
-      reinterpret_cast<scalar_t*>(value_ptr),
-      reinterpret_cast<scalar_t*>(output_ptr),
-      height, width,
-      heads, 
-      kernel_size, dilation, 
-      dim, problem_size);
+        reinterpret_cast<scalar_t*>(attn_ptr),
+        reinterpret_cast<scalar_t*>(value_ptr),
+        reinterpret_cast<scalar_t*>(output_ptr),
+        height,
+        width,
+        heads,
+        kernel_size,
+        dilation,
+        dim,
+        problem_size);
     launch_cuda_kernel<Kernel><<<grid, block, 0, stream>>>(params);
   }
 };
-
 
 } // namespace naive
 } // namespace cuda

@@ -3,7 +3,7 @@
 CUDA_ARCH=
 WORKERS=
 
-check_dirs := src tests
+check_dirs := src/natten tests
 
 all: clean uninstall fetch-submodules install
 
@@ -44,15 +44,9 @@ install:
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" NATTEN_N_WORKERS="${WORKERS}" pip install -v -e . 2>&1 | tee install.out
 
 test:
-	@echo "Running unit tests"
-	python -m unittest discover -v -s ./tests
-
-quality:
-	@echo "Quality check"
-	black --check --preview $(check_dirs)
-	isort --check-only $(check_dirs)
-	flake8 $(check_dirs)
+	pytest -v -x ./tests
 
 style:
-	black --preview $(check_dirs)
-	isort $(check_dirs)
+	ufmt format $(check_dirs)
+	flake8 $(check_dirs)
+	mypy $(check_dirs)

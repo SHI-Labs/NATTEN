@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -63,8 +63,8 @@ bool has_gemm() {
   return kHasGEMM;
 }
 
-bool kEnableTiledNA  = true;
-bool kEnableGemmNA   = true;
+bool kEnableTiledNA = true;
+bool kEnableGemmNA = true;
 
 bool get_tiled_na() {
   return kEnableTiledNA;
@@ -99,9 +99,7 @@ bool get_gemm_tf32() {
   return false;
 }
 
-void set_gemm_tf32(bool v) {
-}
+void set_gemm_tf32(bool v) {}
 #endif
 
 } // namespace natten
-

@@ -24,18 +24,15 @@ from typing import Optional
 
 import torch
 from torch import Tensor
-from torch.autograd import Function
-from torch.cuda.amp import custom_bwd, custom_fwd
 
 try:
-    from natten import _C
+    from natten import _C  # type: ignore
 except ImportError:
     raise ImportError(
-        f"Failed to import NATTEN's CPP backend. "
-        + f"This could be due to an invalid/incomplete install. "
-        + f"Please uninstall NATTEN (pip uninstall natten) and re-install with the"
-        f" correct torch build: "
-        + f"shi-labs.com/natten"
+        "Failed to import NATTEN's CPP backend. "
+        "This could be due to an invalid/incomplete install. "
+        "Please uninstall NATTEN (pip uninstall natten) and re-install with the"
+        " correct torch build: shi-labs.com/natten ."
     )
 
 from .utils import make_attn_tensor_from_input
@@ -155,10 +152,12 @@ def na3d_qk_nested(
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
-    attn = torch.nested.nested_tensor([
-        make_attn_tensor_from_input(q, kernel_size * kernel_size * kernel_size_d)
-        for q in query
-    ])
+    attn = torch.nested.nested_tensor(
+        [
+            make_attn_tensor_from_input(q, kernel_size * kernel_size * kernel_size_d)
+            for q in query
+        ]
+    )
     for q, k, a in zip(query, key, attn):
         _C.na3d_qk_forward(
             a, q, k, rpb, kernel_size, dilation, kernel_size_d, dilation_d

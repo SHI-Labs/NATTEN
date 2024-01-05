@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -32,10 +32,10 @@ namespace pytorch {
 namespace cpu {
 
 void na2d_qk_forward(
-    const at::Tensor &query,
-    const at::Tensor &key,
-    const at::optional<at::Tensor> &bias,
-    at::Tensor &attn,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::optional<at::Tensor>& bias,
+    at::Tensor& attn,
     const int batch_size,
     const int heads,
     const int height,
@@ -45,12 +45,12 @@ void na2d_qk_forward(
     const int dilation);
 
 void na2d_qk_backward(
-    const at::Tensor &d_attn,
-    const at::Tensor &query,
-    const at::Tensor &key,
-    at::Tensor &d_query,
-    at::Tensor &d_key,
-    at::optional<at::Tensor> &d_bias,
+    const at::Tensor& d_attn,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    at::Tensor& d_query,
+    at::Tensor& d_key,
+    at::optional<at::Tensor>& d_bias,
     const int batch_size,
     const int heads,
     const int height,
@@ -60,9 +60,9 @@ void na2d_qk_backward(
     const int dilation);
 
 void na2d_av_forward(
-    const at::Tensor &attn,
-    const at::Tensor &value,
-    at::Tensor &output,
+    const at::Tensor& attn,
+    const at::Tensor& value,
+    at::Tensor& output,
     const int batch_size,
     const int heads,
     const int height,
@@ -72,11 +72,11 @@ void na2d_av_forward(
     const int dilation);
 
 void na2d_av_backward(
-    const at::Tensor &d_out,
-    const at::Tensor &attn,
-    const at::Tensor &value,
-    at::Tensor &d_attn,
-    at::Tensor &d_value,
+    const at::Tensor& d_out,
+    const at::Tensor& attn,
+    const at::Tensor& value,
+    at::Tensor& d_attn,
+    at::Tensor& d_value,
     const int batch_size,
     const int heads,
     const int height,

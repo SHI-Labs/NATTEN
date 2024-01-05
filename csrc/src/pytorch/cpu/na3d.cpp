@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -24,22 +24,22 @@
     \brief Neighborhood Attention 3D Torch interface
 */
 
-#include <torch/extension.h>
 #include <ATen/ATen.h>
+#include <torch/extension.h>
 
-#include "natten/pytorch/cpu/helpers.h"
-#include "natten/dtypes.h"
 #include "natten/cpu/na3d.h"
+#include "natten/dtypes.h"
+#include "natten/pytorch/cpu/helpers.h"
 
 namespace natten {
 namespace pytorch {
 namespace cpu {
 
 void na3d_qk_forward(
-    const at::Tensor &query,
-    const at::Tensor &key,
-    const at::optional<at::Tensor> &bias,
-    at::Tensor &attn,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::optional<at::Tensor>& bias,
+    at::Tensor& attn,
     const int batch_size,
     const int heads,
     const int depth,
@@ -50,22 +50,32 @@ void na3d_qk_forward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
-    DISPATCH_DTYPE(query.scalar_type(), natten::cpu::na3d_qk_forward,
-            static_cast<void *>(query.data_ptr()),
-            static_cast<void *>(key.data_ptr()),
-            bias.has_value() ? static_cast<void *>(bias.value().data_ptr()) : nullptr,
-            static_cast<void *>(attn.data_ptr()),
-            batch_size, heads, depth, height, width, dim,
-            kernel_size, dilation, depth_kernel_size, depth_dilation);
+  DISPATCH_DTYPE(
+      query.scalar_type(),
+      natten::cpu::na3d_qk_forward,
+      static_cast<void*>(query.data_ptr()),
+      static_cast<void*>(key.data_ptr()),
+      bias.has_value() ? static_cast<void*>(bias.value().data_ptr()) : nullptr,
+      static_cast<void*>(attn.data_ptr()),
+      batch_size,
+      heads,
+      depth,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation,
+      depth_kernel_size,
+      depth_dilation);
 }
 
 void na3d_qk_backward(
-    const at::Tensor &d_attn,
-    const at::Tensor &query,
-    const at::Tensor &key,
-    at::Tensor &d_query,
-    at::Tensor &d_key,
-    at::optional<at::Tensor> &d_bias,
+    const at::Tensor& d_attn,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    at::Tensor& d_query,
+    at::Tensor& d_key,
+    at::optional<at::Tensor>& d_bias,
     const int batch_size,
     const int heads,
     const int depth,
@@ -76,21 +86,32 @@ void na3d_qk_backward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
-    DISPATCH_DTYPE(d_attn.scalar_type(), natten::cpu::na3d_qk_backward,
-            static_cast<void *>(query.data_ptr()),
-            static_cast<void *>(key.data_ptr()),
-            static_cast<void *>(d_attn.data_ptr()),
-            static_cast<void *>(d_query.data_ptr()),
-            static_cast<void *>(d_key.data_ptr()),
-            d_bias.has_value() ? static_cast<void *>(d_bias.value().data_ptr()) : nullptr,
-            batch_size, heads, depth, height, width, dim,
-            kernel_size, dilation, depth_kernel_size, depth_dilation);
+  DISPATCH_DTYPE(
+      d_attn.scalar_type(),
+      natten::cpu::na3d_qk_backward,
+      static_cast<void*>(query.data_ptr()),
+      static_cast<void*>(key.data_ptr()),
+      static_cast<void*>(d_attn.data_ptr()),
+      static_cast<void*>(d_query.data_ptr()),
+      static_cast<void*>(d_key.data_ptr()),
+      d_bias.has_value() ? static_cast<void*>(d_bias.value().data_ptr())
+                         : nullptr,
+      batch_size,
+      heads,
+      depth,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation,
+      depth_kernel_size,
+      depth_dilation);
 }
 
 void na3d_av_forward(
-    const at::Tensor &attn,
-    const at::Tensor &value,
-    at::Tensor &output,
+    const at::Tensor& attn,
+    const at::Tensor& value,
+    at::Tensor& output,
     const int batch_size,
     const int heads,
     const int depth,
@@ -101,20 +122,30 @@ void na3d_av_forward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
-    DISPATCH_DTYPE(attn.scalar_type(), natten::cpu::na3d_av_forward,
-            static_cast<void *>(attn.data_ptr()),
-            static_cast<void *>(value.data_ptr()),
-            static_cast<void *>(output.data_ptr()),
-            batch_size, heads, depth, height, width, dim,
-            kernel_size, dilation, depth_kernel_size, depth_dilation);
+  DISPATCH_DTYPE(
+      attn.scalar_type(),
+      natten::cpu::na3d_av_forward,
+      static_cast<void*>(attn.data_ptr()),
+      static_cast<void*>(value.data_ptr()),
+      static_cast<void*>(output.data_ptr()),
+      batch_size,
+      heads,
+      depth,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation,
+      depth_kernel_size,
+      depth_dilation);
 }
 
 void na3d_av_backward(
-    const at::Tensor &d_out,
-    const at::Tensor &attn,
-    const at::Tensor &value,
-    at::Tensor &d_attn,
-    at::Tensor &d_value,
+    const at::Tensor& d_out,
+    const at::Tensor& attn,
+    const at::Tensor& value,
+    at::Tensor& d_attn,
+    at::Tensor& d_value,
     const int batch_size,
     const int heads,
     const int depth,
@@ -125,14 +156,24 @@ void na3d_av_backward(
     const int dilation,
     const int depth_kernel_size,
     const int depth_dilation) {
-    DISPATCH_DTYPE(d_out.scalar_type(), natten::cpu::na3d_av_backward,
-            static_cast<void *>(attn.data_ptr()),
-            static_cast<void *>(value.data_ptr()),
-            static_cast<void *>(d_out.data_ptr()),
-            static_cast<void *>(d_attn.data_ptr()),
-            static_cast<void *>(d_value.data_ptr()),
-            batch_size, heads, depth, height, width, dim,
-            kernel_size, dilation, depth_kernel_size, depth_dilation);
+  DISPATCH_DTYPE(
+      d_out.scalar_type(),
+      natten::cpu::na3d_av_backward,
+      static_cast<void*>(attn.data_ptr()),
+      static_cast<void*>(value.data_ptr()),
+      static_cast<void*>(d_out.data_ptr()),
+      static_cast<void*>(d_attn.data_ptr()),
+      static_cast<void*>(d_value.data_ptr()),
+      batch_size,
+      heads,
+      depth,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation,
+      depth_kernel_size,
+      depth_dilation);
 }
 
 } // namespace cpu

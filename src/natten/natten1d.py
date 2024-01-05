@@ -20,12 +20,14 @@
 # SOFTWARE.
 #
 #################################################################################################
+from typing import Optional
+
 import torch
-from torch import nn
+from torch import nn, Tensor
 from torch.nn.functional import pad
 from torch.nn.init import trunc_normal_
 
-from .functional import natten1dav, natten1dqkrpb
+from .functional import na1d_av, na1d_qk_with_bias
 
 
 class NeighborhoodAttention1D(nn.Module):
@@ -35,15 +37,15 @@ class NeighborhoodAttention1D(nn.Module):
 
     def __init__(
         self,
-        dim,
-        num_heads,
-        kernel_size,
-        dilation=1,
-        bias=True,
-        qkv_bias=True,
-        qk_scale=None,
-        attn_drop=0.0,
-        proj_drop=0.0,
+        dim: int,
+        num_heads: int,
+        kernel_size: int,
+        dilation: int = 1,
+        bias: bool = True,
+        qkv_bias: bool = True,
+        qk_scale: Optional[float] = None,
+        attn_drop: float = 0.0,
+        proj_drop: float = 0.0,
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -69,28 +71,38 @@ class NeighborhoodAttention1D(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x):
-        B, Lp, C = x.shape
-        L = Lp
-        pad_l = pad_r = 0
-        if L < self.window_size:
-            pad_r = max(0, self.window_size - L)
-            x = pad(x, (0, 0, pad_l, pad_r))
-            _, L, _ = x.shape
+    def forward(self, x: Tensor) -> Tensor:
+        if x.dim() != 3:
+            raise ValueError(
+                f"NeighborhoodAttention1D expected a rank-3 input tensor; got {x.dim()=}."
+            )
+
+        B, L, C = x.shape
+        # Pad if the input is small than the minimum supported size
+        L_padded = L
+        padding = 0
+        if L_padded < self.window_size:
+            padding = max(0, self.window_size - L_padded)
+            x = pad(x, (0, 0, 0, padding))
+            _, L_padded, _ = x.shape
+            assert L_padded == L + padding
+
         qkv = (
             self.qkv(x)
-            .reshape(B, L, 3, self.num_heads, self.head_dim)
+            .reshape(B, L_padded, 3, self.num_heads, self.head_dim)
             .permute(2, 0, 3, 1, 4)
         )
         q, k, v = qkv[0], qkv[1], qkv[2]
         q = q * self.scale
-        attn = natten1dqkrpb(q, k, self.rpb, self.kernel_size, self.dilation)
+        attn = na1d_qk_with_bias(q, k, self.rpb, self.kernel_size, self.dilation)
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        x = natten1dav(attn, v, self.kernel_size, self.dilation)
-        x = x.permute(0, 2, 1, 3).reshape(B, L, C)
-        if pad_r:
-            x = x[:, :Lp, :]
+        x = na1d_av(attn, v, self.kernel_size, self.dilation)
+        x = x.permute(0, 2, 1, 3).reshape(B, L_padded, C)
+
+        # Remove padding, if added any
+        if padding:
+            x = x[:, :L, :]
 
         return self.proj_drop(self.proj(x))
 
@@ -98,5 +110,5 @@ class NeighborhoodAttention1D(nn.Module):
         return (
             f"head_dim={self.head_dim}, num_heads={self.num_heads}, "
             + f"kernel_size={self.kernel_size}, dilation={self.dilation}, "
-            + f"rel_pos_bias={self.rpb is not None}"
+            + f"has_bias={self.rpb is not None}"
         )
