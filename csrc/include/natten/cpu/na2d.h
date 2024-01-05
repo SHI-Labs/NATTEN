@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -25,17 +25,17 @@
 */
 
 #pragma once
-#include <natten_autogen/cpu/naive/interface.h> 
+#include <natten_autogen/cpu/naive/interface.h>
 
 namespace natten {
 namespace cpu {
 
-template<typename T>
+template <typename T>
 void na2d_qk_forward(
-    void * query_ptr,
-    void * key_ptr,
-    void * bias_ptr,
-    void * attn_ptr,
+    void* query_ptr,
+    void* key_ptr,
+    void* bias_ptr,
+    void* attn_ptr,
     int batch_size,
     int heads,
     int height,
@@ -43,28 +43,44 @@ void na2d_qk_forward(
     int dim,
     int kernel_size,
     int dilation) {
-    if (bias_ptr == nullptr) {
-        DISPATCH_DTYPE_na2d_pn_cpu_naive(T,
-                query_ptr, key_ptr, attn_ptr,
-                batch_size, heads, height, width, dim, 
-                kernel_size, dilation);
-    }
-    else {
-        DISPATCH_DTYPE_na2d_pn_bias_cpu_naive(T,
-                query_ptr, key_ptr, bias_ptr, attn_ptr,
-                batch_size, heads, height, width, dim, 
-                kernel_size, dilation);
-    }
+  if (bias_ptr == nullptr) {
+    DISPATCH_DTYPE_na2d_pn_cpu_naive(
+        T,
+        query_ptr,
+        key_ptr,
+        attn_ptr,
+        batch_size,
+        heads,
+        height,
+        width,
+        dim,
+        kernel_size,
+        dilation);
+  } else {
+    DISPATCH_DTYPE_na2d_pn_bias_cpu_naive(
+        T,
+        query_ptr,
+        key_ptr,
+        bias_ptr,
+        attn_ptr,
+        batch_size,
+        heads,
+        height,
+        width,
+        dim,
+        kernel_size,
+        dilation);
+  }
 }
 
-template<typename T>
+template <typename T>
 void na2d_qk_backward(
-    void * query_ptr,
-    void * key_ptr,
-    void * d_attn_ptr,
-    void * d_query_ptr,
-    void * d_key_ptr,
-    void * d_bias_ptr,
+    void* query_ptr,
+    void* key_ptr,
+    void* d_attn_ptr,
+    void* d_query_ptr,
+    void* d_key_ptr,
+    void* d_bias_ptr,
     int batch_size,
     int heads,
     int height,
@@ -72,27 +88,50 @@ void na2d_qk_backward(
     int dim,
     int kernel_size,
     int dilation) {
-    DISPATCH_DTYPE_na2d_nn_cpu_naive(T,
-            d_attn_ptr, key_ptr, d_query_ptr,
-            batch_size, heads, height, width, dim, 
-            kernel_size, dilation);
-    DISPATCH_DTYPE_na2d_in_cpu_naive(T,
-            d_attn_ptr, query_ptr, d_key_ptr,
-            batch_size, heads, height, width, dim, 
-            kernel_size, dilation);
-    if (d_bias_ptr != nullptr) {
-        DISPATCH_DTYPE_na2d_rpbgrad_cpu_naive(T,
-                d_bias_ptr, d_attn_ptr,
-                batch_size, heads, height, width, dim, 
-                kernel_size, dilation);
-    }
+  DISPATCH_DTYPE_na2d_nn_cpu_naive(
+      T,
+      d_attn_ptr,
+      key_ptr,
+      d_query_ptr,
+      batch_size,
+      heads,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation);
+  DISPATCH_DTYPE_na2d_in_cpu_naive(
+      T,
+      d_attn_ptr,
+      query_ptr,
+      d_key_ptr,
+      batch_size,
+      heads,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation);
+  if (d_bias_ptr != nullptr) {
+    DISPATCH_DTYPE_na2d_rpbgrad_cpu_naive(
+        T,
+        d_bias_ptr,
+        d_attn_ptr,
+        batch_size,
+        heads,
+        height,
+        width,
+        dim,
+        kernel_size,
+        dilation);
+  }
 }
 
-template<typename T>
+template <typename T>
 void na2d_av_forward(
-    void * attn_ptr,
-    void * value_ptr,
-    void * output_ptr,
+    void* attn_ptr,
+    void* value_ptr,
+    void* output_ptr,
     int batch_size,
     int heads,
     int height,
@@ -100,19 +139,27 @@ void na2d_av_forward(
     int dim,
     int kernel_size,
     int dilation) {
-    DISPATCH_DTYPE_na2d_nn_cpu_naive(T,
-            attn_ptr, value_ptr, output_ptr,
-            batch_size, heads, height, width, dim, 
-            kernel_size, dilation);
+  DISPATCH_DTYPE_na2d_nn_cpu_naive(
+      T,
+      attn_ptr,
+      value_ptr,
+      output_ptr,
+      batch_size,
+      heads,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation);
 }
 
-template<typename T>
+template <typename T>
 void na2d_av_backward(
-    void * attn_ptr,
-    void * value_ptr,
-    void * d_output_ptr,
-    void * d_attn_ptr,
-    void * d_value_ptr,
+    void* attn_ptr,
+    void* value_ptr,
+    void* d_output_ptr,
+    void* d_attn_ptr,
+    void* d_value_ptr,
     int batch_size,
     int heads,
     int height,
@@ -120,16 +167,31 @@ void na2d_av_backward(
     int dim,
     int kernel_size,
     int dilation) {
-    DISPATCH_DTYPE_na2d_pn_cpu_naive(T,
-            d_output_ptr, value_ptr, d_attn_ptr,
-            batch_size, heads, height, width, dim, 
-            kernel_size, dilation);
-    DISPATCH_DTYPE_na2d_in_cpu_naive(T,
-            attn_ptr, d_output_ptr, d_value_ptr,
-            batch_size, heads, height, width, dim, 
-            kernel_size, dilation);
+  DISPATCH_DTYPE_na2d_pn_cpu_naive(
+      T,
+      d_output_ptr,
+      value_ptr,
+      d_attn_ptr,
+      batch_size,
+      heads,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation);
+  DISPATCH_DTYPE_na2d_in_cpu_naive(
+      T,
+      attn_ptr,
+      d_output_ptr,
+      d_value_ptr,
+      batch_size,
+      heads,
+      height,
+      width,
+      dim,
+      kernel_size,
+      dilation);
 }
 
 } // namespace cpu
 } // namespace natten
-

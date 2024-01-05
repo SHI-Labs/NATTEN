@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -33,16 +33,16 @@ namespace natten {
 
 namespace dummy {
 
-  struct sym_bf16 {};
-  struct sym_f16 {};
-  struct sym_tf32 {};
+struct sym_bf16 {};
+struct sym_f16 {};
+struct sym_tf32 {};
 
-}
+} // namespace dummy
 
 using float64 = double;
 using float32 = float;
 #ifdef NATTEN_ENABLE_FP16
-using float16  = __half;
+using float16 = __half;
 #else
 using float16 = dummy::sym_f16;
 #endif
@@ -55,4 +55,3 @@ using bfloat16 = dummy::sym_bf16;
 using tf32 = dummy::sym_tf32;
 
 } // namespace natten
-

@@ -22,24 +22,32 @@
 #
 #################################################################################################
 
-import warnings
 import glob
-import sys
+import multiprocessing
 import os
 import shutil
-from os import path
-import multiprocessing
 import subprocess
+import sys
+import warnings
+from os import path
+from pathlib import Path
+from typing import List
+
+import torch
 from setuptools import find_packages, setup
 from setuptools.command.build_ext import build_ext
-from typing import List
-import torch
-from torch.utils.cpp_extension import CUDA_HOME, CppExtension, CUDAExtension, _nt_quote_args, SHARED_FLAG, LIB_EXT
-from pathlib import Path
+from torch.utils.cpp_extension import (
+    _nt_quote_args,
+    CppExtension,
+    CUDA_HOME,
+    CUDAExtension,
+    LIB_EXT,
+    SHARED_FLAG,
+)
 
-IS_WINDOWS = sys.platform == 'win32'
-IS_MACOS = sys.platform.startswith('darwin')
-IS_LINUX = sys.platform.startswith('linux')
+IS_WINDOWS = sys.platform == "win32"
+IS_MACOS = sys.platform.startswith("darwin")
+IS_LINUX = sys.platform.startswith("linux")
 
 this_directory = Path(__file__).parent
 try:
@@ -50,10 +58,14 @@ except:
 torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 assert torch_ver >= [1, 8], "NATTEN requires PyTorch >= 1.8"
 AVX_INT = torch_ver >= [1, 10]
-HAS_CUDA = (torch.cuda.is_available() and (CUDA_HOME is not None) or os.getenv("FORCE_CUDA", "0") == "1")
+HAS_CUDA = (
+    torch.cuda.is_available()
+    and (CUDA_HOME is not None)
+    or os.getenv("FORCE_CUDA", "0") == "1"
+)
 NATTEN_VERSION_SUFFIX = os.getenv("NATTEN_VERSION_SUFFIX", "")
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
-DEFAULT_CUDA_ARCH_LIST=""
+DEFAULT_CUDA_ARCH_LIST = ""
 if HAS_CUDA:
     cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
     sm = cuda_device.major + cuda_device.minor * 0.1
@@ -62,7 +74,7 @@ if HAS_CUDA:
     # TODO: raise an error or at least a warning when torch cuda doesn't match
     # system.
     TORCH_CUDA_VERSION = [x for x in torch.version.cuda.split(".")[:2]]
-    CUDA_TAG = ''.join([x for x in TORCH_CUDA_VERSION])
+    CUDA_TAG = "".join([x for x in TORCH_CUDA_VERSION])
     CUDA_VERSION = [int(x) for x in TORCH_CUDA_VERSION]
 
     assert CUDA_VERSION >= [10, 2], "NATTEN only supports CUDA 10.2 and above."
@@ -91,34 +103,39 @@ torch_ext_fn = CUDAExtension if HAS_CUDA else CppExtension
 
 
 def get_version():
-    init_py_path = path.join(path.abspath(path.dirname(__file__)), "src/natten", "__init__.py")
+    init_py_path = path.join(
+        path.abspath(path.dirname(__file__)), "src/natten", "__init__.py"
+    )
     init_py = open(init_py_path, "r").readlines()
     version_line = [l.strip() for l in init_py if l.startswith("__version__")][0]
     version = version_line.split("=")[-1].strip().strip("'\"")
     if NATTEN_VERSION_SUFFIX != "1":
-        return f'{version}{NATTEN_VERSION_SUFFIX}'
-    PYTORCH_VERSION = ''.join(torch.__version__.split('+')[0].split('.'))
+        return f"{version}{NATTEN_VERSION_SUFFIX}"
+    PYTORCH_VERSION = "".join(torch.__version__.split("+")[0].split("."))
 
     if HAS_CUDA:
-        CU = f'cu{CUDA_TAG}'
+        CU = f"cu{CUDA_TAG}"
     else:
-        CU = 'cpu'
-    version = f'{version}+torch{PYTORCH_VERSION}{CU}'
+        CU = "cpu"
+    version = f"{version}+torch{PYTORCH_VERSION}{CU}"
 
     return version
 
 
 def _check_cuda_arch(arch):
     try:
-       arch = float(arch)
-       arch = arch * 10 # 8.6 => 86
-       assert arch >= 30 and arch < 100, f"Only SM30 and above are supported at this time, got {arch}."
-       return str(int(arch))
+        arch = float(arch)
+        arch = arch * 10  # 8.6 => 86
+        assert (
+            arch >= 30 and arch < 100
+        ), f"Only SM30 and above are supported at this time, got {arch}."
+        return str(int(arch))
     except ValueError:
         raise ValueError(f"Invalid architecture list {cuda_arch_list}.")
 
+
 def get_cuda_arch_list(cuda_arch_list: str):
-    sep = ";" # expects semicolon separated list
+    sep = ";"  # expects semicolon separated list
     if sep not in cuda_arch_list:
         # Probably a single arch
         return _check_cuda_arch(cuda_arch_list), 1
@@ -134,9 +151,9 @@ class BuildExtension(build_ext):
         this_dir = path.dirname(path.abspath(__file__))
         cmake_lists_dir = path.join(this_dir, "csrc")
         try:
-            out = subprocess.check_output(['cmake', '--version'])
+            out = subprocess.check_output(["cmake", "--version"])
         except OSError:
-            raise RuntimeError('Cannot find CMake executable')
+            raise RuntimeError("Cannot find CMake executable")
 
         # TODO: fix this!!!
         # This is where it gets super hacky
@@ -144,26 +161,32 @@ class BuildExtension(build_ext):
         # What's worse is that we're taking the path where it --would-- dump the final
         # library, and passing it down to CMake so that it dumps it there.
 
-        output_so_name = self.get_ext_filename(ext.name) # i.e. _C.cpython-VERSION-ARCH-OS.so
-        output_so_name = output_so_name.replace(LIB_EXT, '')
+        output_so_name = self.get_ext_filename(
+            ext.name
+        )  # i.e. _C.cpython-VERSION-ARCH-OS.so
+        output_so_name = output_so_name.replace(LIB_EXT, "")
 
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
 
         n_arch = 0
-        cuda_arch_list=""
-        torch_cuda_arch_list=""
+        cuda_arch_list = ""
+        torch_cuda_arch_list = ""
         if HAS_CUDA:
-            torch_cuda_arch_list = cuda_arch # Expects x.x -- i.e. 8.6
-            cuda_arch_list, n_arch = get_cuda_arch_list(cuda_arch) # Expects xx -- i.e. 86
+            torch_cuda_arch_list = cuda_arch  # Expects x.x -- i.e. 8.6
+            cuda_arch_list, n_arch = get_cuda_arch_list(
+                cuda_arch
+            )  # Expects xx -- i.e. 86
 
             # TODO: this assertion prevents building binaries that target multiple architectures,
             # a.k.a. wheels. The reason for it is that we need to separate builds by architecture now
             # with the bfloat16 support, and the GEMM kernels which target SM80.
             # This should be resolved before our next release, and the assertion will be removed or
             # made conditional.
-            assert n_arch == 1, f"This commit does not yet support building NATTEN for multiple architectures. " + \
-                f"You selected {n_arch} architectures: {cuda_arch_list}. " + \
-                f"Please select only one architecture."
+            assert n_arch == 1, (
+                f"This commit does not yet support building NATTEN for multiple architectures. "
+                + f"You selected {n_arch} architectures: {cuda_arch_list}. "
+                + f"Please select only one architecture."
+            )
             current_arch = int(cuda_arch_list)
             print(f"Current arch: {current_arch}")
 
@@ -194,9 +217,11 @@ class BuildExtension(build_ext):
                 elif current_arch >= 70:
                     cmake_args.append("-DNATTEN_CUTLASS_TARGET_SM=70")
                 else:
-                    raise ValueError(f"This should not have happened. "
-                                     "NATTEN can only be built with CUTLASS on SM70 and above, "
-                                     f"got {current_arch}.")
+                    raise ValueError(
+                        f"This should not have happened. "
+                        "NATTEN can only be built with CUTLASS on SM70 and above, "
+                        f"got {current_arch}."
+                    )
 
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)
@@ -206,8 +231,10 @@ class BuildExtension(build_ext):
             os.makedirs(so_dir)
 
         # Config and build the extension
-        subprocess.check_call(['cmake', cmake_lists_dir] + cmake_args, cwd=self.build_lib)
-        subprocess.check_call(['make', f"-j{n_workers}"], cwd=self.build_lib)
+        subprocess.check_call(
+            ["cmake", cmake_lists_dir] + cmake_args, cwd=self.build_lib
+        )
+        subprocess.check_call(["make", f"-j{n_workers}"], cwd=self.build_lib)
 
 
 setup(
@@ -217,12 +244,12 @@ setup(
     url="https://github.com/SHI-Labs/NATTEN",
     description="Neighborhood Attention Extension.",
     long_description=long_description,
-    long_description_content_type='text/markdown',
+    long_description_content_type="text/markdown",
     package_dir={"": "src"},
-    packages=['natten/'],
+    packages=["natten/"],
     package_data={
-            '': ['csrc/*', 'csrc/cpu/*', 'csrc/cuda/*'],
-            },
+        "": ["csrc/*", "csrc/cpu/*", "csrc/cuda/*"],
+    },
     python_requires=">=3.7",
     install_requires=[
         "packaging",
@@ -238,5 +265,5 @@ setup(
         ],
     },
     ext_modules=[torch_ext_fn("natten._C", [])],
-    cmdclass={'build_ext': BuildExtension},
+    cmdclass={"build_ext": BuildExtension},
 )

@@ -8,8 +8,8 @@
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -32,37 +32,89 @@
 namespace natten {
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-  m.def("na1d_qk_forward",  &natten::pytorch::na1d_qk_forward,  "NA1D QK forward");
-  m.def("na1d_qk_backward", &natten::pytorch::na1d_qk_backward, "NA1D QK backward");
-  m.def("na1d_av_forward",  &natten::pytorch::na1d_av_forward,  "NA1D AV forward");
-  m.def("na1d_av_backward", &natten::pytorch::na1d_av_backward, "NA1D AV backward");
+  m.def(
+      "na1d_qk_forward", &natten::pytorch::na1d_qk_forward, "NA1D QK forward");
+  m.def(
+      "na1d_qk_backward",
+      &natten::pytorch::na1d_qk_backward,
+      "NA1D QK backward");
+  m.def(
+      "na1d_av_forward", &natten::pytorch::na1d_av_forward, "NA1D AV forward");
+  m.def(
+      "na1d_av_backward",
+      &natten::pytorch::na1d_av_backward,
+      "NA1D AV backward");
 
-  m.def("na2d_qk_forward",  &natten::pytorch::na2d_qk_forward,  "NA2D QK forward");
-  m.def("na2d_qk_backward", &natten::pytorch::na2d_qk_backward, "NA2D QK backward");
-  m.def("na2d_av_forward",  &natten::pytorch::na2d_av_forward,  "NA2D AV forward");
-  m.def("na2d_av_backward", &natten::pytorch::na2d_av_backward, "NA2D AV backward");
+  m.def(
+      "na2d_qk_forward", &natten::pytorch::na2d_qk_forward, "NA2D QK forward");
+  m.def(
+      "na2d_qk_backward",
+      &natten::pytorch::na2d_qk_backward,
+      "NA2D QK backward");
+  m.def(
+      "na2d_av_forward", &natten::pytorch::na2d_av_forward, "NA2D AV forward");
+  m.def(
+      "na2d_av_backward",
+      &natten::pytorch::na2d_av_backward,
+      "NA2D AV backward");
 
-  m.def("na3d_qk_forward",  &natten::pytorch::na3d_qk_forward,  "NA3D QK forward");
-  m.def("na3d_qk_backward", &natten::pytorch::na3d_qk_backward, "NA3D QK backward");
-  m.def("na3d_av_forward",  &natten::pytorch::na3d_av_forward,  "NA3D AV forward");
-  m.def("na3d_av_backward", &natten::pytorch::na3d_av_backward, "NA3D AV backward");
+  m.def(
+      "na3d_qk_forward", &natten::pytorch::na3d_qk_forward, "NA3D QK forward");
+  m.def(
+      "na3d_qk_backward",
+      &natten::pytorch::na3d_qk_backward,
+      "NA3D QK backward");
+  m.def(
+      "na3d_av_forward", &natten::pytorch::na3d_av_forward, "NA3D AV forward");
+  m.def(
+      "na3d_av_backward",
+      &natten::pytorch::na3d_av_backward,
+      "NA3D AV backward");
 
-  m.def("has_cuda",  &natten::has_cuda,  "Whether NATTEN was compiled with CUDA.");
-  m.def("has_half",  &natten::has_half,  "Whether NATTEN was compiled with half support.");
-  m.def("has_bfloat",  &natten::has_bfloat,  "Whether NATTEN was compiled with bfloat16 support.");
-  m.def("has_gemm",  &natten::has_gemm,  "Whether NATTEN was compiled with GEMM kernels.");
+  m.def(
+      "has_cuda", &natten::has_cuda, "Whether NATTEN was compiled with CUDA.");
+  m.def(
+      "has_half",
+      &natten::has_half,
+      "Whether NATTEN was compiled with half support.");
+  m.def(
+      "has_bfloat",
+      &natten::has_bfloat,
+      "Whether NATTEN was compiled with bfloat16 support.");
+  m.def(
+      "has_gemm",
+      &natten::has_gemm,
+      "Whether NATTEN was compiled with GEMM kernels.");
 
   // Only implemented for 2D NA's PN operator when dim_per_head == 32.
-  m.def("get_tiled_na",  &natten::get_tiled_na,  "Use tiled NA implementations when available.");
-  m.def("set_tiled_na",  &natten::set_tiled_na,  "Use tiled NA implementations when available.");
+  m.def(
+      "get_tiled_na",
+      &natten::get_tiled_na,
+      "Use tiled NA implementations when available.");
+  m.def(
+      "set_tiled_na",
+      &natten::set_tiled_na,
+      "Use tiled NA implementations when available.");
 
   // Only supports NA1D and NA2D, requires SM80 and above.
-  m.def("get_gemm_na",   &natten::get_gemm_na,   "Use GEMM-based NA implementations when available.");
-  m.def("set_gemm_na",   &natten::set_gemm_na,   "Use GEMM-based NA implementations when available.");
+  m.def(
+      "get_gemm_na",
+      &natten::get_gemm_na,
+      "Use GEMM-based NA implementations when available.");
+  m.def(
+      "set_gemm_na",
+      &natten::set_gemm_na,
+      "Use GEMM-based NA implementations when available.");
 
   // Only applies to Gemm NA kernels.
-  m.def("get_gemm_tf32", &natten::get_gemm_tf32, "Use tiled NA implementations when available.");
-  m.def("set_gemm_tf32", &natten::set_gemm_tf32, "Use tiled NA implementations when available.");
+  m.def(
+      "get_gemm_tf32",
+      &natten::get_gemm_tf32,
+      "Use tiled NA implementations when available.");
+  m.def(
+      "set_gemm_tf32",
+      &natten::set_gemm_tf32,
+      "Use tiled NA implementations when available.");
 }
 
 } // namespace natten

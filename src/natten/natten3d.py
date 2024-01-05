@@ -20,12 +20,14 @@
 # SOFTWARE.
 #
 #################################################################################################
+from typing import Optional
+
 import torch
-from torch import nn
+from torch import nn, Tensor
 from torch.nn.functional import pad
 from torch.nn.init import trunc_normal_
 
-from .functional import natten3dav, natten3dqkrpb
+from .functional import na3d_av, na3d_qk_with_bias
 
 
 class NeighborhoodAttention3D(nn.Module):
@@ -35,17 +37,17 @@ class NeighborhoodAttention3D(nn.Module):
 
     def __init__(
         self,
-        dim,
-        num_heads,
-        kernel_size,
-        kernel_size_d=None,
-        dilation=1,
-        dilation_d=None,
-        bias=True,
-        qkv_bias=True,
-        qk_scale=None,
-        attn_drop=0.0,
-        proj_drop=0.0,
+        dim: int,
+        num_heads: int,
+        kernel_size: int,
+        kernel_size_d: Optional[int] = None,
+        dilation: int = 1,
+        dilation_d: Optional[int] = None,
+        bias: bool = True,
+        qkv_bias: bool = True,
+        qk_scale: Optional[float] = None,
+        attn_drop: float = 0.0,
+        proj_drop: float = 0.0,
     ):
         super().__init__()
         self.num_heads = num_heads
@@ -67,6 +69,8 @@ class NeighborhoodAttention3D(nn.Module):
         self.kernel_size_d = kernel_size_d
         self.dilation = dilation
         self.dilation_d = dilation_d
+        self.window_size = self.kernel_size * self.dilation
+        self.window_size_d = self.kernel_size_d * self.dilation_d
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         if bias:
@@ -85,16 +89,31 @@ class NeighborhoodAttention3D(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
+        if x.dim() != 5:
+            raise ValueError(
+                f"NeighborhoodAttention2D expected a rank-5 input tensor; got {x.dim()=}."
+            )
+
         B, D, H, W, C = x.shape
+        # Pad if the input is small than the minimum supported size
+        D_padded, H_padded, W_padded = D, H, W
+        padding_d = padding_h = padding_w = 0
+        if D < self.window_size_d or H < self.window_size or W < self.window_size:
+            padding_d = max(0, self.window_size_d - D_padded)
+            padding_h = max(0, self.window_size - H_padded)
+            padding_w = max(0, self.window_size - W_padded)
+            x = pad(x, (0, 0, 0, padding_w, 0, padding_h))
+            _, D_padded, H_padded, W_padded, _ = x.shape
+
         qkv = (
             self.qkv(x)
-            .reshape(B, D, H, W, 3, self.num_heads, self.head_dim)
+            .reshape(B, D_padded, H_padded, W_padded, 3, self.num_heads, self.head_dim)
             .permute(4, 0, 5, 1, 2, 3, 6)
         )
         q, k, v = qkv[0], qkv[1], qkv[2]
         q = q * self.scale
-        attn = natten3dqkrpb(
+        attn = na3d_qk_with_bias(
             q,
             k,
             self.rpb,
@@ -105,7 +124,7 @@ class NeighborhoodAttention3D(nn.Module):
         )
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
-        x = natten3dav(
+        x = na3d_av(
             attn,
             v,
             self.kernel_size_d,
@@ -113,7 +132,11 @@ class NeighborhoodAttention3D(nn.Module):
             self.dilation_d,
             self.dilation,
         )
-        x = x.permute(0, 2, 3, 4, 1, 5).reshape(B, D, H, W, C)
+        x = x.permute(0, 2, 3, 4, 1, 5).reshape(B, D_padded, H_padded, W_padded, C)
+
+        # Remove padding, if added any
+        if padding_d or padding_h or padding_w:
+            x = x[:, :D, :H, :W, :]
 
         return self.proj_drop(self.proj(x))
 
@@ -122,5 +145,5 @@ class NeighborhoodAttention3D(nn.Module):
             f"head_dim={self.head_dim}, num_heads={self.num_heads}, "
             + f"kernel_size_d={self.kernel_size_d}, dilation_d={self.dilation_d}, "
             + f"kernel_size={self.kernel_size}, dilation={self.dilation}, "
-            + f"rel_pos_bias={self.rpb is not None}"
+            + f"has_bias={self.rpb is not None}"
         )

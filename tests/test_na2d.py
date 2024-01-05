@@ -22,20 +22,29 @@
 #################################################################################################
 
 import logging
-import os
 import unittest
 
 import torch
+
+from natten import (
+    disable_gemm_na,
+    disable_tf32,
+    disable_tiled_na,
+    enable_gemm_na,
+    enable_tf32,
+    enable_tiled_na,
+    has_bfloat,
+    has_gemm,
+    has_half,
+)
+from natten.functional import na2d_av, na2d_qk, na2d_qk_with_bias
+from natten.utils.testing import (
+    skip_if_cuda_is_not_supported,
+    skip_if_gemm_is_not_supported,
+    skip_if_nested_is_not_supported,
+)
 from torch.autograd import gradcheck
-from torch.utils.cpp_extension import CUDA_HOME
 
-from natten import (disable_gemm_na, disable_tf32, disable_tiled_na,
-                    enable_gemm_na, enable_tf32, enable_tiled_na, has_bfloat,
-                    has_cuda, has_gemm, has_half)
-from natten.functional import natten2dav, natten2dqkrpb
-
-SKIP_NESTED_TESTS = [int(x) for x in torch.__version__.split(".")[:2]] < [2, 1]
-HAS_CUDA = torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
 HAS_GEMM = has_gemm()
 HAS_HALF = has_half()
 HAS_BFLOAT = has_bfloat()
@@ -46,8 +55,6 @@ class NA2DTests(unittest.TestCase):
     def _test_against_cpu(
         self, B, H, X, Y, D, kernel_size, dilation, has_bias, dtype, eps
     ):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         with torch.no_grad():
             q, k, v = (
                 torch.randn((B, H, X, Y, D)) * (D**-0.5),
@@ -64,13 +71,13 @@ class NA2DTests(unittest.TestCase):
             )
             rpb_ = None if rpb is None else rpb.clone().cuda().to(dtype)
 
-            attn_ref = natten2dqkrpb(q, k, rpb, kernel_size, dilation)
+            attn_ref = na2d_qk_with_bias(q, k, rpb, kernel_size, dilation)
             attn_ref = attn_ref.softmax(dim=-1)
-            out_ref = natten2dav(attn_ref, v, kernel_size, dilation)
+            out_ref = na2d_av(attn_ref, v, kernel_size, dilation)
 
-            attn = natten2dqkrpb(q_, k_, rpb_, kernel_size, dilation)
+            attn = na2d_qk_with_bias(q_, k_, rpb_, kernel_size, dilation)
             attn = attn.softmax(dim=-1)
-            out = natten2dav(attn, v_, kernel_size, dilation)
+            out = na2d_av(attn, v_, kernel_size, dilation)
 
             torch.testing.assert_close(attn.float().cpu(), attn_ref, atol=eps, rtol=0)
             torch.testing.assert_close(out.float().cpu(), out_ref, atol=eps, rtol=0)
@@ -216,9 +223,8 @@ class NA2DTests(unittest.TestCase):
                     eps=1e-1,
                 )
 
+    @skip_if_cuda_is_not_supported()
     def test_cpu_vs_cuda(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         torch.manual_seed(42)
         self._test_all_dtypes_against_cpu(
             B=1, H=1, X=16, Y=16, D=32, kernel_size=7, dilation=1
@@ -254,14 +260,14 @@ class NA2DTests(unittest.TestCase):
         variables = [query, key, rpb, kernel_size, dilation]
 
         assert gradcheck(
-            natten2dqkrpb,
+            na2d_qk_with_bias,
             variables,
             eps=1e-6,
             atol=eps,
             rtol=1e-4,
             nondet_tol=0,
             fast_mode=False,
-        ), f"Autograd check failed for NA2D: QK."
+        ), "Autograd check failed for NA2D: QK."
 
     def _test_autograd_av(self, B, H, X, Y, D, kernel_size, dilation, eps, device):
         torch.manual_seed(42)
@@ -271,14 +277,14 @@ class NA2DTests(unittest.TestCase):
         variables = [attn, value, kernel_size, dilation]
 
         assert gradcheck(
-            natten2dav,
+            na2d_av,
             variables,
             eps=1e-6,
             atol=eps,
             rtol=1e-4,
             nondet_tol=0,
             fast_mode=False,
-        ), f"Autograd check failed for NA2D: AV."
+        ), "Autograd check failed for NA2D: AV."
 
     def _test_autograd(self, B, H, X, Y, D, kernel_size, dilation, eps, device):
         self._test_autograd_qk(
@@ -312,9 +318,8 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=7, Y=7, D=4, kernel_size=3, dilation=2, eps=1e-6, device="cpu"
         )
 
+    @skip_if_cuda_is_not_supported()
     def test_autograd_cuda_naive(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         disable_tiled_na()
         disable_gemm_na()
         disable_tf32()
@@ -333,9 +338,8 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_cuda_is_not_supported()
     def test_autograd_cuda_tiled(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         enable_tiled_na()
         disable_gemm_na()
         disable_tf32()
@@ -357,11 +361,8 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_gemm_is_not_supported()
     def test_autograd_cuda_gemm(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
-        if not HAS_GEMM:
-            self.skipTest("NATTEN not compiled with GEMM kernels.")
         enable_gemm_na()
         enable_tf32()
         self._test_autograd(
@@ -377,13 +378,13 @@ class NA2DTests(unittest.TestCase):
     @unittest.expectedFailure
     def test_invalid_kernel_size(self):
         self._test_autograd(
-            B=1, H=1, X=8, Y=9, D=8, kernel_size=8, dilation=1, eps=1e-6, device="cuda"
+            B=1, H=1, X=8, Y=9, D=8, kernel_size=8, dilation=1, eps=1e-6, device="cpu"
         )
 
     @unittest.expectedFailure
     def test_invalid_dilation(self):
         self._test_autograd(
-            B=1, H=1, X=8, Y=9, D=8, kernel_size=5, dilation=0, eps=1e-6, device="cuda"
+            B=1, H=1, X=8, Y=9, D=8, kernel_size=5, dilation=0, eps=1e-6, device="cpu"
         )
 
     def _test_fwad_qk(self, B, H, X, Y, D, kernel_size, dilation, device):
@@ -392,16 +393,16 @@ class NA2DTests(unittest.TestCase):
         query = torch.randn((B, H, X, Y, D), **kwargs)
         key = torch.randn((B, H, X, Y, D), **kwargs)
 
-        variables = [query, key, None, kernel_size, dilation]
+        variables = [query, key, kernel_size, dilation]
         assert gradcheck(
-            natten2dqkrpb,
+            na2d_qk,
             variables,
             check_forward_ad=True,
             check_backward_ad=False,
             check_undefined_grad=False,
             check_batched_grad=False,
             check_grad_dtypes=False,
-        ), f"Forward mode autograd check failed for NA2D: QK."
+        ), "Forward mode autograd check failed for NA2D: QK."
 
     def _test_fwad_av(self, B, H, X, Y, D, kernel_size, dilation, device):
         torch.manual_seed(42)
@@ -411,14 +412,14 @@ class NA2DTests(unittest.TestCase):
         variables = [attn, value, kernel_size, dilation]
 
         assert gradcheck(
-            natten2dav,
+            na2d_av,
             variables,
             check_forward_ad=True,
             check_backward_ad=False,
             check_undefined_grad=False,
             check_batched_grad=False,
             check_grad_dtypes=False,
-        ), f"Forward mode autograd check failed for NA2D: AV."
+        ), "Forward mode autograd check failed for NA2D: AV."
 
     def _test_fwad(self, B, H, X, Y, D, kernel_size, dilation, device):
         self._test_fwad_qk(
@@ -450,9 +451,8 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=7, Y=7, D=4, kernel_size=3, dilation=2, device="cpu"
         )
 
+    @skip_if_cuda_is_not_supported()
     def test_fwad_cuda_naive(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         disable_tiled_na()
         disable_gemm_na()
         disable_tf32()
@@ -470,9 +470,8 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_cuda_is_not_supported()
     def test_fwad_cuda_tiled(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         enable_tiled_na()
         disable_gemm_na()
         disable_tf32()
@@ -493,11 +492,8 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_gemm_is_not_supported()
     def test_fwad_cuda_gemm(self):
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
-        if not HAS_GEMM:
-            self.skipTest("NATTEN not compiled with GEMM kernels.")
         enable_gemm_na()
         enable_tf32()
         self._test_fwad(
@@ -530,10 +526,10 @@ class NA2DTests(unittest.TestCase):
             ],
             **kwargs,
         )
-        out_nested = natten2dqkrpb(query, key, None, kernel_size, dilation)
+        out_nested = na2d_qk(query, key, kernel_size, dilation)
         out_ref = []
         for q, k in zip(query, key):
-            out_ref.append(natten2dqkrpb(q, k, None, kernel_size, dilation))
+            out_ref.append(na2d_qk(q, k, kernel_size, dilation))
 
         for o, o_ref in zip(out_nested, out_ref):
             torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
@@ -558,25 +554,22 @@ class NA2DTests(unittest.TestCase):
             ],
             **kwargs,
         )
-        out_nested = natten2dav(attn, value, kernel_size, dilation)
+        out_nested = na2d_av(attn, value, kernel_size, dilation)
         out_ref = []
         for a, v in zip(attn, value):
-            out_ref.append(natten2dav(a, v, kernel_size, dilation))
+            out_ref.append(na2d_av(a, v, kernel_size, dilation))
 
         for o, o_ref in zip(out_nested, out_ref):
             torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
 
+    @skip_if_nested_is_not_supported()
     def test_nested_forward_cpu(self):
-        if SKIP_NESTED_TESTS:
-            self.skipTest("Nested tensors are only supported with torch >= 2.1.")
         self._test_nested_qk_forward(dtype=torch.float32, device="cpu")
         self._test_nested_av_forward(dtype=torch.float32, device="cpu")
 
+    @skip_if_cuda_is_not_supported()
+    @skip_if_nested_is_not_supported()
     def test_nested_forward_cuda(self):
-        if SKIP_NESTED_TESTS:
-            self.skipTest("Nested tensors are only supported with torch >= 2.1.")
-        if not HAS_CUDA:
-            self.skipTest("NATTEN not compiled with CUDA.")
         self._test_nested_qk_forward(dtype=torch.float16, device="cuda")
         self._test_nested_av_forward(dtype=torch.float16, device="cuda")
 

@@ -1,8 +1,7 @@
--f https://download.pytorch.org/whl/cu118
-torch==2.0.0
--f https://download.pytorch.org/whl/cu118
-torchvision==0.15.1
+-f https://download.pytorch.org/whl/cu121
+torch==2.1.2
 cmake==3.20.3
-flake8
-black
-isort
+ufmt==2.3.0
+flake8==7.0.0
+mypy==1.8.0
+pytest==7.4.4
