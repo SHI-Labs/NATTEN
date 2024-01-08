@@ -2,8 +2,9 @@
 
 CUDA_ARCH=
 WORKERS=
+VERBOSE=
 
-check_dirs := src/natten tests
+check_dirs := src/natten tests tools
 
 all: clean uninstall fetch-submodules install
 
@@ -23,6 +24,7 @@ clean:
 	rm -rf dist/ 
 	rm -rf natten.egg-info/ 
 	rm -rf src/natten/_C.* 
+	rm -rf src/natten/libnatten.* 
 	rm -rf __pycache__
 	rm -rf tests/__pycache__
 	rm -rf src/__pycache__
@@ -41,7 +43,7 @@ install-deps:
 
 install: 
 	@echo "Installing NATTEN from source"
-	NATTEN_CUDA_ARCH="${CUDA_ARCH}" NATTEN_N_WORKERS="${WORKERS}" pip install -v -e . 2>&1 | tee install.out
+	NATTEN_CUDA_ARCH="${CUDA_ARCH}" NATTEN_N_WORKERS="${WORKERS}" NATTEN_VERBOSE="${VERBOSE}" pip install -v -e . 2>&1 | tee install.out
 
 test:
 	pytest -v -x ./tests
@@ -50,3 +52,5 @@ style:
 	ufmt format $(check_dirs)
 	flake8 $(check_dirs)
 	mypy $(check_dirs)
+	clang-format -i csrc/include/**/*.*
+	clang-format -i csrc/src/**/*.*

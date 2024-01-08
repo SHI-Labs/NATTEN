@@ -1,14 +1,19 @@
 # Changelog
 
-## Main branch
+## [0.15.0] - 2024-01-09
 * Refactored kernels
   * The backend is messy, particularly the CUDA backend. A step in the right direction is at least factoring out duplicated.
   * Out of the 7 operations in NATTEN's backend, 6 have duplicates (really 3 underlying ops with different inputs.)
   * See #26 for more details.
 * 3D Neighborhood Attention: naive CPU and CUDA kernels were added.
-* Windows users can finally compile from source.
-* Major refactoring of the C++ API.
-* GEMM kernels (more details to come soon)
+* Major refactoring of the C++ API (#38, #47, #53, and #81)
+* GEMM kernels (#38 and #47)
+* New build system with cmake (#38, #53, #81)
+* Bfloat16 support (#38 and #81)
+* Kepler and Maxwell support (#81)
+* Forward mode automatic differentiation support (#74)
+* Experimental support for Nested Tensors (inference only) (#76)
+* Type checking, clang format, and other typesetting/formatting changes (#80)
 
 ## [0.14.6] - 2023-03-21
 Just a really small update that syncs the changes to the private branch.

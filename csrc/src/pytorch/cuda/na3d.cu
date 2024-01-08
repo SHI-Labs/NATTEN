@@ -52,6 +52,7 @@ void na3d_qk_forward(
     const int depth_kernel_size,
     const int depth_dilation) {
   DISPATCH_DTYPE(
+      query.device().index(),
       query.scalar_type(),
       natten::cuda::na3d_qk_forward,
       static_cast<void*>(query.data_ptr()),
@@ -88,6 +89,7 @@ void na3d_qk_backward(
     const int depth_kernel_size,
     const int depth_dilation) {
   DISPATCH_DTYPE(
+      d_attn.device().index(),
       d_attn.scalar_type(),
       natten::cuda::na3d_qk_backward,
       static_cast<void*>(query.data_ptr()),
@@ -124,6 +126,7 @@ void na3d_av_forward(
     const int depth_kernel_size,
     const int depth_dilation) {
   DISPATCH_DTYPE(
+      attn.device().index(),
       attn.scalar_type(),
       natten::cuda::na3d_av_forward,
       static_cast<void*>(attn.data_ptr()),
@@ -158,6 +161,7 @@ void na3d_av_backward(
     const int depth_kernel_size,
     const int depth_dilation) {
   DISPATCH_DTYPE(
+      d_out.device().index(),
       d_out.scalar_type(),
       natten::cuda::na3d_av_backward,
       static_cast<void*>(attn.data_ptr()),

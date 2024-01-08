@@ -50,15 +50,17 @@ namespace natten {
 namespace cuda {
 namespace naive {
 
-/////////////////////////////////////////////////////////////////////////////////////
-//////////////////////////////////// Main Kernels
-//////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////// Main kernels ////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 template <typename scalar_t, int KS, int NS, int DILATION>
 struct PointwiseNeighborhood2DFull : PointwiseNeighborhood2DBase<scalar_t> {
   using Base = PointwiseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ PointwiseNeighborhood2DFull() : Base() {}
 
@@ -121,6 +123,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct PointwiseNeighborhood2DHalf : PointwiseNeighborhood2DBase<scalar_t> {
   using Base = PointwiseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ PointwiseNeighborhood2DHalf() : Base() {}
 
@@ -235,6 +240,7 @@ struct PointwiseNeighborhood2D {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* query_ptr,
       void* key_ptr,
       void* attn_ptr,
@@ -245,7 +251,7 @@ struct PointwiseNeighborhood2D {
       int dim,
       int kernel_size,
       int dilation) {
-    if (dim == 32 && natten::kEnableTiledNA) {
+    if (dim == 32 && natten::kEnableTiledNA && cc >= 60) {
       if (kernel_size == 3) {
         LaunchParams lp = Kernel3x3::get_launch_params(
             batch_size * heads,
@@ -439,6 +445,7 @@ struct PointwiseNeighborhood2DWithBias {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* query_ptr,
       void* key_ptr,
       void* bias_ptr,
@@ -450,7 +457,7 @@ struct PointwiseNeighborhood2DWithBias {
       int dim,
       int kernel_size,
       int dilation) {
-    if (dim == 32 && natten::kEnableTiledNA) {
+    if (dim == 32 && natten::kEnableTiledNA && cc >= 60) {
       if (kernel_size == 3) {
         LaunchParams lp = Kernel3x3::get_launch_params(
             batch_size * heads,

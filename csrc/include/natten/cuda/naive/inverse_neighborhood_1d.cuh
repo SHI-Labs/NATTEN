@@ -100,6 +100,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct InverseNeighborhood1DFull : InverseNeighborhood1DBase<scalar_t> {
   using Base = InverseNeighborhood1DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ InverseNeighborhood1DFull() : Base() {}
 
@@ -147,6 +150,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
   using Base = InverseNeighborhood1DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ InverseNeighborhood1DHalf() : Base() {}
   using HalfHelper = typename HalfArray<scalar_t>::Base;
@@ -215,6 +221,7 @@ struct InverseNeighborhood1D {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* attn_ptr,
       void* d_output_ptr,
       void* d_value_ptr,

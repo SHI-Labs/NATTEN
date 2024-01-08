@@ -67,6 +67,9 @@ struct PointwiseNeighborhood2DFull11x11_13x13
     : PointwiseNeighborhood2DBase<scalar_t> {
   using Base = PointwiseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = true;
 
   __device__ __host__ PointwiseNeighborhood2DFull11x11_13x13() : Base() {}
 
@@ -195,6 +198,9 @@ struct PointwiseNeighborhood2DHalf11x11_13x13
     : PointwiseNeighborhood2DBase<scalar_t> {
   using Base = PointwiseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = true;
 
   __device__ __host__ PointwiseNeighborhood2DHalf11x11_13x13() : Base() {}
 

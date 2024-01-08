@@ -6,57 +6,89 @@
 
 Bringing attention to a neighborhood near you!
 
-NATTEN is an open-source project aimed at providing an interface to neighborhood attention, and more generally sliding window
-attention.
+NATTEN is an open-source project dedicated to providing fast implementations for
+[Neighborhood Attention](https://scholar.google.com/citations?view_op=view_citation&citation_for_view=Ndu0dUcAAAAJ:b0M2c_1WBrUC),
+a sliding window self-attention mechanism.
+
 If you're not familiar with neighborhood attention, we recommend referring to 
 [our papers](https://github.com/SHI-Labs/Neighborhood-Attention-Transformer), or watching our 
-presentation on [YouTube](https://www.youtube.com/watch?v=Ya4BfioxIHA).
+[YouTube video](https://www.youtube.com/watch?v=Ya4BfioxIHA) from CVPR 2023.
 
-NATTEN currently works as an extension to PyTorch, but we plan to reduce dependency on the torch API and possibly support other
-deep learning frameworks in the future.
-NATTEN provides <a href="https://arxiv.org/abs/2204.07143">Neighborhood Attention</a> (local attention)
+NATTEN is primarily a C++/CUDA library, which has so far only supported binding with the torch API, and therefore is mostly
+usable through PyTorch. We plan to eliminate the torch dependency in the future and possibly support other frameworks /
+engines.
+
+NATTEN's python interface provides <a href="https://arxiv.org/abs/2204.07143">Neighborhood Attention</a> (local attention)
 and <a href="https://arxiv.org/abs/2209.15001">Dilated Neighborhood Attention</a> 
-(sparse global attention, a.k.a. dilated local attention) as PyTorch modules for both 1D and 2D data. 
+(sparse global attention, a.k.a. dilated local attention) as autograd-compatible PyTorch modules for both 1D, 2D, and 3D data. 
 
-## NEW: GEMM-based CUDA kernels
-We are finally releasing our new GEMM-based CUDA kernels, which depend on and are modeled after 
+It also has experimental support for 
+[forward mode automatic differentiation](https://pytorch.org/tutorials/intermediate/forward_ad_usage.html),
+and nested tensors.
+
+## CPU support
+Our CPU implementations are very limited and barely performance-optimized.
+While we aim to provide the best implementation for different devices, optimizing our CUDA kernels is higher up on the list of
+priorities. Contributions are always welcomed.
+
+
+## CUDA support
+NATTEN generally supports all architectures supported by PyTorch. More specifically, architectures since Kepler (SM35) are
+supported. However, our most-performant kernels only support architectures since Volta, targeting tensor core math.
+
+### Half-precision support
+Devices with compute capability greater than or equal to 6.0 (Pascal and later) allow running in FP16.
+
+Devices with compute capability greater than or equal to 8.0 (Ampere and later) allow running in BF16.
+
+### Naive kernels
+NATTEN provides more than one set of kernel. Our naive kernels, which were developed during the first phase of the project,
+provide a very basic implementation of neighborhood attention, and are the last resort for every problem. This means that if
+your device and software support alternatives to our naive kernels (i.e. GEMM kernels), and your problem size is supported,
+NATTEN will automatically pick the better kernels for you. (NOTE: this is done based on the class of kernels and not by actual
+performance via profiling.)
+
+Naive kernels are always usable across different architectures, though not the most performant.
+
+### Tiled kernels
+Naive kernels for the 2-dimensional neighborhood attention also come with a tiled implementation for one of the three
+underlying operations, which is considerably more performant than the original. However, the tiled kernels only support problem
+sizes with head dim 32, and up to kernel size 13x13.
+Tiled kernels are also not supported in devices with compute capability smaller than 6.0.
+
+### GEMM kernels.
+
+Our GEMM-based kernels depend on and are modeled after 
 [CUTLASS](https://github.com/NVIDIA/cutlass/)'s [Implicit GEMM](https://github.com/NVIDIA/cutlass/blob/main/media/docs/implicit_gemm_convolution.md) 
 kernels for convolution.
 
-Note that these kernels were developed before the CUTLASS 3.0 release, and are therefore still following the CUTLASS 2.X
-structure. We plan to write new kernels based on CUTLASS 3.X and CUTE in the near future.
+Devices with compute capability greater than or equal to 7.0 (Volta, Turing, Ampere, Ada Lovelace, Hopper), can run our GEMM
+kernels, which are somewhat performance-optimized, thanks to the underlying mainloop from CUTLASS, and target Tensor Core math.
 
-### What does this mean?
-It means that if you're running CUDA 11 and above on SM70 or higher (Volta, Turing, Ampere, Ada Lovelace, Hopper), you can start 
-using our GEMM based kernels and see up to 10X improvement in latency. However, do note that their current float16/bfloat16 
-implementations do not typically result in improved latency, due to a memory alignment issue, which will be resolved in future releases.
+However, do note that their current float16/bfloat16 implementations do not typically result in improved latency, 
+due to a memory alignment issue, which we aim to resolve in future kernels.
+
+Devices with compute capability greater than or equal to 8.0 (Ampere and later) support GEMM kernels with double, full, and
+half precision (FP64, FP32, FP16, BF16).
+
+Devices with compute capability 7.0 or 7.5 (Volta and Turing) only support GEMM kernels with half precision (FP16). This is
+because their tensor cores only allow FP16 math.
 
 ![GEMMvsNaive](assets/gemm_vs_naive.png)
 
 NOTE: the table presents the average improvement in latency over different problem sizes with full precision (tfloat32).
 
-The new NATTEN is also heavily refactored to both continue to support older architectures with our naive kernels, and to
-accommodate our new kernels which only target SM70 (Volta) and above.
-
-### How do I tell if I'm on SM70 or above?
+### How do I check my compute capability / architecture?
 Simple, just Google your GPU model, and check its compute capability.
-If you've already set up PyTorch, you could also run:
+If you've already set up NATTEN, you could also run:
 ```python
-import torch
+from natten.functional import get_device_cc
 
-cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
-sm = cuda_device.major * 10 + cuda_device.minor
+cc = get_device_cc()
+cc = get_device_cc(0) # Optionally select a specific GPU
 
-print(f"Your main GPU is SM{sm}")
+print(f"Your device is SM{cc}.")
 ```
-
-Note: SM70 and SM75 Tensor Cores only support FP16 math, which means you only observe the speedup when you're using mixed precision,
-or manually casting to half precision. Full and double precision fall back to naive kernels.
-
-### How do I use the new kernels if I'm on SM70 or above?
-We're still in the process of deciding the best way to roll out the new kernels via PyPi, which means you can't get these new
-kernels via pip.
-However, you can build NATTEN from source! Just look at the [instructions below on building from source](#build-from-source).
 
 ### How do I know if I'm using the new kernels?
 The new NATTEN library sets up constants that are binded to the python interface, which will allow you to
@@ -65,17 +97,29 @@ check whether you've compiled with: a. CUDA, b. Float16 (half) support, c. Bfloa
 ```python
 import natten
 
-# Whether NATTEN was built with CUDA
+# Whether NATTEN was built with CUDA kernels, 
+# and supports running them on this system.
 print(natten.has_cuda())
 
-# Whether NATTEN with CUDA was built with support for float16
+# Whether NATTEN supports running float16 on
+# the selected device.
 print(natten.has_half())
+print(natten.has_half(0)) # Optionally specify a GPU index.
 
-# Whether NATTEN with CUDA was built with support for bfloat16
+# Whether NATTEN supports running bfloat16 on
+# the selected device.
 print(natten.has_bfloat())
+print(natten.has_bfloat(0)) # Optionally specify a GPU index.
 
-# Whether NATTEN with CUDA was built with the new GEMM kernels
+# Whether NATTEN supports running GEMM kernels
+# on the selected device.
 print(natten.has_gemm())
+print(natten.has_gemm(0)) # Optionally specify a GPU index.
+
+# Whether NATTEN supports running GEMM kernels
+# in full precision on the selected device.
+print(natten.has_fp32_gemm())
+print(natten.has_fp32_gemm(0)) # Optionally specify a GPU index.
 ```
 
 If `natten.has_gemm()` returns true, by default NATTEN will call the faster GEMM kernels instead of the original naive kernels
@@ -83,9 +127,6 @@ for both NA1D and NA2D. 3D Neighborhood attention is not supported at this time,
 
 In addition, we will be adding scripts that allow you to profile and observe latency from the kernels with those options
 available.
-
-### What else is new?
-With the latest code refactor, naive kernels now support arbitrary kernel sizes, and support for bfloat16 (BF16) was also added.
 
 ## About NATTEN
 Sliding window self attention mechanisms have been relatively overlooked, in part due to implementation difficulties.
@@ -102,22 +143,16 @@ transformers.
 For more information, we highly recommend reading our preprints [NAT](https://arxiv.org/abs/2204.07143) and
 [DiNAT](https://arxiv.org/abs/2209.15001), and check out their [repository](https://github.com/SHI-Labs/Neighborhood-Attention-Transformer).
 
-### How fast is NATTEN?
-The latest version of NATTEN runs pretty fast on Ampere with the latest torch and CUDA versions.
-
-![TimePlot](assets/cudatime_dark.png#gh-dark-mode-only) ![TimePlot](assets/cudatime_light.png#gh-light-mode-only)
-![MemPlot](assets/cudamemory_dark.png#gh-dark-mode-only) ![MemPlot](assets/cudamemory_light.png#gh-light-mode-only)
-
-
 ## Requirements
 
-* python >= 3.7
-* torch >= 1.8
-* cmake >= 3.20
+* python >= 3.8
+* torch >= 2.0
  
-NATTEN supports PyTorch version 1.8 and later, and Python versions 3.7, 3.8, 3.9, 3.10(only torch >= 1.11), and 3.11 (only torch >= 1.13).
+NATTEN supports PyTorch version 2.0 and later, and Python versions 3.7, 3.8, 3.9, 3.10(only torch >= 1.11), and 3.11 (only torch >= 1.13).
 
-**NOTE:** The current version of NATTEN comes with Linux-only wheels, and supports Pascal and above (`SM >= 60`, i.e. Tesla P100).
+Older NATTEN releases supported python >= 3.7 and torch >= 1.8.
+
+**NOTE:** NATTEN only comes with pre-built Linux wheels, and supports Kepler and above (`SM >= 35`).
 Make sure your GPU is supported by referring to 
 [this webpage](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/).
 Future versions will extend support to older GPUs.
@@ -143,15 +178,16 @@ on your system might take up to 30 minutes.
 We strongly recommend using our website if you're a Linux user.
 
 ### Mac
-Unfortunately we are not yet able to build Mac wheels, but you can compile on install, so just run:
+Unfortunately we are not yet able to build Mac wheels (and do not yet have a Metal backend). However, you can compile upon
+installing and use the CPU kernels:
 
 ```bash
 pip3 install natten
 ```
 
 ### Windows
-NATTEN now supports Windows devices with CUDA, but does not yet have Windows wheels.
-This means you need to clone this repository, and build NATTEN from source, as instructed below.
+The current release has not been successfully built Windows devices with CUDA, and therefore does not yet have Windows wheels.
+If you are a windows user willing to help us figure out building with MSVC, please contact us or open an issue.
 
 ### Build from source
 Once you've set up your Python environment and installed PyTorch with CUDA, simply clone and build:
@@ -194,15 +230,15 @@ make test
 - [x] Neighborhood Attention 1D (CUDA, naive)
 - [x] Neighborhood Attention 2D (CUDA, naive)
 - [x] Neighborhood Attention 3D (CUDA, naive)
-- [x] Neighborhood Attention 1D (CUDA, gemm-based, SM80 and above)
-- [x] Neighborhood Attention 2D (CUDA, gemm-based, SM80 and above)
+- [x] Neighborhood Attention 1D (CUDA, gemm-based, SM70 and above)
+- [x] Neighborhood Attention 2D (CUDA, gemm-based, SM70 and above)
 - [x] Dilation support
-- [x] Float16 support and utilization
+- [x] Float16 support
 - [x] BFloat16 support
-- [x] Windows builds
+- [x] Kepler and Maxwell (30<=SM<60) support
+- [ ] Windows builds
 - [ ] Neighborhood Attention 1D (CUDA, fused kernels)
 - [ ] Neighborhood Attention 2D (CUDA, fused kernels)
-- [ ] Kepler and Maxwell (30<=SM<60) support
 
 ## Usage
 Simply import `NeighborhoodAttention1D`, `NeighborhoodAttention2D`, or `NeighborhoodAttention3D` from `natten`:
@@ -269,7 +305,7 @@ NATTEN is released under the [MIT License](LICENSE).
 	title        = {Neighborhood Attention Transformer},
 	author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
 	year         = 2023,
-        booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
+  booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
 }
 @article{hassani2022dilated,
 	title        = {Dilated Neighborhood Attention Transformer},

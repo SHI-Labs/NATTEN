@@ -10,10 +10,10 @@
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
-#define DISPATCH_DTYPE_na1d_pn_cuda_gemm(dtype, dim, ...) \
+#define DISPATCH_DTYPE_na1d_pn_cuda_gemm_sm70(dtype, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_ALIGNMENT_na1d_pn_cuda_gemm_half(dim, __VA_ARGS__); \
+      DISPATCH_ALIGNMENT_na1d_pn_cuda_gemm_sm70_half(dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -23,10 +23,10 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_DTYPE_na1d_nn_cuda_gemm(dtype, dim, ...) \
+#define DISPATCH_DTYPE_na1d_nn_cuda_gemm_sm70(dtype, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_ALIGNMENT_na1d_nn_cuda_gemm_half(dim, __VA_ARGS__); \
+      DISPATCH_ALIGNMENT_na1d_nn_cuda_gemm_sm70_half(dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -36,10 +36,10 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_DTYPE_na1d_in_cuda_gemm(dtype, dim, ...) \
+#define DISPATCH_DTYPE_na1d_in_cuda_gemm_sm70(dtype, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_ALIGNMENT_na1d_in_cuda_gemm_half(dim, __VA_ARGS__); \
+      DISPATCH_ALIGNMENT_na1d_in_cuda_gemm_sm70_half(dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \

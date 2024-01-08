@@ -128,6 +128,9 @@ template <
 struct RelPosBiasGradient3DFull : RelPosBiasGradient3DBase<scalar_t, acc_t> {
   using Base = RelPosBiasGradient3DBase<scalar_t, acc_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ RelPosBiasGradient3DFull() : Base() {}
 
@@ -192,6 +195,9 @@ template <
 struct RelPosBiasGradient3DHalf : RelPosBiasGradient3DBase<scalar_t, acc_t> {
   using Base = RelPosBiasGradient3DBase<scalar_t, acc_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ RelPosBiasGradient3DHalf() : Base() {}
 
@@ -281,6 +287,7 @@ struct RelPosBiasGradient3D {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* d_bias_ptr,
       void* d_attn_ptr,
       int batch_size,

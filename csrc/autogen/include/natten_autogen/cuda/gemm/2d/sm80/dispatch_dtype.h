@@ -10,67 +10,67 @@
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
-#define DISPATCH_DTYPE_na2d_pn_cuda_gemm(dtype, kernel_size, dim, ...) \
+#define DISPATCH_DTYPE_na2d_pn_cuda_gemm_sm80(dtype, kernel_size, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float64>::value) { \
-      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_double(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_double(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_float(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_float(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_half(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_half(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::bfloat16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_bfloat16(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_bfloat16(kernel_size, dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na2d_pn_cuda_gemm does not support this data type." \
+                << "na2d_pn_cuda_gemm_sm80 does not support this data type." \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \
 }();
 
-#define DISPATCH_DTYPE_na2d_nn_cuda_gemm(dtype, kernel_size, dim, ...) \
+#define DISPATCH_DTYPE_na2d_nn_cuda_gemm_sm80(dtype, kernel_size, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float64>::value) { \
-      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_double(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_double(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_float(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_float(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_half(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_half(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::bfloat16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_bfloat16(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_bfloat16(kernel_size, dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na2d_nn_cuda_gemm does not support this data type." \
+                << "na2d_nn_cuda_gemm_sm80 does not support this data type." \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \
 }();
 
-#define DISPATCH_DTYPE_na2d_in_cuda_gemm(dtype, kernel_size, dim, ...) \
+#define DISPATCH_DTYPE_na2d_in_cuda_gemm_sm80(dtype, kernel_size, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float64>::value) { \
-      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_double(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_double(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_float(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_float(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_half(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_half(kernel_size, dim, __VA_ARGS__); \
     } \
     else if (std::is_same<dtype, natten::bfloat16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_bfloat16(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_bfloat16(kernel_size, dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na2d_in_cuda_gemm does not support this data type." \
+                << "na2d_in_cuda_gemm_sm80 does not support this data type." \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \

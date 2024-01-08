@@ -74,14 +74,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def(
       "has_cuda", &natten::has_cuda, "Whether NATTEN was compiled with CUDA.");
   m.def(
-      "has_half",
-      &natten::has_half,
-      "Whether NATTEN was compiled with half support.");
-  m.def(
-      "has_bfloat",
-      &natten::has_bfloat,
-      "Whether NATTEN was compiled with bfloat16 support.");
-  m.def(
       "has_gemm",
       &natten::has_gemm,
       "Whether NATTEN was compiled with GEMM kernels.");

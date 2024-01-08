@@ -10,7 +10,7 @@
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
-#define DISPATCH_ALIGNMENT_na1d_pn_cuda_gemm_half(dim, ...) \
+#define DISPATCH_ALIGNMENT_na1d_pn_cuda_gemm_sm75_half(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
       natten::cuda::gemm::na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_align8(__VA_ARGS__); \
@@ -23,14 +23,14 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na1d_pn_cuda_gemm_half requires at least 32-bit alignment." \
+                << "na1d_pn_cuda_gemm_sm75_half requires at least 32-bit alignment." \
                 << "Got dim=" << dim << ", dtype=half. " \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \
 }();
 
-#define DISPATCH_ALIGNMENT_na1d_nn_cuda_gemm_half(dim, ...) \
+#define DISPATCH_ALIGNMENT_na1d_nn_cuda_gemm_sm75_half(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
       natten::cuda::gemm::na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align8(__VA_ARGS__); \
@@ -43,14 +43,14 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na1d_nn_cuda_gemm_half requires at least 32-bit alignment." \
+                << "na1d_nn_cuda_gemm_sm75_half requires at least 32-bit alignment." \
                 << "Got dim=" << dim << ", dtype=half. " \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \
 }();
 
-#define DISPATCH_ALIGNMENT_na1d_in_cuda_gemm_half(dim, ...) \
+#define DISPATCH_ALIGNMENT_na1d_in_cuda_gemm_sm75_half(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
       natten::cuda::gemm::na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align8(__VA_ARGS__); \
@@ -63,7 +63,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na1d_in_cuda_gemm_half requires at least 32-bit alignment." \
+                << "na1d_in_cuda_gemm_sm75_half requires at least 32-bit alignment." \
                 << "Got dim=" << dim << ", dtype=half. " \
                 << std::endl; \
       exit(EXIT_FAILURE); \

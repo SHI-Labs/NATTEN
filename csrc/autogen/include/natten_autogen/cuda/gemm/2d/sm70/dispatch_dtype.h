@@ -10,40 +10,40 @@
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
-#define DISPATCH_DTYPE_na2d_pn_cuda_gemm(dtype, kernel_size, dim, ...) \
+#define DISPATCH_DTYPE_na2d_pn_cuda_gemm_sm70(dtype, kernel_size, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_half(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm70_half(kernel_size, dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na2d_pn_cuda_gemm does not support this data type." \
+                << "na2d_pn_cuda_gemm_sm70 does not support this data type." \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \
 }();
 
-#define DISPATCH_DTYPE_na2d_nn_cuda_gemm(dtype, kernel_size, dim, ...) \
+#define DISPATCH_DTYPE_na2d_nn_cuda_gemm_sm70(dtype, kernel_size, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_half(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm70_half(kernel_size, dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na2d_nn_cuda_gemm does not support this data type." \
+                << "na2d_nn_cuda_gemm_sm70 does not support this data type." \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \
 }();
 
-#define DISPATCH_DTYPE_na2d_in_cuda_gemm(dtype, kernel_size, dim, ...) \
+#define DISPATCH_DTYPE_na2d_in_cuda_gemm_sm70(dtype, kernel_size, dim, ...) \
   [&] { \
     if (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_half(kernel_size, dim, __VA_ARGS__); \
+      DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm70_half(kernel_size, dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
-                << "na2d_in_cuda_gemm does not support this data type." \
+                << "na2d_in_cuda_gemm_sm70 does not support this data type." \
                 << std::endl; \
       exit(EXIT_FAILURE); \
     } \

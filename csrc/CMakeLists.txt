@@ -6,7 +6,7 @@ project(natten LANGUAGES CXX)
 endif()
 
 if(${NATTEN_WITH_CUDA})
-find_package(CUDA 10.2 REQUIRED)
+find_package(CUDA 11.0 REQUIRED)
 message("Building NATTEN with CUDA.")
 endif()
 set(CXX_STD "17" CACHE STRING "C++ standard")
@@ -55,7 +55,7 @@ list(APPEND COMMON_HEADER_DIRS ${TORCH_INCLUDE_DIRS})
 # CUTLASS
 if(${NATTEN_WITH_CUDA})
 	if(${NATTEN_WITH_CUTLASS})
-		message("Building NATTEN with GEMM kernels.")
+    message("Building NATTEN with GEMM kernels.")
 		list(APPEND COMMON_HEADER_DIRS ../third_party/cutlass/include)
 	endif()
 endif()
@@ -97,57 +97,31 @@ if(${NATTEN_WITH_CUDA})
 	message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
 endif()
 
-set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_USE_CXX11_ABI=0")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
-
-# So there's no room for error
 add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
 
 if(${NATTEN_WITH_CUDA})
-# CUDA flags
-add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
-add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
-add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
-add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
+	# CUDA flags
+	add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
+	add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
+	add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
+	add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
 endif()
 
 # Torch/pybind flags
 # Pybind specifically needs these to recognize the module being initialized.
 add_definitions("-DTORCH_API_INCLUDE_EXTENSION_H")
-add_definitions("-DTORCH_EXTENSION_NAME=_C")
+add_definitions("-DTORCH_EXTENSION_NAME=libnatten")
 
 if(${NATTEN_WITH_AVX})
 	add_definitions("-DAVX_INT")
 endif()
 
-# Arch list environment variable that PyTorch might expect
-# Note: I haven't checked, but I'm pretty sure the torch headers do not use this env var.
-# It's only used when compiling with setuptools, which we're overriding with cmake.
-# Leaving it here until I know for sure.
 if(${NATTEN_WITH_CUDA})
 	add_definitions("-DWITH_CUDA")
 	add_definitions("-DNATTEN_WITH_CUDA")
-	set(ENV{TORCH_CUDA_ARCH_LIST} ${NATTEN_TORCH_CUDA_ARCH_LIST})
 	if(${NATTEN_WITH_CUTLASS})
 		add_definitions("-DNATTEN_WITH_CUTLASS")
 		message("Building NATTEN with CUTLASS-based GEMM kernels.")
-		if(${NATTEN_CUTLASS_TARGET_SM})
-			add_compile_definitions(NATTEN_CUTLASS_TARGET_SM=${NATTEN_CUTLASS_TARGET_SM})
-			message("GEMM kernels targeting SM " ${NATTEN_CUTLASS_TARGET_SM})
-		else()
-			message(FATAL_ERROR "Cannot build with CUTLASS without an arch tag. Please set NATTEN_CUTLASS_TARGET_SM.")
-		endif()
-	endif()
-	if(${NATTEN_WITH_CUDA_FP16})
-		add_definitions("-DNATTEN_ENABLE_FP16")
-		message("Building NATTEN with FP16 support.")
-	endif()
-	if(${NATTEN_WITH_CUDA_BF16})
-		add_definitions("-DNATTEN_ENABLE_BF16")
-		message("Building NATTEN with BF16 support.")
 	endif()
 endif()
 
@@ -162,12 +136,14 @@ file(GLOB TORCH_INTERFACE ./src/pytorch/*.cpp)
 file(GLOB TORCH_CPU_SOURCES  ./src/pytorch/cpu/*.cpp)
 file(GLOB AUTOGEN_CPU  ./autogen/src/cpu/naive/*.cpp)
 if(${NATTEN_WITH_CUDA})
-file(GLOB MISC_SOURCES_CUDA  ./src/*.cpp ./src/*.cu)
-file(GLOB AUTOGEN_CUDA ./autogen/src/cuda/naive/*.cu)
-file(GLOB TORCH_CUDA_SOURCES ./src/pytorch/cuda/*.cu)
-if(${NATTEN_WITH_CUTLASS})
-file(GLOB AUTOGEN_CUDA_GEMM ./autogen/src/cuda/gemm/1d/sm${NATTEN_CUTLASS_TARGET_SM}/*.cu ./autogen/src/cuda/gemm/2d/sm${NATTEN_CUTLASS_TARGET_SM}/*.cu)
-endif()
+	file(GLOB MISC_SOURCES_CUDA  ./src/*.cpp ./src/*.cu)
+	file(GLOB AUTOGEN_CUDA ./autogen/src/cuda/naive/*.cu)
+	file(GLOB TORCH_CUDA_SOURCES ./src/pytorch/cuda/*.cu)
+	if(${NATTEN_WITH_CUTLASS})
+		file(GLOB AUTOGEN_CUDA_GEMM_SM70 ./autogen/src/cuda/gemm/1d/sm70/*.cu ./autogen/src/cuda/gemm/2d/sm70/*.cu)
+		file(GLOB AUTOGEN_CUDA_GEMM_SM75 ./autogen/src/cuda/gemm/1d/sm75/*.cu ./autogen/src/cuda/gemm/2d/sm75/*.cu)
+		file(GLOB AUTOGEN_CUDA_GEMM_SM80 ./autogen/src/cuda/gemm/1d/sm80/*.cu ./autogen/src/cuda/gemm/2d/sm80/*.cu)
+	endif()
 endif()
 
 file(GLOB ALL_SOURCES 
@@ -176,7 +152,9 @@ file(GLOB ALL_SOURCES
 	${TORCH_CUDA_SOURCES} 
 	${AUTOGEN_CPU} 
 	${AUTOGEN_CUDA} 
-	${AUTOGEN_CUDA_GEMM} 
+	${AUTOGEN_CUDA_GEMM_SM70} 
+	${AUTOGEN_CUDA_GEMM_SM75} 
+	${AUTOGEN_CUDA_GEMM_SM80} 
 	${MISC_SOURCES} 
 	${MISC_SOURCES_CUDA} 
 	${MAIN_SOURCE} 
@@ -185,7 +163,7 @@ file(GLOB ALL_SOURCES
 # Add headers
 include_directories(${COMMON_HEADER_DIRS})
 
-# TODO: again, terrible solution, but a solution nonetheless
+# Find torch lib dir so we can link with libtorch
 link_directories("${TORCH_DIR}/lib/")
 
 add_library(natten SHARED ${ALL_SOURCES})
@@ -194,7 +172,7 @@ set_target_properties(natten PROPERTIES PREFIX "" OUTPUT_NAME ${OUTPUT_FILE_NAME
 set_target_properties(natten PROPERTIES LINKER_LANGUAGE CXX)
 if(${NATTEN_WITH_CUDA})
 	message("Building NATTEN for the following architectures: ${NATTEN_CUDA_ARCH_LIST}")
-	set_target_properties(natten PROPERTIES CUDA_ARCHITECTURES ${NATTEN_CUDA_ARCH_LIST})
+	set_target_properties(natten PROPERTIES CUDA_ARCHITECTURES "${NATTEN_CUDA_ARCH_LIST}")
 endif()
 
 if(${NATTEN_IS_MAC})
@@ -202,7 +180,7 @@ if(${NATTEN_IS_MAC})
 endif()
 
 if(${NATTEN_WITH_CUDA})
-target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda")
+  target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda")
 else()
-target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python")
+	target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python")
 endif()

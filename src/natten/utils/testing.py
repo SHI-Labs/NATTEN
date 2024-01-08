@@ -24,13 +24,14 @@
 import torch
 from torch.utils.cpp_extension import CUDA_HOME
 
-from .. import has_cuda, has_gemm
+from .. import has_cuda, has_fp64_gemm, has_gemm
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
 _IS_CUDA_AVAILABLE = (
     torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
 )
 _HAS_GEMM_KERNELS = has_gemm()
+_GEMM_WITH_DOUBLE_PRECISION = has_fp64_gemm()
 
 
 def skip_if_cuda_is_not_supported():
@@ -51,6 +52,25 @@ def skip_if_gemm_is_not_supported():
         def wrapper(self, *args, **kwargs):
             if not _IS_CUDA_AVAILABLE or not _HAS_GEMM_KERNELS:
                 self.skipTest("GEMM kernels are not supported.")
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def skip_if_gemm_does_not_support_double_precision():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if (
+                not _IS_CUDA_AVAILABLE
+                or not _HAS_GEMM_KERNELS
+                or not _GEMM_WITH_DOUBLE_PRECISION
+            ):
+                self.skipTest(
+                    "GEMM kernels don't support double precision on this device."
+                )
             else:
                 return f(self, *args, **kwargs)
 

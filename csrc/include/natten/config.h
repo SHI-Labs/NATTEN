@@ -26,15 +26,9 @@
 namespace natten {
 
 extern bool kHasCUDA;
-extern bool kHasHalf;
-extern bool kHasBFloat;
 extern bool kHasGEMM;
 
 bool has_cuda();
-
-bool has_half();
-
-bool has_bfloat();
 
 bool has_gemm();
 
