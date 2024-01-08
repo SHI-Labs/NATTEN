@@ -14,6 +14,7 @@
 * Forward mode automatic differentiation support (#74)
 * Experimental support for Nested Tensors (inference only) (#76)
 * Type checking, clang format, and other typesetting/formatting changes (#80)
+* Added profiling scripts (#81)
 
 ## [0.14.6] - 2023-03-21
 Just a really small update that syncs the changes to the private branch.
