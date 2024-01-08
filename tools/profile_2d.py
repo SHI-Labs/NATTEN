@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2023 Ali Hassani.
+# Copyright (c) 2024 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
 #
 #################################################################################################
 
-import argparse
+import click
 
 import natten
 import torch
@@ -29,47 +29,61 @@ from utils.pretty_printer import print_table
 from utils.profiler_2d import profile_na2d
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--batch-size", type=int, default=128)
-    parser.add_argument("-n", "--heads", type=int, default=16)
-    parser.add_argument("-x", "--height", type=int, default=14)
-    parser.add_argument("-y", "--width", type=int, default=14)
-    parser.add_argument("-d", "--dim", type=int, default=32)
-    parser.add_argument("-k", "--kernel-size", type=int, default=7)
-    parser.add_argument("--dilation", type=int, default=1)
-    parser.add_argument("--fp16", action="store_true", default=False)
-    parser.add_argument("--bf16", action="store_true", default=False)
-    parser.add_argument("--bias", action="store_true", default=False)
-    parser.add_argument("--disable-tiled", action="store_true", default=False)
-    parser.add_argument("--disable-gemm", action="store_true", default=False)
-    parser.add_argument("--disable-tf32", action="store_true", default=False)
-    parser.add_argument("--warmup-steps", type=int, default=10)
-    args = parser.parse_args()
+@click.command()
+@click.option("-b", "--batch-size", default=128)
+@click.option("-n", "--heads", default=16)
+@click.option("-x", "--height", default=14)
+@click.option("-y", "--width", default=14)
+@click.option("-d", "--dim", default=32)
+@click.option("-k", "--kernel-size", default=7)
+@click.option("--dilation", default=1)
+@click.option("--fp16", is_flag=True)
+@click.option("--bf16", is_flag=True)
+@click.option("--bias", is_flag=True)
+@click.option("--disable-tiled", is_flag=True)
+@click.option("--disable-gemm", is_flag=True)
+@click.option("--disable-tf32", is_flag=True)
+@click.option("--warmup-steps", default=10)
+def profile_2d(
+    batch_size: int,
+    heads: int,
+    height: int,
+    width: int,
+    dim: int,
+    kernel_size: int,
+    dilation: int,
+    fp16: bool,
+    bf16: bool,
+    bias: bool,
+    disable_tiled: bool,
+    disable_gemm: bool,
+    disable_tf32: bool,
+    warmup_steps: int,
+):
 
     dtype = torch.float32
-    if args.fp16:
+    if fp16:
         dtype = torch.float16
-    if args.bf16:
+    if bf16:
         dtype = torch.bfloat16
-    if args.disable_tiled:
+    if disable_tiled:
         natten.libnatten.set_tiled_na(False)
-    if args.disable_gemm:
+    if disable_gemm:
         natten.libnatten.set_gemm_na(False)
-    if args.disable_tf32:
+    if disable_tf32:
         natten.libnatten.set_gemm_tf32(False)
 
     logged_ops = profile_na2d(
-        batch_size=args.batch_size,
-        heads=args.heads,
-        height=args.height,
-        width=args.width,
-        dim=args.dim,
-        kernel_size=args.kernel_size,
-        dilation=args.dilation,
+        batch_size=batch_size,
+        heads=heads,
+        height=height,
+        width=width,
+        dim=dim,
+        kernel_size=kernel_size,
+        dilation=dilation,
         dtype=dtype,
-        warmup_steps=args.warmup_steps,
-        enable_bias=args.bias,
+        warmup_steps=warmup_steps,
+        enable_bias=bias,
     )
 
     title = "Profiler results"
@@ -78,3 +92,7 @@ if __name__ == "__main__":
     total = sum(logged_ops)
     values.append(["", "", "Total", total.time_str])
     print_table(title, headers, values)
+
+
+if __name__ == "__main__":
+    profile_2d()

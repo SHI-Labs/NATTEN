@@ -302,7 +302,7 @@ NATTEN is released under the [MIT License](https://github.com/SHI-Labs/NATTEN/bl
 	title        = {Neighborhood Attention Transformer},
 	author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
 	year         = 2023,
-  booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
+        booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
 }
 @article{hassani2022dilated,
 	title        = {Dilated Neighborhood Attention Transformer},

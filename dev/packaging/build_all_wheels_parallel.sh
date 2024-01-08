@@ -10,14 +10,13 @@
 build_one() {
   cu=$1
   pytorch_ver=$2
-  cp310=${3:-0}
 
   case "$cu" in
     cu*)
-      container_name=manylinux-cuda${cu/cu/}
+      image_name=manylinux-cuda${cu/cu/}
       ;;
     cpu)
-      container_name=manylinux-cpu
+      image_name=manylinux-cpu
       ;;
     *)
       echo "Unrecognized cu=$cu"
@@ -25,33 +24,29 @@ build_one() {
       ;;
   esac
 
-  echo "Launching container $container_name ..."
-  container_id="$container_name"_"$cu"_"$pytorch_ver"
+  echo "Launching container with $image_name ..."
+  container_name="$image_name"_"$cu"_"$pytorch_ver"
 
-  if [ $cp310 -eq 3 ]; then
-    py_versions=(3.8 3.9 3.10 3.11)
-  elif [ $cp310 -eq 2 ]; then
-    py_versions=(3.7 3.8 3.9 3.10 3.11)
-  elif [ $cp310 -eq 1 ]; then
-    py_versions=(3.7 3.8 3.9 3.10)
-  else
-    py_versions=(3.7 3.8 3.9)
-  fi
+  py_versions=(3.8 3.9 3.10 3.11)
 
   for py in "${py_versions[@]}"; do
-    docker run -itd \
-      --name "$container_id" \
-      --mount type=bind,source="$(pwd)",target=/natten \
-      pytorch/$container_name
+    container_name_="${container_name}_${py}"
 
-    cat <<EOF | docker exec -i $container_id sh
+    docker run -itd --rm \
+      --gpus=all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+      --name "$container_name_" \
+      --mount type=bind,source="$(pwd)",target=/natten \
+      pytorch/$image_name
+    cat <<EOF | docker exec -i $container_name_ sh
       export CU_VERSION=$cu PYTHON_VERSION=$py
       export PYTORCH_VERSION=$pytorch_ver
-      cd /natten && ./dev/packaging/build_wheel.sh
+      export OUTPUT_DIR=/natten
+      cp -r /natten /natten-build
+      cd /natten-build && 
+      make clean &&
+      ./dev/packaging/build_wheel.sh
 EOF
-
-    docker container stop $container_id
-    docker container rm $container_id
+    docker container stop $container_name_
   done
 }
 
@@ -59,26 +54,12 @@ EOF
 if [[ -n "$1" ]] && [[ -n "$2" ]]; then
   build_one "$1" "$2"
 else
-  # 2.0 and newer -- build 3.8 <= python <= 3.11 wheels
-  build_one cu118 2.0.0 3 & build_one cu117 2.0.0 3 &  build_one cpu 2.0.0 3
+  # We don't need to build for every minor torch release; they're usually
+  # compatible in their python API and ABIs.
 
-  # 1.13 and newer -- build python 3.11 wheels
-  build_one cu117 1.13 2 & build_one cu116 1.13 2 &  build_one cpu 1.13 2
+  build_one cu121 2.1.0 & build_one cu118 2.1.0
 
-  # 1.11 and newer -- build python 3.10 wheels
-  build_one cu116 1.12.1 1 & build_one cu113 1.12.1 1 &  build_one cu102 1.12.1 1 &  build_one cpu 1.12.1 1
+  build_one cu118 2.0.0 & build_one cu117 2.0.0 
 
-  build_one cu116 1.12 1 & build_one cu113 1.12 1 &  build_one cu102 1.12 1 &  build_one cpu 1.12 1
-
-  build_one cu115 1.11 1 &  build_one cu113 1.11 1 & build_one cu102 1.11 1 & build_one cpu 1.11 1
-
-  # 1.10 and older
-
-  build_one cu113 1.10.1 & build_one cu111 1.10.1 & build_one cu102 1.10.1 & build_one cpu 1.10.1
-
-  build_one cu113 1.10 & build_one cu111 1.10 & build_one cu102 1.10 & build_one cpu 1.10
-
-  build_one cu111 1.9 & build_one cu102 1.9 & build_one cpu 1.9
-
-  build_one cu111 1.8 & build_one cu102 1.8 & build_one cu101 1.8 & build_one cpu 1.8
+  build_one cpu 2.1.0 & build_one cpu 2.0.0
 fi

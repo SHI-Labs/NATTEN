@@ -4,19 +4,35 @@ CUDA_ARCH=
 WORKERS=
 VERBOSE=
 
-check_dirs := src/natten tests tools
+RELEASE=
+
+check_dirs := src/natten tests tools scripts setup.py
 
 all: clean uninstall fetch-submodules install
 
 full: clean uninstall install-deps fetch-submodules install
 
+install-deps:
+	@echo "Recognized python bin:"
+	@which python3
+	pip install -r requirements.txt
+
+install-release-deps:
+	pip3 install twine
+
 fetch-submodules:
 	@echo "Fetching all third party submodules"
 	git submodule update --init --recursive
 
-sdist:
+build-wheels:
+	./dev/packaging/build_all_wheels_parallel.sh
+
+build-dist:
 	@echo "Generating source dist"
 	python3 setup.py sdist
+
+release:
+	twine upload --repository ${RELEASE} dist/*
 
 clean: 
 	@echo "Cleaning up"
@@ -35,11 +51,6 @@ clean:
 uninstall: 
 	@echo "Uninstalling NATTEN"
 	pip uninstall -y natten
-
-install-deps:
-	@echo "Recognized python bin:"
-	@which python3
-	pip install -r requirements.txt
 
 install: 
 	@echo "Installing NATTEN from source"
