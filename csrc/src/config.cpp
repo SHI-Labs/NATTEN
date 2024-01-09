@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 
-#include "natten/config.h"
+#include <natten/config.h>
 
 namespace natten {
 
@@ -36,27 +36,9 @@ bool kHasGEMM = false;
 bool kHasCUDA = false;
 bool kHasGEMM = false;
 #endif
-#ifdef NATTEN_ENABLE_FP16
-bool kHasHalf = true;
-#else
-bool kHasHalf = false;
-#endif
-#ifdef NATTEN_ENABLE_BF16
-bool kHasBFloat = true;
-#else
-bool kHasBFloat = false;
-#endif
 
 bool has_cuda() {
   return kHasCUDA;
-}
-
-bool has_half() {
-  return kHasHalf;
-}
-
-bool has_bfloat() {
-  return kHasBFloat;
 }
 
 bool has_gemm() {
@@ -82,7 +64,7 @@ void set_gemm_na(bool v) {
   kEnableGemmNA = v;
 }
 
-#if (NATTEN_CUTLASS_TARGET_SM >= 80)
+#ifdef NATTEN_WITH_CUTLASS
 bool kEnableGemmTF32 = true;
 
 bool get_gemm_tf32() {

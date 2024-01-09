@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +29,9 @@
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <cuda.h>
-#include <cuda_runtime.h>
-#ifdef NATTEN_ENABLE_FP16
-#include <cuda_fp16.h>
-#endif
-#ifdef NATTEN_ENABLE_BF16
 #include <cuda_bf16.h>
-#endif
+#include <cuda_fp16.h>
+#include <cuda_runtime.h>
 
 #define CUDA_NUM_THREADS 1024
 
@@ -60,9 +56,44 @@ struct LaunchParams {
 
 template <typename KernelTemplate>
 __global__ void launch_cuda_kernel(typename KernelTemplate::Params params) {
-  KernelTemplate kernel;
-  kernel.launch(params);
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ > 300)
+#if (__CUDA_ARCH__ < 600)
+  // Half kernels are not supported in CC < 60,
+  // Partial FP16 support was added in SM54, but
+  // we use atomics, which were only introduced in
+  // SM60, so disabling half kernels for CC < 60.
+  // Also disabling tiled kernels, because older
+  // architectures might not have enough shared memory
+  // and the tiled kernels heavily rely on the assumed
+  // amount of shared memory.
+  if constexpr (KernelTemplate::IsHalfKernel || KernelTemplate::UsesSmem) {
+    return;
+  } else {
+#elif (__CUDA_ARCH__ < 800)
+  if constexpr (KernelTemplate::IsBF16Kernel) {
+    return;
+  } else {
+#endif
+    KernelTemplate kernel;
+    kernel.launch(params);
+#if (__CUDA_ARCH__ < 800)
+  }
+#endif
+#else
+  printf("Kernel not supported on this device / CUDA version.\n");
+  asm volatile("brkpt;\n");
+#endif
 }
+
+template <typename ElementScalar_>
+struct IsBF16 {
+  static constexpr bool value = false;
+};
+
+template <>
+struct IsBF16<natten::bfloat16> {
+  static constexpr bool value = true;
+};
 
 template <typename ElementScalar_>
 struct HalfArray;
@@ -70,7 +101,7 @@ struct HalfArray;
 template <typename ElementScalar_, typename ElementVector_>
 struct HalfArrayBase;
 
-#ifdef NATTEN_ENABLE_FP16
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
 
 template <>
 struct HalfArrayBase<natten::float16, __half2> {
@@ -118,9 +149,57 @@ template <>
 struct HalfArray<natten::float16> {
   using Base = HalfArrayBase<natten::float16, __half2>;
 };
+#else
+struct float162 {};
+
+template <>
+struct HalfArrayBase<natten::float16, float162> {
+  using ElementNatten = natten::float16;
+  using ElementScalar = natten::float16;
+  using ElementVector = float162;
+
+  __device__ __inline__ static ElementVector* typecast(
+      ElementScalar* ptr_scalar) {
+    asm volatile("brkpt;\n");
+  }
+
+  __device__ __inline__ static ElementNatten cast_back(ElementScalar s) {
+    asm volatile("brkpt;\n");
+  }
+
+  __device__ __inline__ static float to_float(ElementScalar s) {
+    asm volatile("brkpt;\n");
+  }
+
+  __device__ __inline__ static ElementVector zero() {
+    asm volatile("brkpt;\n");
+  }
+  __device__ __inline__ static ElementVector fma(
+      ElementVector a,
+      ElementVector b,
+      ElementVector c) {
+    asm volatile("brkpt;\n");
+  }
+  __device__ __inline__ static ElementVector fma(
+      ElementVector a,
+      ElementScalar b,
+      ElementVector c) {
+    asm volatile("brkpt;\n");
+  }
+  __device__ __inline__ static ElementScalar add(
+      ElementScalar a,
+      ElementScalar b) {
+    asm volatile("brkpt;\n");
+  }
+};
+
+template <>
+struct HalfArray<natten::float16> {
+  using Base = HalfArrayBase<natten::float16, float162>;
+};
 #endif
 
-#ifdef NATTEN_ENABLE_BF16
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 800)
 template <>
 struct HalfArrayBase<natten::bfloat16, __nv_bfloat162> {
   using ElementNatten = natten::bfloat16;
@@ -166,6 +245,54 @@ struct HalfArrayBase<natten::bfloat16, __nv_bfloat162> {
 template <>
 struct HalfArray<natten::bfloat16> {
   using Base = HalfArrayBase<natten::bfloat16, __nv_bfloat162>;
+};
+#else
+struct bfloat162 {};
+
+template <>
+struct HalfArrayBase<natten::bfloat16, bfloat162> {
+  using ElementNatten = natten::bfloat16;
+  using ElementScalar = natten::bfloat16;
+  using ElementVector = bfloat162;
+
+  __device__ __inline__ static ElementVector* typecast(
+      ElementScalar* ptr_scalar) {
+    asm volatile("brkpt;\n");
+  }
+
+  __device__ __inline__ static ElementNatten cast_back(ElementScalar s) {
+    asm volatile("brkpt;\n");
+  }
+
+  __device__ __inline__ static float to_float(ElementScalar s) {
+    asm volatile("brkpt;\n");
+  }
+
+  __device__ __inline__ static ElementVector zero() {
+    asm volatile("brkpt;\n");
+  }
+  __device__ __inline__ static ElementVector fma(
+      ElementVector a,
+      ElementVector b,
+      ElementVector c) {
+    asm volatile("brkpt;\n");
+  }
+  __device__ __inline__ static ElementVector fma(
+      ElementVector a,
+      ElementScalar b,
+      ElementVector c) {
+    asm volatile("brkpt;\n");
+  }
+  __device__ __inline__ static ElementScalar add(
+      ElementScalar a,
+      ElementScalar b) {
+    asm volatile("brkpt;\n");
+  }
+};
+
+template <>
+struct HalfArray<natten::bfloat16> {
+  using Base = HalfArrayBase<natten::bfloat16, bfloat162>;
 };
 #endif
 

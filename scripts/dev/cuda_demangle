@@ -1,0 +1,14 @@
+#!/usr/bin/env python
+
+# Simple symbol demangler for CUDA kernels.
+
+from itanium_demangler import parse as demangle
+import sys
+
+assert len(sys.argv) >= 2
+
+s = " ".join(sys.argv[1:])
+
+ast = demangle(s)
+
+print(ast)

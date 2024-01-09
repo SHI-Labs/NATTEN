@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,16 +26,10 @@
 
 #pragma once
 
+#include <natten/config.h>
 #include <natten_autogen/cuda/naive/interface.h>
-#include "natten/config.h"
 #ifdef NATTEN_WITH_CUTLASS
-#if (NATTEN_CUTLASS_TARGET_SM >= 80)
-#include <natten_autogen/cuda/gemm/1d/sm80/interface.h>
-#elif (NATTEN_CUTLASS_TARGET_SM >= 75)
-#include <natten_autogen/cuda/gemm/1d/sm75/interface.h>
-#elif (NATTEN_CUTLASS_TARGET_SM >= 70)
-#include <natten_autogen/cuda/gemm/1d/sm70/interface.h>
-#endif
+#include <natten_autogen/cuda/gemm/1d/interface.h>
 #endif
 
 namespace natten {
@@ -43,6 +37,7 @@ namespace cuda {
 
 template <typename T>
 void na1d_qk_forward(
+    const int cc,
     void* query_ptr,
     void* key_ptr,
     void* bias_ptr,
@@ -54,12 +49,10 @@ void na1d_qk_forward(
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
-#if (NATTEN_CUTLASS_TARGET_SM >= 80)
-  if (natten::kEnableGemmNA) {
-#elif (NATTEN_CUTLASS_TARGET_SM >= 70)
-  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
-#endif
-    DISPATCH_DTYPE_na1d_pn_cuda_gemm(
+  if (natten::kEnableGemmNA &&
+      (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
+    LAUNCH_na1d_pn_cuda_gemm(
+        cc,
         T,
         dim,
         query_ptr,
@@ -80,6 +73,7 @@ void na1d_qk_forward(
           T,
           kernel_size,
           dilation,
+          cc,
           query_ptr,
           key_ptr,
           attn_ptr,
@@ -94,6 +88,7 @@ void na1d_qk_forward(
           T,
           kernel_size,
           dilation,
+          cc,
           query_ptr,
           key_ptr,
           bias_ptr,
@@ -112,6 +107,7 @@ void na1d_qk_forward(
 
 template <typename T>
 void na1d_qk_backward(
+    const int cc,
     void* query_ptr,
     void* key_ptr,
     void* d_attn_ptr,
@@ -125,12 +121,10 @@ void na1d_qk_backward(
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
-#if (NATTEN_CUTLASS_TARGET_SM >= 80)
-  if (natten::kEnableGemmNA) {
-#elif (NATTEN_CUTLASS_TARGET_SM >= 70)
-  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
-#endif
-    DISPATCH_DTYPE_na1d_nn_cuda_gemm(
+  if (natten::kEnableGemmNA &&
+      (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
+    LAUNCH_na1d_nn_cuda_gemm(
+        cc,
         T,
         dim,
         d_attn_ptr,
@@ -143,7 +137,8 @@ void na1d_qk_backward(
         kernel_size,
         dilation,
         1.0);
-    DISPATCH_DTYPE_na1d_in_cuda_gemm(
+    LAUNCH_na1d_in_cuda_gemm(
+        cc,
         T,
         dim,
         d_attn_ptr,
@@ -162,6 +157,7 @@ void na1d_qk_backward(
         T,
         kernel_size,
         dilation,
+        cc,
         d_attn_ptr,
         key_ptr,
         d_query_ptr,
@@ -175,6 +171,7 @@ void na1d_qk_backward(
         T,
         kernel_size,
         dilation,
+        cc,
         d_attn_ptr,
         query_ptr,
         d_key_ptr,
@@ -192,6 +189,7 @@ void na1d_qk_backward(
         T,
         kernel_size,
         dilation,
+        cc,
         d_bias_ptr,
         d_attn_ptr,
         batch_size,
@@ -205,6 +203,7 @@ void na1d_qk_backward(
 
 template <typename T>
 void na1d_av_forward(
+    const int cc,
     void* attn_ptr,
     void* value_ptr,
     void* output_ptr,
@@ -215,12 +214,10 @@ void na1d_av_forward(
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
-#if (NATTEN_CUTLASS_TARGET_SM >= 80)
-  if (natten::kEnableGemmNA) {
-#elif (NATTEN_CUTLASS_TARGET_SM >= 70)
-  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
-#endif
-    DISPATCH_DTYPE_na1d_nn_cuda_gemm(
+  if (natten::kEnableGemmNA &&
+      (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
+    LAUNCH_na1d_nn_cuda_gemm(
+        cc,
         T,
         dim,
         attn_ptr,
@@ -239,6 +236,7 @@ void na1d_av_forward(
         T,
         kernel_size,
         dilation,
+        cc,
         attn_ptr,
         value_ptr,
         output_ptr,
@@ -255,6 +253,7 @@ void na1d_av_forward(
 
 template <typename T>
 void na1d_av_backward(
+    const int cc,
     void* attn_ptr,
     void* value_ptr,
     void* d_output_ptr,
@@ -267,12 +266,10 @@ void na1d_av_backward(
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
-#if (NATTEN_CUTLASS_TARGET_SM >= 80)
-  if (natten::kEnableGemmNA) {
-#elif (NATTEN_CUTLASS_TARGET_SM >= 70)
-  if (natten::kEnableGemmNA && std::is_same<T, natten::float16>::value) {
-#endif
-    DISPATCH_DTYPE_na1d_pn_cuda_gemm(
+  if (natten::kEnableGemmNA &&
+      (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
+    LAUNCH_na1d_pn_cuda_gemm(
+        cc,
         T,
         dim,
         d_output_ptr,
@@ -286,7 +283,8 @@ void na1d_av_backward(
         kernel_size,
         dilation,
         1.0);
-    DISPATCH_DTYPE_na1d_in_cuda_gemm(
+    LAUNCH_na1d_in_cuda_gemm(
+        cc,
         T,
         dim,
         attn_ptr,
@@ -305,6 +303,7 @@ void na1d_av_backward(
         T,
         kernel_size,
         dilation,
+        cc,
         d_output_ptr,
         value_ptr,
         d_attn_ptr,
@@ -318,6 +317,7 @@ void na1d_av_backward(
         T,
         kernel_size,
         dilation,
+        cc,
         attn_ptr,
         d_output_ptr,
         d_value_ptr,

@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2023 Ali Hassani.
+# Copyright (c) 2022-2024 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,7 +26,7 @@ import torch
 from torch import Tensor
 
 try:
-    from natten import _C  # type: ignore
+    from natten import libnatten  # type: ignore
 except ImportError:
     raise ImportError(
         "Failed to import NATTEN's CPP backend. "
@@ -60,7 +60,7 @@ def na1d_qk_nested(
         [make_attn_tensor_from_input(q, kernel_size) for q in query]
     )
     for q, k, a in zip(query, key, attn):
-        _C.na1d_qk_forward(a, q, k, rpb, kernel_size, dilation)
+        libnatten.na1d_qk_forward(a, q, k, rpb, kernel_size, dilation)
 
     return attn
 
@@ -78,7 +78,7 @@ def na1d_av_nested(attn: Tensor, value: Tensor, kernel_size: int, dilation: int)
 
     out = torch.empty_like(value)
     for a, v, o in zip(attn, value, out):
-        _C.na1d_av_forward(o, a, v, kernel_size, dilation)
+        libnatten.na1d_av_forward(o, a, v, kernel_size, dilation)
 
     return out
 
@@ -105,7 +105,7 @@ def na2d_qk_nested(
         [make_attn_tensor_from_input(q, kernel_size**2) for q in query]
     )
     for q, k, a in zip(query, key, attn):
-        _C.na2d_qk_forward(a, q, k, rpb, kernel_size, dilation)
+        libnatten.na2d_qk_forward(a, q, k, rpb, kernel_size, dilation)
 
     return attn
 
@@ -123,7 +123,7 @@ def na2d_av_nested(attn: Tensor, value: Tensor, kernel_size: int, dilation: int)
 
     out = torch.empty_like(value)
     for a, v, o in zip(attn, value, out):
-        _C.na2d_av_forward(o, a, v, kernel_size, dilation)
+        libnatten.na2d_av_forward(o, a, v, kernel_size, dilation)
 
     return out
 
@@ -159,7 +159,7 @@ def na3d_qk_nested(
         ]
     )
     for q, k, a in zip(query, key, attn):
-        _C.na3d_qk_forward(
+        libnatten.na3d_qk_forward(
             a, q, k, rpb, kernel_size, dilation, kernel_size_d, dilation_d
         )
 
@@ -186,6 +186,8 @@ def na3d_av_nested(
 
     out = torch.empty_like(value)
     for a, v, o in zip(attn, value, out):
-        _C.na3d_av_forward(o, a, v, kernel_size, dilation, kernel_size_d, dilation_d)
+        libnatten.na3d_av_forward(
+            o, a, v, kernel_size, dilation, kernel_size_d, dilation_d
+        )
 
     return out

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -100,6 +100,9 @@ template <typename scalar_t, typename acc_t, int KS, int NS, int DILATION>
 struct RelPosBiasGradient2DFull : RelPosBiasGradient2DBase<scalar_t, acc_t> {
   using Base = RelPosBiasGradient2DBase<scalar_t, acc_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ RelPosBiasGradient2DFull() : Base() {}
 
@@ -144,6 +147,9 @@ template <typename scalar_t, typename acc_t, int KS, int NS, int DILATION>
 struct RelPosBiasGradient2DHalf : RelPosBiasGradient2DBase<scalar_t, acc_t> {
   using Base = RelPosBiasGradient2DBase<scalar_t, acc_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ RelPosBiasGradient2DHalf() : Base() {}
 
@@ -202,6 +208,7 @@ struct RelPosBiasGradient2D {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* d_bias_ptr,
       void* d_attn_ptr,
       int batch_size,

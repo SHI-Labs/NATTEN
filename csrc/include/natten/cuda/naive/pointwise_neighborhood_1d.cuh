@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -140,6 +140,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct PointwiseNeighborhood1DFull : PointwiseNeighborhood1DBase<scalar_t> {
   using Base = PointwiseNeighborhood1DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ PointwiseNeighborhood1DFull() : Base() {}
 
@@ -189,6 +192,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct PointwiseNeighborhood1DHalf : PointwiseNeighborhood1DBase<scalar_t> {
   using Base = PointwiseNeighborhood1DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ PointwiseNeighborhood1DHalf() : Base() {}
 
@@ -262,6 +268,7 @@ struct PointwiseNeighborhood1D {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* query_ptr,
       void* key_ptr,
       void* attn_ptr,
@@ -303,6 +310,7 @@ struct PointwiseNeighborhood1DWithBias {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* query_ptr,
       void* key_ptr,
       void* bias_ptr,

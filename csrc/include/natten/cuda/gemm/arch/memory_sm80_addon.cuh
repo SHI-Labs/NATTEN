@@ -1,10 +1,10 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  * NATTEN's CUTLASS kernels started off from CUTLASS 2.X's implicit GEMM kernels
  *for convolution.
  **************************************************************************************************/
 /***************************************************************************************************
- * Copyright (c) 2017 - 2023 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without

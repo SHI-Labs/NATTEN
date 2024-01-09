@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,35 +22,21 @@
  **************************************************************************************************/
 
 #pragma once
-#ifdef NATTEN_ENABLE_FP16
-#include <cuda_fp16.h>
-#endif
-#ifdef NATTEN_ENABLE_BF16
 #include <cuda_bf16.h>
-#endif
+#include <cuda_fp16.h>
 
 namespace natten {
 
 namespace dummy {
 
-struct sym_bf16 {};
-struct sym_f16 {};
 struct sym_tf32 {};
 
 } // namespace dummy
 
 using float64 = double;
 using float32 = float;
-#ifdef NATTEN_ENABLE_FP16
 using float16 = __half;
-#else
-using float16 = dummy::sym_f16;
-#endif
-#ifdef NATTEN_ENABLE_BF16
 using bfloat16 = __nv_bfloat16;
-#else
-using bfloat16 = dummy::sym_bf16;
-#endif
 
 using tf32 = dummy::sym_tf32;
 

@@ -10,7 +10,7 @@
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
-#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_double(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_double(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -62,7 +62,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_pn_cuda_gemm_double does not support implement " \
+                << "na2d_pn_cuda_gemm_sm80_double does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -71,7 +71,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_float(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_float(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -123,7 +123,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_pn_cuda_gemm_float does not support implement " \
+                << "na2d_pn_cuda_gemm_sm80_float does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -132,7 +132,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_half(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_half(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_64x64x32_32x32x32_16x8x16_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -184,7 +184,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_pn_cuda_gemm_half does not support implement " \
+                << "na2d_pn_cuda_gemm_sm80_half does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -193,7 +193,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_bfloat16(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm80_bfloat16(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_bfloat16_64x64x32_32x32x32_16x8x16_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -245,7 +245,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_pn_cuda_gemm_bfloat16 does not support implement " \
+                << "na2d_pn_cuda_gemm_sm80_bfloat16 does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -254,7 +254,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_double(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_double(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -306,7 +306,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_nn_cuda_gemm_double does not support implement " \
+                << "na2d_nn_cuda_gemm_sm80_double does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -315,7 +315,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_float(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_float(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -367,7 +367,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_nn_cuda_gemm_float does not support implement " \
+                << "na2d_nn_cuda_gemm_sm80_float does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -376,7 +376,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_half(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_half(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x16_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -428,7 +428,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_nn_cuda_gemm_half does not support implement " \
+                << "na2d_nn_cuda_gemm_sm80_half does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -437,7 +437,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_bfloat16(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm80_bfloat16(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_bfloat16_64x64x32_32x32x32_16x8x16_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -489,7 +489,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_nn_cuda_gemm_bfloat16 does not support implement " \
+                << "na2d_nn_cuda_gemm_sm80_bfloat16 does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -498,7 +498,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_double(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_double(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -550,7 +550,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_in_cuda_gemm_double does not support implement " \
+                << "na2d_in_cuda_gemm_sm80_double does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -559,7 +559,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_float(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_float(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -611,7 +611,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_in_cuda_gemm_float does not support implement " \
+                << "na2d_in_cuda_gemm_sm80_float does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -620,7 +620,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_half(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_half(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x16_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -672,7 +672,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_in_cuda_gemm_half does not support implement " \
+                << "na2d_in_cuda_gemm_sm80_half does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -681,7 +681,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_bfloat16(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm80_bfloat16(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_bfloat16_64x64x32_32x32x32_16x8x16_3_sm80_ks3(dim, __VA_ARGS__); \
@@ -733,7 +733,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_in_cuda_gemm_bfloat16 does not support implement " \
+                << "na2d_in_cuda_gemm_sm80_bfloat16 does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \

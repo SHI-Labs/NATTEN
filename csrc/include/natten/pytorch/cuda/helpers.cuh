@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,84 +25,23 @@
 
 #include "natten/dtypes.cuh"
 
-#ifdef NATTEN_ENABLE_FP16
-#ifdef NATTEN_ENABLE_BF16
-#define DISPATCH_DTYPE(c10_dtype, fn_name, ...)                             \
-  [&] {                                                                     \
-    if (c10_dtype == torch::kFloat) {                                       \
-      fn_name<natten::float32>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kDouble) {                               \
-      fn_name<natten::float64>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kFloat16) {                              \
-      fn_name<natten::float16>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kBFloat16) {                             \
-      fn_name<natten::bfloat16>(__VA_ARGS__);                               \
-    } else {                                                                \
-      std::cerr << "NATTEN (CUDA) does not support data type " << c10_dtype \
-                << " yet." << std::endl;                                    \
-      exit(EXIT_FAILURE);                                                   \
-    }                                                                       \
+#define DISPATCH_DTYPE(device_index, c10_dtype, fn_name, ...)                \
+  [&] {                                                                      \
+    cudaDeviceProp* device_props =                                           \
+        at::cuda::getDeviceProperties(device_index);                         \
+    const int cc = device_props->major * 10 + device_props->minor;           \
+    if (c10_dtype == torch::kFloat) {                                        \
+      fn_name<natten::float32>(cc, __VA_ARGS__);                             \
+    } else if (c10_dtype == torch::kDouble) {                                \
+      fn_name<natten::float64>(cc, __VA_ARGS__);                             \
+    } else if (c10_dtype == torch::kFloat16 && cc >= 60) {                   \
+      fn_name<natten::float16>(cc, __VA_ARGS__);                             \
+    } else if (c10_dtype == torch::kBFloat16 && cc >= 80) {                  \
+      fn_name<natten::bfloat16>(cc, __VA_ARGS__);                            \
+    } else {                                                                 \
+      std::cerr << "NATTEN (CUDA) does not support data type " << c10_dtype  \
+                << " on device with index " << device_index << " (SM " << cc \
+                << ")." << std::endl;                                        \
+      exit(EXIT_FAILURE);                                                    \
+    }                                                                        \
   }()
-#else
-#define DISPATCH_DTYPE(c10_dtype, fn_name, ...)                             \
-  [&] {                                                                     \
-    if (c10_dtype == torch::kFloat) {                                       \
-      fn_name<natten::float32>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kDouble) {                               \
-      fn_name<natten::float64>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kFloat16) {                              \
-      fn_name<natten::float16>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kBFloat16) {                             \
-      std::cerr << "NATTEN (CUDA) was not compiled to support data type "   \
-                << c10_dtype << " yet." << std::endl;                       \
-      exit(EXIT_FAILURE);                                                   \
-    } else {                                                                \
-      std::cerr << "NATTEN (CUDA) does not support data type " << c10_dtype \
-                << " yet." << std::endl;                                    \
-      exit(EXIT_FAILURE);                                                   \
-    }                                                                       \
-  }()
-#endif
-#else
-#ifdef NATTEN_ENABLE_BF16
-#define DISPATCH_DTYPE(c10_dtype, fn_name, ...)                             \
-  [&] {                                                                     \
-    if (c10_dtype == torch::kFloat) {                                       \
-      fn_name<natten::float32>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kDouble) {                               \
-      fn_name<natten::float64>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kFloat16) {                              \
-      std::cerr << "NATTEN (CUDA) was not compiled to support data type "   \
-                << c10_dtype << " yet." << std::endl;                       \
-      exit(EXIT_FAILURE);                                                   \
-    } else if (c10_dtype == torch::kBFloat16) {                             \
-      fn_name<natten::bfloat16>(__VA_ARGS__);                               \
-    } else {                                                                \
-      std::cerr << "NATTEN (CUDA) does not support data type " << c10_dtype \
-                << " yet." << std::endl;                                    \
-      exit(EXIT_FAILURE);                                                   \
-    }                                                                       \
-  }()
-#else
-#define DISPATCH_DTYPE(c10_dtype, fn_name, ...)                             \
-  [&] {                                                                     \
-    if (c10_dtype == torch::kFloat) {                                       \
-      fn_name<natten::float32>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kDouble) {                               \
-      fn_name<natten::float64>(__VA_ARGS__);                                \
-    } else if (c10_dtype == torch::kFloat16) {                              \
-      std::cerr << "NATTEN (CUDA) was not compiled to support data type "   \
-                << c10_dtype << " yet." << std::endl;                       \
-      exit(EXIT_FAILURE);                                                   \
-    } else if (c10_dtype == torch::kBFloat16) {                             \
-      std::cerr << "NATTEN (CUDA) was not compiled to support data type "   \
-                << c10_dtype << " yet." << std::endl;                       \
-      exit(EXIT_FAILURE);                                                   \
-    } else {                                                                \
-      std::cerr << "NATTEN (CUDA) does not support data type " << c10_dtype \
-                << " yet." << std::endl;                                    \
-      exit(EXIT_FAILURE);                                                   \
-    }                                                                       \
-  }()
-#endif
-#endif

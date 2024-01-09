@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -101,18 +101,31 @@ enum class Operator {
 
 // Kernel launcher
 // Duplicate of CUTLASS's
-template <typename Operator>
+template <typename ArchTag, typename Operator>
 __global__ void Kernel(typename Operator::Params params) {
-  // Dynamic shared memory base pointer
-  extern __shared__ int SharedStorageBase[];
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 700)
+#if (__CUDA_ARCH__ >= 800)
+  if constexpr (std::is_same<ArchTag, cutlass::arch::Sm80>::value) {
+#elif (__CUDA_ARCH__ < 800) && (__CUDA_ARCH__ >= 750)
+  if constexpr (std::is_same<ArchTag, cutlass::arch::Sm75>::value) {
+#elif (__CUDA_ARCH__ < 750) && (__CUDA_ARCH__ >= 700)
+  if constexpr (std::is_same<ArchTag, cutlass::arch::Sm70>::value) {
+#endif
+    // Dynamic shared memory base pointer
+    extern __shared__ int SharedStorageBase[];
 
-  // Declare pointer to dynamic shared memory.
-  typename Operator::SharedStorage* shared_storage =
-      reinterpret_cast<typename Operator::SharedStorage*>(SharedStorageBase);
+    // Declare pointer to dynamic shared memory.
+    typename Operator::SharedStorage* shared_storage =
+        reinterpret_cast<typename Operator::SharedStorage*>(SharedStorageBase);
 
-  Operator op;
+    Operator op;
 
-  op(params, *shared_storage);
+    op(params, *shared_storage);
+  }
+#else
+  printf("Kernel not supported on this device / CUDA version.\n");
+  asm volatile("brkpt;\n");
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

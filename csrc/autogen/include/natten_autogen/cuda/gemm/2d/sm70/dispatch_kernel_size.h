@@ -10,7 +10,7 @@
 namespace natten { 
 namespace cuda { 
 namespace gemm { 
-#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_half(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_pn_cuda_gemm_sm70_half(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks3(dim, __VA_ARGS__); \
@@ -62,7 +62,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_pn_cuda_gemm_half does not support implement " \
+                << "na2d_pn_cuda_gemm_sm70_half does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -71,7 +71,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_half(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_nn_cuda_gemm_sm70_half(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks3(dim, __VA_ARGS__); \
@@ -123,7 +123,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_nn_cuda_gemm_half does not support implement " \
+                << "na2d_nn_cuda_gemm_sm70_half does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \
@@ -132,7 +132,7 @@ namespace gemm {
     } \
 }();
 
-#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_half(kernel_size, dim, ...) \
+#define DISPATCH_KERNELSIZE_na2d_in_cuda_gemm_sm70_half(kernel_size, dim, ...) \
   [&] { \
     if (kernel_size == 3) { \
       DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks3(dim, __VA_ARGS__); \
@@ -184,7 +184,7 @@ namespace gemm {
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
-                << "na2d_in_cuda_gemm_half does not support implement " \
+                << "na2d_in_cuda_gemm_sm70_half does not support implement " \
                 << " kernel size " << kernel_size << ". " \
                 << " You may try generating it manually and build from source." \
                 << " Refer to NATTEN's github repository for more information." \

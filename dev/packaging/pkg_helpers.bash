@@ -13,51 +13,28 @@ pip_install() {
 
 
 setup_cuda() {
-  # SM<6.0 is not supported at this time.
   # Like other torch domain libraries, we choose common GPU architectures only.
   # See https://github.com/pytorch/pytorch/blob/master/torch/utils/cpp_extension.py
   # and https://github.com/pytorch/vision/blob/main/packaging/pkg_helpers.bash for reference.
   export FORCE_CUDA=1
   case "$CU_VERSION" in
+    cu121)
+      cuda_path=/usr/local/cuda-12.1/
+      export PATH=${cuda_path}/bin${PATH:+:${PATH}}
+      export LD_LIBRARY_PATH=${cuda_path}/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+      export TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0"
+      ;;
     cu118)
-      export CUDA_HOME=/usr/local/cuda-11.8/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX;8.9+PTX;9.0+PTX"
+      cuda_path=/usr/local/cuda-11.8/
+      export PATH=${cuda_path}/bin${PATH:+:${PATH}}
+      export LD_LIBRARY_PATH=${cuda_path}/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+      export TORCH_CUDA_ARCH_LIST="3.5;5.0;6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0"
       ;;
     cu117)
-      export CUDA_HOME=/usr/local/cuda-11.7/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
-      ;;
-    cu116)
-      export CUDA_HOME=/usr/local/cuda-11.6/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
-      ;;
-    cu115)
-      export CUDA_HOME=/usr/local/cuda-11.5/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
-      ;;
-    cu113)
-      export CUDA_HOME=/usr/local/cuda-11.3/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
-      ;;
-    cu112)
-      export CUDA_HOME=/usr/local/cuda-11.2/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
-      ;;
-    cu111)
-      export CUDA_HOME=/usr/local/cuda-11.1/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0;8.6+PTX"
-      ;;
-    cu110)
-      export CUDA_HOME=/usr/local/cuda-11.0/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX;8.0+PTX"
-      ;;
-    cu102)
-      export CUDA_HOME=/usr/local/cuda-10.2/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX"
-      ;;
-    cu101)
-      export CUDA_HOME=/usr/local/cuda-10.1/
-      export TORCH_CUDA_ARCH_LIST="6.0;6.1+PTX;7.0;7.5+PTX"
+      cuda_path=/usr/local/cuda-11.7/
+      export PATH=${cuda_path}/bin${PATH:+:${PATH}}
+      export LD_LIBRARY_PATH=${cuda_path}/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+      export TORCH_CUDA_ARCH_LIST="3.5;5.0;6.0;6.1;7.0;7.5;8.0;8.6"
       ;;
     cpu)
       unset FORCE_CUDA

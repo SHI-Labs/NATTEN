@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,7 @@ void na2d_qk_forward(
     const int kernel_size,
     const int dilation) {
   DISPATCH_DTYPE(
+      query.device().index(),
       query.scalar_type(),
       natten::cuda::na2d_qk_forward,
       static_cast<void*>(query.data_ptr()),
@@ -79,6 +80,7 @@ void na2d_qk_backward(
     const int kernel_size,
     const int dilation) {
   DISPATCH_DTYPE(
+      d_attn.device().index(),
       d_attn.scalar_type(),
       natten::cuda::na2d_qk_backward,
       static_cast<void*>(query.data_ptr()),
@@ -109,6 +111,7 @@ void na2d_av_forward(
     const int kernel_size,
     const int dilation) {
   DISPATCH_DTYPE(
+      attn.device().index(),
       attn.scalar_type(),
       natten::cuda::na2d_av_forward,
       static_cast<void*>(attn.data_ptr()),
@@ -137,6 +140,7 @@ void na2d_av_backward(
     const int kernel_size,
     const int dilation) {
   DISPATCH_DTYPE(
+      d_out.device().index(),
       d_out.scalar_type(),
       natten::cuda::na2d_av_backward,
       static_cast<void*>(attn.data_ptr()),

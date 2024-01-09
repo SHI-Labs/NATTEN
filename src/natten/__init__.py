@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2023 Ali Hassani.
+# Copyright (c) 2022-2024 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -30,8 +30,11 @@ from .functional import (
     enable_tiled_na,
     has_bfloat,
     has_cuda,
+    has_fp32_gemm,
+    has_fp64_gemm,
     has_gemm,
     has_half,
+    has_tf32_gemm,
 )
 from .natten1d import NeighborhoodAttention1D
 from .natten2d import NeighborhoodAttention2D
@@ -51,6 +54,9 @@ __all__ = [
     "has_cuda",
     "has_gemm",
     "has_half",
+    "has_tf32_gemm",
+    "has_fp32_gemm",
+    "has_fp64_gemm",
 ]
 
-__version__ = "0.14.7.dev"
+__version__ = "0.15.0"

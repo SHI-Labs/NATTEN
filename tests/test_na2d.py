@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2023 Ali Hassani.
+# Copyright (c) 2022-2024 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -34,18 +34,20 @@ from natten import (
     enable_tf32,
     enable_tiled_na,
     has_bfloat,
+    has_fp32_gemm,
     has_gemm,
     has_half,
 )
 from natten.functional import na2d_av, na2d_qk, na2d_qk_with_bias
 from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
-    skip_if_gemm_is_not_supported,
+    skip_if_gemm_does_not_support_double_precision,
     skip_if_nested_is_not_supported,
 )
 from torch.autograd import gradcheck
 
 HAS_GEMM = has_gemm()
+HAS_FLOAT_GEMM = has_fp32_gemm()
 HAS_HALF = has_half()
 HAS_BFLOAT = has_bfloat()
 logger = logging.getLogger(__name__)
@@ -171,32 +173,7 @@ class NA2DTests(unittest.TestCase):
         # Test GEMM-based kernels
         if HAS_GEMM:
             enable_gemm_na()
-            self._test_against_cpu(
-                B=B,
-                H=H,
-                X=X,
-                Y=Y,
-                D=D,
-                kernel_size=kernel_size,
-                dilation=dilation,
-                has_bias=has_bias,
-                dtype=torch.float32,
-                eps=1e-2,
-            )
-            enable_tf32()
-            self._test_against_cpu(
-                B=B,
-                H=H,
-                X=X,
-                Y=Y,
-                D=D,
-                kernel_size=kernel_size,
-                dilation=dilation,
-                has_bias=has_bias,
-                dtype=torch.float32,
-                eps=1e-2,
-            )
-            if HAS_HALF:
+            if HAS_FLOAT_GEMM:
                 self._test_against_cpu(
                     B=B,
                     H=H,
@@ -206,9 +183,37 @@ class NA2DTests(unittest.TestCase):
                     kernel_size=kernel_size,
                     dilation=dilation,
                     has_bias=has_bias,
-                    dtype=torch.float16,
-                    eps=1e-1,
+                    dtype=torch.float32,
+                    eps=1e-2,
                 )
+                enable_tf32()
+                self._test_against_cpu(
+                    B=B,
+                    H=H,
+                    X=X,
+                    Y=Y,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    has_bias=has_bias,
+                    dtype=torch.float32,
+                    eps=1e-2,
+                )
+            assert (
+                HAS_HALF
+            ), "GEMM kernels must support FP16 across on all supported architectures."
+            self._test_against_cpu(
+                B=B,
+                H=H,
+                X=X,
+                Y=Y,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.float16,
+                eps=1e-1,
+            )
             if HAS_BFLOAT:
                 self._test_against_cpu(
                     B=B,
@@ -361,10 +366,9 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
-    @skip_if_gemm_is_not_supported()
+    @skip_if_gemm_does_not_support_double_precision()
     def test_autograd_cuda_gemm(self):
         enable_gemm_na()
-        enable_tf32()
         self._test_autograd(
             B=1, H=1, X=8, Y=9, D=8, kernel_size=5, dilation=1, eps=1e-6, device="cuda"
         )
@@ -492,10 +496,9 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
-    @skip_if_gemm_is_not_supported()
+    @skip_if_gemm_does_not_support_double_precision()
     def test_fwad_cuda_gemm(self):
         enable_gemm_na()
-        enable_tf32()
         self._test_fwad(
             B=1, H=1, X=8, Y=9, D=8, kernel_size=5, dilation=1, device="cuda"
         )

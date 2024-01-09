@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 */
 
 #pragma once
+
 #include <natten_autogen/cuda/naive/interface.h>
 
 namespace natten {
@@ -32,6 +33,7 @@ namespace cuda {
 
 template <typename T>
 void na3d_qk_forward(
+    const int cc,
     void* query_ptr,
     void* key_ptr,
     void* bias_ptr,
@@ -51,6 +53,7 @@ void na3d_qk_forward(
         T,
         kernel_size,
         dilation,
+        cc,
         query_ptr,
         key_ptr,
         attn_ptr,
@@ -69,6 +72,7 @@ void na3d_qk_forward(
         T,
         kernel_size,
         dilation,
+        cc,
         query_ptr,
         key_ptr,
         bias_ptr,
@@ -88,6 +92,7 @@ void na3d_qk_forward(
 
 template <typename T>
 void na3d_qk_backward(
+    const int cc,
     void* query_ptr,
     void* key_ptr,
     void* d_attn_ptr,
@@ -108,6 +113,7 @@ void na3d_qk_backward(
       T,
       kernel_size,
       dilation,
+      cc,
       d_attn_ptr,
       key_ptr,
       d_query_ptr,
@@ -125,6 +131,7 @@ void na3d_qk_backward(
       T,
       kernel_size,
       dilation,
+      cc,
       d_attn_ptr,
       query_ptr,
       d_key_ptr,
@@ -143,6 +150,7 @@ void na3d_qk_backward(
         T,
         kernel_size,
         dilation,
+        cc,
         d_bias_ptr,
         d_attn_ptr,
         batch_size,
@@ -160,6 +168,7 @@ void na3d_qk_backward(
 
 template <typename T>
 void na3d_av_forward(
+    const int cc,
     void* attn_ptr,
     void* value_ptr,
     void* output_ptr,
@@ -177,6 +186,7 @@ void na3d_av_forward(
       T,
       kernel_size,
       dilation,
+      cc,
       attn_ptr,
       value_ptr,
       output_ptr,
@@ -194,6 +204,7 @@ void na3d_av_forward(
 
 template <typename T>
 void na3d_av_backward(
+    const int cc,
     void* attn_ptr,
     void* value_ptr,
     void* d_output_ptr,
@@ -213,6 +224,7 @@ void na3d_av_backward(
       T,
       kernel_size,
       dilation,
+      cc,
       d_output_ptr,
       value_ptr,
       d_attn_ptr,
@@ -230,6 +242,7 @@ void na3d_av_backward(
       T,
       kernel_size,
       dilation,
+      cc,
       attn_ptr,
       d_output_ptr,
       d_value_ptr,

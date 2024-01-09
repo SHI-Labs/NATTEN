@@ -1,10 +1,10 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  * NATTEN's CUTLASS kernels started off from CUTLASS 2.X's implicit GEMM kernels
  *for convolution.
  **************************************************************************************************/
 /***************************************************************************************************
- * Copyright (c) 2017 - 2023 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -43,9 +43,7 @@
 #include <limits>
 
 #include <cutlass/cutlass.h>
-#include <cutlass/device_kernel.h>
-
-#include "natten/cuda/gemm/neighborhood_attention.cuh"
+#include <natten/cuda/gemm/neighborhood_attention.cuh>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -166,7 +164,7 @@ class ImplicitGemmNA1d {
 
     if (smem_size >= (48 << 10)) {
       cudaError_t result = cudaFuncSetAttribute(
-          natten::cuda::gemm::Kernel<UnderlyingKernel>,
+          natten::cuda::gemm::Kernel<ArchTag, UnderlyingKernel>,
           cudaFuncAttributeMaxDynamicSharedMemorySize,
           smem_size);
 
@@ -187,7 +185,7 @@ class ImplicitGemmNA1d {
 
     int smem_size = int(sizeof(typename UnderlyingKernel::SharedStorage));
 
-    natten::cuda::gemm::Kernel<UnderlyingKernel>
+    natten::cuda::gemm::Kernel<ArchTag, UnderlyingKernel>
         <<<grid, block, smem_size, stream>>>(params_);
 
     cudaError_t result = cudaGetLastError();

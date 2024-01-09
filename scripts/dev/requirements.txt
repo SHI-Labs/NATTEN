@@ -1,0 +1,1 @@
+itanium-demangler==1.1

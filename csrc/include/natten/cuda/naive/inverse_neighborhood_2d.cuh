@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2023 Ali Hassani.
+ * Copyright (c) 2022-2024 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -108,6 +108,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct InverseNeighborhood2DFull : InverseNeighborhood2DBase<scalar_t> {
   using Base = InverseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = false;
+  static constexpr bool IsHalfKernel = false;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ InverseNeighborhood2DFull() : Base() {}
 
@@ -170,6 +173,9 @@ template <typename scalar_t, int KS, int NS, int DILATION>
 struct InverseNeighborhood2DHalf : InverseNeighborhood2DBase<scalar_t> {
   using Base = InverseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
+  static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
+  static constexpr bool IsHalfKernel = true;
+  static constexpr bool UsesSmem = false;
 
   __device__ __host__ InverseNeighborhood2DHalf() : Base() {}
 
@@ -254,6 +260,7 @@ struct InverseNeighborhood2D {
   using Params = typename Kernel::Params;
 
   void operator()(
+      const int cc,
       void* attn_ptr,
       void* d_output_ptr,
       void* d_value_ptr,

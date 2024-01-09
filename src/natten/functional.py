@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2023 Ali Hassani.
+# Copyright (c) 2022-2024 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,11 @@ from typing import Any, Optional, Tuple
 import torch
 from torch import Tensor
 from torch.autograd import Function
+from torch.cuda import _device_t
 from torch.cuda.amp import custom_bwd, custom_fwd
 
 try:
-    from natten import _C  # type: ignore
+    from natten import libnatten  # type: ignore
 except ImportError:
     raise ImportError(
         "Failed to import NATTEN's CPP backend. "
@@ -49,44 +50,66 @@ from .utils.tensor import make_attn_tensor_from_input
 from .utils.typing import NoneType
 
 
+def get_device_cc(device_index: Optional[_device_t] = None) -> int:
+    major, minor = torch.cuda.get_device_capability(device_index)
+    return major * 10 + minor
+
+
 def has_cuda() -> bool:
-    return _C.has_cuda()
+    return torch.cuda.is_available() and libnatten.has_cuda()
 
 
-def has_half() -> bool:
-    return _C.has_half()
+def has_half(device_index: Optional[_device_t] = None) -> bool:
+    return has_cuda() and get_device_cc(device_index) >= 60
 
 
-def has_bfloat() -> bool:
-    return _C.has_bfloat()
+def has_bfloat(device_index: Optional[_device_t] = None) -> bool:
+    return has_cuda() and get_device_cc(device_index) >= 80
 
 
-def has_gemm() -> bool:
-    return _C.has_gemm()
+def has_gemm(device_index: Optional[_device_t] = None) -> bool:
+    return has_cuda() and get_device_cc(device_index) >= 70 and libnatten.has_gemm()
 
 
-def enable_tf32():
-    _C.set_gemm_tf32(True)
+def has_tf32_gemm(device_index: Optional[_device_t] = None) -> bool:
+    return has_cuda() and get_device_cc(device_index) >= 80 and libnatten.has_gemm()
 
 
-def disable_tf32():
-    _C.set_gemm_tf32(False)
+has_fp32_gemm = has_tf32_gemm
+
+
+def has_fp64_gemm(device_index: Optional[_device_t] = None) -> bool:
+    return has_cuda() and get_device_cc(device_index) >= 80 and libnatten.has_gemm()
+
+
+def enable_tf32() -> bool:
+    if has_tf32_gemm():
+        libnatten.set_gemm_tf32(True)
+        return libnatten.get_gemm_tf32()
+    return False
+
+
+def disable_tf32() -> bool:
+    if has_tf32_gemm():
+        libnatten.set_gemm_tf32(False)
+        return libnatten.get_gemm_tf32()
+    return False
 
 
 def enable_tiled_na():
-    _C.set_tiled_na(True)
+    libnatten.set_tiled_na(True)
 
 
 def disable_tiled_na():
-    _C.set_tiled_na(False)
+    libnatten.set_tiled_na(False)
 
 
 def enable_gemm_na():
-    _C.set_gemm_na(True)
+    libnatten.set_gemm_na(True)
 
 
 def disable_gemm_na():
-    _C.set_gemm_na(False)
+    libnatten.set_gemm_na(False)
 
 
 class NeighborhoodAttention1DQKAutogradFunction(Function):
@@ -105,7 +128,7 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         if bias is not None:
             bias = bias.to(key.dtype)
         attn = make_attn_tensor_from_input(query, kernel_size)
-        _C.na1d_qk_forward(attn, query, key, bias, kernel_size, dilation)
+        libnatten.na1d_qk_forward(attn, query, key, bias, kernel_size, dilation)
         ctx.save_for_backward(query, key, bias)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -134,8 +157,12 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         key_t = key_t.contiguous()
         attn_0 = make_attn_tensor_from_input(query_t, ctx.kernel_size)
         attn_1 = torch.empty_like(attn_0)
-        _C.na1d_qk_forward(attn_0, query_t, key_p, None, ctx.kernel_size, ctx.dilation)
-        _C.na1d_qk_forward(attn_1, query_p, key_t, None, ctx.kernel_size, ctx.dilation)
+        libnatten.na1d_qk_forward(
+            attn_0, query_t, key_p, None, ctx.kernel_size, ctx.dilation
+        )
+        libnatten.na1d_qk_forward(
+            attn_1, query_p, key_t, None, ctx.kernel_size, ctx.dilation
+        )
         return attn_0 + attn_1
 
     @staticmethod
@@ -148,7 +175,7 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         d_key = torch.empty_like(key)
         # dbias has to be zero filled
         d_bias = None if bias is None else torch.zeros_like(bias)
-        _C.na1d_qk_backward(
+        libnatten.na1d_qk_backward(
             d_query,
             d_key,
             d_bias,
@@ -168,7 +195,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         attn = attn.contiguous()
         value = value.contiguous()
         out = torch.empty_like(value)
-        _C.na1d_av_forward(out, attn, value, kernel_size, dilation)
+        libnatten.na1d_av_forward(out, attn, value, kernel_size, dilation)
         ctx.save_for_backward(attn, value)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -190,8 +217,8 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
         out_1 = torch.empty_like(out_0)
-        _C.na1d_av_forward(out_0, attn_t, value_p, ctx.kernel_size, ctx.dilation)
-        _C.na1d_av_forward(out_1, attn_p, value_t, ctx.kernel_size, ctx.dilation)
+        libnatten.na1d_av_forward(out_0, attn_t, value_p, ctx.kernel_size, ctx.dilation)
+        libnatten.na1d_av_forward(out_1, attn_p, value_t, ctx.kernel_size, ctx.dilation)
         return out_0 + out_1
 
     @staticmethod
@@ -200,7 +227,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         attn, value = ctx.saved_tensors
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
-        _C.na1d_av_backward(
+        libnatten.na1d_av_backward(
             d_attn,
             d_value,
             grad_out.contiguous(),
@@ -228,7 +255,7 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         if bias is not None:
             bias = bias.to(key.dtype)
         attn = make_attn_tensor_from_input(query, kernel_size**2)
-        _C.na2d_qk_forward(attn, query, key, bias, kernel_size, dilation)
+        libnatten.na2d_qk_forward(attn, query, key, bias, kernel_size, dilation)
         ctx.save_for_backward(query, key, bias)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -256,8 +283,12 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         key_t = key_t.contiguous()
         attn_0 = make_attn_tensor_from_input(query_t, ctx.kernel_size**2)
         attn_1 = torch.empty_like(attn_0)
-        _C.na2d_qk_forward(attn_0, query_t, key_p, None, ctx.kernel_size, ctx.dilation)
-        _C.na2d_qk_forward(attn_1, query_p, key_t, None, ctx.kernel_size, ctx.dilation)
+        libnatten.na2d_qk_forward(
+            attn_0, query_t, key_p, None, ctx.kernel_size, ctx.dilation
+        )
+        libnatten.na2d_qk_forward(
+            attn_1, query_p, key_t, None, ctx.kernel_size, ctx.dilation
+        )
         return attn_0 + attn_1
 
     @staticmethod
@@ -270,7 +301,7 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         d_key = torch.empty_like(key)
         # dbias has to be zero filled
         d_bias = None if bias is None else torch.zeros_like(bias)
-        _C.na2d_qk_backward(
+        libnatten.na2d_qk_backward(
             d_query,
             d_key,
             d_bias,
@@ -292,7 +323,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         attn = attn.contiguous()
         value = value.contiguous()
         out = torch.empty_like(value)
-        _C.na2d_av_forward(out, attn, value, kernel_size, dilation)
+        libnatten.na2d_av_forward(out, attn, value, kernel_size, dilation)
         ctx.save_for_backward(attn, value)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
@@ -314,8 +345,8 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
         out_1 = torch.empty_like(out_0)
-        _C.na2d_av_forward(out_0, attn_t, value_p, ctx.kernel_size, ctx.dilation)
-        _C.na2d_av_forward(out_1, attn_p, value_t, ctx.kernel_size, ctx.dilation)
+        libnatten.na2d_av_forward(out_0, attn_t, value_p, ctx.kernel_size, ctx.dilation)
+        libnatten.na2d_av_forward(out_1, attn_p, value_t, ctx.kernel_size, ctx.dilation)
         return out_0 + out_1
 
     @staticmethod
@@ -324,7 +355,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         attn, value = ctx.saved_tensors
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
-        _C.na2d_av_backward(
+        libnatten.na2d_av_backward(
             d_attn,
             d_value,
             grad_out.contiguous(),
@@ -356,7 +387,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         attn = make_attn_tensor_from_input(
             query, kernel_size * kernel_size * kernel_size_d
         )
-        _C.na3d_qk_forward(
+        libnatten.na3d_qk_forward(
             attn, query, key, bias, kernel_size, dilation, kernel_size_d, dilation_d
         )
         ctx.save_for_backward(query, key, bias)
@@ -390,7 +421,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             query_t, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
         )
         attn_1 = torch.empty_like(attn_0)
-        _C.na3d_qk_forward(
+        libnatten.na3d_qk_forward(
             attn_0,
             query_t,
             key_p,
@@ -400,7 +431,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             ctx.kernel_size_d,
             ctx.dilation_d,
         )
-        _C.na3d_qk_forward(
+        libnatten.na3d_qk_forward(
             attn_1,
             query_p,
             key_t,
@@ -424,7 +455,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         d_key = torch.empty_like(key)
         # dbias has to be zero filled
         d_bias = None if bias is None else torch.zeros_like(bias)
-        _C.na3d_qk_backward(
+        libnatten.na3d_qk_backward(
             d_query,
             d_key,
             d_bias,
@@ -454,7 +485,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         attn = attn.contiguous()
         value = value.contiguous()
         out = torch.empty_like(value)
-        _C.na3d_av_forward(
+        libnatten.na3d_av_forward(
             out, attn, value, kernel_size, dilation, kernel_size_d, dilation_d
         )
         ctx.save_for_backward(attn, value)
@@ -480,7 +511,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
         out_1 = torch.empty_like(out_0)
-        _C.na3d_av_forward(
+        libnatten.na3d_av_forward(
             out_0,
             attn_t,
             value_p,
@@ -489,7 +520,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
             ctx.kernel_size_d,
             ctx.dilation_d,
         )
-        _C.na3d_av_forward(
+        libnatten.na3d_av_forward(
             out_1,
             attn_p,
             value_t,
@@ -508,7 +539,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         attn, value = ctx.saved_tensors
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
-        _C.na3d_av_backward(
+        libnatten.na3d_av_backward(
             d_attn,
             d_value,
             grad_out.contiguous(),
