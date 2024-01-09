@@ -44,12 +44,96 @@
     <div class="title row">
         <div class="col-lg-12">
             <p class="h2">Install with pip</p>
-            <p>Latest release: <code>0.14.6</code></p>
+            <p>Latest release: <code>0.15.0</code></p>
         </div>
     </div>
     <div class="row">
         <div class="col-lg-12">
           <p>Please select your preferred PyTorch version with the correct CUDA build, or CPU build if you're not using CUDA:</p>
+          <p></p>
+          <ul class="nav nav-tabs" id="torchTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">PyTorch:</a>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-B" data-bs-toggle="tab" data-bs-target="#v210" type="button" role="tab" aria-controls="v210" aria-selected="true">2.1.X</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-A" data-bs-toggle="tab" data-bs-target="#v200" type="button" role="tab" aria-controls="v200" aria-selected="true">2.0.X</button>
+              </li>
+          </ul>
+          <div class="tab-content" id="torchTabContent">
+              <div class="tab-pane fade show active" id="v210" role="tabpanel" aria-labelledby="tab-B">
+                <div class="d-flex align-items-start">
+                  <div class="nav flex-column nav-pills me-3" id="v210-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v210-cu121-tab" data-bs-toggle="pill" data-bs-target="#v210-121" type="button" role="tab" aria-controls="v210-121" aria-selected="true">CUDA 12.1</button>
+                    <button class="nav-link" id="v210-cu118-tab" data-bs-toggle="pill" data-bs-target="#v210-118" type="button" role="tab" aria-controls="v210-118" aria-selected="false">CUDA 11.8</button>
+                    <button class="nav-link" id="v210-cpu-tab" data-bs-toggle="pill" data-bs-target="#v210-cpu" type="button" role="tab" aria-controls="v210-cpu" aria-selected="false">CPU</button>
+                  </div>
+                  <div class="tab-content" id="v210-tabContent">
+                    <div class="tab-pane fade show active" id="v210-121" role="tabpanel" aria-labelledby="v210-cu121-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu121/torch2.1.0/index.html</pre>
+                    </div>
+                    <div class="tab-pane fade" id="v210-118" role="tabpanel" aria-labelledby="v210-cu118-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu118/torch2.1.0/index.html </pre>
+                    </div>
+                    <div class="tab-pane fade" id="v210-cpu" role="tabpanel" aria-labelledby="v210-cpu-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch2.1.0/index.html </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade show" id="v200" role="tabpanel" aria-labelledby="tab-A">
+                <div class="d-flex align-items-start">
+                  <div class="nav flex-column nav-pills me-3" id="v200-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v200-cu118-tab" data-bs-toggle="pill" data-bs-target="#v200-118" type="button" role="tab" aria-controls="v200-118" aria-selected="true">CUDA 11.8</button>
+                    <button class="nav-link" id="v200-cu117-tab" data-bs-toggle="pill" data-bs-target="#v200-117" type="button" role="tab" aria-controls="v200-117" aria-selected="false">CUDA 11.7</button>
+                    <button class="nav-link" id="v200-cpu-tab" data-bs-toggle="pill" data-bs-target="#v200-cpu" type="button" role="tab" aria-controls="v200-cpu" aria-selected="false">CPU</button>
+                  </div>
+                  <div class="tab-content" id="v200-tabContent">
+                    <div class="tab-pane fade show active" id="v200-118" role="tabpanel" aria-labelledby="v200-cu118-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu118/torch2.0.0/index.html </pre>
+                    </div>
+                    <div class="tab-pane fade" id="v200-117" role="tabpanel" aria-labelledby="v200-cu117-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu117/torch2.0.0/index.html </pre>
+                    </div>
+                    <div class="tab-pane fade" id="v200-cpu" role="tabpanel" aria-labelledby="v200-cpu-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch2.0.0/index.html </pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </div>
+          <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.15.0</pre></p>
+          <p>Careful though, without precompiled wheels installing might take a while.</p>
+          <p>You're also required to have CUDA &gt; 11.0, cmake &gt; 3.20 and PyTorch &gt; 2.0 installed before attempting to install/build NATTEN.</p>
+          <p></p>
+          <p>Don't know your torch/cuda version? 
+          Run this: <pre class="tight">python3 -c "import torch; print(torch.__version__)"</pre></p>
+          <p><em>Note: the CUDA version refers to your torch build, not the actual CUDA version you have installed, which may be higher.</em></p>
+          <p>Make sure your Python version ∈ [3.8, 3.11].</p>
+          <p>NATTEN does not have precompiled wheels for Windows (you can try building from source). </p> 
+          <p>PRs and contributions are appreciated.</p>
+          <p></p>
+        </div>
+    </div>
+</div>
+<div class="container news mt-4">
+    <div class="title row">
+        <div class="col-lg-12">
+            <p class="h2">Older releases</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-12">
+          <p>We're only able to support the two most recent major torch releases starting 2024.
+            If you're using an older torch / CUDA build, you can still installer previous NATTEN releases.</p>
           <p></p>
           <ul class="nav nav-tabs" id="torchTab" role="tablist">
               <li class="nav-item" role="presentation">
@@ -94,15 +178,15 @@
                   <div class="tab-content" id="v200-tabContent">
                     <div class="tab-pane fade show active" id="v200-118" role="tabpanel" aria-labelledby="v200-cu118-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu118/torch2.0.0/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu118/torch2.0.0/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v200-117" role="tabpanel" aria-labelledby="v200-cu117-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu117/torch2.0.0/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu117/torch2.0.0/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v200-cpu" role="tabpanel" aria-labelledby="v200-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch2.0.0/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch2.0.0/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -117,15 +201,15 @@
                   <div class="tab-content" id="v113-tabContent">
                     <div class="tab-pane fade show active" id="v113-117" role="tabpanel" aria-labelledby="v113-cu117-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu117/torch1.13/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu117/torch1.13/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v113-116" role="tabpanel" aria-labelledby="v113-cu116-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu116/torch1.13/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu116/torch1.13/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v113-cpu" role="tabpanel" aria-labelledby="v113-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.13/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.13/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -141,19 +225,19 @@
                   <div class="tab-content" id="v1121-tabContent">
                     <div class="tab-pane fade show active" id="v1121-116" role="tabpanel" aria-labelledby="v1121-cu116-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu116/torch1.12.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu116/torch1.12.1/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1121-113" role="tabpanel" aria-labelledby="v1121-cu113-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu113/torch1.12.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu113/torch1.12.1/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1121-102" role="tabpanel" aria-labelledby="v1121-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.12.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.12.1/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1121-cpu" role="tabpanel" aria-labelledby="v1121-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.12.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.12.1/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -169,19 +253,19 @@
                   <div class="tab-content" id="v1120-tabContent">
                     <div class="tab-pane fade show active" id="v1120-116" role="tabpanel" aria-labelledby="v1120-cu116-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu116/torch1.12/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu116/torch1.12/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1120-113" role="tabpanel" aria-labelledby="v1120-cu113-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu113/torch1.12/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu113/torch1.12/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1120-102" role="tabpanel" aria-labelledby="v1120-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.12/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.12/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1120-cpu" role="tabpanel" aria-labelledby="v1120-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.12/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.12/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -197,19 +281,19 @@
                   <div class="tab-content" id="v1110-tabContent">
                     <div class="tab-pane fade show active" id="v1110-115" role="tabpanel" aria-labelledby="v1110-cu115-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu115/torch1.11/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu115/torch1.11/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1110-113" role="tabpanel" aria-labelledby="v1110-cu113-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu113/torch1.11/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu113/torch1.11/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1110-102" role="tabpanel" aria-labelledby="v1110-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.11/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.11/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1110-cpu" role="tabpanel" aria-labelledby="v1110-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.11/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.11/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -225,19 +309,19 @@
                   <div class="tab-content" id="v1101-tabContent">
                     <div class="tab-pane fade show active" id="v1101-113" role="tabpanel" aria-labelledby="v1101-cu113-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu113/torch1.10.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu113/torch1.10.1/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1101-111" role="tabpanel" aria-labelledby="v1101-cu111-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu111/torch1.10.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu111/torch1.10.1/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1101-102" role="tabpanel" aria-labelledby="v1101-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.10.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.10.1/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1101-cpu" role="tabpanel" aria-labelledby="v1101-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.10.1/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.10.1/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -253,19 +337,19 @@
                   <div class="tab-content" id="v1100-tabContent">
                     <div class="tab-pane fade show active" id="v1100-113" role="tabpanel" aria-labelledby="v1100-cu113-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu113/torch1.10/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu113/torch1.10/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1100-111" role="tabpanel" aria-labelledby="v1100-cu111-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu111/torch1.10/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu111/torch1.10/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1100-102" role="tabpanel" aria-labelledby="v1100-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.10/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.10/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1100-cpu" role="tabpanel" aria-labelledby="v1100-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.10/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.10/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -280,15 +364,15 @@
                   <div class="tab-content" id="v1090-tabContent">
                     <div class="tab-pane fade show active" id="v1090-111" role="tabpanel" aria-labelledby="v1090-cu111-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu111/torch1.9/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu111/torch1.9/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1090-102" role="tabpanel" aria-labelledby="v1090-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.9/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.9/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1090-cpu" role="tabpanel" aria-labelledby="v1090-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.9/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.9/index.html </pre>
                     </div>
                   </div>
                 </div>
@@ -304,34 +388,24 @@
                   <div class="tab-content" id="v1080-tabContent">
                     <div class="tab-pane fade show active" id="v1080-111" role="tabpanel" aria-labelledby="v1080-cu111-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu111/torch1.8/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu111/torch1.8/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1080-102" role="tabpanel" aria-labelledby="v1080-cu102-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu102/torch1.8/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu102/torch1.8/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1080-101" role="tabpanel" aria-labelledby="v1080-cu101-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cu101/torch1.8/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cu101/torch1.8/index.html </pre>
                     </div>
                     <div class="tab-pane fade" id="v1080-cpu" role="tabpanel" aria-labelledby="v1080-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten -f https://shi-labs.com/natten/wheels/cpu/torch1.8/index.html </pre>
+                      <pre>pip3 install natten==0.14.6 -f https://shi-labs.com/natten/wheels/cpu/torch1.8/index.html </pre>
                     </div>
                   </div>
                 </div>
               </div>
           </div>
-          <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.14.6</pre></p>
-          <p>Careful though, without precompiled wheels installing might take a while.</p>
-          <p></p>
-          <p>Don't know your torch/cuda version? 
-          Run this: <pre class="tight">python3 -c "import torch; print(torch.__version__)"</pre></p>
-          <p><em>Note: the CUDA version refers to your torch build, not the actual CUDA version you have installed, which may be higher.</em></p>
-          <p>Make sure your Python version ∈ [3.7, 3.8, 3.9], unless you're using PyTorch 1.11 and above in which case Python
-          3.10 is also supported, or using PyTorch 1.13, in which case Python 3.11 is also supported. PyTorch 2.0 dropped support for 3.7 and 3.8.</p>
-          <p>NATTEN does not have precompiled wheels for Windows (you can try building from source). </p> 
-          <p>PRs and contributions are appreciated.</p>
           <p></p>
         </div>
     </div>
@@ -342,18 +416,28 @@
             <p class="h2">Build from source</p>
         </div>
         <div class="col-lg-12">
-            <p>You can build from source if you are on an unsupported environment.</p>
-            <p>Building with ninja is recommended.</p>
+            <p>Once you've set up your Python environment and installed PyTorch with CUDA, simply clone and build:</p>
             <p></p>
         </div>
     </div>
     <div class="row">
         <div class="col-lg-12">
           <p>Run this command:</p>
-          <pre>pip install ninja # Recommended, not required
-git clone https://github.com/SHI-Labs/NATTEN
+          <pre>git clone https://github.com/SHI-Labs/NATTEN
 cd NATTEN
-pip install -e .</pre>
+pip install -r requirements.txt
+make
+</pre>
+
+          <p>NOTE: NATTEN will use the PyTorch API to detect your GPU architecture, and will by default attempt to use 
+            1/4th of the number of processes your system allows to build. 
+            You can override them by passing in the following arguments:</p>
+          <pre># Build with 2 workers/processes
+make WORKERS=2
+
+# Build targeting SM89 (Ada Lovelace)
+make CUDA_ARCH="8.9"
+</pre>
           <p></p>
         </div>
     </div>
@@ -364,11 +448,11 @@ pip install -e .</pre>
             <p class="h2">Requirements</p>
         </div>
         <div class="col-lg-12">
-            <p>Presently NATTEN only supports PyTorch, and the CUDA build only supports Pascal(i.e. Tesla P100) and
-            above (SM60 and higher). Make sure your GPU is supported by referring to <a
+            <p>The latest NATTEN release only supports PyTorch, and the CUDA builds only support Kepler (SM35) and
+            above. Make sure your GPU is supported by referring to <a
             href="https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/">this link</a>.</p>
-            <p>Future versions will include support for Maxell and Kepler.</p>
-            <p></p>
+            <p>Our GEMM-based kernels are only available for Volta (SM70) and above, and they're limited to FP16 math only on
+              Volta and Turing (SM70 and SM75).</p>
         </div>
     </div>
 </div>
@@ -379,9 +463,14 @@ pip install -e .</pre>
         </div>
         <div class="col-lg-12">
           <p>Easy to use, just import and go:</p>
-          <pre>from natten import NeighborhoodAttention1D, NeighborhoodAttention2D
+          <pre>from natten import (
+  NeighborhoodAttention1D,
+  NeighborhoodAttention2D,
+  NeighborhoodAttention3D,
+)
 na1d = NeighborhoodAttention1D(dim=128, kernel_size=7, dilation=3, num_heads=4)
 na2d = NeighborhoodAttention2D(dim=128, kernel_size=7, dilation=3, num_heads=4)
+na3d = NeighborhoodAttention3D(dim=128, kernel_size=7, dilation=3, num_heads=4)
 </pre>
         </div>
     </div>
