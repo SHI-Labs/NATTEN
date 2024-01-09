@@ -1028,7 +1028,7 @@ def generate_cuda_kernels(path, sm, num_splits=4):
 
 
 class DeviceDispatcher:
-    def __init__(self, operation: Operation, sm_list: list[int]):
+    def __init__(self, operation: Operation, sm_list: List[int]):
         self.operation = operation
         self.name_base = f"na1d_{operation.name.lower()}_cuda_gemm"
         self.name_cc = f"LAUNCH_{self.name_base}"

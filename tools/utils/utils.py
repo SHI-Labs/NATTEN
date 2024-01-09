@@ -22,7 +22,7 @@
 #################################################################################################
 
 from enum import Enum
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -142,7 +142,7 @@ class Result:
         return f"{self.kernel_type} \t\t {self.tag} \t\t {self.op_str} \t\t {self.time_str}"
 
 
-def convert_ops(ops: Dict[NAOp, list[float]], tags: dict) -> Optional[list[Result]]:
+def convert_ops(ops: Dict[NAOp, List[float]], tags: Dict) -> Optional[List[Result]]:
     output = []
     for op, values in ops.items():
         if len(values):
@@ -218,20 +218,20 @@ def convert_ops(ops: Dict[NAOp, list[float]], tags: dict) -> Optional[list[Resul
 
 def str_to_na_op(
     sym: str,
-    pn_keywords: list[str],
-    nn_keywords: list[str],
-    in_keywords: list[str],
-    rpb_keywords: list[str],
-    rpbgrad_keywords: list[str],
-    qkrpb_keywords: list[str],
-    av_keywords: list[str],
-    qgrad_keywords: list[str],
-    kgrad_keywords: list[str],
-    vgrad_keywords: list[str],
-    agrad_keywords: list[str],
-    legacy_pn_keywords: list[str],
-    legacy_nn_keywords: list[str],
-    legacy_in_keywords: list[str],
+    pn_keywords: List[str],
+    nn_keywords: List[str],
+    in_keywords: List[str],
+    rpb_keywords: List[str],
+    rpbgrad_keywords: List[str],
+    qkrpb_keywords: List[str],
+    av_keywords: List[str],
+    qgrad_keywords: List[str],
+    kgrad_keywords: List[str],
+    vgrad_keywords: List[str],
+    agrad_keywords: List[str],
+    legacy_pn_keywords: List[str],
+    legacy_nn_keywords: List[str],
+    legacy_in_keywords: List[str],
 ) -> Tuple[Optional[NAOp], bool, str]:
     kernel_map = {
         NAOp.PN: pn_keywords,
@@ -263,11 +263,11 @@ def str_to_na_op(
 
 
 def extract_na_ops(
-    profiler: torch_profile, _keywords: Dict[str, list[str]]
-) -> Optional[list[Result]]:
+    profiler: torch_profile, _keywords: Dict[str, List[str]]
+) -> Optional[List[Result]]:
     events = profiler.events()
-    logged_ops: dict[NAOp, list[float]] = {na_op: [] for na_op in NAOp}
-    tags: dict[NAOp, Optional[str]] = {na_op: None for na_op in NAOp}
+    logged_ops: Dict[NAOp, List[float]] = {na_op: [] for na_op in NAOp}
+    tags: Dict[NAOp, Optional[str]] = {na_op: None for na_op in NAOp}
     for evt in events:
         op, valid, tag = str_to_na_op(sym=evt.key, **_keywords)
         if valid and isinstance(op, NAOp):
