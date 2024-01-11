@@ -1,7 +1,8 @@
 #include <cuda_runtime.h>
+#include <iostream>
 #include <natten/dtypes.cuh>
-#include <natten/gemm_argpack.cuh>
 #include <natten/config.h>
+#include <natten/gemm_argpack.cuh>
 #include <natten/cuda/gemm/na2d.cuh>
 namespace natten { 
 namespace cuda { 
@@ -17,9 +18,14 @@ void na2d_pn_cuda_gemm_double_128x128x16_64x64x16_8x8x4_3_sm80_ks33_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<128, 128, 16, 64, 64, 16, 8, 8, 4, 3, 17, 1, 16>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -27,7 +33,7 @@ void na2d_pn_cuda_gemm_double_128x128x16_64x64x16_8x8x4_3_sm80_ks33_align1(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align4(
@@ -40,9 +46,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 7, 1, 1>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<4, 4, 1>;
@@ -51,14 +62,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align4(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -73,9 +84,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 7, 1, 1>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<2, 2, 1>;
@@ -84,14 +100,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align2(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -106,9 +122,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 7, 1, 1>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -117,14 +138,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks3_align1(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -139,9 +160,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks5_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 6, 1, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<4, 4, 1>;
@@ -150,14 +176,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks5_align4(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -172,9 +198,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks5_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 6, 1, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<2, 2, 1>;
@@ -183,14 +214,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks5_align2(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -205,9 +236,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks5_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 6, 1, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -216,14 +252,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks5_align1(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -238,9 +274,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks7_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 5, 1, 3>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<4, 4, 1>;
@@ -249,14 +290,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks7_align4(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -271,9 +312,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks7_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 5, 1, 3>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<2, 2, 1>;
@@ -282,14 +328,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks7_align2(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -304,9 +350,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks7_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 5, 1, 3>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -315,14 +366,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks7_align1(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -337,9 +388,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks9_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 7, 1, 4>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<4, 4, 1>;
@@ -348,14 +404,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks9_align4(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -370,9 +426,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks9_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 7, 1, 4>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<2, 2, 1>;
@@ -381,14 +442,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks9_align2(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -403,9 +464,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks9_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 7, 1, 4>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -414,14 +480,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks9_align1(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -436,9 +502,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks11_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 6, 1, 5>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<4, 4, 1>;
@@ -447,14 +518,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks11_align4(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }
@@ -469,9 +540,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks11_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 16, 16, 16, 8, 8, 3, 6, 1, 5>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, float>;
   using AConfig = natten::gemm::detail::AlignmentConfig<2, 2, 1>;
@@ -480,14 +556,14 @@ void na2d_pn_cuda_gemm_float_64x64x16_32x16x16_16x8x8_3_sm80_ks11_align2(
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     } else { 
       using DConfig = natten::gemm::detail::DTypeConfig<natten::float32>;
   using Kernel = PointwiseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+query_ptr, key_ptr, attn_ptr, bias_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 
     }
 }

@@ -27,13 +27,11 @@
 */
 
 #pragma once
-// TODO: remaining dependency to torch: getCurrentCUDAStream
-#include <torch/extension.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "natten/cuda/naive/natten_commons.cuh"
+#include <natten/cuda/naive/natten_commons.cuh>
 
 namespace natten {
 namespace cuda {
@@ -51,8 +49,8 @@ struct InverseNeighborhood1DBase {
     const int dilation_in;
     const int dim;
     const int64_t problem_size;
-    const int weights_stride_0, weights_stride_1, weights_stride_2;
-    const int values_stride_0, values_stride_1, values_stride_2;
+    const int64_t weights_stride_0, weights_stride_1, weights_stride_2;
+    const int64_t values_stride_0, values_stride_1, values_stride_2;
 
     __device__ __host__ Params() {}
 
@@ -65,7 +63,10 @@ struct InverseNeighborhood1DBase {
         const int kernel_size_in,
         const int dilation_in,
         const int dim,
-        const int output_numel)
+        const int64_t weights_stride_0,
+        const int64_t weights_stride_1,
+        const int64_t weights_stride_2,
+        const int64_t output_numel)
         : weights(weights),
           values(values),
           output(output),
@@ -75,9 +76,9 @@ struct InverseNeighborhood1DBase {
           dilation_in(dilation_in),
           dim(dim),
           problem_size(output_numel),
-          weights_stride_2(kernel_size_in),
-          weights_stride_1(kernel_size_in * length),
-          weights_stride_0(kernel_size_in * length * heads),
+          weights_stride_2(weights_stride_2),
+          weights_stride_1(weights_stride_1),
+          weights_stride_0(weights_stride_0),
           values_stride_2(dim),
           values_stride_1(dim * length),
           values_stride_0(dim * length * heads) {}
@@ -114,7 +115,7 @@ struct InverseNeighborhood1DFull : InverseNeighborhood1DBase<scalar_t> {
     const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
     const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
     const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
       int indtmp1 = linearIndex / p.dim;
       const int d = linearIndex - indtmp1 * p.dim;
@@ -128,16 +129,16 @@ struct InverseNeighborhood1DFull : InverseNeighborhood1DBase<scalar_t> {
           i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
       const int ei = get_backward_window_end(
           i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1;
-      const int valuesOffset =
+      const int64_t weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1;
+      const int64_t valuesOffset =
           b * p.values_stride_0 + h * p.values_stride_1 + d;
       scalar_t output_update = scalar_t(0);
 #pragma unroll
       for (int xi = ni; xi < ei; xi += dilation) {
         const int oni = get_window_start(
             xi, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int valuesIndex = valuesOffset + xi * p.values_stride_2;
-        const int weightsIndex =
+        const int64_t valuesIndex = valuesOffset + xi * p.values_stride_2;
+        const int64_t weightsIndex =
             weightsOffset + xi * p.weights_stride_2 + int((i - oni) / dilation);
         output_update += p.weights[weightsIndex] * p.values[valuesIndex];
       }
@@ -172,7 +173,7 @@ struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
     const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
     const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
     const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
       auto values2 = HalfHelper::typecast(p.values);
       auto output2 = HalfHelper::typecast(p.output);
@@ -196,8 +197,8 @@ struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
       for (int xi = ni; xi < ei; xi += dilation) {
         const int oni = get_window_start(
             xi, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int valuesIndex = valuesOffset + xi * p.dim;
-        const int weightsIndex =
+        const int64_t valuesIndex = valuesOffset + xi * p.dim;
+        const int64_t weightsIndex =
             weightsOffset + xi * p.weights_stride_2 + int((i - oni) / dilation);
         scalar_t a = p.weights[weightsIndex];
         output_update = HalfHelper::fma(values2[valuesIndex], a, output_update);
@@ -222,6 +223,7 @@ struct InverseNeighborhood1D {
 
   void operator()(
       const int cc,
+      cudaStream_t stream,
       void* attn_ptr,
       void* d_output_ptr,
       void* d_value_ptr,
@@ -229,13 +231,15 @@ struct InverseNeighborhood1D {
       int heads,
       int length,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
       int kernel_size,
       int dilation) {
     dim = Kernel::get_dim(dim);
     int64_t problem_size = batch_size * heads * length * dim;
     auto grid = Kernel::Base::get_grid(problem_size);
     auto block = Kernel::Base::get_block();
-    const auto stream = c10::cuda::getCurrentCUDAStream();
     auto params = Params(
         reinterpret_cast<scalar_t*>(attn_ptr),
         reinterpret_cast<scalar_t*>(d_output_ptr),
@@ -245,6 +249,9 @@ struct InverseNeighborhood1D {
         kernel_size,
         dilation,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         problem_size);
     launch_cuda_kernel<Kernel><<<grid, block, 0, stream>>>(params);
   }

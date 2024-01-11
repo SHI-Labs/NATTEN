@@ -18,9 +18,13 @@ void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_align8(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_align4(
   void * query_ptr,
@@ -31,9 +35,13 @@ void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_align4(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_align2(
   void * query_ptr,
@@ -44,9 +52,13 @@ void na1d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_align2(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align8(
   void * attn_ptr,
@@ -56,9 +68,13 @@ void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align8(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align4(
   void * attn_ptr,
@@ -68,9 +84,13 @@ void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align4(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align2(
   void * attn_ptr,
@@ -80,9 +100,13 @@ void na1d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align2(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align8(
   void * attn_ptr,
@@ -92,9 +116,13 @@ void na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align8(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align4(
   void * attn_ptr,
@@ -104,9 +132,13 @@ void na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align4(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 void na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align2(
   void * attn_ptr,
@@ -116,9 +148,13 @@ void na1d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_align2(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation,
-  float scale);
+  float scale,
+  cudaStream_t stream);
 
 
 

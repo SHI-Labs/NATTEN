@@ -136,6 +136,7 @@ class CArg:
 
 CC_ARG = [
     CArg("const int", "cc"),
+    CArg("cudaStream_t", "stream"),
 ]
 
 COMMON_ARGS = [
@@ -183,6 +184,9 @@ NA1D_PROBLEM_SIZE_ARGS = [
     CArg("int", "heads"),
     CArg("int", "length"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
 ]
 
 NA2D_PROBLEM_SIZE_ARGS = [
@@ -191,6 +195,10 @@ NA2D_PROBLEM_SIZE_ARGS = [
     CArg("int", "height"),
     CArg("int", "width"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
+    CArg("int64_t", "attn_stride_3"),
 ]
 
 NA3D_PROBLEM_SIZE_ARGS = [
@@ -200,6 +208,11 @@ NA3D_PROBLEM_SIZE_ARGS = [
     CArg("int", "height"),
     CArg("int", "width"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
+    CArg("int64_t", "attn_stride_3"),
+    CArg("int64_t", "attn_stride_4"),
 ]
 
 
@@ -382,6 +395,7 @@ class NaiveNAKernel:
     def write_source_file(self, path):
         source_head = []
         source_head += ["#include <cuda_runtime.h>\n"]
+        source_head += ["#include <iostream>\n"]
         source_head += ["#include <natten/dtypes.cuh>\n"]
         source_head += ["#include <natten/naive_argpack.h>\n"]
 
@@ -412,6 +426,7 @@ class NaiveNAKernel:
 def write_combined_source_file(path, filename, headers, sources):
     source_head = []
     source_head += ["#include <cuda_runtime.h>\n"]
+    source_head += ["#include <iostream>\n"]
     source_head += ["#include <natten/dtypes.cuh>\n"]
     source_head += ["#include <natten/naive_argpack.h>\n"]
 

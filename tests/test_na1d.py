@@ -205,13 +205,17 @@ class NA1DTests(unittest.TestCase):
             B=4, H=8, L=100, D=32, has_bias=True, kernel_size=13, dilation=2
         )
 
-    def _test_autograd_qk(self, B, H, L, D, kernel_size, dilation, eps, device):
+    def _test_autograd_qk(
+        self, B, H, L, D, kernel_size, dilation, eps, device, L_extra=0
+    ):
+        assert L_extra >= 0
         torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         query = torch.randn((B, H, L, D), **kwargs)
         key = torch.randn((B, H, L, D), **kwargs)
+        extra_key = None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
         rpb = torch.randn((H, 2 * kernel_size - 1), **kwargs)
-        variables = [query, key, rpb, kernel_size, dilation]
+        variables = [query, key, rpb, kernel_size, dilation, extra_key]
 
         assert gradcheck(
             na1d_qk_with_bias,
@@ -223,12 +227,18 @@ class NA1DTests(unittest.TestCase):
             fast_mode=False,
         ), "Autograd check failed for NA1D: QK."
 
-    def _test_autograd_av(self, B, H, L, D, kernel_size, dilation, eps, device):
+    def _test_autograd_av(
+        self, B, H, L, D, kernel_size, dilation, eps, device, L_extra=0
+    ):
+        assert L_extra >= 0
         torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
-        attn = torch.randn((B, H, L, kernel_size), **kwargs)
+        attn = torch.randn((B, H, L, kernel_size + L_extra), **kwargs)
         value = torch.randn((B, H, L, D), **kwargs)
-        variables = [attn, value, kernel_size, dilation]
+        extra_value = (
+            None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
+        )
+        variables = [attn, value, kernel_size, dilation, extra_value]
 
         assert gradcheck(
             na1d_av,
@@ -251,6 +261,17 @@ class NA1DTests(unittest.TestCase):
             eps=eps,
             device=device,
         )
+        self._test_autograd_qk(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            eps=eps,
+            device=device,
+            L_extra=9,
+        )
         self._test_autograd_av(
             B=B,
             H=H,
@@ -260,6 +281,17 @@ class NA1DTests(unittest.TestCase):
             dilation=dilation,
             eps=eps,
             device=device,
+        )
+        self._test_autograd_av(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            eps=eps,
+            device=device,
+            L_extra=9,
         )
 
     def test_autograd_cpu(self):
@@ -312,13 +344,14 @@ class NA1DTests(unittest.TestCase):
             B=2, H=2, L=16, D=8, kernel_size=5, dilation=0, eps=1e-6, device="cpu"
         )
 
-    def _test_fwad_qk(self, B, H, L, D, kernel_size, dilation, device):
+    def _test_fwad_qk(self, B, H, L, D, kernel_size, dilation, device, L_extra=0):
         torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         query = torch.randn((B, H, L, D), **kwargs)
         key = torch.randn((B, H, L, D), **kwargs)
+        extra_key = None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
 
-        variables = [query, key, kernel_size, dilation]
+        variables = [query, key, kernel_size, dilation, extra_key]
         assert gradcheck(
             na1d_qk,
             variables,
@@ -329,12 +362,15 @@ class NA1DTests(unittest.TestCase):
             check_grad_dtypes=False,
         ), "Forward mode autograd check failed for NA1D: QK."
 
-    def _test_fwad_av(self, B, H, L, D, kernel_size, dilation, device):
+    def _test_fwad_av(self, B, H, L, D, kernel_size, dilation, device, L_extra=0):
         torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
-        attn = torch.randn((B, H, L, kernel_size), **kwargs)
+        attn = torch.randn((B, H, L, kernel_size + L_extra), **kwargs)
         value = torch.randn((B, H, L, D), **kwargs)
-        variables = [attn, value, kernel_size, dilation]
+        extra_value = (
+            None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
+        )
+        variables = [attn, value, kernel_size, dilation, extra_value]
 
         assert gradcheck(
             na1d_av,
@@ -356,6 +392,16 @@ class NA1DTests(unittest.TestCase):
             dilation=dilation,
             device=device,
         )
+        self._test_fwad_qk(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            device=device,
+            L_extra=9,
+        )
         self._test_fwad_av(
             B=B,
             H=H,
@@ -364,6 +410,16 @@ class NA1DTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             device=device,
+        )
+        self._test_fwad_av(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            device=device,
+            L_extra=9,
         )
 
     def test_fwad_cpu(self):
@@ -386,7 +442,7 @@ class NA1DTests(unittest.TestCase):
         self._test_fwad(B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, device="cuda")
         self._test_fwad(B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, device="cuda")
 
-    def _test_nested_qk_forward(self, dtype, device):
+    def _test_nested_qk_forward(self, dtype, device, test_additional_tokens=True):
         torch.manual_seed(42)
         kernel_size, dilation = 7, 2
         kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
@@ -414,7 +470,29 @@ class NA1DTests(unittest.TestCase):
         for o, o_ref in zip(out_nested, out_ref):
             torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
 
-    def _test_nested_av_forward(self, dtype, device):
+        if test_additional_tokens:
+            n_extra_tokens = 9
+            additional_keys = torch.nested.nested_tensor(
+                [
+                    torch.randn(1, 2, n_extra_tokens, 16),
+                    torch.randn(2, 8, n_extra_tokens, 32),
+                    torch.randn(4, 1, n_extra_tokens, 16),
+                ],
+                **kwargs,
+            )
+            out_nested = na1d_qk(
+                query, key, kernel_size, dilation, additional_keys=additional_keys
+            )
+            out_ref = []
+            for q, k, k_add in zip(query, key, additional_keys):
+                out_ref.append(
+                    na1d_qk(q, k, kernel_size, dilation, additional_keys=k_add)
+                )
+
+            for o, o_ref in zip(out_nested, out_ref):
+                torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
+
+    def _test_nested_av_forward(self, dtype, device, test_additional_tokens=True):
         torch.manual_seed(42)
         kernel_size, dilation = 7, 2
         kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
@@ -441,6 +519,36 @@ class NA1DTests(unittest.TestCase):
 
         for o, o_ref in zip(out_nested, out_ref):
             torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
+
+        if test_additional_tokens:
+            n_extra_tokens = 9
+            attn = torch.nested.nested_tensor(
+                [
+                    torch.randn(1, 2, 14, kernel_size + n_extra_tokens),
+                    torch.randn(2, 8, 16, kernel_size + n_extra_tokens),
+                    torch.randn(4, 1, 32, kernel_size + n_extra_tokens),
+                ],
+                **kwargs,
+            )
+            additional_values = torch.nested.nested_tensor(
+                [
+                    torch.randn(1, 2, n_extra_tokens, 16),
+                    torch.randn(2, 8, n_extra_tokens, 32),
+                    torch.randn(4, 1, n_extra_tokens, 16),
+                ],
+                **kwargs,
+            )
+            out_nested = na1d_av(
+                attn, value, kernel_size, dilation, additional_values=additional_values
+            )
+            out_ref = []
+            for a, v, v_add in zip(attn, value, additional_values):
+                out_ref.append(
+                    na1d_av(a, v, kernel_size, dilation, additional_values=v_add)
+                )
+
+            for o, o_ref in zip(out_nested, out_ref):
+                torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
 
     @skip_if_nested_is_not_supported()
     def test_nested_forward_cpu(self):

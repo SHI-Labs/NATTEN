@@ -28,13 +28,11 @@
 */
 
 #pragma once
-// TODO: remaining dependency to torch: getCurrentCUDAStream
-#include <torch/extension.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "natten/cuda/naive/natten_commons.cuh"
+#include <natten/cuda/naive/natten_commons.cuh>
 
 namespace natten {
 namespace cuda {
@@ -53,9 +51,9 @@ struct PointwiseNeighborhood1DBase {
     const int dilation_in;
     const int dim;
     const int batch_size;
-    const int attn_stride_0, attn_stride_1, attn_stride_2;
-    const int query_stride_0, query_stride_1, query_stride_2;
-    const int bias_stride_0;
+    const int64_t attn_stride_0, attn_stride_1, attn_stride_2;
+    const int64_t query_stride_0, query_stride_1, query_stride_2;
+    const int64_t bias_stride_0;
 
     __device__ __host__ Params() {}
 
@@ -68,7 +66,10 @@ struct PointwiseNeighborhood1DBase {
         const int kernel_size_in,
         const int dilation_in,
         const int dim,
-        const int batch_size)
+        const int batch_size,
+        const int64_t attn_stride_0,
+        const int64_t attn_stride_1,
+        const int64_t attn_stride_2)
         : query(query),
           key(key),
           attn(attn),
@@ -79,9 +80,9 @@ struct PointwiseNeighborhood1DBase {
           dim(dim),
           batch_size(batch_size),
           bias_stride_0(0),
-          attn_stride_2(kernel_size_in),
-          attn_stride_1(kernel_size_in * length),
-          attn_stride_0(kernel_size_in * length * heads),
+          attn_stride_2(attn_stride_2),
+          attn_stride_1(attn_stride_1),
+          attn_stride_0(attn_stride_0),
           query_stride_2(dim),
           query_stride_1(dim * length),
           query_stride_0(dim * length * heads) {}
@@ -97,7 +98,10 @@ struct PointwiseNeighborhood1DBase {
         const int kernel_size_in,
         const int dilation_in,
         const int dim,
-        const int batch_size)
+        const int batch_size,
+        const int64_t attn_stride_0,
+        const int64_t attn_stride_1,
+        const int64_t attn_stride_2)
         : query(query),
           key(key),
           bias(bias),
@@ -109,9 +113,9 @@ struct PointwiseNeighborhood1DBase {
           dim(dim),
           batch_size(batch_size),
           bias_stride_0(2 * kernel_size_in - 1),
-          attn_stride_2(kernel_size_in),
-          attn_stride_1(kernel_size_in * length),
-          attn_stride_0(kernel_size_in * length * heads),
+          attn_stride_2(attn_stride_2),
+          attn_stride_1(attn_stride_1),
+          attn_stride_0(attn_stride_0),
           query_stride_2(dim),
           query_stride_1(dim * length),
           query_stride_0(dim * length * heads) {}
@@ -165,10 +169,10 @@ struct PointwiseNeighborhood1DFull : PointwiseNeighborhood1DBase<scalar_t> {
           const int ni = get_window_start(
               i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
           scalar_t updt = scalar_t(0);
-          const int batchHeadOffset =
+          const int64_t batchHeadOffset =
               b * p.query_stride_0 + h * p.query_stride_1;
-          const int queryOffset = batchHeadOffset + i * p.query_stride_2;
-          const int keyOffset =
+          const int64_t queryOffset = batchHeadOffset + i * p.query_stride_2;
+          const int64_t keyOffset =
               batchHeadOffset + (ki * dilation + ni) * p.query_stride_2;
 #pragma unroll
           for (int dimOffset = 0; dimOffset < p.dim; ++dimOffset)
@@ -228,10 +232,10 @@ struct PointwiseNeighborhood1DHalf : PointwiseNeighborhood1DBase<scalar_t> {
           const int ni = get_window_start(
               i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
           auto updt = HalfHelper::zero();
-          const int batchHeadOffset =
+          const int64_t batchHeadOffset =
               b * p.query_stride_0 + h * p.query_stride_1;
-          const int queryOffset = batchHeadOffset + i * p.query_stride_2;
-          const int keyOffset =
+          const int64_t queryOffset = batchHeadOffset + i * p.query_stride_2;
+          const int64_t keyOffset =
               batchHeadOffset + (ki * dilation + ni) * p.query_stride_2;
 #pragma unroll
           for (int dimOffset = 0; dimOffset < p.dim; ++dimOffset)
@@ -269,6 +273,7 @@ struct PointwiseNeighborhood1D {
 
   void operator()(
       const int cc,
+      cudaStream_t stream,
       void* query_ptr,
       void* key_ptr,
       void* attn_ptr,
@@ -276,12 +281,14 @@ struct PointwiseNeighborhood1D {
       int heads,
       int length,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
       int kernel_size,
       int dilation) {
     dim = Kernel::get_dim(dim);
     LaunchParams lp = Kernel::Base::get_launch_params(
         batch_size * heads, length, kernel_size);
-    const auto stream = c10::cuda::getCurrentCUDAStream();
     auto params = Params(
         reinterpret_cast<scalar_t*>(query_ptr),
         reinterpret_cast<scalar_t*>(key_ptr),
@@ -291,7 +298,10 @@ struct PointwiseNeighborhood1D {
         kernel_size,
         dilation,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2);
     launch_cuda_kernel<Kernel><<<lp.grid, lp.block, 0, stream>>>(params);
   }
 };
@@ -311,6 +321,7 @@ struct PointwiseNeighborhood1DWithBias {
 
   void operator()(
       const int cc,
+      cudaStream_t stream,
       void* query_ptr,
       void* key_ptr,
       void* bias_ptr,
@@ -319,12 +330,14 @@ struct PointwiseNeighborhood1DWithBias {
       int heads,
       int length,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
       int kernel_size,
       int dilation) {
     dim = Kernel::get_dim(dim);
     LaunchParams lp = Kernel::Base::get_launch_params(
         batch_size * heads, length, kernel_size);
-    const auto stream = c10::cuda::getCurrentCUDAStream();
     auto params = Params(
         reinterpret_cast<scalar_t*>(query_ptr),
         reinterpret_cast<scalar_t*>(key_ptr),
@@ -335,7 +348,10 @@ struct PointwiseNeighborhood1DWithBias {
         kernel_size,
         dilation,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2);
     launch_cuda_kernel<Kernel><<<lp.grid, lp.block, 0, stream>>>(params);
   }
 };

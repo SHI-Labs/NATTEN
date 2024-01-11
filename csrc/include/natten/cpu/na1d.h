@@ -40,6 +40,9 @@ void na1d_qk_forward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
   if (bias_ptr == nullptr) {
@@ -52,6 +55,9 @@ void na1d_qk_forward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
   } else {
@@ -65,6 +71,9 @@ void na1d_qk_forward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
   }
@@ -82,6 +91,9 @@ void na1d_qk_backward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
   DISPATCH_DTYPE_na1d_nn_cpu_naive(
@@ -93,6 +105,9 @@ void na1d_qk_backward(
       heads,
       length,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
       kernel_size,
       dilation);
   DISPATCH_DTYPE_na1d_in_cpu_naive(
@@ -104,6 +119,9 @@ void na1d_qk_backward(
       heads,
       length,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
       kernel_size,
       dilation);
   if (d_bias_ptr != nullptr) {
@@ -115,6 +133,9 @@ void na1d_qk_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
   }
@@ -129,6 +150,9 @@ void na1d_av_forward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
   DISPATCH_DTYPE_na1d_nn_cpu_naive(
@@ -140,6 +164,9 @@ void na1d_av_forward(
       heads,
       length,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
       kernel_size,
       dilation);
 }
@@ -155,6 +182,9 @@ void na1d_av_backward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
   DISPATCH_DTYPE_na1d_pn_cpu_naive(
@@ -166,6 +196,9 @@ void na1d_av_backward(
       heads,
       length,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
       kernel_size,
       dilation);
   DISPATCH_DTYPE_na1d_in_cpu_naive(
@@ -177,6 +210,9 @@ void na1d_av_backward(
       heads,
       length,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
       kernel_size,
       dilation);
 }

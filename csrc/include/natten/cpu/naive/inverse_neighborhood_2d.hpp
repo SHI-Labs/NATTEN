@@ -60,6 +60,10 @@ struct InverseNeighborhood2D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
       int kernel_size,
       int dilation) {
     launch(
@@ -72,7 +76,11 @@ struct InverseNeighborhood2D {
         kernel_size,
         dilation,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3);
   }
 
   void launch( // K-grad / V-grad
@@ -85,12 +93,12 @@ struct InverseNeighborhood2D {
       const int kernel_size,
       const int dilation,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t weights_stride_0,
+      const int64_t weights_stride_1,
+      const int64_t weights_stride_2,
+      const int64_t weights_stride_3) {
     const int neighborhood_size = kernel_size / 2;
-    const int weights_stride_3 = kernel_size * kernel_size;
-    const int weights_stride_2 = width * weights_stride_3;
-    const int weights_stride_1 = height * weights_stride_2;
-    const int weights_stride_0 = heads * weights_stride_1;
     const int values_stride_3 = dim;
     const int values_stride_2 = width * values_stride_3;
     const int values_stride_1 = height * values_stride_2;
@@ -109,9 +117,9 @@ struct InverseNeighborhood2D {
               const int ej = get_backward_window_end(
                   j, width, kernel_size, neighborhood_size, dilation);
               for (int d = 0; d < dim; d++) {
-                const int weightsOffset =
+                const int64_t weightsOffset =
                     b * weights_stride_0 + h * weights_stride_1;
-                const int outOffset =
+                const int64_t outOffset =
                     b * values_stride_0 + h * values_stride_1 + d;
                 scalar_t output_update = scalar_t(0);
                 for (int xi = ni; xi < ei; xi += dilation) {
@@ -120,16 +128,16 @@ struct InverseNeighborhood2D {
                   for (int xj = nj; xj < ej; xj += dilation) {
                     const int onj = get_window_start(
                         xj, width, kernel_size, neighborhood_size, dilation);
-                    const int outIndex =
+                    const int64_t outIndex =
                         outOffset + xi * values_stride_2 + xj * values_stride_3;
-                    const int weightsIndex = weightsOffset +
+                    const int64_t weightsIndex = weightsOffset +
                         xi * weights_stride_2 + xj * weights_stride_3 +
                         int((i - oni) / dilation) * kernel_size +
                         int((j - onj) / dilation);
                     output_update += values[outIndex] * weights[weightsIndex];
                   }
                 }
-                const int linearIndex = b * values_stride_0 +
+                const int64_t linearIndex = b * values_stride_0 +
                     h * values_stride_1 + i * values_stride_2 +
                     j * values_stride_3 + d;
                 output[linearIndex] = output_update;

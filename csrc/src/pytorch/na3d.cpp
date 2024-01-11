@@ -45,6 +45,8 @@ void na3d_qk_forward(
     const int dilation,
     const int kernel_size_d,
     const int dilation_d) {
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
   CheckArgs(kernel_size_d, dilation_d);
   CheckIfPropertiesMatch(query, key, attn);
@@ -92,6 +94,10 @@ void na3d_qk_backward(
     const int dilation,
     const int kernel_size_d,
     const int dilation_d) {
+  CHECK_CONTIGUOUS(d_query);
+  CHECK_CONTIGUOUS(d_key);
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
   CheckArgs(kernel_size_d, dilation_d);
   CheckIfPropertiesMatch(query, key);
@@ -141,6 +147,8 @@ void na3d_av_forward(
     const int dilation,
     const int kernel_size_d,
     const int dilation_d) {
+  CHECK_CONTIGUOUS(out);
+  CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
   CheckArgs(kernel_size_d, dilation_d);
   CheckIfPropertiesMatch(out, value, attn);
@@ -183,6 +191,9 @@ void na3d_av_backward(
     const int dilation,
     const int kernel_size_d,
     const int dilation_d) {
+  CHECK_CONTIGUOUS(d_out);
+  CHECK_CONTIGUOUS(d_value);
+  CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
   CheckArgs(kernel_size_d, dilation_d);
   CheckIfPropertiesMatch(attn, value);

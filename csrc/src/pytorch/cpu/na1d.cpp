@@ -57,6 +57,9 @@ void na1d_qk_forward(
       heads,
       length,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
       kernel_size,
       dilation);
 }
@@ -88,6 +91,9 @@ void na1d_qk_backward(
       heads,
       length,
       dim,
+      d_attn.stride(0),
+      d_attn.stride(1),
+      d_attn.stride(2),
       kernel_size,
       dilation);
 }
@@ -112,6 +118,9 @@ void na1d_av_forward(
       heads,
       length,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
       kernel_size,
       dilation);
 }
@@ -140,6 +149,9 @@ void na1d_av_backward(
       heads,
       length,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
       kernel_size,
       dilation);
 }

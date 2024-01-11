@@ -340,7 +340,7 @@ namespace naive {
 
 
 
-} // namespace natten 
-} // namespace cuda 
-} // namespace naive 
+} // namespace {namespace} 
+} // namespace {namespace} 
+} // namespace {namespace} 
 

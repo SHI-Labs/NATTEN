@@ -43,6 +43,8 @@ void na2d_qk_forward(
     const at::optional<at::Tensor>& bias,
     const int kernel_size,
     const int dilation) {
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
   CheckIfPropertiesMatch(query, key, attn);
   CheckIfTensorShapesMatch<2>(query, key);
@@ -82,6 +84,10 @@ void na2d_qk_backward(
     const at::Tensor& key,
     const int kernel_size,
     const int dilation) {
+  CHECK_CONTIGUOUS(d_query);
+  CHECK_CONTIGUOUS(d_key);
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
   CheckIfPropertiesMatch(query, key);
   CheckIfPropertiesMatch(d_query, d_key, d_attn);
@@ -123,6 +129,8 @@ void na2d_av_forward(
     const at::Tensor& value,
     const int kernel_size,
     const int dilation) {
+  CHECK_CONTIGUOUS(out);
+  CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
   CheckIfPropertiesMatch(out, value, attn);
   CheckIfTensorShapesMatch<2>(out, value);
@@ -157,6 +165,9 @@ void na2d_av_backward(
     const at::Tensor& value,
     const int kernel_size,
     const int dilation) {
+  CHECK_CONTIGUOUS(d_out);
+  CHECK_CONTIGUOUS(d_value);
+  CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
   CheckIfPropertiesMatch(attn, value);
   CheckIfPropertiesMatch(d_attn, d_value, d_out);

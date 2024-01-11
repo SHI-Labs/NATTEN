@@ -33,13 +33,13 @@
 #include <cutlass/cutlass.h>
 #include <cutlass/gemm/device/gemm.h>
 
-#include "natten/cuda/gemm/device/implicit_gemm_na2d.cuh"
-#include "natten/cuda/gemm/kernel/default_na2d_in.cuh"
-#include "natten/cuda/gemm/kernel/default_na2d_nn.cuh"
-#include "natten/cuda/gemm/kernel/default_na2d_pn.cuh"
-#include "natten/cuda/gemm/neighborhood_attention.cuh"
-#include "natten/cuda/gemm/threadblock/threadblock_swizzle.cuh"
-#include "natten/cuda/gemm/utils.cuh"
+#include <natten/cuda/gemm/device/implicit_gemm_na2d.cuh>
+#include <natten/cuda/gemm/kernel/default_na2d_in.cuh>
+#include <natten/cuda/gemm/kernel/default_na2d_nn.cuh>
+#include <natten/cuda/gemm/kernel/default_na2d_pn.cuh>
+#include <natten/cuda/gemm/neighborhood_attention.cuh>
+#include <natten/cuda/gemm/threadblock/threadblock_swizzle.cuh>
+#include <natten/cuda/gemm/utils.cuh>
 
 namespace natten {
 namespace cuda {
@@ -73,6 +73,7 @@ struct NA2DLauncher {
       const int dim,
       const int kernel_size,
       const int dilation,
+      cudaStream_t stream,
       ElementCompute alpha,
       ElementCompute beta) {
     NA2dProblemSize problem_size(
@@ -94,10 +95,10 @@ struct NA2DLauncher {
     cutlass::Status status = gemm.can_implement(arguments);
     CUTLASS_CHECK(status);
 
-    status = gemm.initialize(arguments);
+    status = gemm.initialize(arguments, nullptr, stream);
     CUTLASS_CHECK(status);
 
-    status = gemm();
+    status = gemm(stream);
     CUTLASS_CHECK(status);
   }
 
@@ -114,6 +115,7 @@ struct NA2DLauncher {
       const int dim,
       const int kernel_size,
       const int dilation,
+      cudaStream_t stream,
       ElementCompute scale) {
     launch_cutlass_kernel(
         ref_a,
@@ -127,6 +129,7 @@ struct NA2DLauncher {
         dim,
         kernel_size,
         dilation,
+        stream,
         scale,
         ElementCompute(1.0));
   }
@@ -142,6 +145,7 @@ struct NA2DLauncher {
       const int dim,
       const int kernel_size,
       const int dilation,
+      cudaStream_t stream,
       ElementCompute scale) {
     RefBias ref_bias = RefBias();
     launch_cutlass_kernel(
@@ -156,6 +160,7 @@ struct NA2DLauncher {
         dim,
         kernel_size,
         dilation,
+        stream,
         scale,
         ElementCompute(0.0) // beta is zero because no bias
     );
@@ -235,17 +240,18 @@ struct PointwiseNeighborhood2D {
       const int height,
       const int width,
       const int dim,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3,
       const int kernel_size,
       const int dilation,
-      const float scale = 1.0) {
+      const float scale,
+      cudaStream_t stream) {
     // PN refs
     auto layout_ab = LayoutOperand(
         dim, dim * width, dim * height * width, dim * height * width * heads);
-    auto layout_c = LayoutOperand(
-        kernel_size * kernel_size,
-        kernel_size * kernel_size * width,
-        kernel_size * kernel_size * width * height,
-        kernel_size * kernel_size * width * height * heads);
+    auto layout_c = LayoutOperand(attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
     auto ref_a = RefOperand(static_cast<ElementOperand*>(ptr_query), layout_ab);
     auto ref_b = RefOperand(static_cast<ElementOperand*>(ptr_key), layout_ab);
     auto ref_c = RefOutput(static_cast<ElementOutput*>(ptr_attn), layout_c);
@@ -269,6 +275,7 @@ struct PointwiseNeighborhood2D {
           dim,
           kernel_size,
           dilation,
+          stream,
           ElementCompute(scale));
       return;
     }
@@ -283,6 +290,7 @@ struct PointwiseNeighborhood2D {
         dim,
         kernel_size,
         dilation,
+        stream,
         ElementCompute(scale));
   }
 };
@@ -357,15 +365,16 @@ struct NeighborhoodNeighborhood2D {
       const int height,
       const int width,
       const int dim,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3,
       const int kernel_size,
       const int dilation,
-      const float scale = 1.0) {
+      const float scale,
+      cudaStream_t stream) {
     // NN refs
-    auto layout_a = LayoutOperand(
-        kernel_size * kernel_size,
-        kernel_size * kernel_size * width,
-        kernel_size * kernel_size * width * height,
-        kernel_size * kernel_size * width * height * heads);
+    auto layout_a = LayoutOperand(attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
     auto layout_bc = LayoutOperand(
         dim, dim * width, dim * height * width, dim * height * width * heads);
     auto ref_a = RefOperand(static_cast<ElementOperand*>(ptr_attn), layout_a);
@@ -384,6 +393,7 @@ struct NeighborhoodNeighborhood2D {
         dim,
         kernel_size,
         dilation,
+        stream,
         ElementCompute(scale));
   }
 };
@@ -458,15 +468,16 @@ struct InverseNeighborhood2D {
       const int height,
       const int width,
       const int dim,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3,
       const int kernel_size,
       const int dilation,
-      const float scale = 1.0) {
+      const float scale,
+      cudaStream_t stream) {
     // IN refs
-    auto layout_a = LayoutOperand(
-        kernel_size * kernel_size,
-        kernel_size * kernel_size * width,
-        kernel_size * kernel_size * width * height,
-        kernel_size * kernel_size * width * height * heads);
+    auto layout_a = LayoutOperand(attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
     auto layout_bc = LayoutOperand(
         dim, dim * width, dim * height * width, dim * height * width * heads);
     auto ref_a = RefOperand(static_cast<ElementOperand*>(ptr_attn), layout_a);
@@ -485,6 +496,7 @@ struct InverseNeighborhood2D {
         dim,
         kernel_size,
         dilation,
+        stream,
         ElementCompute(scale));
   }
 };

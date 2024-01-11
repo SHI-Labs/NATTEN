@@ -28,13 +28,13 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-// We're still using ATen's atomic add!
+#include <natten/cuda/naive/natten_commons.cuh>
+
+// TODO: We're still using ATen's atomic add!
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/extension.h>
 #include <ATen/native/cuda/KernelUtils.cuh>
-
-#include "natten/cuda/naive/natten_commons.cuh"
 
 namespace natten {
 namespace cuda {
@@ -54,10 +54,11 @@ struct RelPosBiasGradient3DBase {
     const int depth_kernel_size_in;
     const int depth_dilation_in;
     const int batch_size;
-    const int problem_size, num_threads;
-    const int attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3,
+    const int num_threads;
+    const int64_t problem_size;
+    const int64_t attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3,
         attn_stride_4;
-    const int bias_stride_0, bias_stride_1, bias_stride_2;
+    const int64_t bias_stride_0, bias_stride_1, bias_stride_2;
 
     __device__ __host__ Params() {}
 
@@ -73,7 +74,12 @@ struct RelPosBiasGradient3DBase {
         const int depth_kernel_size_in,
         const int depth_dilation_in,
         const int batch_size,
-        const int problem_size,
+        const int64_t attn_stride_0,
+        const int64_t attn_stride_1,
+        const int64_t attn_stride_2,
+        const int64_t attn_stride_3,
+        const int64_t attn_stride_4,
+        const int64_t problem_size,
         const int num_threads)
         : d_bias(d_bias),
           d_attn(d_attn),
@@ -93,18 +99,11 @@ struct RelPosBiasGradient3DBase {
           bias_stride_0(
               (2 * kernel_size_in - 1) * (2 * kernel_size_in - 1) *
               (2 * depth_kernel_size_in - 1)),
-          attn_stride_4(kernel_size_in * kernel_size_in * depth_kernel_size_in),
-          attn_stride_3(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width),
-          attn_stride_2(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width *
-              height),
-          attn_stride_1(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width *
-              height * depth),
-          attn_stride_0(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width *
-              height * depth * heads) {}
+          attn_stride_4(attn_stride_4),
+          attn_stride_3(attn_stride_3),
+          attn_stride_2(attn_stride_2),
+          attn_stride_1(attn_stride_1),
+          attn_stride_0(attn_stride_0) {}
   };
 
   __device__ __host__ RelPosBiasGradient3DBase() {}
@@ -141,7 +140,7 @@ struct RelPosBiasGradient3DFull : RelPosBiasGradient3DBase<scalar_t, acc_t> {
     const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
     const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.num_threads) {
       int indtmp1 = linearIndex / KERNEL_SIZE;
       const int kj = linearIndex - indtmp1 * KERNEL_SIZE;
@@ -167,7 +166,7 @@ struct RelPosBiasGradient3DFull : RelPosBiasGradient3DBase<scalar_t, acc_t> {
       const int pk = get_pb_start(
           k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
       acc_t d_rpb_update = acc_t(0);
-      int attnOffset = h * p.attn_stride_1 + k * p.attn_stride_2 +
+      int64_t attnOffset = h * p.attn_stride_1 + k * p.attn_stride_2 +
           i * p.attn_stride_3 + j * p.attn_stride_4 +
           ((kk * KERNEL_SIZE * KERNEL_SIZE) + (ki * KERNEL_SIZE) + kj);
 #pragma unroll
@@ -175,7 +174,7 @@ struct RelPosBiasGradient3DFull : RelPosBiasGradient3DBase<scalar_t, acc_t> {
         d_rpb_update += static_cast<acc_t>(p.d_attn[attnOffset]);
         attnOffset += p.attn_stride_0;
       }
-      const int index = h * p.bias_stride_0 + (pk + kk) * p.bias_stride_1 +
+      const int64_t index = h * p.bias_stride_0 + (pk + kk) * p.bias_stride_1 +
           (pi + ki) * p.bias_stride_2 + (pj + kj);
       at::native::fastAtomicAdd(
           p.d_bias, index, p.problem_size, d_rpb_update, true);
@@ -210,7 +209,7 @@ struct RelPosBiasGradient3DHalf : RelPosBiasGradient3DBase<scalar_t, acc_t> {
     const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
     const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.num_threads) {
       int indtmp1 = linearIndex / KERNEL_SIZE;
       const int kj = linearIndex - indtmp1 * KERNEL_SIZE;
@@ -236,7 +235,7 @@ struct RelPosBiasGradient3DHalf : RelPosBiasGradient3DBase<scalar_t, acc_t> {
       const int pk = get_pb_start(
           k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
       acc_t d_rpb_update = acc_t(0);
-      int attnOffset = h * p.attn_stride_1 + k * p.attn_stride_2 +
+      int64_t attnOffset = h * p.attn_stride_1 + k * p.attn_stride_2 +
           i * p.attn_stride_3 + j * p.attn_stride_4 +
           ((kk * KERNEL_SIZE * KERNEL_SIZE) + (ki * KERNEL_SIZE) + kj);
 #pragma unroll
@@ -244,7 +243,7 @@ struct RelPosBiasGradient3DHalf : RelPosBiasGradient3DBase<scalar_t, acc_t> {
         d_rpb_update += HalfHelper::to_float(p.d_attn[attnOffset]);
         attnOffset += p.attn_stride_0;
       }
-      const int index = h * p.bias_stride_0 + (pk + kk) * p.bias_stride_1 +
+      const int64_t index = h * p.bias_stride_0 + (pk + kk) * p.bias_stride_1 +
           (pi + ki) * p.bias_stride_2 + (pj + kj);
       at::native::fastAtomicAdd(
           p.d_bias, index, p.problem_size, d_rpb_update, true);
@@ -288,6 +287,7 @@ struct RelPosBiasGradient3D {
 
   void operator()(
       const int cc,
+      cudaStream_t stream,
       void* d_bias_ptr,
       void* d_attn_ptr,
       int batch_size,
@@ -296,15 +296,19 @@ struct RelPosBiasGradient3D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
       int dilation_depth) {
     int num_threads = heads * depth * height * width * kernel_size_depth *
         kernel_size * kernel_size;
-    int problem_size = heads * (2 * kernel_size - 1);
+    int64_t problem_size = heads * (2 * kernel_size_depth - 1) * (2 * kernel_size - 1) * (2 * kernel_size - 1);
     LaunchParams lp = Kernel::Base::get_launch_params(num_threads);
-    const auto stream = c10::cuda::getCurrentCUDAStream();
     auto params = Params(
         reinterpret_cast<acc_t*>(d_bias_ptr),
         reinterpret_cast<scalar_t*>(d_attn_ptr),
@@ -317,6 +321,11 @@ struct RelPosBiasGradient3D {
         kernel_size_depth,
         dilation_depth,
         batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4,
         problem_size,
         num_threads);
     launch_cuda_kernel<Kernel><<<lp.grid, lp.block, 0, stream>>>(params);

@@ -59,6 +59,11 @@ struct InverseNeighborhood3D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
@@ -76,7 +81,12 @@ struct InverseNeighborhood3D {
         dilation,
         dilation_depth,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4);
   }
 
   void launch( // K-grad / V-grad
@@ -92,14 +102,14 @@ struct InverseNeighborhood3D {
       const int dilation,
       const int dilation_d,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t weights_stride_0,
+      const int64_t weights_stride_1,
+      const int64_t weights_stride_2,
+      const int64_t weights_stride_3,
+      const int64_t weights_stride_4) {
     const int neighborhood_size = kernel_size / 2;
     const int neighborhood_size_d = kernel_size_d / 2;
-    const int weights_stride_4 = kernel_size_d * kernel_size * kernel_size;
-    const int weights_stride_3 = width * weights_stride_4;
-    const int weights_stride_2 = height * weights_stride_3;
-    const int weights_stride_1 = depth * weights_stride_2;
-    const int weights_stride_0 = heads * weights_stride_1;
     const int values_stride_4 = dim;
     const int values_stride_3 = width * values_stride_4;
     const int values_stride_2 = height * values_stride_3;
@@ -124,9 +134,9 @@ struct InverseNeighborhood3D {
                 const int ej = get_backward_window_end(
                     j, width, kernel_size, neighborhood_size, dilation);
                 for (int d = 0; d < dim; d++) {
-                  const int weightsOffset =
+                  const int64_t weightsOffset =
                       b * weights_stride_0 + h * weights_stride_1;
-                  const int outOffset =
+                  const int64_t outOffset =
                       b * values_stride_0 + h * values_stride_1 + d;
                   scalar_t output_update = scalar_t(0);
                   for (int xk = nk; xk < ek; xk += dilation_d) {
@@ -146,9 +156,9 @@ struct InverseNeighborhood3D {
                             kernel_size,
                             neighborhood_size,
                             dilation);
-                        const int outIndex = outOffset + xk * values_stride_2 +
+                        const int64_t outIndex = outOffset + xk * values_stride_2 +
                             xi * values_stride_3 + xj * values_stride_4;
-                        const int weightsIndex = weightsOffset +
+                        const int64_t weightsIndex = weightsOffset +
                             xk * weights_stride_2 + xi * weights_stride_3 +
                             xj * weights_stride_4 +
                             int((k - onk) / dilation_d) *
@@ -160,7 +170,7 @@ struct InverseNeighborhood3D {
                       }
                     }
                   }
-                  const int linearIndex = b * values_stride_0 +
+                  const int64_t linearIndex = b * values_stride_0 +
                       h * values_stride_1 + k * values_stride_2 +
                       i * values_stride_3 + j * values_stride_4 + d;
                   output[linearIndex] = output_update;

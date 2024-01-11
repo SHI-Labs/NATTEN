@@ -59,6 +59,10 @@ struct PointwiseNeighborhood2D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
       int kernel_size,
       int dilation) {
     launch(
@@ -71,7 +75,11 @@ struct PointwiseNeighborhood2D {
         kernel_size,
         dilation,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3);
   }
 
   void launch( // QK    / A-grad
@@ -84,12 +92,12 @@ struct PointwiseNeighborhood2D {
       const int kernel_size,
       const int dilation,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3) {
     const int neighborhood_size = kernel_size / 2;
-    const int attn_stride_3 = kernel_size * kernel_size;
-    const int attn_stride_2 = width * attn_stride_3;
-    const int attn_stride_1 = height * attn_stride_2;
-    const int attn_stride_0 = heads * attn_stride_1;
     const int query_stride_3 = dim;
     const int query_stride_2 = width * query_stride_3;
     const int query_stride_1 = height * query_stride_2;
@@ -114,16 +122,16 @@ struct PointwiseNeighborhood2D {
                 i, height, kernel_size, neighborhood_size, dilation);
             const int nj = get_window_start(
                 j, width, kernel_size, neighborhood_size, dilation);
-            const int batchHeadOffset = b * query_stride_0 + h * query_stride_1;
-            const int queryOffset =
+            const int64_t batchHeadOffset = b * query_stride_0 + h * query_stride_1;
+            const int64_t queryOffset =
                 batchHeadOffset + i * query_stride_2 + j * query_stride_3;
-            int index = b * attn_stride_0 + h * attn_stride_1 +
+            int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                 i * attn_stride_2 + j * attn_stride_3;
             scalar_t* _qaddr = query + queryOffset;
             for (int ki = 0; ki < kernel_size; ki++) {
               for (int kj = 0; kj < kernel_size; kj++) {
                 Vec updt = Vec(scalar_t(0));
-                const int keyOffset = batchHeadOffset +
+                const int64_t keyOffset = batchHeadOffset +
                     (ki * dilation + ni) * query_stride_2 +
                     (kj * dilation + nj) * query_stride_3;
                 scalar_t* _kaddr = key + keyOffset;
@@ -163,17 +171,17 @@ struct PointwiseNeighborhood2D {
             for (int ki = 0; ki < kernel_size; ki++) {
               for (int kj = 0; kj < kernel_size; kj++) {
                 scalar_t updt = scalar_t(0);
-                const int batchHeadOffset =
+                const int64_t batchHeadOffset =
                     b * query_stride_0 + h * query_stride_1;
-                const int queryOffset =
+                const int64_t queryOffset =
                     batchHeadOffset + i * query_stride_2 + j * query_stride_3;
-                const int keyOffset = batchHeadOffset +
+                const int64_t keyOffset = batchHeadOffset +
                     (ki * dilation + ni) * query_stride_2 +
                     (kj * dilation + nj) * query_stride_3;
-                for (int dimOffset = 0; dimOffset < dim; ++dimOffset)
+                for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
                   updt += query[queryOffset + dimOffset] *
                       key[keyOffset + dimOffset];
-                const int index = b * attn_stride_0 + h * attn_stride_1 +
+                const int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                     i * attn_stride_2 + j * attn_stride_3 + ki * kernel_size +
                     kj;
                 attn[index] = updt;
@@ -197,6 +205,10 @@ struct PointwiseNeighborhood2DWithBias {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
       int kernel_size,
       int dilation) {
     launch(
@@ -210,7 +222,11 @@ struct PointwiseNeighborhood2DWithBias {
         kernel_size,
         dilation,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3);
   }
 
   void launch( // QK
@@ -224,14 +240,14 @@ struct PointwiseNeighborhood2DWithBias {
       const int kernel_size,
       const int dilation,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3) {
     const int neighborhood_size = kernel_size / 2;
     const int bias_stride_1 = (2 * kernel_size - 1);
     const int bias_stride_0 = (2 * kernel_size - 1) * bias_stride_1;
-    const int attn_stride_3 = kernel_size * kernel_size;
-    const int attn_stride_2 = width * attn_stride_3;
-    const int attn_stride_1 = height * attn_stride_2;
-    const int attn_stride_0 = heads * attn_stride_1;
     const int query_stride_3 = dim;
     const int query_stride_2 = width * query_stride_3;
     const int query_stride_1 = height * query_stride_2;
@@ -260,16 +276,16 @@ struct PointwiseNeighborhood2DWithBias {
                 j, width, kernel_size, neighborhood_size, dilation);
             const int pj = get_pb_start(
                 j, width, kernel_size, neighborhood_size, dilation);
-            const int batchHeadOffset = b * query_stride_0 + h * query_stride_1;
-            const int queryOffset =
+            const int64_t batchHeadOffset = b * query_stride_0 + h * query_stride_1;
+            const int64_t queryOffset =
                 batchHeadOffset + i * query_stride_2 + j * query_stride_3;
-            int index = b * attn_stride_0 + h * attn_stride_1 +
+            int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                 i * attn_stride_2 + j * attn_stride_3;
             scalar_t* _qaddr = query + queryOffset;
             for (int ki = 0; ki < kernel_size; ki++) {
               for (int kj = 0; kj < kernel_size; kj++) {
                 Vec updt = Vec(scalar_t(0));
-                const int keyOffset = batchHeadOffset +
+                const int64_t keyOffset = batchHeadOffset +
                     (ki * dilation + ni) * query_stride_2 +
                     (kj * dilation + nj) * query_stride_3;
                 scalar_t* _kaddr = key + keyOffset;
@@ -281,7 +297,7 @@ struct PointwiseNeighborhood2DWithBias {
                     [](Vec& x, Vec& y) { return x + y; }, updt, Vec::size());
                 for (; d1 < dim; ++d1)
                   sum_val += _qaddr[d1] * _kaddr[d1];
-                const int biasIndex =
+                const int64_t biasIndex =
                     h * bias_stride_0 + (pi + ki) * bias_stride_1 + (pj + kj);
                 attn[index] = bias[biasIndex] + sum_val;
                 index++;
@@ -315,20 +331,20 @@ struct PointwiseNeighborhood2DWithBias {
             for (int ki = 0; ki < kernel_size; ki++) {
               for (int kj = 0; kj < kernel_size; kj++) {
                 scalar_t updt = scalar_t(0);
-                const int batchHeadOffset =
+                const int64_t batchHeadOffset =
                     b * query_stride_0 + h * query_stride_1;
-                const int queryOffset =
+                const int64_t queryOffset =
                     batchHeadOffset + i * query_stride_2 + j * query_stride_3;
-                const int keyOffset = batchHeadOffset +
+                const int64_t keyOffset = batchHeadOffset +
                     (ki * dilation + ni) * query_stride_2 +
                     (kj * dilation + nj) * query_stride_3;
-                for (int dimOffset = 0; dimOffset < dim; ++dimOffset)
+                for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
                   updt += query[queryOffset + dimOffset] *
                       key[keyOffset + dimOffset];
-                const int index = b * attn_stride_0 + h * attn_stride_1 +
+                const int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                     i * attn_stride_2 + j * attn_stride_3 + ki * kernel_size +
                     kj;
-                const int biasIndex =
+                const int64_t biasIndex =
                     h * bias_stride_0 + (pi + ki) * bias_stride_1 + (pj + kj);
                 updt += bias[biasIndex];
                 attn[index] = updt;

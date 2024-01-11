@@ -29,6 +29,30 @@ from torch import Tensor
 from torch.profiler import profile as torch_profile, ProfilerActivity, record_function
 
 
+def qk_cross(query: Tensor, key: Tensor) -> Tensor:
+    """
+    Performs cross attention between arbitrary-rank tensors ([batch, heads, ..., dim]).
+    """
+    output_shape = [x for x in query.shape[:-1]] + [key.shape[-2]]
+    query_bmm_view = query.view(query.shape[0] * query.shape[1], -1, query.shape[-1])
+    key_transposed_bmm_view = key.view(
+        key.shape[0] * key.shape[1], -1, key.shape[-1]
+    ).transpose(-2, -1)
+    output = torch.bmm(query_bmm_view, key_transposed_bmm_view)
+    return output.reshape(*output_shape)
+
+
+def av_cross(attn: Tensor, value: Tensor) -> Tensor:
+    """
+    Applies cross attention weights.
+    """
+    output_shape = [x for x in attn.shape[:-1]] + [value.shape[-1]]
+    attn_bmm_view = attn.view(attn.shape[0] * attn.shape[1], -1, attn.shape[-1])
+    value_bmm_view = value.view(value.shape[0] * value.shape[1], -1, value.shape[-1])
+    output = torch.bmm(attn_bmm_view, value_bmm_view)
+    return output.reshape(*output_shape)
+
+
 class NAOp(Enum):
     # GEMM
     PN = 0
@@ -67,7 +91,7 @@ def _format_time(time_us: float) -> str:
 class Result:
     def __init__(
         self,
-        op: NAOp,
+        op: NAOp | str,
         op_str: str,
         time: float,
         index: int = -1,
@@ -142,45 +166,53 @@ class Result:
         return f"{self.kernel_type} \t\t {self.tag} \t\t {self.op_str} \t\t {self.time_str}"
 
 
-def convert_ops(ops: Dict[NAOp, List[float]], tags: Dict) -> Optional[List[Result]]:
+def convert_ops(
+    ops: Dict[NAOp | str, List[float]], tags: Dict
+) -> Optional[List[Result]]:
     output = []
     for op, values in ops.items():
-        if len(values):
+        if len(values) and isinstance(op, NAOp):
             if op == NAOp.PN:
-                if len(values) != 2:
-                    return None
+                # if len(values) != 2:
+                #    return None
                 output.append(Result(op, NAOp.QKRPB.name, max(values), 0, tag=tags[op]))
                 output.append(Result(op, NAOp.AGRAD.name, min(values), 5, tag=tags[op]))
                 continue
             elif op == NAOp.NN:
-                if len(values) != 2:
-                    return None
+                # if len(values) != 2:
+                #    return None
                 output.append(
-                    Result(op, NAOp.AV.name, sum(values) / 2, 1, tag=tags[op])
+                    Result(op, NAOp.AV.name, sum(values) / len(values), 1, tag=tags[op])
                 )
                 output.append(
-                    Result(op, NAOp.QGRAD.name, sum(values) / 2, 2, tag=tags[op])
+                    Result(
+                        op, NAOp.QGRAD.name, sum(values) / len(values), 2, tag=tags[op]
+                    )
                 )
                 continue
             elif op == NAOp.IN:
-                if len(values) != 2:
-                    return None
+                # if len(values) != 2:
+                #    return None
                 output.append(
-                    Result(op, NAOp.VGRAD.name, sum(values) / 2, 4, tag=tags[op])
+                    Result(
+                        op, NAOp.VGRAD.name, sum(values) / len(values), 4, tag=tags[op]
+                    )
                 )
                 output.append(
-                    Result(op, NAOp.KGRAD.name, sum(values) / 2, 3, tag=tags[op])
+                    Result(
+                        op, NAOp.KGRAD.name, sum(values) / len(values), 3, tag=tags[op]
+                    )
                 )
                 continue
             elif op == NAOp.LegacyPN:
-                if len(values) != 2:
-                    return None
+                # if len(values) != 2:
+                #    return None
                 output.append(Result(op, NAOp.QKRPB.name, max(values), 0, tag=tags[op]))
                 output.append(Result(op, NAOp.AGRAD.name, min(values), 5, tag=tags[op]))
                 continue
             elif op == NAOp.LegacyNN:
-                if len(values) != 2:
-                    return None
+                # if len(values) != 2:
+                #    return None
                 output.append(
                     Result(op, NAOp.AV.name, sum(values) / 2, 1, tag=tags[op])
                 )
@@ -189,8 +221,8 @@ def convert_ops(ops: Dict[NAOp, List[float]], tags: Dict) -> Optional[List[Resul
                 )
                 continue
             elif op == NAOp.LegacyIN:
-                if len(values) != 2:
-                    return None
+                # if len(values) != 2:
+                #    return None
                 output.append(
                     Result(op, NAOp.VGRAD.name, sum(values) / 2, 4, tag=tags[op])
                 )
@@ -201,6 +233,9 @@ def convert_ops(ops: Dict[NAOp, List[float]], tags: Dict) -> Optional[List[Resul
             if len(values) != 1:
                 return None
             output.append(Result(op, op.name, values[0], op.value, tag=tags[op]))
+        elif len(values):
+            assert isinstance(op, str)
+            output.append(Result(op, op, values[0], 999, tag="Non-NA"))
     filtered_output = []
     rpb_op = None
     for res in output:
@@ -262,11 +297,16 @@ def str_to_na_op(
     return None, False, ""
 
 
+def custom_op_to_name(name: str) -> str:
+    return name.split("::")[-1].split("<")[0]
+
+
 def extract_na_ops(
     profiler: torch_profile, _keywords: Dict[str, List[str]]
 ) -> Optional[List[Result]]:
     events = profiler.events()
-    logged_ops: Dict[NAOp, List[float]] = {na_op: [] for na_op in NAOp}
+    logged_ops: Dict[NAOp | str, List[float]] = {na_op: [] for na_op in NAOp}
+    custom_ops: Dict[str, int] = {}
     tags: Dict[NAOp, Optional[str]] = {na_op: None for na_op in NAOp}
     for evt in events:
         op, valid, tag = str_to_na_op(sym=evt.key, **_keywords)
@@ -276,6 +316,16 @@ def extract_na_ops(
             else:
                 assert tags[op] == tag
             logged_ops[op].append(evt.cuda_time_total)
+        elif evt.cuda_time_total > 0:
+            op_key = custom_op_to_name(evt.key)
+            if op_key in custom_ops:
+                custom_ops[op_key] += 1
+                op_key = f"{op_key}_{custom_ops[op_key]}"
+            else:
+                custom_ops[op_key] = 0
+                op_key = f"{op_key}_{custom_ops[op_key]}"
+            assert op_key not in logged_ops
+            logged_ops[op_key] = [evt.cuda_time_total]
 
     converted_ops = convert_ops(logged_ops, tags)
     return None if converted_ops is None else sorted(converted_ops)
@@ -318,5 +368,53 @@ def profile_with_torch(
         ) as prof:
             with record_function("model_inference"):
                 run_ops()
+
+    return prof
+
+
+def profile_extra_tokens_with_torch(
+    qk_func,
+    av_func,
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    extra_key: Tensor,
+    extra_value: Tensor,
+    kernel_size: int,
+    dilation: int,
+    warmup_steps: int,
+    disable_concat_fusion: bool = False,
+) -> torch_profile:
+    def run_ops(query, key, value, extra_key, extra_value):
+        if not disable_concat_fusion:
+            attn = qk_func(query, key, kernel_size, dilation, additional_keys=extra_key)
+            attn = attn.softmax(dim=-1)
+            out = av_func(
+                attn, value, kernel_size, dilation, additional_values=extra_value
+            )
+            return out
+
+        attn_na = qk_func(query, key, kernel_size, dilation)
+        attn_extra = qk_cross(query, extra_key)
+        n_na_weights, n_extra_weights = attn_na.shape[-1], attn_extra.shape[-1]
+        attn = torch.cat([attn_na, attn_extra], dim=-1)
+        attn = attn.softmax(dim=-1)
+        attn_na, attn_extra = attn.split([n_na_weights, n_extra_weights], dim=-1)
+        attn_na = attn_na.contiguous()
+        attn_extra = attn_extra.contiguous()
+        out_na = av_func(attn_na, value, kernel_size, dilation)
+        out_extra = av_cross(attn_extra, extra_value)
+        out_na += out_extra
+        return out_na
+
+    with torch.no_grad():
+        for _ in range(warmup_steps):
+            run_ops(query, key, value, extra_key, extra_value)
+
+        with torch_profile(
+            activities=[ProfilerActivity.CUDA], record_shapes=True
+        ) as prof:
+            with record_function("model_inference"):
+                run_ops(query, key, value, extra_key, extra_value)
 
     return prof

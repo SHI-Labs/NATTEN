@@ -57,6 +57,10 @@ struct RelPosBiasGradient2D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
       int kernel_size,
       int dilation) {
     launch(
@@ -67,7 +71,11 @@ struct RelPosBiasGradient2D {
         heads,
         kernel_size,
         dilation,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3);
   }
 
   void launch(
@@ -78,14 +86,14 @@ struct RelPosBiasGradient2D {
       const int heads,
       const int kernel_size,
       const int dilation,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t d_attn_stride_0,
+      const int64_t d_attn_stride_1,
+      const int64_t d_attn_stride_2,
+      const int64_t d_attn_stride_3) {
     const int neighborhood_size = kernel_size / 2;
     const int d_bias_stride_1 = (2 * kernel_size - 1);
     const int d_bias_stride_0 = (2 * kernel_size - 1) * d_bias_stride_1;
-    const int d_attn_stride_3 = kernel_size * kernel_size;
-    const int d_attn_stride_2 = width * d_attn_stride_3;
-    const int d_attn_stride_1 = height * d_attn_stride_2;
-    const int d_attn_stride_0 = heads * d_attn_stride_1;
     at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
       for (int h = start; h < end; h++) {
         for (int i = 0; i < height; i++) {
@@ -97,13 +105,13 @@ struct RelPosBiasGradient2D {
             for (int ki = 0; ki < kernel_size; ki++) {
               for (int kj = 0; kj < kernel_size; kj++) {
                 scalar_t d_bias_update = scalar_t(0);
-                int attnOffset = h * d_attn_stride_1 + i * d_attn_stride_2 +
+                int64_t attnOffset = h * d_attn_stride_1 + i * d_attn_stride_2 +
                     j * d_attn_stride_3 + ki * kernel_size + kj;
                 for (int b = 0; b < batch_size; ++b) {
                   d_bias_update += d_attn[attnOffset];
                   attnOffset += d_attn_stride_0;
                 }
-                const int index = h * d_bias_stride_0 +
+                const int64_t index = h * d_bias_stride_0 +
                     (pi + ki) * d_bias_stride_1 + (pj + kj);
                 d_bias[index] += d_bias_update;
               }

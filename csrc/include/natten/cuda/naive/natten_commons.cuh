@@ -26,8 +26,10 @@
 
 #pragma once
 
-#include <ATen/ATen.h>
-#include <ATen/cuda/CUDAContext.h>
+#ifndef __CUDA_ARCH__ 
+#include <iostream>
+#endif
+
 #include <cuda.h>
 #include <cuda_bf16.h>
 #include <cuda_fp16.h>

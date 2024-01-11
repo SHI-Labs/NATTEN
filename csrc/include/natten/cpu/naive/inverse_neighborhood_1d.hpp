@@ -59,6 +59,9 @@ struct InverseNeighborhood1D {
       int heads,
       int length,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
       int kernel_size,
       int dilation) {
     launch(
@@ -70,7 +73,10 @@ struct InverseNeighborhood1D {
         kernel_size,
         dilation,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2);
   }
 
   void launch( // K-grad / V-grad
@@ -82,11 +88,11 @@ struct InverseNeighborhood1D {
       const int kernel_size,
       const int dilation,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t weights_stride_0,
+      const int64_t weights_stride_1,
+      const int64_t weights_stride_2) {
     const int neighborhood_size = kernel_size / 2;
-    const int weights_stride_2 = kernel_size;
-    const int weights_stride_1 = length * weights_stride_2;
-    const int weights_stride_0 = heads * weights_stride_1;
     const int values_stride_2 = dim;
     const int values_stride_1 = length * values_stride_2;
     const int values_stride_0 = heads * values_stride_1;
@@ -99,20 +105,20 @@ struct InverseNeighborhood1D {
             const int ei = get_backward_window_end(
                 i, length, kernel_size, neighborhood_size, dilation);
             for (int d = 0; d < dim; d++) {
-              const int weightsOffset =
+              const int64_t weightsOffset =
                   b * weights_stride_0 + h * weights_stride_1;
-              const int valuesOffset =
+              const int64_t valuesOffset =
                   b * values_stride_0 + h * values_stride_1 + d;
               scalar_t output_update = scalar_t(0);
               for (int xi = ni; xi < ei; xi += dilation) {
                 const int oni = get_window_start(
                     xi, length, kernel_size, neighborhood_size, dilation);
-                const int valuesIndex = valuesOffset + xi * values_stride_2;
-                const int weightsIndex = weightsOffset + xi * weights_stride_2 +
+                const int64_t valuesIndex = valuesOffset + xi * values_stride_2;
+                const int64_t weightsIndex = weightsOffset + xi * weights_stride_2 +
                     int((i - oni) / dilation);
                 output_update += values[valuesIndex] * weights[weightsIndex];
               }
-              const int linearIndex = b * values_stride_0 +
+              const int64_t linearIndex = b * values_stride_0 +
                   h * values_stride_1 + i * values_stride_2 + d;
               output[linearIndex] = output_update;
             }

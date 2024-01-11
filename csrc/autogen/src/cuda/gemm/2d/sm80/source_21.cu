@@ -1,7 +1,8 @@
 #include <cuda_runtime.h>
+#include <iostream>
 #include <natten/dtypes.cuh>
-#include <natten/gemm_argpack.cuh>
 #include <natten/config.h>
+#include <natten/gemm_argpack.cuh>
 #include <natten/cuda/gemm/na2d.cuh>
 namespace natten { 
 namespace cuda { 
@@ -16,9 +17,14 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks31_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<128, 128, 32, 64, 64, 32, 16, 8, 16, 3, 11, 2, 15>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, bfloat16>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 4, 4>;
@@ -26,7 +32,7 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks31_align4(
   using Kernel = NeighborhoodNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks31_align2(
@@ -38,9 +44,14 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks31_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<128, 128, 32, 64, 64, 32, 16, 8, 16, 3, 11, 2, 15>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, bfloat16>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 2, 2>;
@@ -48,7 +59,7 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks31_align2(
   using Kernel = NeighborhoodNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align8(
@@ -60,9 +71,14 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align8(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<128, 128, 32, 64, 64, 32, 16, 8, 16, 3, 11, 2, 16>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, bfloat16>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 8, 8>;
@@ -70,7 +86,7 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align8(
   using Kernel = NeighborhoodNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align4(
@@ -82,9 +98,14 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align4(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<128, 128, 32, 64, 64, 32, 16, 8, 16, 3, 11, 2, 16>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, bfloat16>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 4, 4>;
@@ -92,7 +113,7 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align4(
   using Kernel = NeighborhoodNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align2(
@@ -104,9 +125,14 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align2(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<128, 128, 32, 64, 64, 32, 16, 8, 16, 3, 11, 2, 16>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, bfloat16>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 2, 2>;
@@ -114,7 +140,7 @@ void na2d_nn_cuda_gemm_bfloat16_128x128x32_64x64x32_16x8x16_3_sm80_ks33_align2(
   using Kernel = NeighborhoodNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, value_ptr, output_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks3_align1(
@@ -126,9 +152,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks3_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 1>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -136,7 +167,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks3_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks5_align1(
@@ -148,9 +179,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks5_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 2>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -158,7 +194,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks5_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks7_align1(
@@ -170,9 +206,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks7_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 3>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -180,7 +221,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks7_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks9_align1(
@@ -192,9 +233,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks9_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 4>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -202,7 +248,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks9_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks11_align1(
@@ -214,9 +260,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks11_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 5>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -224,7 +275,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks11_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks13_align1(
@@ -236,9 +287,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks13_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 6>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -246,7 +302,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks13_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks15_align1(
@@ -258,9 +314,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks15_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 7>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -268,7 +329,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks15_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks17_align1(
@@ -280,9 +341,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks17_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 8>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -290,7 +356,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks17_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks19_align1(
@@ -302,9 +368,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks19_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 9>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -312,7 +383,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks19_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks21_align1(
@@ -324,9 +395,14 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks21_align1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation,
-  float scale) {
+  float scale,
+  cudaStream_t stream) {
   using GConfig = natten::gemm::detail::GemmConfig2D<64, 64, 16, 32, 32, 16, 8, 8, 4, 3, 8, 4, 10>;
   using ArchConfig = natten::gemm::detail::ArchArgs<80, double>;
   using AConfig = natten::gemm::detail::AlignmentConfig<1, 1, 1>;
@@ -334,7 +410,7 @@ void na2d_in_cuda_gemm_double_64x64x16_32x32x16_8x8x4_3_sm80_ks21_align1(
   using Kernel = InverseNeighborhood2D<GConfig, AConfig, DConfig, ArchConfig>;
   Kernel kernel;
   kernel(
-attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, kernel_size, dilation, scale);
+attn_ptr, d_output_ptr, d_value_ptr, batch_size, heads, height, width, dim, attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3, kernel_size, dilation, scale, stream);
 }
 
 } 

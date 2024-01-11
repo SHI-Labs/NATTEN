@@ -41,6 +41,10 @@ void na2d_qk_forward(
     int height,
     int width,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
+    int64_t attn_stride_3,
     int kernel_size,
     int dilation) {
   if (bias_ptr == nullptr) {
@@ -54,6 +58,10 @@ void na2d_qk_forward(
         height,
         width,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
         kernel_size,
         dilation);
   } else {
@@ -68,6 +76,10 @@ void na2d_qk_forward(
         height,
         width,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
         kernel_size,
         dilation);
   }
@@ -86,6 +98,10 @@ void na2d_qk_backward(
     int height,
     int width,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
+    int64_t attn_stride_3,
     int kernel_size,
     int dilation) {
   DISPATCH_DTYPE_na2d_nn_cpu_naive(
@@ -98,6 +114,10 @@ void na2d_qk_backward(
       height,
       width,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
+      attn_stride_3,
       kernel_size,
       dilation);
   DISPATCH_DTYPE_na2d_in_cpu_naive(
@@ -110,6 +130,10 @@ void na2d_qk_backward(
       height,
       width,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
+      attn_stride_3,
       kernel_size,
       dilation);
   if (d_bias_ptr != nullptr) {
@@ -122,6 +146,10 @@ void na2d_qk_backward(
         height,
         width,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
         kernel_size,
         dilation);
   }
@@ -137,6 +165,10 @@ void na2d_av_forward(
     int height,
     int width,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
+    int64_t attn_stride_3,
     int kernel_size,
     int dilation) {
   DISPATCH_DTYPE_na2d_nn_cpu_naive(
@@ -149,6 +181,10 @@ void na2d_av_forward(
       height,
       width,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
+      attn_stride_3,
       kernel_size,
       dilation);
 }
@@ -165,6 +201,10 @@ void na2d_av_backward(
     int height,
     int width,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
+    int64_t attn_stride_3,
     int kernel_size,
     int dilation) {
   DISPATCH_DTYPE_na2d_pn_cpu_naive(
@@ -177,6 +217,10 @@ void na2d_av_backward(
       height,
       width,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
+      attn_stride_3,
       kernel_size,
       dilation);
   DISPATCH_DTYPE_na2d_in_cpu_naive(
@@ -189,6 +233,10 @@ void na2d_av_backward(
       height,
       width,
       dim,
+      attn_stride_0,
+      attn_stride_1,
+      attn_stride_2,
+      attn_stride_3,
       kernel_size,
       dilation);
 }

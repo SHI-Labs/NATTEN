@@ -59,6 +59,10 @@ void na2d_qk_forward(
       height,
       width,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
+      attn.stride(3),
       kernel_size,
       dilation);
 }
@@ -92,6 +96,10 @@ void na2d_qk_backward(
       height,
       width,
       dim,
+      d_attn.stride(0),
+      d_attn.stride(1),
+      d_attn.stride(2),
+      d_attn.stride(3),
       kernel_size,
       dilation);
 }
@@ -118,6 +126,10 @@ void na2d_av_forward(
       height,
       width,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
+      attn.stride(3),
       kernel_size,
       dilation);
 }
@@ -148,6 +160,10 @@ void na2d_av_backward(
       height,
       width,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
+      attn.stride(3),
       kernel_size,
       dilation);
 }

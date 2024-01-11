@@ -31,14 +31,12 @@
 */
 
 #pragma once
-// TODO: remaining dependency to torch: getCurrentCUDAStream
-#include <torch/extension.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "natten/cuda/naive/natten_commons.cuh"
-#include "natten/cuda/naive/natten_tiled_macros.cuh"
+#include <natten/cuda/naive/natten_commons.cuh>
+#include <natten/cuda/naive/natten_tiled_macros.cuh>
 
 namespace natten {
 namespace cuda {
@@ -58,9 +56,9 @@ struct PointwiseNeighborhood2DBase {
     const int dilation_in;
     const int dim;
     const int batch_size;
-    const int attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3;
-    const int query_stride_0, query_stride_1, query_stride_2, query_stride_3;
-    const int bias_stride_0, bias_stride_1;
+    const int64_t attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3;
+    const int64_t query_stride_0, query_stride_1, query_stride_2, query_stride_3;
+    const int64_t bias_stride_0, bias_stride_1;
 
     __device__ __host__ Params() {}
 
@@ -74,7 +72,11 @@ struct PointwiseNeighborhood2DBase {
         const int kernel_size_in,
         const int dilation_in,
         const int dim,
-        const int batch_size)
+        const int batch_size,
+        const int64_t attn_stride_0,
+        const int64_t attn_stride_1,
+        const int64_t attn_stride_2,
+        const int64_t attn_stride_3)
         : query(query),
           key(key),
           attn(attn),
@@ -87,11 +89,10 @@ struct PointwiseNeighborhood2DBase {
           batch_size(batch_size),
           bias_stride_1(0),
           bias_stride_0(0),
-          attn_stride_3(kernel_size_in * kernel_size_in),
-          attn_stride_2(kernel_size_in * kernel_size_in * width),
-          attn_stride_1(kernel_size_in * kernel_size_in * width * height),
-          attn_stride_0(
-              kernel_size_in * kernel_size_in * width * height * heads),
+          attn_stride_3(attn_stride_3),
+          attn_stride_2(attn_stride_2),
+          attn_stride_1(attn_stride_1),
+          attn_stride_0(attn_stride_0),
           query_stride_3(dim),
           query_stride_2(dim * width),
           query_stride_1(dim * width * height),
@@ -109,7 +110,11 @@ struct PointwiseNeighborhood2DBase {
         const int kernel_size_in,
         const int dilation_in,
         const int dim,
-        const int batch_size)
+        const int batch_size,
+        const int64_t attn_stride_0,
+        const int64_t attn_stride_1,
+        const int64_t attn_stride_2,
+        const int64_t attn_stride_3)
         : query(query),
           key(key),
           bias(bias),
@@ -123,11 +128,10 @@ struct PointwiseNeighborhood2DBase {
           batch_size(batch_size),
           bias_stride_1(2 * kernel_size_in - 1),
           bias_stride_0((2 * kernel_size_in - 1) * (2 * kernel_size_in - 1)),
-          attn_stride_3(kernel_size_in * kernel_size_in),
-          attn_stride_2(kernel_size_in * kernel_size_in * width),
-          attn_stride_1(kernel_size_in * kernel_size_in * width * height),
-          attn_stride_0(
-              kernel_size_in * kernel_size_in * width * height * heads),
+          attn_stride_3(attn_stride_3),
+          attn_stride_2(attn_stride_2),
+          attn_stride_1(attn_stride_1),
+          attn_stride_0(attn_stride_0),
           query_stride_3(dim),
           query_stride_2(dim * width),
           query_stride_1(dim * width * height),
