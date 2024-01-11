@@ -24,23 +24,25 @@
 from typing import Any
 
 import torch
+
+from natten.functional import na2d_av, na2d_qk
 from torch.profiler import profile as torch_profile
 
-from .utils import extract_na_ops, profile_with_torch
+from .utils import extract_na_ops, profile_extra_tokens_with_torch, profile_with_torch
 
 try:
     from natten.libnatten import (  # type: ignore
-        na2d_av_backward as na2d_av_d,
-        na2d_av_forward as na2d_av,
-        na2d_qk_backward as na2d_qk_d,
-        na2d_qk_forward as na2d_qk,
+        na2d_av_backward as na2d_av_backward_op,
+        na2d_av_forward as na2d_av_op,
+        na2d_qk_backward as na2d_qk_backward_op,
+        na2d_qk_forward as na2d_qk_op,
     )
 except:
     from natten._C import (  # type: ignore
-        natten2dav_backward as na2d_av_d,
-        natten2dav_forward as na2d_av,
-        natten2dqkrpb_backward as na2d_qk_d,
-        natten2dqkrpb_forward as na2d_qk,
+        natten2dav_backward as na2d_av_backward_op,
+        natten2dav_forward as na2d_av_op,
+        natten2dqkrpb_backward as na2d_qk_backward_op,
+        natten2dqkrpb_forward as na2d_qk_op,
     )
 
 
@@ -119,10 +121,10 @@ def _profile_na2d_with_torch(
         rpb, d_rpb = None, None
 
     return profile_with_torch(
-        na2d_qk,
-        na2d_av,
-        na2d_qk_d,
-        na2d_av_d,
+        na2d_qk_op,
+        na2d_av_op,
+        na2d_qk_backward_op,
+        na2d_av_backward_op,
         q,
         k,
         v,
@@ -168,7 +170,7 @@ def profile_na2d(
     exp_num_ops = 7 if enable_bias else 6
     captured_num_ops = 0 if not out else len(out)
     i = 0
-    while captured_num_ops != exp_num_ops and i < 50:
+    while captured_num_ops < exp_num_ops and i < 50:
         profile_result = _profile_na2d_with_torch(
             batch_size=batch_size,
             heads=heads,
@@ -180,6 +182,101 @@ def profile_na2d(
             dtype=dtype,
             warmup_steps=warmup_steps,
             enable_bias=enable_bias,
+        )
+        out = extract_na_ops(profile_result, _NA_2D_C_KEYWORDS)
+        captured_num_ops = 0 if not out else len(out)
+        i += 1
+    assert out, f"Profiler keeps failing after {i} iters, exiting..."
+    return out
+
+
+def _profile_na2d_extra_tokens_with_torch(
+    batch_size: int,
+    heads: int,
+    height: int,
+    width: int,
+    dim: int,
+    kernel_size: int,
+    dilation: int,
+    num_extra_tokens: int,
+    dtype: Any,
+    warmup_steps: int = 10,
+    disable_concat_fusion: bool = False,
+) -> torch_profile:
+    q = torch.randn(
+        (batch_size, heads, height, width, dim), requires_grad=False, dtype=dtype
+    ).cuda(0)
+    k = torch.randn(
+        (batch_size, heads, height, width, dim), requires_grad=False, dtype=dtype
+    ).cuda(0)
+    v = torch.randn(
+        (batch_size, heads, height, width, dim), requires_grad=False, dtype=dtype
+    ).cuda(0)
+    k_ext = torch.randn(
+        (batch_size, heads, num_extra_tokens, dim), requires_grad=False, dtype=dtype
+    ).cuda(0)
+    v_ext = torch.randn(
+        (batch_size, heads, num_extra_tokens, dim), requires_grad=False, dtype=dtype
+    ).cuda(0)
+
+    return profile_extra_tokens_with_torch(
+        na2d_qk,
+        na2d_av,
+        q,
+        k,
+        v,
+        k_ext,
+        v_ext,
+        kernel_size,
+        dilation,
+        warmup_steps=warmup_steps,
+        disable_concat_fusion=disable_concat_fusion,
+    )
+
+
+def profile_na2d_extra_tokens(
+    batch_size: int,
+    heads: int,
+    height: int,
+    width: int,
+    dim: int,
+    kernel_size: int,
+    dilation: int,
+    num_extra_tokens: int,
+    dtype: Any,
+    warmup_steps: int = 10,
+    disable_concat_fusion: bool = False,
+):
+    profile_result = _profile_na2d_extra_tokens_with_torch(
+        batch_size=batch_size,
+        heads=heads,
+        height=height,
+        width=width,
+        dim=dim,
+        kernel_size=kernel_size,
+        dilation=dilation,
+        num_extra_tokens=num_extra_tokens,
+        dtype=dtype,
+        warmup_steps=warmup_steps,
+        disable_concat_fusion=disable_concat_fusion,
+    )
+    out = extract_na_ops(profile_result, _NA_2D_C_KEYWORDS)
+    exp_num_ops = 3
+    captured_num_ops = 0 if not out else len(out)
+    i = 0
+    while captured_num_ops < exp_num_ops and i < 50:
+        profile_result = _profile_na2d_extra_tokens_with_torch(
+            batch_size=batch_size,
+            heads=heads,
+            height=height,
+            width=width,
+            dim=dim,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            num_extra_tokens=num_extra_tokens,
+            dtype=dtype,
+            warmup_steps=warmup_steps,
+            disable_concat_fusion=disable_concat_fusion,
         )
         out = extract_na_ops(profile_result, _NA_2D_C_KEYWORDS)
         captured_num_ops = 0 if not out else len(out)
