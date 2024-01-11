@@ -15,6 +15,9 @@ void na1d_pn_cpu_naive_double(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -26,6 +29,9 @@ void na1d_pn_cpu_naive_float(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -38,6 +44,10 @@ void na2d_pn_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -50,6 +60,10 @@ void na2d_pn_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -63,6 +77,11 @@ void na3d_pn_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -78,6 +97,11 @@ void na3d_pn_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -92,6 +116,9 @@ void na1d_pn_bias_cpu_naive_double(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -104,6 +131,9 @@ void na1d_pn_bias_cpu_naive_float(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -117,6 +147,10 @@ void na2d_pn_bias_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -130,6 +164,10 @@ void na2d_pn_bias_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -144,6 +182,11 @@ void na3d_pn_bias_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -160,6 +203,11 @@ void na3d_pn_bias_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -173,6 +221,9 @@ void na1d_nn_cpu_naive_double(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -184,6 +235,9 @@ void na1d_nn_cpu_naive_float(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -196,6 +250,10 @@ void na2d_nn_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -208,6 +266,10 @@ void na2d_nn_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -221,6 +283,11 @@ void na3d_nn_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -236,6 +303,11 @@ void na3d_nn_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -249,6 +321,9 @@ void na1d_in_cpu_naive_double(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -260,6 +335,9 @@ void na1d_in_cpu_naive_float(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -272,6 +350,10 @@ void na2d_in_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -284,6 +366,10 @@ void na2d_in_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -297,6 +383,11 @@ void na3d_in_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -312,6 +403,11 @@ void na3d_in_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -324,6 +420,9 @@ void na1d_rpbgrad_cpu_naive_double(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -334,6 +433,9 @@ void na1d_rpbgrad_cpu_naive_float(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
@@ -345,6 +447,10 @@ void na2d_rpbgrad_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -356,6 +462,10 @@ void na2d_rpbgrad_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
@@ -368,6 +478,11 @@ void na3d_rpbgrad_cpu_naive_double(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -382,6 +497,11 @@ void na3d_rpbgrad_cpu_naive_float(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,

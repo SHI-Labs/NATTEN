@@ -28,9 +28,9 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/extension.h>
 
-#include "natten/cuda/na2d.cuh"
-#include "natten/dtypes.cuh"
-#include "natten/pytorch/cuda/helpers.cuh"
+#include <natten/cuda/na2d.cuh>
+#include <natten/dtypes.cuh>
+#include <natten/pytorch/cuda/helpers.cuh>
 
 namespace natten {
 namespace pytorch {
@@ -50,6 +50,7 @@ void na2d_qk_forward(
     const int dilation) {
   DISPATCH_DTYPE(
       query.device().index(),
+      at::cuda::getCurrentCUDAStream(),
       query.scalar_type(),
       natten::cuda::na2d_qk_forward,
       static_cast<void*>(query.data_ptr()),
@@ -61,6 +62,10 @@ void na2d_qk_forward(
       height,
       width,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
+      attn.stride(3),
       kernel_size,
       dilation);
 }
@@ -81,6 +86,7 @@ void na2d_qk_backward(
     const int dilation) {
   DISPATCH_DTYPE(
       d_attn.device().index(),
+      at::cuda::getCurrentCUDAStream(),
       d_attn.scalar_type(),
       natten::cuda::na2d_qk_backward,
       static_cast<void*>(query.data_ptr()),
@@ -95,6 +101,10 @@ void na2d_qk_backward(
       height,
       width,
       dim,
+      d_attn.stride(0),
+      d_attn.stride(1),
+      d_attn.stride(2),
+      d_attn.stride(3),
       kernel_size,
       dilation);
 }
@@ -112,6 +122,7 @@ void na2d_av_forward(
     const int dilation) {
   DISPATCH_DTYPE(
       attn.device().index(),
+      at::cuda::getCurrentCUDAStream(),
       attn.scalar_type(),
       natten::cuda::na2d_av_forward,
       static_cast<void*>(attn.data_ptr()),
@@ -122,6 +133,10 @@ void na2d_av_forward(
       height,
       width,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
+      attn.stride(3),
       kernel_size,
       dilation);
 }
@@ -141,6 +156,7 @@ void na2d_av_backward(
     const int dilation) {
   DISPATCH_DTYPE(
       d_out.device().index(),
+      at::cuda::getCurrentCUDAStream(),
       d_out.scalar_type(),
       natten::cuda::na2d_av_backward,
       static_cast<void*>(attn.data_ptr()),
@@ -153,6 +169,10 @@ void na2d_av_backward(
       height,
       width,
       dim,
+      attn.stride(0),
+      attn.stride(1),
+      attn.stride(2),
+      attn.stride(3),
       kernel_size,
       dilation);
 }

@@ -9,6 +9,7 @@ namespace cuda {
 namespace naive { 
 void na1d_pn_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -16,11 +17,15 @@ void na1d_pn_cuda_naive_double_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -28,11 +33,15 @@ void na1d_pn_cuda_naive_double_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -40,11 +49,15 @@ void na1d_pn_cuda_naive_double_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -52,11 +65,15 @@ void na1d_pn_cuda_naive_double_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -64,11 +81,15 @@ void na1d_pn_cuda_naive_double_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -76,11 +97,15 @@ void na1d_pn_cuda_naive_double_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -88,11 +113,15 @@ void na1d_pn_cuda_naive_double_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -100,11 +129,15 @@ void na1d_pn_cuda_naive_double_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -112,11 +145,15 @@ void na1d_pn_cuda_naive_double_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -124,11 +161,15 @@ void na1d_pn_cuda_naive_double_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -136,11 +177,15 @@ void na1d_pn_cuda_naive_double_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -148,11 +193,15 @@ void na1d_pn_cuda_naive_double_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -160,11 +209,15 @@ void na1d_pn_cuda_naive_double_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -172,11 +225,15 @@ void na1d_pn_cuda_naive_double_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -184,11 +241,15 @@ void na1d_pn_cuda_naive_float_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -196,11 +257,15 @@ void na1d_pn_cuda_naive_float_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -208,11 +273,15 @@ void na1d_pn_cuda_naive_float_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -220,11 +289,15 @@ void na1d_pn_cuda_naive_float_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -232,11 +305,15 @@ void na1d_pn_cuda_naive_float_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -244,11 +321,15 @@ void na1d_pn_cuda_naive_float_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -256,11 +337,15 @@ void na1d_pn_cuda_naive_float_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -268,11 +353,15 @@ void na1d_pn_cuda_naive_float_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -280,11 +369,15 @@ void na1d_pn_cuda_naive_float_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -292,11 +385,15 @@ void na1d_pn_cuda_naive_float_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -304,11 +401,15 @@ void na1d_pn_cuda_naive_float_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -316,11 +417,15 @@ void na1d_pn_cuda_naive_float_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -328,11 +433,15 @@ void na1d_pn_cuda_naive_float_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -340,11 +449,15 @@ void na1d_pn_cuda_naive_float_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -352,11 +465,15 @@ void na1d_pn_cuda_naive_half_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -364,11 +481,15 @@ void na1d_pn_cuda_naive_half_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -376,11 +497,15 @@ void na1d_pn_cuda_naive_half_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -388,11 +513,15 @@ void na1d_pn_cuda_naive_half_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -400,11 +529,15 @@ void na1d_pn_cuda_naive_half_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -412,11 +545,15 @@ void na1d_pn_cuda_naive_half_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -424,11 +561,15 @@ void na1d_pn_cuda_naive_half_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -436,11 +577,15 @@ void na1d_pn_cuda_naive_half_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -448,11 +593,15 @@ void na1d_pn_cuda_naive_half_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -460,11 +609,15 @@ void na1d_pn_cuda_naive_half_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -472,11 +625,15 @@ void na1d_pn_cuda_naive_half_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -484,11 +641,15 @@ void na1d_pn_cuda_naive_half_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -496,11 +657,15 @@ void na1d_pn_cuda_naive_half_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -508,11 +673,15 @@ void na1d_pn_cuda_naive_half_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -520,11 +689,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -532,11 +705,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -544,11 +721,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -556,11 +737,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -568,11 +753,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -580,11 +769,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -592,11 +785,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -604,11 +801,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -616,11 +817,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -628,11 +833,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -640,11 +849,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -652,11 +865,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -664,11 +881,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -676,11 +897,15 @@ void na1d_pn_cuda_naive_bfloat16_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -689,11 +914,16 @@ void na2d_pn_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -702,11 +932,16 @@ void na2d_pn_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -715,11 +950,16 @@ void na2d_pn_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -728,11 +968,16 @@ void na2d_pn_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -741,11 +986,16 @@ void na2d_pn_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -754,11 +1004,16 @@ void na2d_pn_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -767,11 +1022,16 @@ void na2d_pn_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -780,11 +1040,16 @@ void na2d_pn_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -793,11 +1058,16 @@ void na2d_pn_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -806,11 +1076,16 @@ void na2d_pn_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -819,11 +1094,16 @@ void na2d_pn_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -832,11 +1112,16 @@ void na2d_pn_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -845,11 +1130,16 @@ void na2d_pn_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -858,11 +1148,16 @@ void na2d_pn_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -871,11 +1166,16 @@ void na2d_pn_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -884,11 +1184,16 @@ void na2d_pn_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -897,11 +1202,16 @@ void na2d_pn_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -910,11 +1220,16 @@ void na2d_pn_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -923,11 +1238,16 @@ void na2d_pn_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -936,11 +1256,16 @@ void na2d_pn_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -949,11 +1274,16 @@ void na2d_pn_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -962,11 +1292,16 @@ void na2d_pn_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -975,11 +1310,16 @@ void na2d_pn_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -988,11 +1328,16 @@ void na2d_pn_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1001,11 +1346,16 @@ void na2d_pn_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1014,11 +1364,16 @@ void na2d_pn_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1027,11 +1382,16 @@ void na2d_pn_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1040,11 +1400,16 @@ void na2d_pn_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1053,11 +1418,16 @@ void na2d_pn_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1066,11 +1436,16 @@ void na2d_pn_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1079,11 +1454,16 @@ void na2d_pn_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1092,11 +1472,16 @@ void na2d_pn_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1105,11 +1490,16 @@ void na2d_pn_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1118,11 +1508,16 @@ void na2d_pn_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1131,11 +1526,16 @@ void na2d_pn_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1144,11 +1544,16 @@ void na2d_pn_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1157,11 +1562,16 @@ void na2d_pn_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1170,11 +1580,16 @@ void na2d_pn_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1183,11 +1598,16 @@ void na2d_pn_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1196,11 +1616,16 @@ void na2d_pn_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1209,11 +1634,16 @@ void na2d_pn_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1222,11 +1652,16 @@ void na2d_pn_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1235,11 +1670,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1248,11 +1688,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1261,11 +1706,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1274,11 +1724,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1287,11 +1742,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1300,11 +1760,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1313,11 +1778,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1326,11 +1796,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1339,11 +1814,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1352,11 +1832,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1365,11 +1850,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1378,11 +1868,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1391,11 +1886,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1404,11 +1904,16 @@ void na2d_pn_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na3d_pn_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1418,6 +1923,11 @@ void na3d_pn_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1425,6 +1935,7 @@ void na3d_pn_cuda_naive_double_ks_any_di_any(
 
 void na3d_pn_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1434,6 +1945,11 @@ void na3d_pn_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1441,6 +1957,7 @@ void na3d_pn_cuda_naive_double_ks_any_di_1(
 
 void na3d_pn_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1450,6 +1967,11 @@ void na3d_pn_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1457,6 +1979,7 @@ void na3d_pn_cuda_naive_double_ks_3_di_any(
 
 void na3d_pn_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1466,6 +1989,11 @@ void na3d_pn_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1473,6 +2001,7 @@ void na3d_pn_cuda_naive_double_ks_3_di_1(
 
 void na3d_pn_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1482,6 +2011,11 @@ void na3d_pn_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1489,6 +2023,7 @@ void na3d_pn_cuda_naive_double_ks_5_di_any(
 
 void na3d_pn_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1498,6 +2033,11 @@ void na3d_pn_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1505,6 +2045,7 @@ void na3d_pn_cuda_naive_double_ks_5_di_1(
 
 void na3d_pn_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1514,6 +2055,11 @@ void na3d_pn_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1521,6 +2067,7 @@ void na3d_pn_cuda_naive_double_ks_7_di_any(
 
 void na3d_pn_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1530,6 +2077,11 @@ void na3d_pn_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1537,6 +2089,7 @@ void na3d_pn_cuda_naive_double_ks_7_di_1(
 
 void na3d_pn_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1546,6 +2099,11 @@ void na3d_pn_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1553,6 +2111,7 @@ void na3d_pn_cuda_naive_double_ks_9_di_any(
 
 void na3d_pn_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1562,6 +2121,11 @@ void na3d_pn_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1569,6 +2133,7 @@ void na3d_pn_cuda_naive_double_ks_9_di_1(
 
 void na3d_pn_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1578,6 +2143,11 @@ void na3d_pn_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1585,6 +2155,7 @@ void na3d_pn_cuda_naive_double_ks_11_di_any(
 
 void na3d_pn_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1594,6 +2165,11 @@ void na3d_pn_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1601,6 +2177,7 @@ void na3d_pn_cuda_naive_double_ks_11_di_1(
 
 void na3d_pn_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1610,6 +2187,11 @@ void na3d_pn_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1617,6 +2199,7 @@ void na3d_pn_cuda_naive_double_ks_13_di_any(
 
 void na3d_pn_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1626,6 +2209,11 @@ void na3d_pn_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1633,6 +2221,7 @@ void na3d_pn_cuda_naive_double_ks_13_di_1(
 
 void na3d_pn_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1642,6 +2231,11 @@ void na3d_pn_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1649,6 +2243,7 @@ void na3d_pn_cuda_naive_float_ks_any_di_any(
 
 void na3d_pn_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1658,6 +2253,11 @@ void na3d_pn_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1665,6 +2265,7 @@ void na3d_pn_cuda_naive_float_ks_any_di_1(
 
 void na3d_pn_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1674,6 +2275,11 @@ void na3d_pn_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1681,6 +2287,7 @@ void na3d_pn_cuda_naive_float_ks_3_di_any(
 
 void na3d_pn_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1690,6 +2297,11 @@ void na3d_pn_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1697,6 +2309,7 @@ void na3d_pn_cuda_naive_float_ks_3_di_1(
 
 void na3d_pn_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1706,6 +2319,11 @@ void na3d_pn_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1713,6 +2331,7 @@ void na3d_pn_cuda_naive_float_ks_5_di_any(
 
 void na3d_pn_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1722,6 +2341,11 @@ void na3d_pn_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1729,6 +2353,7 @@ void na3d_pn_cuda_naive_float_ks_5_di_1(
 
 void na3d_pn_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1738,6 +2363,11 @@ void na3d_pn_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1745,6 +2375,7 @@ void na3d_pn_cuda_naive_float_ks_7_di_any(
 
 void na3d_pn_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1754,6 +2385,11 @@ void na3d_pn_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1761,6 +2397,7 @@ void na3d_pn_cuda_naive_float_ks_7_di_1(
 
 void na3d_pn_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1770,6 +2407,11 @@ void na3d_pn_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1777,6 +2419,7 @@ void na3d_pn_cuda_naive_float_ks_9_di_any(
 
 void na3d_pn_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1786,6 +2429,11 @@ void na3d_pn_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1793,6 +2441,7 @@ void na3d_pn_cuda_naive_float_ks_9_di_1(
 
 void na3d_pn_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1802,6 +2451,11 @@ void na3d_pn_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1809,6 +2463,7 @@ void na3d_pn_cuda_naive_float_ks_11_di_any(
 
 void na3d_pn_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1818,6 +2473,11 @@ void na3d_pn_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1825,6 +2485,7 @@ void na3d_pn_cuda_naive_float_ks_11_di_1(
 
 void na3d_pn_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1834,6 +2495,11 @@ void na3d_pn_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1841,6 +2507,7 @@ void na3d_pn_cuda_naive_float_ks_13_di_any(
 
 void na3d_pn_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1850,6 +2517,11 @@ void na3d_pn_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1857,6 +2529,7 @@ void na3d_pn_cuda_naive_float_ks_13_di_1(
 
 void na3d_pn_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1866,6 +2539,11 @@ void na3d_pn_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1873,6 +2551,7 @@ void na3d_pn_cuda_naive_half_ks_any_di_any(
 
 void na3d_pn_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1882,6 +2561,11 @@ void na3d_pn_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1889,6 +2573,7 @@ void na3d_pn_cuda_naive_half_ks_any_di_1(
 
 void na3d_pn_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1898,6 +2583,11 @@ void na3d_pn_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1905,6 +2595,7 @@ void na3d_pn_cuda_naive_half_ks_3_di_any(
 
 void na3d_pn_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1914,6 +2605,11 @@ void na3d_pn_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1921,6 +2617,7 @@ void na3d_pn_cuda_naive_half_ks_3_di_1(
 
 void na3d_pn_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1930,6 +2627,11 @@ void na3d_pn_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1937,6 +2639,7 @@ void na3d_pn_cuda_naive_half_ks_5_di_any(
 
 void na3d_pn_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1946,6 +2649,11 @@ void na3d_pn_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1953,6 +2661,7 @@ void na3d_pn_cuda_naive_half_ks_5_di_1(
 
 void na3d_pn_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1962,6 +2671,11 @@ void na3d_pn_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1969,6 +2683,7 @@ void na3d_pn_cuda_naive_half_ks_7_di_any(
 
 void na3d_pn_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1978,6 +2693,11 @@ void na3d_pn_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -1985,6 +2705,7 @@ void na3d_pn_cuda_naive_half_ks_7_di_1(
 
 void na3d_pn_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -1994,6 +2715,11 @@ void na3d_pn_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2001,6 +2727,7 @@ void na3d_pn_cuda_naive_half_ks_9_di_any(
 
 void na3d_pn_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2010,6 +2737,11 @@ void na3d_pn_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2017,6 +2749,7 @@ void na3d_pn_cuda_naive_half_ks_9_di_1(
 
 void na3d_pn_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2026,6 +2759,11 @@ void na3d_pn_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2033,6 +2771,7 @@ void na3d_pn_cuda_naive_half_ks_11_di_any(
 
 void na3d_pn_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2042,6 +2781,11 @@ void na3d_pn_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2049,6 +2793,7 @@ void na3d_pn_cuda_naive_half_ks_11_di_1(
 
 void na3d_pn_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2058,6 +2803,11 @@ void na3d_pn_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2065,6 +2815,7 @@ void na3d_pn_cuda_naive_half_ks_13_di_any(
 
 void na3d_pn_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2074,6 +2825,11 @@ void na3d_pn_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2081,6 +2837,7 @@ void na3d_pn_cuda_naive_half_ks_13_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2090,6 +2847,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2097,6 +2859,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_any_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2106,6 +2869,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2113,6 +2881,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_any_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2122,6 +2891,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2129,6 +2903,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_3_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2138,6 +2913,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2145,6 +2925,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_3_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2154,6 +2935,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2161,6 +2947,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_5_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2170,6 +2957,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2177,6 +2969,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_5_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2186,6 +2979,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2193,6 +2991,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_7_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2202,6 +3001,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2209,6 +3013,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_7_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2218,6 +3023,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2225,6 +3035,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_9_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2234,6 +3045,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2241,6 +3057,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_9_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2250,6 +3067,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2257,6 +3079,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_11_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2266,6 +3089,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2273,6 +3101,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_11_di_1(
 
 void na3d_pn_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2282,6 +3111,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2289,6 +3123,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_13_di_any(
 
 void na3d_pn_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * attn_ptr,
@@ -2298,6 +3133,11 @@ void na3d_pn_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -2305,6 +3145,7 @@ void na3d_pn_cuda_naive_bfloat16_ks_13_di_1(
 
 void na1d_pn_bias_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2313,11 +3154,15 @@ void na1d_pn_bias_cuda_naive_double_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2326,11 +3171,15 @@ void na1d_pn_bias_cuda_naive_double_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2339,11 +3188,15 @@ void na1d_pn_bias_cuda_naive_double_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2352,11 +3205,15 @@ void na1d_pn_bias_cuda_naive_double_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2365,11 +3222,15 @@ void na1d_pn_bias_cuda_naive_double_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2378,11 +3239,15 @@ void na1d_pn_bias_cuda_naive_double_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2391,11 +3256,15 @@ void na1d_pn_bias_cuda_naive_double_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2404,11 +3273,15 @@ void na1d_pn_bias_cuda_naive_double_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2417,11 +3290,15 @@ void na1d_pn_bias_cuda_naive_double_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2430,11 +3307,15 @@ void na1d_pn_bias_cuda_naive_double_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2443,11 +3324,15 @@ void na1d_pn_bias_cuda_naive_double_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2456,11 +3341,15 @@ void na1d_pn_bias_cuda_naive_double_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2469,11 +3358,15 @@ void na1d_pn_bias_cuda_naive_double_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2482,11 +3375,15 @@ void na1d_pn_bias_cuda_naive_double_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2495,11 +3392,15 @@ void na1d_pn_bias_cuda_naive_float_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2508,11 +3409,15 @@ void na1d_pn_bias_cuda_naive_float_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2521,11 +3426,15 @@ void na1d_pn_bias_cuda_naive_float_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2534,11 +3443,15 @@ void na1d_pn_bias_cuda_naive_float_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2547,11 +3460,15 @@ void na1d_pn_bias_cuda_naive_float_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2560,11 +3477,15 @@ void na1d_pn_bias_cuda_naive_float_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2573,11 +3494,15 @@ void na1d_pn_bias_cuda_naive_float_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2586,11 +3511,15 @@ void na1d_pn_bias_cuda_naive_float_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2599,11 +3528,15 @@ void na1d_pn_bias_cuda_naive_float_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2612,11 +3545,15 @@ void na1d_pn_bias_cuda_naive_float_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2625,11 +3562,15 @@ void na1d_pn_bias_cuda_naive_float_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2638,11 +3579,15 @@ void na1d_pn_bias_cuda_naive_float_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2651,11 +3596,15 @@ void na1d_pn_bias_cuda_naive_float_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2664,11 +3613,15 @@ void na1d_pn_bias_cuda_naive_float_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2677,11 +3630,15 @@ void na1d_pn_bias_cuda_naive_half_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2690,11 +3647,15 @@ void na1d_pn_bias_cuda_naive_half_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2703,11 +3664,15 @@ void na1d_pn_bias_cuda_naive_half_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2716,11 +3681,15 @@ void na1d_pn_bias_cuda_naive_half_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2729,11 +3698,15 @@ void na1d_pn_bias_cuda_naive_half_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2742,11 +3715,15 @@ void na1d_pn_bias_cuda_naive_half_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2755,11 +3732,15 @@ void na1d_pn_bias_cuda_naive_half_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2768,11 +3749,15 @@ void na1d_pn_bias_cuda_naive_half_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2781,11 +3766,15 @@ void na1d_pn_bias_cuda_naive_half_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2794,11 +3783,15 @@ void na1d_pn_bias_cuda_naive_half_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2807,11 +3800,15 @@ void na1d_pn_bias_cuda_naive_half_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2820,11 +3817,15 @@ void na1d_pn_bias_cuda_naive_half_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2833,11 +3834,15 @@ void na1d_pn_bias_cuda_naive_half_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2846,11 +3851,15 @@ void na1d_pn_bias_cuda_naive_half_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2859,11 +3868,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2872,11 +3885,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2885,11 +3902,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2898,11 +3919,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2911,11 +3936,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2924,11 +3953,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2937,11 +3970,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2950,11 +3987,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2963,11 +4004,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2976,11 +4021,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -2989,11 +4038,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3002,11 +4055,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3015,11 +4072,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3028,11 +4089,15 @@ void na1d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3042,11 +4107,16 @@ void na2d_pn_bias_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3056,11 +4126,16 @@ void na2d_pn_bias_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3070,11 +4145,16 @@ void na2d_pn_bias_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3084,11 +4164,16 @@ void na2d_pn_bias_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3098,11 +4183,16 @@ void na2d_pn_bias_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3112,11 +4202,16 @@ void na2d_pn_bias_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3126,11 +4221,16 @@ void na2d_pn_bias_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3140,11 +4240,16 @@ void na2d_pn_bias_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3154,11 +4259,16 @@ void na2d_pn_bias_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3168,11 +4278,16 @@ void na2d_pn_bias_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3182,11 +4297,16 @@ void na2d_pn_bias_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3196,11 +4316,16 @@ void na2d_pn_bias_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3210,11 +4335,16 @@ void na2d_pn_bias_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3224,11 +4354,16 @@ void na2d_pn_bias_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3238,11 +4373,16 @@ void na2d_pn_bias_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3252,11 +4392,16 @@ void na2d_pn_bias_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3266,11 +4411,16 @@ void na2d_pn_bias_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3280,11 +4430,16 @@ void na2d_pn_bias_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3294,11 +4449,16 @@ void na2d_pn_bias_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3308,11 +4468,16 @@ void na2d_pn_bias_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3322,11 +4487,16 @@ void na2d_pn_bias_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3336,11 +4506,16 @@ void na2d_pn_bias_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3350,11 +4525,16 @@ void na2d_pn_bias_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3364,11 +4544,16 @@ void na2d_pn_bias_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3378,11 +4563,16 @@ void na2d_pn_bias_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3392,11 +4582,16 @@ void na2d_pn_bias_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3406,11 +4601,16 @@ void na2d_pn_bias_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3420,11 +4620,16 @@ void na2d_pn_bias_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3434,11 +4639,16 @@ void na2d_pn_bias_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3448,11 +4658,16 @@ void na2d_pn_bias_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3462,11 +4677,16 @@ void na2d_pn_bias_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3476,11 +4696,16 @@ void na2d_pn_bias_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3490,11 +4715,16 @@ void na2d_pn_bias_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3504,11 +4734,16 @@ void na2d_pn_bias_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3518,11 +4753,16 @@ void na2d_pn_bias_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3532,11 +4772,16 @@ void na2d_pn_bias_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3546,11 +4791,16 @@ void na2d_pn_bias_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3560,11 +4810,16 @@ void na2d_pn_bias_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3574,11 +4829,16 @@ void na2d_pn_bias_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3588,11 +4848,16 @@ void na2d_pn_bias_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3602,11 +4867,16 @@ void na2d_pn_bias_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3616,11 +4886,16 @@ void na2d_pn_bias_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3630,11 +4905,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3644,11 +4924,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3658,11 +4943,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3672,11 +4962,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3686,11 +4981,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3700,11 +5000,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3714,11 +5019,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3728,11 +5038,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3742,11 +5057,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3756,11 +5076,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3770,11 +5095,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3784,11 +5114,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3798,11 +5133,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3812,11 +5152,16 @@ void na2d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na3d_pn_bias_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3827,6 +5172,11 @@ void na3d_pn_bias_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3834,6 +5184,7 @@ void na3d_pn_bias_cuda_naive_double_ks_any_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3844,6 +5195,11 @@ void na3d_pn_bias_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3851,6 +5207,7 @@ void na3d_pn_bias_cuda_naive_double_ks_any_di_1(
 
 void na3d_pn_bias_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3861,6 +5218,11 @@ void na3d_pn_bias_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3868,6 +5230,7 @@ void na3d_pn_bias_cuda_naive_double_ks_3_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3878,6 +5241,11 @@ void na3d_pn_bias_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3885,6 +5253,7 @@ void na3d_pn_bias_cuda_naive_double_ks_3_di_1(
 
 void na3d_pn_bias_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3895,6 +5264,11 @@ void na3d_pn_bias_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3902,6 +5276,7 @@ void na3d_pn_bias_cuda_naive_double_ks_5_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3912,6 +5287,11 @@ void na3d_pn_bias_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3919,6 +5299,7 @@ void na3d_pn_bias_cuda_naive_double_ks_5_di_1(
 
 void na3d_pn_bias_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3929,6 +5310,11 @@ void na3d_pn_bias_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3936,6 +5322,7 @@ void na3d_pn_bias_cuda_naive_double_ks_7_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3946,6 +5333,11 @@ void na3d_pn_bias_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3953,6 +5345,7 @@ void na3d_pn_bias_cuda_naive_double_ks_7_di_1(
 
 void na3d_pn_bias_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3963,6 +5356,11 @@ void na3d_pn_bias_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3970,6 +5368,7 @@ void na3d_pn_bias_cuda_naive_double_ks_9_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3980,6 +5379,11 @@ void na3d_pn_bias_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -3987,6 +5391,7 @@ void na3d_pn_bias_cuda_naive_double_ks_9_di_1(
 
 void na3d_pn_bias_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -3997,6 +5402,11 @@ void na3d_pn_bias_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4004,6 +5414,7 @@ void na3d_pn_bias_cuda_naive_double_ks_11_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4014,6 +5425,11 @@ void na3d_pn_bias_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4021,6 +5437,7 @@ void na3d_pn_bias_cuda_naive_double_ks_11_di_1(
 
 void na3d_pn_bias_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4031,6 +5448,11 @@ void na3d_pn_bias_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4038,6 +5460,7 @@ void na3d_pn_bias_cuda_naive_double_ks_13_di_any(
 
 void na3d_pn_bias_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4048,6 +5471,11 @@ void na3d_pn_bias_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4055,6 +5483,7 @@ void na3d_pn_bias_cuda_naive_double_ks_13_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4065,6 +5494,11 @@ void na3d_pn_bias_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4072,6 +5506,7 @@ void na3d_pn_bias_cuda_naive_float_ks_any_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4082,6 +5517,11 @@ void na3d_pn_bias_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4089,6 +5529,7 @@ void na3d_pn_bias_cuda_naive_float_ks_any_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4099,6 +5540,11 @@ void na3d_pn_bias_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4106,6 +5552,7 @@ void na3d_pn_bias_cuda_naive_float_ks_3_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4116,6 +5563,11 @@ void na3d_pn_bias_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4123,6 +5575,7 @@ void na3d_pn_bias_cuda_naive_float_ks_3_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4133,6 +5586,11 @@ void na3d_pn_bias_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4140,6 +5598,7 @@ void na3d_pn_bias_cuda_naive_float_ks_5_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4150,6 +5609,11 @@ void na3d_pn_bias_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4157,6 +5621,7 @@ void na3d_pn_bias_cuda_naive_float_ks_5_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4167,6 +5632,11 @@ void na3d_pn_bias_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4174,6 +5644,7 @@ void na3d_pn_bias_cuda_naive_float_ks_7_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4184,6 +5655,11 @@ void na3d_pn_bias_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4191,6 +5667,7 @@ void na3d_pn_bias_cuda_naive_float_ks_7_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4201,6 +5678,11 @@ void na3d_pn_bias_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4208,6 +5690,7 @@ void na3d_pn_bias_cuda_naive_float_ks_9_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4218,6 +5701,11 @@ void na3d_pn_bias_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4225,6 +5713,7 @@ void na3d_pn_bias_cuda_naive_float_ks_9_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4235,6 +5724,11 @@ void na3d_pn_bias_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4242,6 +5736,7 @@ void na3d_pn_bias_cuda_naive_float_ks_11_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4252,6 +5747,11 @@ void na3d_pn_bias_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4259,6 +5759,7 @@ void na3d_pn_bias_cuda_naive_float_ks_11_di_1(
 
 void na3d_pn_bias_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4269,6 +5770,11 @@ void na3d_pn_bias_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4276,6 +5782,7 @@ void na3d_pn_bias_cuda_naive_float_ks_13_di_any(
 
 void na3d_pn_bias_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4286,6 +5793,11 @@ void na3d_pn_bias_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4293,6 +5805,7 @@ void na3d_pn_bias_cuda_naive_float_ks_13_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4303,6 +5816,11 @@ void na3d_pn_bias_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4310,6 +5828,7 @@ void na3d_pn_bias_cuda_naive_half_ks_any_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4320,6 +5839,11 @@ void na3d_pn_bias_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4327,6 +5851,7 @@ void na3d_pn_bias_cuda_naive_half_ks_any_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4337,6 +5862,11 @@ void na3d_pn_bias_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4344,6 +5874,7 @@ void na3d_pn_bias_cuda_naive_half_ks_3_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4354,6 +5885,11 @@ void na3d_pn_bias_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4361,6 +5897,7 @@ void na3d_pn_bias_cuda_naive_half_ks_3_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4371,6 +5908,11 @@ void na3d_pn_bias_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4378,6 +5920,7 @@ void na3d_pn_bias_cuda_naive_half_ks_5_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4388,6 +5931,11 @@ void na3d_pn_bias_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4395,6 +5943,7 @@ void na3d_pn_bias_cuda_naive_half_ks_5_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4405,6 +5954,11 @@ void na3d_pn_bias_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4412,6 +5966,7 @@ void na3d_pn_bias_cuda_naive_half_ks_7_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4422,6 +5977,11 @@ void na3d_pn_bias_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4429,6 +5989,7 @@ void na3d_pn_bias_cuda_naive_half_ks_7_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4439,6 +6000,11 @@ void na3d_pn_bias_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4446,6 +6012,7 @@ void na3d_pn_bias_cuda_naive_half_ks_9_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4456,6 +6023,11 @@ void na3d_pn_bias_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4463,6 +6035,7 @@ void na3d_pn_bias_cuda_naive_half_ks_9_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4473,6 +6046,11 @@ void na3d_pn_bias_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4480,6 +6058,7 @@ void na3d_pn_bias_cuda_naive_half_ks_11_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4490,6 +6069,11 @@ void na3d_pn_bias_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4497,6 +6081,7 @@ void na3d_pn_bias_cuda_naive_half_ks_11_di_1(
 
 void na3d_pn_bias_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4507,6 +6092,11 @@ void na3d_pn_bias_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4514,6 +6104,7 @@ void na3d_pn_bias_cuda_naive_half_ks_13_di_any(
 
 void na3d_pn_bias_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4524,6 +6115,11 @@ void na3d_pn_bias_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4531,6 +6127,7 @@ void na3d_pn_bias_cuda_naive_half_ks_13_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4541,6 +6138,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4548,6 +6150,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_any_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4558,6 +6161,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4565,6 +6173,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_any_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4575,6 +6184,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4582,6 +6196,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_3_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4592,6 +6207,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4599,6 +6219,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_3_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4609,6 +6230,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4616,6 +6242,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_5_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4626,6 +6253,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4633,6 +6265,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_5_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4643,6 +6276,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4650,6 +6288,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_7_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4660,6 +6299,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4667,6 +6311,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_7_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4677,6 +6322,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4684,6 +6334,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_9_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4694,6 +6345,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4701,6 +6357,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_9_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4711,6 +6368,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4718,6 +6380,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_11_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4728,6 +6391,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4735,6 +6403,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_11_di_1(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4745,6 +6414,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4752,6 +6426,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_13_di_any(
 
 void na3d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * query_ptr,
   void * key_ptr,
   void * bias_ptr,
@@ -4762,6 +6437,11 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -4769,6 +6449,7 @@ void na3d_pn_bias_cuda_naive_bfloat16_ks_13_di_1(
 
 void na1d_nn_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4776,11 +6457,15 @@ void na1d_nn_cuda_naive_double_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4788,11 +6473,15 @@ void na1d_nn_cuda_naive_double_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4800,11 +6489,15 @@ void na1d_nn_cuda_naive_double_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4812,11 +6505,15 @@ void na1d_nn_cuda_naive_double_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4824,11 +6521,15 @@ void na1d_nn_cuda_naive_double_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4836,11 +6537,15 @@ void na1d_nn_cuda_naive_double_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4848,11 +6553,15 @@ void na1d_nn_cuda_naive_double_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4860,11 +6569,15 @@ void na1d_nn_cuda_naive_double_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4872,11 +6585,15 @@ void na1d_nn_cuda_naive_double_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4884,11 +6601,15 @@ void na1d_nn_cuda_naive_double_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4896,11 +6617,15 @@ void na1d_nn_cuda_naive_double_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4908,11 +6633,15 @@ void na1d_nn_cuda_naive_double_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4920,11 +6649,15 @@ void na1d_nn_cuda_naive_double_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4932,11 +6665,15 @@ void na1d_nn_cuda_naive_double_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4944,11 +6681,15 @@ void na1d_nn_cuda_naive_float_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4956,11 +6697,15 @@ void na1d_nn_cuda_naive_float_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4968,11 +6713,15 @@ void na1d_nn_cuda_naive_float_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4980,11 +6729,15 @@ void na1d_nn_cuda_naive_float_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -4992,11 +6745,15 @@ void na1d_nn_cuda_naive_float_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5004,11 +6761,15 @@ void na1d_nn_cuda_naive_float_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5016,11 +6777,15 @@ void na1d_nn_cuda_naive_float_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5028,11 +6793,15 @@ void na1d_nn_cuda_naive_float_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5040,11 +6809,15 @@ void na1d_nn_cuda_naive_float_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5052,11 +6825,15 @@ void na1d_nn_cuda_naive_float_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5064,11 +6841,15 @@ void na1d_nn_cuda_naive_float_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5076,11 +6857,15 @@ void na1d_nn_cuda_naive_float_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5088,11 +6873,15 @@ void na1d_nn_cuda_naive_float_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5100,11 +6889,15 @@ void na1d_nn_cuda_naive_float_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5112,11 +6905,15 @@ void na1d_nn_cuda_naive_half_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5124,11 +6921,15 @@ void na1d_nn_cuda_naive_half_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5136,11 +6937,15 @@ void na1d_nn_cuda_naive_half_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5148,11 +6953,15 @@ void na1d_nn_cuda_naive_half_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5160,11 +6969,15 @@ void na1d_nn_cuda_naive_half_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5172,11 +6985,15 @@ void na1d_nn_cuda_naive_half_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5184,11 +7001,15 @@ void na1d_nn_cuda_naive_half_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5196,11 +7017,15 @@ void na1d_nn_cuda_naive_half_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5208,11 +7033,15 @@ void na1d_nn_cuda_naive_half_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5220,11 +7049,15 @@ void na1d_nn_cuda_naive_half_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5232,11 +7065,15 @@ void na1d_nn_cuda_naive_half_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5244,11 +7081,15 @@ void na1d_nn_cuda_naive_half_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5256,11 +7097,15 @@ void na1d_nn_cuda_naive_half_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5268,11 +7113,15 @@ void na1d_nn_cuda_naive_half_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5280,11 +7129,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5292,11 +7145,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5304,11 +7161,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5316,11 +7177,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5328,11 +7193,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5340,11 +7209,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5352,11 +7225,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5364,11 +7241,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5376,11 +7257,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5388,11 +7273,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5400,11 +7289,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5412,11 +7305,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5424,11 +7321,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_nn_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5436,11 +7337,15 @@ void na1d_nn_cuda_naive_bfloat16_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5449,11 +7354,16 @@ void na2d_nn_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5462,11 +7372,16 @@ void na2d_nn_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5475,11 +7390,16 @@ void na2d_nn_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5488,11 +7408,16 @@ void na2d_nn_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5501,11 +7426,16 @@ void na2d_nn_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5514,11 +7444,16 @@ void na2d_nn_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5527,11 +7462,16 @@ void na2d_nn_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5540,11 +7480,16 @@ void na2d_nn_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5553,11 +7498,16 @@ void na2d_nn_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5566,11 +7516,16 @@ void na2d_nn_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5579,11 +7534,16 @@ void na2d_nn_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5592,11 +7552,16 @@ void na2d_nn_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5605,11 +7570,16 @@ void na2d_nn_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5618,11 +7588,16 @@ void na2d_nn_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5631,11 +7606,16 @@ void na2d_nn_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5644,11 +7624,16 @@ void na2d_nn_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5657,11 +7642,16 @@ void na2d_nn_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5670,11 +7660,16 @@ void na2d_nn_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5683,11 +7678,16 @@ void na2d_nn_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5696,11 +7696,16 @@ void na2d_nn_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5709,11 +7714,16 @@ void na2d_nn_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5722,11 +7732,16 @@ void na2d_nn_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5735,11 +7750,16 @@ void na2d_nn_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5748,11 +7768,16 @@ void na2d_nn_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5761,11 +7786,16 @@ void na2d_nn_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5774,11 +7804,16 @@ void na2d_nn_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5787,11 +7822,16 @@ void na2d_nn_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5800,11 +7840,16 @@ void na2d_nn_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5813,11 +7858,16 @@ void na2d_nn_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5826,11 +7876,16 @@ void na2d_nn_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5839,11 +7894,16 @@ void na2d_nn_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5852,11 +7912,16 @@ void na2d_nn_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5865,11 +7930,16 @@ void na2d_nn_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5878,11 +7948,16 @@ void na2d_nn_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5891,11 +7966,16 @@ void na2d_nn_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5904,11 +7984,16 @@ void na2d_nn_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5917,11 +8002,16 @@ void na2d_nn_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5930,11 +8020,16 @@ void na2d_nn_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5943,11 +8038,16 @@ void na2d_nn_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5956,11 +8056,16 @@ void na2d_nn_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5969,11 +8074,16 @@ void na2d_nn_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5982,11 +8092,16 @@ void na2d_nn_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -5995,11 +8110,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6008,11 +8128,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6021,11 +8146,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6034,11 +8164,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6047,11 +8182,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6060,11 +8200,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6073,11 +8218,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6086,11 +8236,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6099,11 +8254,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6112,11 +8272,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6125,11 +8290,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6138,11 +8308,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6151,11 +8326,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_nn_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6164,11 +8344,16 @@ void na2d_nn_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na3d_nn_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6178,6 +8363,11 @@ void na3d_nn_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6185,6 +8375,7 @@ void na3d_nn_cuda_naive_double_ks_any_di_any(
 
 void na3d_nn_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6194,6 +8385,11 @@ void na3d_nn_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6201,6 +8397,7 @@ void na3d_nn_cuda_naive_double_ks_any_di_1(
 
 void na3d_nn_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6210,6 +8407,11 @@ void na3d_nn_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6217,6 +8419,7 @@ void na3d_nn_cuda_naive_double_ks_3_di_any(
 
 void na3d_nn_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6226,6 +8429,11 @@ void na3d_nn_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6233,6 +8441,7 @@ void na3d_nn_cuda_naive_double_ks_3_di_1(
 
 void na3d_nn_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6242,6 +8451,11 @@ void na3d_nn_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6249,6 +8463,7 @@ void na3d_nn_cuda_naive_double_ks_5_di_any(
 
 void na3d_nn_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6258,6 +8473,11 @@ void na3d_nn_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6265,6 +8485,7 @@ void na3d_nn_cuda_naive_double_ks_5_di_1(
 
 void na3d_nn_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6274,6 +8495,11 @@ void na3d_nn_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6281,6 +8507,7 @@ void na3d_nn_cuda_naive_double_ks_7_di_any(
 
 void na3d_nn_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6290,6 +8517,11 @@ void na3d_nn_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6297,6 +8529,7 @@ void na3d_nn_cuda_naive_double_ks_7_di_1(
 
 void na3d_nn_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6306,6 +8539,11 @@ void na3d_nn_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6313,6 +8551,7 @@ void na3d_nn_cuda_naive_double_ks_9_di_any(
 
 void na3d_nn_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6322,6 +8561,11 @@ void na3d_nn_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6329,6 +8573,7 @@ void na3d_nn_cuda_naive_double_ks_9_di_1(
 
 void na3d_nn_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6338,6 +8583,11 @@ void na3d_nn_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6345,6 +8595,7 @@ void na3d_nn_cuda_naive_double_ks_11_di_any(
 
 void na3d_nn_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6354,6 +8605,11 @@ void na3d_nn_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6361,6 +8617,7 @@ void na3d_nn_cuda_naive_double_ks_11_di_1(
 
 void na3d_nn_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6370,6 +8627,11 @@ void na3d_nn_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6377,6 +8639,7 @@ void na3d_nn_cuda_naive_double_ks_13_di_any(
 
 void na3d_nn_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6386,6 +8649,11 @@ void na3d_nn_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6393,6 +8661,7 @@ void na3d_nn_cuda_naive_double_ks_13_di_1(
 
 void na3d_nn_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6402,6 +8671,11 @@ void na3d_nn_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6409,6 +8683,7 @@ void na3d_nn_cuda_naive_float_ks_any_di_any(
 
 void na3d_nn_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6418,6 +8693,11 @@ void na3d_nn_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6425,6 +8705,7 @@ void na3d_nn_cuda_naive_float_ks_any_di_1(
 
 void na3d_nn_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6434,6 +8715,11 @@ void na3d_nn_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6441,6 +8727,7 @@ void na3d_nn_cuda_naive_float_ks_3_di_any(
 
 void na3d_nn_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6450,6 +8737,11 @@ void na3d_nn_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6457,6 +8749,7 @@ void na3d_nn_cuda_naive_float_ks_3_di_1(
 
 void na3d_nn_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6466,6 +8759,11 @@ void na3d_nn_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6473,6 +8771,7 @@ void na3d_nn_cuda_naive_float_ks_5_di_any(
 
 void na3d_nn_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6482,6 +8781,11 @@ void na3d_nn_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6489,6 +8793,7 @@ void na3d_nn_cuda_naive_float_ks_5_di_1(
 
 void na3d_nn_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6498,6 +8803,11 @@ void na3d_nn_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6505,6 +8815,7 @@ void na3d_nn_cuda_naive_float_ks_7_di_any(
 
 void na3d_nn_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6514,6 +8825,11 @@ void na3d_nn_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6521,6 +8837,7 @@ void na3d_nn_cuda_naive_float_ks_7_di_1(
 
 void na3d_nn_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6530,6 +8847,11 @@ void na3d_nn_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6537,6 +8859,7 @@ void na3d_nn_cuda_naive_float_ks_9_di_any(
 
 void na3d_nn_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6546,6 +8869,11 @@ void na3d_nn_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6553,6 +8881,7 @@ void na3d_nn_cuda_naive_float_ks_9_di_1(
 
 void na3d_nn_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6562,6 +8891,11 @@ void na3d_nn_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6569,6 +8903,7 @@ void na3d_nn_cuda_naive_float_ks_11_di_any(
 
 void na3d_nn_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6578,6 +8913,11 @@ void na3d_nn_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6585,6 +8925,7 @@ void na3d_nn_cuda_naive_float_ks_11_di_1(
 
 void na3d_nn_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6594,6 +8935,11 @@ void na3d_nn_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6601,6 +8947,7 @@ void na3d_nn_cuda_naive_float_ks_13_di_any(
 
 void na3d_nn_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6610,6 +8957,11 @@ void na3d_nn_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6617,6 +8969,7 @@ void na3d_nn_cuda_naive_float_ks_13_di_1(
 
 void na3d_nn_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6626,6 +8979,11 @@ void na3d_nn_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6633,6 +8991,7 @@ void na3d_nn_cuda_naive_half_ks_any_di_any(
 
 void na3d_nn_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6642,6 +9001,11 @@ void na3d_nn_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6649,6 +9013,7 @@ void na3d_nn_cuda_naive_half_ks_any_di_1(
 
 void na3d_nn_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6658,6 +9023,11 @@ void na3d_nn_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6665,6 +9035,7 @@ void na3d_nn_cuda_naive_half_ks_3_di_any(
 
 void na3d_nn_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6674,6 +9045,11 @@ void na3d_nn_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6681,6 +9057,7 @@ void na3d_nn_cuda_naive_half_ks_3_di_1(
 
 void na3d_nn_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6690,6 +9067,11 @@ void na3d_nn_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6697,6 +9079,7 @@ void na3d_nn_cuda_naive_half_ks_5_di_any(
 
 void na3d_nn_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6706,6 +9089,11 @@ void na3d_nn_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6713,6 +9101,7 @@ void na3d_nn_cuda_naive_half_ks_5_di_1(
 
 void na3d_nn_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6722,6 +9111,11 @@ void na3d_nn_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6729,6 +9123,7 @@ void na3d_nn_cuda_naive_half_ks_7_di_any(
 
 void na3d_nn_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6738,6 +9133,11 @@ void na3d_nn_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6745,6 +9145,7 @@ void na3d_nn_cuda_naive_half_ks_7_di_1(
 
 void na3d_nn_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6754,6 +9155,11 @@ void na3d_nn_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6761,6 +9167,7 @@ void na3d_nn_cuda_naive_half_ks_9_di_any(
 
 void na3d_nn_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6770,6 +9177,11 @@ void na3d_nn_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6777,6 +9189,7 @@ void na3d_nn_cuda_naive_half_ks_9_di_1(
 
 void na3d_nn_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6786,6 +9199,11 @@ void na3d_nn_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6793,6 +9211,7 @@ void na3d_nn_cuda_naive_half_ks_11_di_any(
 
 void na3d_nn_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6802,6 +9221,11 @@ void na3d_nn_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6809,6 +9233,7 @@ void na3d_nn_cuda_naive_half_ks_11_di_1(
 
 void na3d_nn_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6818,6 +9243,11 @@ void na3d_nn_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6825,6 +9255,7 @@ void na3d_nn_cuda_naive_half_ks_13_di_any(
 
 void na3d_nn_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6834,6 +9265,11 @@ void na3d_nn_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6841,6 +9277,7 @@ void na3d_nn_cuda_naive_half_ks_13_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6850,6 +9287,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6857,6 +9299,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_any_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6866,6 +9309,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6873,6 +9321,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_any_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6882,6 +9331,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6889,6 +9343,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_3_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6898,6 +9353,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6905,6 +9365,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_3_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6914,6 +9375,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6921,6 +9387,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_5_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6930,6 +9397,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6937,6 +9409,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_5_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6946,6 +9419,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6953,6 +9431,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_7_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6962,6 +9441,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6969,6 +9453,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_7_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6978,6 +9463,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -6985,6 +9475,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_9_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -6994,6 +9485,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -7001,6 +9497,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_9_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -7010,6 +9507,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -7017,6 +9519,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_11_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -7026,6 +9529,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -7033,6 +9541,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_11_di_1(
 
 void na3d_nn_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -7042,6 +9551,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -7049,6 +9563,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_13_di_any(
 
 void na3d_nn_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * value_ptr,
   void * output_ptr,
@@ -7058,6 +9573,11 @@ void na3d_nn_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -7065,6 +9585,7 @@ void na3d_nn_cuda_naive_bfloat16_ks_13_di_1(
 
 void na1d_in_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7072,11 +9593,15 @@ void na1d_in_cuda_naive_double_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7084,11 +9609,15 @@ void na1d_in_cuda_naive_double_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7096,11 +9625,15 @@ void na1d_in_cuda_naive_double_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7108,11 +9641,15 @@ void na1d_in_cuda_naive_double_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7120,11 +9657,15 @@ void na1d_in_cuda_naive_double_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7132,11 +9673,15 @@ void na1d_in_cuda_naive_double_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7144,11 +9689,15 @@ void na1d_in_cuda_naive_double_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7156,11 +9705,15 @@ void na1d_in_cuda_naive_double_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7168,11 +9721,15 @@ void na1d_in_cuda_naive_double_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7180,11 +9737,15 @@ void na1d_in_cuda_naive_double_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7192,11 +9753,15 @@ void na1d_in_cuda_naive_double_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7204,11 +9769,15 @@ void na1d_in_cuda_naive_double_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7216,11 +9785,15 @@ void na1d_in_cuda_naive_double_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7228,11 +9801,15 @@ void na1d_in_cuda_naive_double_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7240,11 +9817,15 @@ void na1d_in_cuda_naive_float_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7252,11 +9833,15 @@ void na1d_in_cuda_naive_float_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7264,11 +9849,15 @@ void na1d_in_cuda_naive_float_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7276,11 +9865,15 @@ void na1d_in_cuda_naive_float_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7288,11 +9881,15 @@ void na1d_in_cuda_naive_float_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7300,11 +9897,15 @@ void na1d_in_cuda_naive_float_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7312,11 +9913,15 @@ void na1d_in_cuda_naive_float_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7324,11 +9929,15 @@ void na1d_in_cuda_naive_float_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7336,11 +9945,15 @@ void na1d_in_cuda_naive_float_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7348,11 +9961,15 @@ void na1d_in_cuda_naive_float_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7360,11 +9977,15 @@ void na1d_in_cuda_naive_float_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7372,11 +9993,15 @@ void na1d_in_cuda_naive_float_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7384,11 +10009,15 @@ void na1d_in_cuda_naive_float_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7396,11 +10025,15 @@ void na1d_in_cuda_naive_float_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7408,11 +10041,15 @@ void na1d_in_cuda_naive_half_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7420,11 +10057,15 @@ void na1d_in_cuda_naive_half_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7432,11 +10073,15 @@ void na1d_in_cuda_naive_half_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7444,11 +10089,15 @@ void na1d_in_cuda_naive_half_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7456,11 +10105,15 @@ void na1d_in_cuda_naive_half_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7468,11 +10121,15 @@ void na1d_in_cuda_naive_half_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7480,11 +10137,15 @@ void na1d_in_cuda_naive_half_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7492,11 +10153,15 @@ void na1d_in_cuda_naive_half_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7504,11 +10169,15 @@ void na1d_in_cuda_naive_half_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7516,11 +10185,15 @@ void na1d_in_cuda_naive_half_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7528,11 +10201,15 @@ void na1d_in_cuda_naive_half_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7540,11 +10217,15 @@ void na1d_in_cuda_naive_half_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7552,11 +10233,15 @@ void na1d_in_cuda_naive_half_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7564,11 +10249,15 @@ void na1d_in_cuda_naive_half_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7576,11 +10265,15 @@ void na1d_in_cuda_naive_bfloat16_ks_any_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7588,11 +10281,15 @@ void na1d_in_cuda_naive_bfloat16_ks_any_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7600,11 +10297,15 @@ void na1d_in_cuda_naive_bfloat16_ks_3_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7612,11 +10313,15 @@ void na1d_in_cuda_naive_bfloat16_ks_3_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7624,11 +10329,15 @@ void na1d_in_cuda_naive_bfloat16_ks_5_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7636,11 +10345,15 @@ void na1d_in_cuda_naive_bfloat16_ks_5_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7648,11 +10361,15 @@ void na1d_in_cuda_naive_bfloat16_ks_7_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7660,11 +10377,15 @@ void na1d_in_cuda_naive_bfloat16_ks_7_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7672,11 +10393,15 @@ void na1d_in_cuda_naive_bfloat16_ks_9_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7684,11 +10409,15 @@ void na1d_in_cuda_naive_bfloat16_ks_9_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7696,11 +10425,15 @@ void na1d_in_cuda_naive_bfloat16_ks_11_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7708,11 +10441,15 @@ void na1d_in_cuda_naive_bfloat16_ks_11_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7720,11 +10457,15 @@ void na1d_in_cuda_naive_bfloat16_ks_13_di_any(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_in_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7732,11 +10473,15 @@ void na1d_in_cuda_naive_bfloat16_ks_13_di_1(
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7745,11 +10490,16 @@ void na2d_in_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7758,11 +10508,16 @@ void na2d_in_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7771,11 +10526,16 @@ void na2d_in_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7784,11 +10544,16 @@ void na2d_in_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7797,11 +10562,16 @@ void na2d_in_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7810,11 +10580,16 @@ void na2d_in_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7823,11 +10598,16 @@ void na2d_in_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7836,11 +10616,16 @@ void na2d_in_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7849,11 +10634,16 @@ void na2d_in_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7862,11 +10652,16 @@ void na2d_in_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7875,11 +10670,16 @@ void na2d_in_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7888,11 +10688,16 @@ void na2d_in_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7901,11 +10706,16 @@ void na2d_in_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7914,11 +10724,16 @@ void na2d_in_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7927,11 +10742,16 @@ void na2d_in_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7940,11 +10760,16 @@ void na2d_in_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7953,11 +10778,16 @@ void na2d_in_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7966,11 +10796,16 @@ void na2d_in_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7979,11 +10814,16 @@ void na2d_in_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -7992,11 +10832,16 @@ void na2d_in_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8005,11 +10850,16 @@ void na2d_in_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8018,11 +10868,16 @@ void na2d_in_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8031,11 +10886,16 @@ void na2d_in_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8044,11 +10904,16 @@ void na2d_in_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8057,11 +10922,16 @@ void na2d_in_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8070,11 +10940,16 @@ void na2d_in_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8083,11 +10958,16 @@ void na2d_in_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8096,11 +10976,16 @@ void na2d_in_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8109,11 +10994,16 @@ void na2d_in_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8122,11 +11012,16 @@ void na2d_in_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8135,11 +11030,16 @@ void na2d_in_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8148,11 +11048,16 @@ void na2d_in_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8161,11 +11066,16 @@ void na2d_in_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8174,11 +11084,16 @@ void na2d_in_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8187,11 +11102,16 @@ void na2d_in_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8200,11 +11120,16 @@ void na2d_in_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8213,11 +11138,16 @@ void na2d_in_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8226,11 +11156,16 @@ void na2d_in_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8239,11 +11174,16 @@ void na2d_in_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8252,11 +11192,16 @@ void na2d_in_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8265,11 +11210,16 @@ void na2d_in_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8278,11 +11228,16 @@ void na2d_in_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8291,11 +11246,16 @@ void na2d_in_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8304,11 +11264,16 @@ void na2d_in_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8317,11 +11282,16 @@ void na2d_in_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8330,11 +11300,16 @@ void na2d_in_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8343,11 +11318,16 @@ void na2d_in_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8356,11 +11336,16 @@ void na2d_in_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8369,11 +11354,16 @@ void na2d_in_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8382,11 +11372,16 @@ void na2d_in_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8395,11 +11390,16 @@ void na2d_in_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8408,11 +11408,16 @@ void na2d_in_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8421,11 +11426,16 @@ void na2d_in_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8434,11 +11444,16 @@ void na2d_in_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8447,11 +11462,16 @@ void na2d_in_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_in_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8460,11 +11480,16 @@ void na2d_in_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na3d_in_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8474,6 +11499,11 @@ void na3d_in_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8481,6 +11511,7 @@ void na3d_in_cuda_naive_double_ks_any_di_any(
 
 void na3d_in_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8490,6 +11521,11 @@ void na3d_in_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8497,6 +11533,7 @@ void na3d_in_cuda_naive_double_ks_any_di_1(
 
 void na3d_in_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8506,6 +11543,11 @@ void na3d_in_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8513,6 +11555,7 @@ void na3d_in_cuda_naive_double_ks_3_di_any(
 
 void na3d_in_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8522,6 +11565,11 @@ void na3d_in_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8529,6 +11577,7 @@ void na3d_in_cuda_naive_double_ks_3_di_1(
 
 void na3d_in_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8538,6 +11587,11 @@ void na3d_in_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8545,6 +11599,7 @@ void na3d_in_cuda_naive_double_ks_5_di_any(
 
 void na3d_in_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8554,6 +11609,11 @@ void na3d_in_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8561,6 +11621,7 @@ void na3d_in_cuda_naive_double_ks_5_di_1(
 
 void na3d_in_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8570,6 +11631,11 @@ void na3d_in_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8577,6 +11643,7 @@ void na3d_in_cuda_naive_double_ks_7_di_any(
 
 void na3d_in_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8586,6 +11653,11 @@ void na3d_in_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8593,6 +11665,7 @@ void na3d_in_cuda_naive_double_ks_7_di_1(
 
 void na3d_in_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8602,6 +11675,11 @@ void na3d_in_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8609,6 +11687,7 @@ void na3d_in_cuda_naive_double_ks_9_di_any(
 
 void na3d_in_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8618,6 +11697,11 @@ void na3d_in_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8625,6 +11709,7 @@ void na3d_in_cuda_naive_double_ks_9_di_1(
 
 void na3d_in_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8634,6 +11719,11 @@ void na3d_in_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8641,6 +11731,7 @@ void na3d_in_cuda_naive_double_ks_11_di_any(
 
 void na3d_in_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8650,6 +11741,11 @@ void na3d_in_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8657,6 +11753,7 @@ void na3d_in_cuda_naive_double_ks_11_di_1(
 
 void na3d_in_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8666,6 +11763,11 @@ void na3d_in_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8673,6 +11775,7 @@ void na3d_in_cuda_naive_double_ks_13_di_any(
 
 void na3d_in_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8682,6 +11785,11 @@ void na3d_in_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8689,6 +11797,7 @@ void na3d_in_cuda_naive_double_ks_13_di_1(
 
 void na3d_in_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8698,6 +11807,11 @@ void na3d_in_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8705,6 +11819,7 @@ void na3d_in_cuda_naive_float_ks_any_di_any(
 
 void na3d_in_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8714,6 +11829,11 @@ void na3d_in_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8721,6 +11841,7 @@ void na3d_in_cuda_naive_float_ks_any_di_1(
 
 void na3d_in_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8730,6 +11851,11 @@ void na3d_in_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8737,6 +11863,7 @@ void na3d_in_cuda_naive_float_ks_3_di_any(
 
 void na3d_in_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8746,6 +11873,11 @@ void na3d_in_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8753,6 +11885,7 @@ void na3d_in_cuda_naive_float_ks_3_di_1(
 
 void na3d_in_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8762,6 +11895,11 @@ void na3d_in_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8769,6 +11907,7 @@ void na3d_in_cuda_naive_float_ks_5_di_any(
 
 void na3d_in_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8778,6 +11917,11 @@ void na3d_in_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8785,6 +11929,7 @@ void na3d_in_cuda_naive_float_ks_5_di_1(
 
 void na3d_in_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8794,6 +11939,11 @@ void na3d_in_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8801,6 +11951,7 @@ void na3d_in_cuda_naive_float_ks_7_di_any(
 
 void na3d_in_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8810,6 +11961,11 @@ void na3d_in_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8817,6 +11973,7 @@ void na3d_in_cuda_naive_float_ks_7_di_1(
 
 void na3d_in_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8826,6 +11983,11 @@ void na3d_in_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8833,6 +11995,7 @@ void na3d_in_cuda_naive_float_ks_9_di_any(
 
 void na3d_in_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8842,6 +12005,11 @@ void na3d_in_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8849,6 +12017,7 @@ void na3d_in_cuda_naive_float_ks_9_di_1(
 
 void na3d_in_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8858,6 +12027,11 @@ void na3d_in_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8865,6 +12039,7 @@ void na3d_in_cuda_naive_float_ks_11_di_any(
 
 void na3d_in_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8874,6 +12049,11 @@ void na3d_in_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8881,6 +12061,7 @@ void na3d_in_cuda_naive_float_ks_11_di_1(
 
 void na3d_in_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8890,6 +12071,11 @@ void na3d_in_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8897,6 +12083,7 @@ void na3d_in_cuda_naive_float_ks_13_di_any(
 
 void na3d_in_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8906,6 +12093,11 @@ void na3d_in_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8913,6 +12105,7 @@ void na3d_in_cuda_naive_float_ks_13_di_1(
 
 void na3d_in_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8922,6 +12115,11 @@ void na3d_in_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8929,6 +12127,7 @@ void na3d_in_cuda_naive_half_ks_any_di_any(
 
 void na3d_in_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8938,6 +12137,11 @@ void na3d_in_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8945,6 +12149,7 @@ void na3d_in_cuda_naive_half_ks_any_di_1(
 
 void na3d_in_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8954,6 +12159,11 @@ void na3d_in_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8961,6 +12171,7 @@ void na3d_in_cuda_naive_half_ks_3_di_any(
 
 void na3d_in_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8970,6 +12181,11 @@ void na3d_in_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8977,6 +12193,7 @@ void na3d_in_cuda_naive_half_ks_3_di_1(
 
 void na3d_in_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -8986,6 +12203,11 @@ void na3d_in_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -8993,6 +12215,7 @@ void na3d_in_cuda_naive_half_ks_5_di_any(
 
 void na3d_in_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9002,6 +12225,11 @@ void na3d_in_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9009,6 +12237,7 @@ void na3d_in_cuda_naive_half_ks_5_di_1(
 
 void na3d_in_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9018,6 +12247,11 @@ void na3d_in_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9025,6 +12259,7 @@ void na3d_in_cuda_naive_half_ks_7_di_any(
 
 void na3d_in_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9034,6 +12269,11 @@ void na3d_in_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9041,6 +12281,7 @@ void na3d_in_cuda_naive_half_ks_7_di_1(
 
 void na3d_in_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9050,6 +12291,11 @@ void na3d_in_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9057,6 +12303,7 @@ void na3d_in_cuda_naive_half_ks_9_di_any(
 
 void na3d_in_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9066,6 +12313,11 @@ void na3d_in_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9073,6 +12325,7 @@ void na3d_in_cuda_naive_half_ks_9_di_1(
 
 void na3d_in_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9082,6 +12335,11 @@ void na3d_in_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9089,6 +12347,7 @@ void na3d_in_cuda_naive_half_ks_11_di_any(
 
 void na3d_in_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9098,6 +12357,11 @@ void na3d_in_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9105,6 +12369,7 @@ void na3d_in_cuda_naive_half_ks_11_di_1(
 
 void na3d_in_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9114,6 +12379,11 @@ void na3d_in_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9121,6 +12391,7 @@ void na3d_in_cuda_naive_half_ks_13_di_any(
 
 void na3d_in_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9130,6 +12401,11 @@ void na3d_in_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9137,6 +12413,7 @@ void na3d_in_cuda_naive_half_ks_13_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9146,6 +12423,11 @@ void na3d_in_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9153,6 +12435,7 @@ void na3d_in_cuda_naive_bfloat16_ks_any_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9162,6 +12445,11 @@ void na3d_in_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9169,6 +12457,7 @@ void na3d_in_cuda_naive_bfloat16_ks_any_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9178,6 +12467,11 @@ void na3d_in_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9185,6 +12479,7 @@ void na3d_in_cuda_naive_bfloat16_ks_3_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9194,6 +12489,11 @@ void na3d_in_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9201,6 +12501,7 @@ void na3d_in_cuda_naive_bfloat16_ks_3_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9210,6 +12511,11 @@ void na3d_in_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9217,6 +12523,7 @@ void na3d_in_cuda_naive_bfloat16_ks_5_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9226,6 +12533,11 @@ void na3d_in_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9233,6 +12545,7 @@ void na3d_in_cuda_naive_bfloat16_ks_5_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9242,6 +12555,11 @@ void na3d_in_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9249,6 +12567,7 @@ void na3d_in_cuda_naive_bfloat16_ks_7_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9258,6 +12577,11 @@ void na3d_in_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9265,6 +12589,7 @@ void na3d_in_cuda_naive_bfloat16_ks_7_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9274,6 +12599,11 @@ void na3d_in_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9281,6 +12611,7 @@ void na3d_in_cuda_naive_bfloat16_ks_9_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9290,6 +12621,11 @@ void na3d_in_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9297,6 +12633,7 @@ void na3d_in_cuda_naive_bfloat16_ks_9_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9306,6 +12643,11 @@ void na3d_in_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9313,6 +12655,7 @@ void na3d_in_cuda_naive_bfloat16_ks_11_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9322,6 +12665,11 @@ void na3d_in_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9329,6 +12677,7 @@ void na3d_in_cuda_naive_bfloat16_ks_11_di_1(
 
 void na3d_in_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9338,6 +12687,11 @@ void na3d_in_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9345,6 +12699,7 @@ void na3d_in_cuda_naive_bfloat16_ks_13_di_any(
 
 void na3d_in_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * attn_ptr,
   void * d_output_ptr,
   void * d_value_ptr,
@@ -9354,6 +12709,11 @@ void na3d_in_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -9361,622 +12721,847 @@ void na3d_in_cuda_naive_bfloat16_ks_13_di_1(
 
 void na1d_rpbgrad_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na1d_rpbgrad_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
   int heads,
   int length,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -9984,11 +13569,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -9996,11 +13586,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10008,11 +13603,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10020,11 +13620,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10032,11 +13637,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10044,11 +13654,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10056,11 +13671,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10068,11 +13688,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10080,11 +13705,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10092,11 +13722,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10104,11 +13739,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10116,11 +13756,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10128,11 +13773,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10140,11 +13790,16 @@ void na2d_rpbgrad_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10152,11 +13807,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10164,11 +13824,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10176,11 +13841,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10188,11 +13858,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10200,11 +13875,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10212,11 +13892,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10224,11 +13909,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10236,11 +13926,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10248,11 +13943,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10260,11 +13960,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10272,11 +13977,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10284,11 +13994,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10296,11 +14011,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10308,11 +14028,16 @@ void na2d_rpbgrad_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10320,11 +14045,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10332,11 +14062,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10344,11 +14079,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10356,11 +14096,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10368,11 +14113,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10380,11 +14130,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10392,11 +14147,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10404,11 +14164,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10416,11 +14181,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10428,11 +14198,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10440,11 +14215,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10452,11 +14232,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10464,11 +14249,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10476,11 +14266,16 @@ void na2d_rpbgrad_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10488,11 +14283,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10500,11 +14300,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10512,11 +14317,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10524,11 +14334,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10536,11 +14351,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10548,11 +14368,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10560,11 +14385,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10572,11 +14402,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10584,11 +14419,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10596,11 +14436,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10608,11 +14453,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10620,11 +14470,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10632,11 +14487,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na2d_rpbgrad_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10644,11 +14504,16 @@ void na2d_rpbgrad_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
   int kernel_size,
   int dilation);
 
 void na3d_rpbgrad_cuda_naive_double_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10657,6 +14522,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10664,6 +14534,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_any_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10672,6 +14543,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10679,6 +14555,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_any_di_1(
 
 void na3d_rpbgrad_cuda_naive_double_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10687,6 +14564,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10694,6 +14576,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_3_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10702,6 +14585,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10709,6 +14597,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_3_di_1(
 
 void na3d_rpbgrad_cuda_naive_double_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10717,6 +14606,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10724,6 +14618,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_5_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10732,6 +14627,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10739,6 +14639,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_5_di_1(
 
 void na3d_rpbgrad_cuda_naive_double_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10747,6 +14648,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10754,6 +14660,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_7_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10762,6 +14669,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10769,6 +14681,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_7_di_1(
 
 void na3d_rpbgrad_cuda_naive_double_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10777,6 +14690,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10784,6 +14702,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_9_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10792,6 +14711,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10799,6 +14723,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_9_di_1(
 
 void na3d_rpbgrad_cuda_naive_double_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10807,6 +14732,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10814,6 +14744,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_11_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10822,6 +14753,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10829,6 +14765,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_11_di_1(
 
 void na3d_rpbgrad_cuda_naive_double_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10837,6 +14774,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10844,6 +14786,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_13_di_any(
 
 void na3d_rpbgrad_cuda_naive_double_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10852,6 +14795,11 @@ void na3d_rpbgrad_cuda_naive_double_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10859,6 +14807,7 @@ void na3d_rpbgrad_cuda_naive_double_ks_13_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10867,6 +14816,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10874,6 +14828,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_any_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10882,6 +14837,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10889,6 +14849,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_any_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10897,6 +14858,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10904,6 +14870,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_3_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10912,6 +14879,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10919,6 +14891,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_3_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10927,6 +14900,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10934,6 +14912,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_5_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10942,6 +14921,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10949,6 +14933,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_5_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10957,6 +14942,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10964,6 +14954,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_7_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10972,6 +14963,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10979,6 +14975,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_7_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -10987,6 +14984,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -10994,6 +14996,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_9_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11002,6 +15005,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11009,6 +15017,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_9_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11017,6 +15026,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11024,6 +15038,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_11_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11032,6 +15047,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11039,6 +15059,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_11_di_1(
 
 void na3d_rpbgrad_cuda_naive_float_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11047,6 +15068,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11054,6 +15080,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_13_di_any(
 
 void na3d_rpbgrad_cuda_naive_float_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11062,6 +15089,11 @@ void na3d_rpbgrad_cuda_naive_float_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11069,6 +15101,7 @@ void na3d_rpbgrad_cuda_naive_float_ks_13_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11077,6 +15110,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11084,6 +15122,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_any_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11092,6 +15131,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11099,6 +15143,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_any_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11107,6 +15152,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11114,6 +15164,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_3_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11122,6 +15173,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11129,6 +15185,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_3_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11137,6 +15194,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11144,6 +15206,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_5_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11152,6 +15215,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11159,6 +15227,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_5_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11167,6 +15236,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11174,6 +15248,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_7_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11182,6 +15257,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11189,6 +15269,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_7_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11197,6 +15278,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11204,6 +15290,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_9_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11212,6 +15299,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11219,6 +15311,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_9_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11227,6 +15320,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11234,6 +15332,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_11_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11242,6 +15341,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11249,6 +15353,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_11_di_1(
 
 void na3d_rpbgrad_cuda_naive_half_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11257,6 +15362,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11264,6 +15374,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_13_di_any(
 
 void na3d_rpbgrad_cuda_naive_half_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11272,6 +15383,11 @@ void na3d_rpbgrad_cuda_naive_half_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11279,6 +15395,7 @@ void na3d_rpbgrad_cuda_naive_half_ks_13_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_any_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11287,6 +15404,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_any_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11294,6 +15416,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_any_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_any_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11302,6 +15425,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_any_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11309,6 +15437,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_any_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_3_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11317,6 +15446,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_3_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11324,6 +15458,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_3_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_3_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11332,6 +15467,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_3_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11339,6 +15479,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_3_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_5_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11347,6 +15488,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_5_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11354,6 +15500,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_5_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_5_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11362,6 +15509,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_5_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11369,6 +15521,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_5_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_7_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11377,6 +15530,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_7_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11384,6 +15542,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_7_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_7_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11392,6 +15551,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_7_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11399,6 +15563,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_7_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_9_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11407,6 +15572,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_9_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11414,6 +15584,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_9_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_9_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11422,6 +15593,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_9_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11429,6 +15605,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_9_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_11_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11437,6 +15614,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_11_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11444,6 +15626,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_11_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_11_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11452,6 +15635,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_11_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11459,6 +15647,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_11_di_1(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_13_di_any(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11467,6 +15656,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_13_di_any(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11474,6 +15668,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_13_di_any(
 
 void na3d_rpbgrad_cuda_naive_bfloat16_ks_13_di_1(
   const int cc,
+  cudaStream_t stream,
   void * d_bias_ptr,
   void * d_attn_ptr,
   int batch_size,
@@ -11482,6 +15677,11 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_13_di_1(
   int height,
   int width,
   int dim,
+  int64_t attn_stride_0,
+  int64_t attn_stride_1,
+  int64_t attn_stride_2,
+  int64_t attn_stride_3,
+  int64_t attn_stride_4,
   int kernel_size,
   int dilation,
   int kernel_size_d,
@@ -11489,7 +15689,7 @@ void na3d_rpbgrad_cuda_naive_bfloat16_ks_13_di_1(
 
 
 
-} // namespace natten 
-} // namespace cuda 
-} // namespace naive 
+} // namespace {namespace} 
+} // namespace {namespace} 
+} // namespace {namespace} 
 

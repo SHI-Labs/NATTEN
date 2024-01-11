@@ -56,6 +56,11 @@ struct RelPosBiasGradient3D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
@@ -71,7 +76,12 @@ struct RelPosBiasGradient3D {
         kernel_size_depth,
         dilation,
         dilation_depth,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4);
   }
 
   void launch(
@@ -85,17 +95,17 @@ struct RelPosBiasGradient3D {
       const int kernel_size_d,
       const int dilation,
       const int dilation_d,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t d_attn_stride_0,
+      const int64_t d_attn_stride_1,
+      const int64_t d_attn_stride_2,
+      const int64_t d_attn_stride_3,
+      const int64_t d_attn_stride_4) {
     const int neighborhood_size = kernel_size / 2;
     const int neighborhood_size_d = kernel_size_d / 2;
     const int d_bias_stride_2 = (2 * kernel_size - 1);
     const int d_bias_stride_1 = (2 * kernel_size - 1) * d_bias_stride_2;
     const int d_bias_stride_0 = (2 * kernel_size_d - 1) * d_bias_stride_1;
-    const int d_attn_stride_4 = kernel_size_d * kernel_size * kernel_size;
-    const int d_attn_stride_3 = width * d_attn_stride_4;
-    const int d_attn_stride_2 = height * d_attn_stride_3;
-    const int d_attn_stride_1 = depth * d_attn_stride_2;
-    const int d_attn_stride_0 = heads * d_attn_stride_1;
     at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
       for (int h = start; h < end; h++) {
         for (int k = 0; k < depth; k++) {
@@ -111,7 +121,7 @@ struct RelPosBiasGradient3D {
                 for (int ki = 0; ki < kernel_size; ki++) {
                   for (int kj = 0; kj < kernel_size; kj++) {
                     scalar_t d_bias_update = scalar_t(0);
-                    int attnOffset = h * d_attn_stride_1 + k * d_attn_stride_2 +
+                    int64_t attnOffset = h * d_attn_stride_1 + k * d_attn_stride_2 +
                         i * d_attn_stride_3 + j * d_attn_stride_4 +
                         kk * (kernel_size * kernel_size) + ki * kernel_size +
                         kj;
@@ -119,7 +129,7 @@ struct RelPosBiasGradient3D {
                       d_bias_update += d_attn[attnOffset];
                       attnOffset += d_attn_stride_0;
                     }
-                    const int index = h * d_bias_stride_0 +
+                    const int64_t index = h * d_bias_stride_0 +
                         (pk + kk) * d_bias_stride_1 +
                         (pi + ki) * d_bias_stride_2 + (pj + kj);
                     d_bias[index] += d_bias_update;

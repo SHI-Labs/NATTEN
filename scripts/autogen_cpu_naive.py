@@ -179,6 +179,9 @@ NA1D_PROBLEM_SIZE_ARGS = [
     CArg("int", "heads"),
     CArg("int", "length"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
 ]
 
 NA2D_PROBLEM_SIZE_ARGS = [
@@ -187,6 +190,10 @@ NA2D_PROBLEM_SIZE_ARGS = [
     CArg("int", "height"),
     CArg("int", "width"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
+    CArg("int64_t", "attn_stride_3"),
 ]
 
 NA3D_PROBLEM_SIZE_ARGS = [
@@ -196,6 +203,11 @@ NA3D_PROBLEM_SIZE_ARGS = [
     CArg("int", "height"),
     CArg("int", "width"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
+    CArg("int64_t", "attn_stride_3"),
+    CArg("int64_t", "attn_stride_4"),
 ]
 
 

@@ -21,10 +21,16 @@
 #
 #################################################################################################
 
-from .tensor import make_attn_tensor_from_input
+from .tensor import (
+    check_additional_keys,
+    check_additional_values,
+    make_attn_tensor_from_input,
+)
 from .typing import NoneType
 
 __all__ = [
+    "check_additional_keys",
+    "check_additional_values",
     "make_attn_tensor_from_input",
     "NoneType",
 ]

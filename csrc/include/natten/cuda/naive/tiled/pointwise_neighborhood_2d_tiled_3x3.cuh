@@ -76,7 +76,7 @@ struct PointwiseNeighborhood2DFull3x3 : PointwiseNeighborhood2DBase<scalar_t> {
     // if (z < batch_size * heads)
     // {
     const int lti = threadIdx.y * (TILE_3 * KERNEL_SIZE_3) + threadIdx.x;
-    const int batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
+    const int64_t batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
     const int si = int(blockIdx.y / dilation) * (TILE_3 * dilation) +
         (blockIdx.y % dilation);
     const int sj = int(blockIdx.x / dilation) * (TILE_3 * dilation) +
@@ -111,7 +111,7 @@ struct PointwiseNeighborhood2DFull3x3 : PointwiseNeighborhood2DBase<scalar_t> {
       const int bj = (ktx - bi * KTILE_3) * dilation + snj;
       bi = bi * dilation + sni;
       if (bi < p.height && bj < p.width) {
-        const int keyOffset = batchHeadOffset + bi * p.query_stride_2 +
+        const int64_t keyOffset = batchHeadOffset + bi * p.query_stride_2 +
             bj * p.query_stride_3 + kty;
 #pragma unroll
         for (int ti = 0; ti < KITERS_32; ++ti)
@@ -138,14 +138,14 @@ struct PointwiseNeighborhood2DFull3x3 : PointwiseNeighborhood2DBase<scalar_t> {
       for (int dimOffset = 0; dimOffset < DIM_32; ++dimOffset)
         updt += tile[queryIdx][dimOffset] * kTile[keyIdx][dimOffset];
 
-      const int index = b * p.attn_stride_0 + h * p.attn_stride_1 +
+      const int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
           i * p.attn_stride_2 + j * p.attn_stride_3 + ki * KERNEL_SIZE_3 + kj;
       if (p.bias) {
         const int pi = get_pb_start(
             i, p.height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
         const int pj = get_pb_start(
             j, p.width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
-        const int biasIndex =
+        const int64_t biasIndex =
             h * p.bias_stride_0 + (pi + ki) * p.bias_stride_1 + (pj + kj);
         updt += p.bias[biasIndex];
       }
@@ -204,7 +204,7 @@ struct PointwiseNeighborhood2DHalf3x3 : PointwiseNeighborhood2DBase<scalar_t> {
     // {
     const int lti = threadIdx.y * (TILE_3 * KERNEL_SIZE_3) + threadIdx.x;
     const int stride2 = DIMHALF_32 * p.width;
-    const int batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
+    const int64_t batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
     const int si = int(blockIdx.y / dilation) * (TILE_3 * dilation) +
         (blockIdx.y % dilation);
     const int sj = int(blockIdx.x / dilation) * (TILE_3 * dilation) +
@@ -240,7 +240,7 @@ struct PointwiseNeighborhood2DHalf3x3 : PointwiseNeighborhood2DBase<scalar_t> {
       const int bj = (ktx - bi * KTILE_3) * dilation + snj;
       bi = bi * dilation + sni;
       if (bi < p.height && bj < p.width) {
-        const int keyOffset =
+        const int64_t keyOffset =
             batchHeadOffset + bi * stride2 + bj * DIMHALF_32 + kty;
 #pragma unroll
         for (int ti = 0; ti < KHALFITERS_32; ++ti)
@@ -268,7 +268,7 @@ struct PointwiseNeighborhood2DHalf3x3 : PointwiseNeighborhood2DBase<scalar_t> {
         updt = HalfHelper::fma(
             tile[queryIdx][dimOffset], kTile[keyIdx][dimOffset], updt);
 
-      const int index = b * p.attn_stride_0 + h * p.attn_stride_1 +
+      const int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
           i * p.attn_stride_2 + j * p.attn_stride_3 + ki * KERNEL_SIZE_3 + kj;
       scalar_t acc = HalfHelper::cast_back(HalfHelper::add(updt.x, updt.y));
       if (p.bias) {
@@ -276,7 +276,7 @@ struct PointwiseNeighborhood2DHalf3x3 : PointwiseNeighborhood2DBase<scalar_t> {
             i, p.height, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
         const int pj = get_pb_start(
             j, p.width, KERNEL_SIZE_3, NEIGHBORHOOD_SIZE_3, dilation);
-        const int biasIndex =
+        const int64_t biasIndex =
             h * p.bias_stride_0 + (pi + ki) * p.bias_stride_1 + (pj + kj);
         acc = HalfHelper::add(acc, p.bias[biasIndex]);
       }

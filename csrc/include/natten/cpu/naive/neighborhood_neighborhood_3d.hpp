@@ -59,6 +59,11 @@ struct NeighborhoodNeighborhood3D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
@@ -76,7 +81,12 @@ struct NeighborhoodNeighborhood3D {
         dilation,
         dilation_depth,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4);
   }
 
   void launch( // AV     / Q-grad
@@ -92,14 +102,14 @@ struct NeighborhoodNeighborhood3D {
       const int dilation,
       const int dilation_d,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t weights_stride_0,
+      const int64_t weights_stride_1,
+      const int64_t weights_stride_2,
+      const int64_t weights_stride_3,
+      const int64_t weights_stride_4) {
     const int neighborhood_size = kernel_size / 2;
     const int neighborhood_size_d = kernel_size_d / 2;
-    const int weights_stride_4 = kernel_size_d * kernel_size * kernel_size;
-    const int weights_stride_3 = width * weights_stride_4;
-    const int weights_stride_2 = height * weights_stride_3;
-    const int weights_stride_1 = depth * weights_stride_2;
-    const int weights_stride_0 = heads * weights_stride_1;
     const int values_stride_4 = dim;
     const int values_stride_3 = width * values_stride_4;
     const int values_stride_2 = height * values_stride_3;
@@ -130,10 +140,10 @@ struct NeighborhoodNeighborhood3D {
                 k, depth, kernel_size_d, neighborhood_size_d, dilation_d);
             for (int d = 0; d < dim; d++) {
               scalar_t updt = scalar_t(0);
-              int weightsOffset = b * weights_stride_0 + h * weights_stride_1 +
+              int64_t weightsOffset = b * weights_stride_0 + h * weights_stride_1 +
                   k * weights_stride_2 + i * weights_stride_3 +
                   j * weights_stride_4;
-              const int valuesOffset =
+              const int64_t valuesOffset =
                   b * values_stride_0 + h * values_stride_1 + d;
               for (int xk = nk; xk < nk + kernel_size_d * dilation_d;
                    xk += dilation_d) {
@@ -141,7 +151,7 @@ struct NeighborhoodNeighborhood3D {
                      xi += dilation) {
                   for (int xj = nj; xj < nj + kernel_size * dilation;
                        xj += dilation) {
-                    const int valuesIndex = valuesOffset +
+                    const int64_t valuesIndex = valuesOffset +
                         xk * values_stride_2 + xi * values_stride_3 +
                         xj * values_stride_4;
                     updt += weights[weightsOffset] * values[valuesIndex];
@@ -149,7 +159,7 @@ struct NeighborhoodNeighborhood3D {
                   }
                 }
               }
-              const int linearIndex = b * values_stride_0 +
+              const int64_t linearIndex = b * values_stride_0 +
                   h * values_stride_1 + k * values_stride_2 +
                   i * values_stride_3 + j * values_stride_4 + d;
               output[linearIndex] = updt;

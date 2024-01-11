@@ -38,6 +38,7 @@ namespace cuda {
 template <typename T>
 void na1d_qk_forward(
     const int cc,
+    cudaStream_t stream,
     void* query_ptr,
     void* key_ptr,
     void* bias_ptr,
@@ -46,6 +47,9 @@ void na1d_qk_forward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
@@ -63,9 +67,13 @@ void na1d_qk_forward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation,
-        1.0);
+        1.0,
+        stream);
   } else {
 #endif
     if (bias_ptr == nullptr) {
@@ -74,6 +82,7 @@ void na1d_qk_forward(
           kernel_size,
           dilation,
           cc,
+          stream,
           query_ptr,
           key_ptr,
           attn_ptr,
@@ -81,6 +90,9 @@ void na1d_qk_forward(
           heads,
           length,
           dim,
+          attn_stride_0,
+          attn_stride_1,
+          attn_stride_2,
           kernel_size,
           dilation);
     } else {
@@ -89,6 +101,7 @@ void na1d_qk_forward(
           kernel_size,
           dilation,
           cc,
+          stream,
           query_ptr,
           key_ptr,
           bias_ptr,
@@ -97,6 +110,9 @@ void na1d_qk_forward(
           heads,
           length,
           dim,
+          attn_stride_0,
+          attn_stride_1,
+          attn_stride_2,
           kernel_size,
           dilation);
     }
@@ -108,6 +124,7 @@ void na1d_qk_forward(
 template <typename T>
 void na1d_qk_backward(
     const int cc,
+    cudaStream_t stream,
     void* query_ptr,
     void* key_ptr,
     void* d_attn_ptr,
@@ -118,6 +135,9 @@ void na1d_qk_backward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
@@ -134,9 +154,13 @@ void na1d_qk_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation,
-        1.0);
+        1.0,
+        stream);
     LAUNCH_na1d_in_cuda_gemm(
         cc,
         T,
@@ -148,9 +172,13 @@ void na1d_qk_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation,
-        1.0);
+        1.0,
+        stream);
   } else {
 #endif
     DISPATCH_DTYPE_na1d_nn_cuda_naive(
@@ -158,6 +186,7 @@ void na1d_qk_backward(
         kernel_size,
         dilation,
         cc,
+        stream,
         d_attn_ptr,
         key_ptr,
         d_query_ptr,
@@ -165,6 +194,9 @@ void na1d_qk_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
     DISPATCH_DTYPE_na1d_in_cuda_naive(
@@ -172,6 +204,7 @@ void na1d_qk_backward(
         kernel_size,
         dilation,
         cc,
+        stream,
         d_attn_ptr,
         query_ptr,
         d_key_ptr,
@@ -179,6 +212,9 @@ void na1d_qk_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
 #ifdef NATTEN_WITH_CUTLASS
@@ -190,12 +226,16 @@ void na1d_qk_backward(
         kernel_size,
         dilation,
         cc,
+        stream,
         d_bias_ptr,
         d_attn_ptr,
         batch_size,
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
   }
@@ -204,6 +244,7 @@ void na1d_qk_backward(
 template <typename T>
 void na1d_av_forward(
     const int cc,
+    cudaStream_t stream,
     void* attn_ptr,
     void* value_ptr,
     void* output_ptr,
@@ -211,6 +252,9 @@ void na1d_av_forward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
@@ -227,9 +271,13 @@ void na1d_av_forward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation,
-        1.0);
+        1.0,
+        stream);
   } else {
 #endif
     DISPATCH_DTYPE_na1d_nn_cuda_naive(
@@ -237,6 +285,7 @@ void na1d_av_forward(
         kernel_size,
         dilation,
         cc,
+        stream,
         attn_ptr,
         value_ptr,
         output_ptr,
@@ -244,6 +293,9 @@ void na1d_av_forward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
 #ifdef NATTEN_WITH_CUTLASS
@@ -254,6 +306,7 @@ void na1d_av_forward(
 template <typename T>
 void na1d_av_backward(
     const int cc,
+    cudaStream_t stream,
     void* attn_ptr,
     void* value_ptr,
     void* d_output_ptr,
@@ -263,6 +316,9 @@ void na1d_av_backward(
     int heads,
     int length,
     int dim,
+    int64_t attn_stride_0,
+    int64_t attn_stride_1,
+    int64_t attn_stride_2,
     int kernel_size,
     int dilation) {
 #ifdef NATTEN_WITH_CUTLASS
@@ -280,9 +336,13 @@ void na1d_av_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation,
-        1.0);
+        1.0,
+        stream);
     LAUNCH_na1d_in_cuda_gemm(
         cc,
         T,
@@ -294,9 +354,13 @@ void na1d_av_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation,
-        1.0);
+        1.0,
+        stream);
   } else {
 #endif
     DISPATCH_DTYPE_na1d_pn_cuda_naive(
@@ -304,6 +368,7 @@ void na1d_av_backward(
         kernel_size,
         dilation,
         cc,
+        stream,
         d_output_ptr,
         value_ptr,
         d_attn_ptr,
@@ -311,6 +376,9 @@ void na1d_av_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
     DISPATCH_DTYPE_na1d_in_cuda_naive(
@@ -318,6 +386,7 @@ void na1d_av_backward(
         kernel_size,
         dilation,
         cc,
+        stream,
         attn_ptr,
         d_output_ptr,
         d_value_ptr,
@@ -325,6 +394,9 @@ void na1d_av_backward(
         heads,
         length,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
         kernel_size,
         dilation);
 #ifdef NATTEN_WITH_CUTLASS

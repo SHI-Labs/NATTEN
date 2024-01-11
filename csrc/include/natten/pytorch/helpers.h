@@ -86,8 +86,6 @@ inline void CheckArgsAgainstDim(int dim, int kernel_size, int dilation) {
 }
 
 inline void CheckIfPropertiesMatch(const at::Tensor& a, const at::Tensor& b) {
-  CHECK_CONTIGUOUS(a);
-  CHECK_CONTIGUOUS(b);
   TORCH_CHECK(
       a.device().is_cuda() == b.device().is_cuda(),
       "Expected all tensors to be on the same device.");
@@ -99,9 +97,6 @@ inline void CheckIfPropertiesMatch(
     const at::Tensor& a,
     const at::Tensor& b,
     const at::Tensor& c) {
-  CHECK_CONTIGUOUS(a);
-  CHECK_CONTIGUOUS(b);
-  CHECK_CONTIGUOUS(c);
   TORCH_CHECK(
       a.device().is_cuda() == b.device().is_cuda() &&
           b.device().is_cuda() == c.device().is_cuda(),

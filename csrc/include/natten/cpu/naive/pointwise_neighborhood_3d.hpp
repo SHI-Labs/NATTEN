@@ -60,6 +60,11 @@ struct PointwiseNeighborhood3D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
@@ -77,7 +82,12 @@ struct PointwiseNeighborhood3D {
         dilation,
         dilation_depth,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4);
   }
 
   void launch( // QK    / A-grad
@@ -93,14 +103,14 @@ struct PointwiseNeighborhood3D {
       const int dilation,
       const int dilation_d,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3,
+      const int64_t attn_stride_4) {
     const int neighborhood_size = kernel_size / 2;
     const int neighborhood_size_d = kernel_size_d / 2;
-    const int attn_stride_4 = kernel_size_d * kernel_size * kernel_size;
-    const int attn_stride_3 = width * attn_stride_4;
-    const int attn_stride_2 = height * attn_stride_3;
-    const int attn_stride_1 = depth * attn_stride_2;
-    const int attn_stride_0 = heads * attn_stride_1;
     const int query_stride_4 = dim;
     const int query_stride_3 = width * query_stride_4;
     const int query_stride_2 = height * query_stride_3;
@@ -133,18 +143,18 @@ struct PointwiseNeighborhood3D {
               for (int ki = 0; ki < kernel_size; ki++) {
                 for (int kj = 0; kj < kernel_size; kj++) {
                   scalar_t updt = scalar_t(0);
-                  const int batchHeadOffset =
+                  const int64_t batchHeadOffset =
                       b * query_stride_0 + h * query_stride_1;
-                  const int queryOffset = batchHeadOffset + k * query_stride_2 +
+                  const int64_t queryOffset = batchHeadOffset + k * query_stride_2 +
                       i * query_stride_3 + j * query_stride_4;
-                  const int keyOffset = batchHeadOffset +
+                  const int64_t keyOffset = batchHeadOffset +
                       (kk * dilation_d + nk) * query_stride_2 +
                       (ki * dilation + ni) * query_stride_3 +
                       (kj * dilation + nj) * query_stride_4;
-                  for (int dimOffset = 0; dimOffset < dim; ++dimOffset)
+                  for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
                     updt += query[queryOffset + dimOffset] *
                         key[keyOffset + dimOffset];
-                  const int index = b * attn_stride_0 + h * attn_stride_1 +
+                  const int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                       k * attn_stride_2 + i * attn_stride_3 +
                       j * attn_stride_4 + kk * (kernel_size * kernel_size) +
                       ki * kernel_size + kj;
@@ -170,6 +180,11 @@ struct PointwiseNeighborhood3DWithBias {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
@@ -188,7 +203,12 @@ struct PointwiseNeighborhood3DWithBias {
         dilation,
         dilation_depth,
         dim,
-        batch_size);
+        batch_size,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4);
   }
 
   void launch( // QK
@@ -205,17 +225,17 @@ struct PointwiseNeighborhood3DWithBias {
       const int dilation,
       const int dilation_d,
       const int dim,
-      const int batch_size) {
+      const int batch_size,
+      const int64_t attn_stride_0,
+      const int64_t attn_stride_1,
+      const int64_t attn_stride_2,
+      const int64_t attn_stride_3,
+      const int64_t attn_stride_4) {
     const int neighborhood_size = kernel_size / 2;
     const int neighborhood_size_d = kernel_size_d / 2;
     const int bias_stride_2 = (2 * kernel_size - 1);
     const int bias_stride_1 = (2 * kernel_size - 1) * bias_stride_2;
     const int bias_stride_0 = (2 * kernel_size_d - 1) * bias_stride_1;
-    const int attn_stride_4 = kernel_size_d * kernel_size * kernel_size;
-    const int attn_stride_3 = width * attn_stride_4;
-    const int attn_stride_2 = height * attn_stride_3;
-    const int attn_stride_1 = depth * attn_stride_2;
-    const int attn_stride_0 = heads * attn_stride_1;
     const int query_stride_4 = dim;
     const int query_stride_3 = width * query_stride_4;
     const int query_stride_2 = height * query_stride_3;
@@ -254,22 +274,22 @@ struct PointwiseNeighborhood3DWithBias {
               for (int ki = 0; ki < kernel_size; ki++) {
                 for (int kj = 0; kj < kernel_size; kj++) {
                   scalar_t updt = scalar_t(0);
-                  const int batchHeadOffset =
+                  const int64_t batchHeadOffset =
                       b * query_stride_0 + h * query_stride_1;
-                  const int queryOffset = batchHeadOffset + k * query_stride_2 +
+                  const int64_t queryOffset = batchHeadOffset + k * query_stride_2 +
                       i * query_stride_3 + j * query_stride_4;
-                  const int keyOffset = batchHeadOffset +
+                  const int64_t keyOffset = batchHeadOffset +
                       (kk * dilation_d + nk) * query_stride_2 +
                       (ki * dilation + ni) * query_stride_3 +
                       (kj * dilation + nj) * query_stride_4;
-                  for (int dimOffset = 0; dimOffset < dim; ++dimOffset)
+                  for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
                     updt += query[queryOffset + dimOffset] *
                         key[keyOffset + dimOffset];
-                  const int index = b * attn_stride_0 + h * attn_stride_1 +
+                  const int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                       k * attn_stride_2 + i * attn_stride_3 +
                       j * attn_stride_4 + kk * (kernel_size * kernel_size) +
                       ki * kernel_size + kj;
-                  const int biasIndex = h * bias_stride_0 +
+                  const int64_t biasIndex = h * bias_stride_0 +
                       (pk + kk) * bias_stride_1 + (pi + ki) * bias_stride_2 +
                       (pj + kj);
                   updt += bias[biasIndex];

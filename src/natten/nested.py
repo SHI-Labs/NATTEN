@@ -20,7 +20,7 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import Optional
+from typing import List, Optional
 
 import torch
 from torch import Tensor
@@ -35,12 +35,23 @@ except ImportError:
         " correct torch build: shi-labs.com/natten ."
     )
 
-from .utils import make_attn_tensor_from_input
+from .ops import av_cross_forward, qk_cross_forward
+from .utils import (
+    check_additional_keys,
+    check_additional_values,
+    make_attn_tensor_from_input,
+)
 
 
 def na1d_qk_nested(
-    query: Tensor, key: Tensor, rpb: Optional[Tensor], kernel_size: int, dilation: int
+    query: Tensor,
+    key: Tensor,
+    rpb: Optional[Tensor],
+    kernel_size: int,
+    dilation: int,
+    additional_keys: Optional[Tensor] = None,
 ) -> Tensor:
+    num_na_weights = kernel_size
     if not query.is_nested or not key.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not query.is_leaf or not key.is_leaf:
@@ -56,16 +67,56 @@ def na1d_qk_nested(
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
-    attn = torch.nested.nested_tensor(
-        [make_attn_tensor_from_input(q, kernel_size) for q in query]
+    n_add_tokens_list = []
+    if additional_keys is not None and additional_keys.is_nested:
+        if additional_keys.size(0) != query.size(0):
+            raise ValueError("Got nested inputs, but they don't match in size.")
+        n_add_tokens_list = [
+            check_additional_keys(q, k) for q, k in zip(query, additional_keys)
+        ]
+    elif additional_keys is not None:
+        # n_add_tokens_list = [check_additional_keys(q, additional_keys) for q in query]
+        # Banning this for now, because it will be much more complicated to check
+        # tensor sizes against each other, when they can exist in both nested and non
+        # nested format.
+        raise ValueError(
+            "Expected all inputs to be nested, but "
+            "additional keys were passed and are not "
+            "nested."
+        )
+
+    additional_keys_list: List | Tensor = (
+        [None for _ in range(query.size(0))]
+        if additional_keys is None
+        else additional_keys
     )
-    for q, k, a in zip(query, key, attn):
-        libnatten.na1d_qk_forward(a, q, k, rpb, kernel_size, dilation)
+
+    attn = torch.nested.nested_tensor(
+        [
+            make_attn_tensor_from_input(q, num_na_weights + n_add_tokens)
+            for q, n_add_tokens in zip(query, n_add_tokens_list)
+        ]
+    )
+    for q, k, a, k_add in zip(query, key, attn, additional_keys_list):
+        attn_na = a[:, :, :, :num_na_weights]
+        libnatten.na1d_qk_forward(attn_na, q, k, rpb, kernel_size, dilation)
+
+        if len(n_add_tokens_list):
+            assert k_add is not None
+            attn_add = a[:, :, :, num_na_weights:]
+            qk_cross_forward(q, k_add, attn_add)
 
     return attn
 
 
-def na1d_av_nested(attn: Tensor, value: Tensor, kernel_size: int, dilation: int):
+def na1d_av_nested(
+    attn: Tensor,
+    value: Tensor,
+    kernel_size: int,
+    dilation: int,
+    additional_values: Optional[Tensor] = None,
+):
+    num_na_weights = kernel_size
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not attn.is_leaf or not value.is_leaf:
@@ -76,16 +127,57 @@ def na1d_av_nested(attn: Tensor, value: Tensor, kernel_size: int, dilation: int)
     if attn.size(0) != value.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
+    if additional_values is not None and additional_values.is_nested:
+        if additional_values.size(0) != attn.size(0):
+            raise ValueError("Got nested inputs, but they don't match in size.")
+        for a, v, v_add in zip(attn, value, additional_values):
+            check_additional_values(a, v_add, v, num_na_weights)
+    elif additional_values is not None:
+        # [check_additional_values(a, additional_values, v, num_na_weights) for a, v in zip(attn, value)]
+        # Banning this for now, because it will be much more complicated to check
+        # tensor sizes against each other, when they can exist in both nested and non
+        # nested format.
+        raise ValueError(
+            "Expected all inputs to be nested, but "
+            "additional values were passed and are not "
+            "nested."
+        )
+
     out = torch.empty_like(value)
-    for a, v, o in zip(attn, value, out):
-        libnatten.na1d_av_forward(o, a, v, kernel_size, dilation)
+    additional_values_list: List | Tensor = (
+        [None for _ in range(attn.size(0))]
+        if additional_values is None
+        else additional_values
+    )
+    additional_outputs_list: List | Tensor = (
+        [None for _ in range(attn.size(0))]
+        if additional_values is None
+        else torch.empty_like(out)
+    )
+
+    for a, v, o, v_add, o_add in zip(
+        attn, value, out, additional_values_list, additional_outputs_list
+    ):
+        attn_na = a[:, :, :, :num_na_weights]
+        libnatten.na1d_av_forward(o, attn_na, v, kernel_size, dilation)
+
+        if v_add is not None and o_add is not None:
+            attn_add = a[:, :, :, num_na_weights:]
+            av_cross_forward(attn_add, v_add, o_add)
+            o += o_add
 
     return out
 
 
 def na2d_qk_nested(
-    query: Tensor, key: Tensor, rpb: Optional[Tensor], kernel_size: int, dilation: int
+    query: Tensor,
+    key: Tensor,
+    rpb: Optional[Tensor],
+    kernel_size: int,
+    dilation: int,
+    additional_keys: Optional[Tensor] = None,
 ) -> Tensor:
+    num_na_weights = kernel_size**2
     if not query.is_nested or not key.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not query.is_leaf or not key.is_leaf:
@@ -101,16 +193,56 @@ def na2d_qk_nested(
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
-    attn = torch.nested.nested_tensor(
-        [make_attn_tensor_from_input(q, kernel_size**2) for q in query]
+    n_add_tokens_list = []
+    if additional_keys is not None and additional_keys.is_nested:
+        if additional_keys.size(0) != query.size(0):
+            raise ValueError("Got nested inputs, but they don't match in size.")
+        n_add_tokens_list = [
+            check_additional_keys(q, k) for q, k in zip(query, additional_keys)
+        ]
+    elif additional_keys is not None:
+        # n_add_tokens_list = [check_additional_keys(q, additional_keys) for q in query]
+        # Banning this for now, because it will be much more complicated to check
+        # tensor sizes against each other, when they can exist in both nested and non
+        # nested format.
+        raise ValueError(
+            "Expected all inputs to be nested, but "
+            "additional keys were passed and are not "
+            "nested."
+        )
+
+    additional_keys_list: List | Tensor = (
+        [None for _ in range(query.size(0))]
+        if additional_keys is None
+        else additional_keys
     )
-    for q, k, a in zip(query, key, attn):
-        libnatten.na2d_qk_forward(a, q, k, rpb, kernel_size, dilation)
+    attn = torch.nested.nested_tensor(
+        [
+            make_attn_tensor_from_input(q, num_na_weights + n_add_tokens)
+            for q, n_add_tokens in zip(query, n_add_tokens_list)
+        ]
+    )
+
+    for q, k, a, k_add in zip(query, key, attn, additional_keys_list):
+        attn_na = a[:, :, :, :, :num_na_weights]
+        libnatten.na2d_qk_forward(attn_na, q, k, rpb, kernel_size, dilation)
+
+        if len(n_add_tokens_list):
+            assert k_add is not None
+            attn_add = a[:, :, :, :, num_na_weights:]
+            qk_cross_forward(q, k_add, attn_add)
 
     return attn
 
 
-def na2d_av_nested(attn: Tensor, value: Tensor, kernel_size: int, dilation: int):
+def na2d_av_nested(
+    attn: Tensor,
+    value: Tensor,
+    kernel_size: int,
+    dilation: int,
+    additional_values: Optional[Tensor] = None,
+):
+    num_na_weights = kernel_size**2
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not attn.is_leaf or not value.is_leaf:
@@ -121,9 +253,44 @@ def na2d_av_nested(attn: Tensor, value: Tensor, kernel_size: int, dilation: int)
     if attn.size(0) != value.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
+    if additional_values is not None and additional_values.is_nested:
+        if additional_values.size(0) != attn.size(0):
+            raise ValueError("Got nested inputs, but they don't match in size.")
+        for a, v, v_add in zip(attn, value, additional_values):
+            check_additional_values(a, v_add, v, num_na_weights)
+    elif additional_values is not None:
+        # [check_additional_values(a, additional_values, v, num_na_weights) for a, v in zip(attn, value)]
+        # Banning this for now, because it will be much more complicated to check
+        # tensor sizes against each other, when they can exist in both nested and non
+        # nested format.
+        raise ValueError(
+            "Expected all inputs to be nested, but "
+            "additional values were passed and are not "
+            "nested."
+        )
+
     out = torch.empty_like(value)
-    for a, v, o in zip(attn, value, out):
-        libnatten.na2d_av_forward(o, a, v, kernel_size, dilation)
+    additional_values_list: List | Tensor = (
+        [None for _ in range(attn.size(0))]
+        if additional_values is None
+        else additional_values
+    )
+    additional_outputs_list: List | Tensor = (
+        [None for _ in range(attn.size(0))]
+        if additional_values is None
+        else torch.empty_like(out)
+    )
+
+    for a, v, o, v_add, o_add in zip(
+        attn, value, out, additional_values_list, additional_outputs_list
+    ):
+        attn_na = a[:, :, :, :, :num_na_weights]
+        libnatten.na2d_av_forward(o, attn_na, v, kernel_size, dilation)
+
+        if v_add is not None and o_add is not None:
+            attn_add = a[:, :, :, :, num_na_weights:]
+            av_cross_forward(attn_add, v_add, o_add)
+            o += o_add
 
     return out
 
@@ -136,7 +303,9 @@ def na3d_qk_nested(
     kernel_size: int,
     dilation_d: int,
     dilation: int,
+    additional_keys: Optional[Tensor] = None,
 ) -> Tensor:
+    num_na_weights = kernel_size_d * kernel_size * kernel_size
     if not query.is_nested or not key.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not query.is_leaf or not key.is_leaf:
@@ -152,16 +321,46 @@ def na3d_qk_nested(
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
+    n_add_tokens_list = []
+    if additional_keys is not None and additional_keys.is_nested:
+        if additional_keys.size(0) != query.size(0):
+            raise ValueError("Got nested inputs, but they don't match in size.")
+        n_add_tokens_list = [
+            check_additional_keys(q, k) for q, k in zip(query, additional_keys)
+        ]
+    elif additional_keys is not None:
+        # n_add_tokens_list = [check_additional_keys(q, additional_keys) for q in query]
+        # Banning this for now, because it will be much more complicated to check
+        # tensor sizes against each other, when they can exist in both nested and non
+        # nested format.
+        raise ValueError(
+            "Expected all inputs to be nested, but "
+            "additional keys were passed and are not "
+            "nested."
+        )
+
+    additional_keys_list: List | Tensor = (
+        [None for _ in range(query.size(0))]
+        if additional_keys is None
+        else additional_keys
+    )
     attn = torch.nested.nested_tensor(
         [
-            make_attn_tensor_from_input(q, kernel_size * kernel_size * kernel_size_d)
-            for q in query
+            make_attn_tensor_from_input(q, num_na_weights + n_add_tokens)
+            for q, n_add_tokens in zip(query, n_add_tokens_list)
         ]
     )
-    for q, k, a in zip(query, key, attn):
+
+    for q, k, a, k_add in zip(query, key, attn, additional_keys_list):
+        attn_na = a[:, :, :, :, :, :num_na_weights]
         libnatten.na3d_qk_forward(
-            a, q, k, rpb, kernel_size, dilation, kernel_size_d, dilation_d
+            attn_na, q, k, rpb, kernel_size, dilation, kernel_size_d, dilation_d
         )
+
+        if len(n_add_tokens_list):
+            assert k_add is not None
+            attn_add = a[:, :, :, :, :, num_na_weights:]
+            qk_cross_forward(q, k_add, attn_add)
 
     return attn
 
@@ -173,7 +372,9 @@ def na3d_av_nested(
     kernel_size: int,
     dilation_d: int,
     dilation: int,
+    additional_values: Optional[Tensor] = None,
 ):
+    num_na_weights = kernel_size_d * kernel_size * kernel_size
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not attn.is_leaf or not value.is_leaf:
@@ -184,10 +385,45 @@ def na3d_av_nested(
     if attn.size(0) != value.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
 
-    out = torch.empty_like(value)
-    for a, v, o in zip(attn, value, out):
-        libnatten.na3d_av_forward(
-            o, a, v, kernel_size, dilation, kernel_size_d, dilation_d
+    if additional_values is not None and additional_values.is_nested:
+        if additional_values.size(0) != attn.size(0):
+            raise ValueError("Got nested inputs, but they don't match in size.")
+        for a, v, v_add in zip(attn, value, additional_values):
+            check_additional_values(a, v_add, v, num_na_weights)
+    elif additional_values is not None:
+        # [check_additional_values(a, additional_values, v, num_na_weights) for a, v in zip(attn, value)]
+        # Banning this for now, because it will be much more complicated to check
+        # tensor sizes against each other, when they can exist in both nested and non
+        # nested format.
+        raise ValueError(
+            "Expected all inputs to be nested, but "
+            "additional values were passed and are not "
+            "nested."
         )
+
+    out = torch.empty_like(value)
+    additional_values_list: List | Tensor = (
+        [None for _ in range(attn.size(0))]
+        if additional_values is None
+        else additional_values
+    )
+    additional_outputs_list: List | Tensor = (
+        [None for _ in range(attn.size(0))]
+        if additional_values is None
+        else torch.empty_like(out)
+    )
+
+    for a, v, o, v_add, o_add in zip(
+        attn, value, out, additional_values_list, additional_outputs_list
+    ):
+        attn_na = a[:, :, :, :, :, :num_na_weights]
+        libnatten.na3d_av_forward(
+            o, attn_na, v, kernel_size, dilation, kernel_size_d, dilation_d
+        )
+
+        if v_add is not None and o_add is not None:
+            attn_add = a[:, :, :, :, :, num_na_weights:]
+            av_cross_forward(attn_add, v_add, o_add)
+            o += o_add
 
     return out

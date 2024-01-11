@@ -26,13 +26,11 @@
 */
 
 #pragma once
-// TODO: remaining dependency to torch: getCurrentCUDAStream
-#include <torch/extension.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "natten/cuda/naive/natten_commons.cuh"
+#include <natten/cuda/naive/natten_commons.cuh>
 
 namespace natten {
 namespace cuda {
@@ -54,9 +52,9 @@ struct NeighborhoodNeighborhood3DBase {
     const int depth_dilation_in;
     const int dim;
     const int64_t problem_size;
-    const int weights_stride_0, weights_stride_1, weights_stride_2,
+    const int64_t weights_stride_0, weights_stride_1, weights_stride_2,
         weights_stride_3, weights_stride_4;
-    const int values_stride_0, values_stride_1, values_stride_2,
+    const int64_t values_stride_0, values_stride_1, values_stride_2,
         values_stride_3, values_stride_4;
 
     __device__ __host__ Params() {}
@@ -74,6 +72,11 @@ struct NeighborhoodNeighborhood3DBase {
         const int depth_kernel_size_in,
         const int depth_dilation_in,
         const int dim,
+        const int64_t weights_stride_0,
+        const int64_t weights_stride_1,
+        const int64_t weights_stride_2,
+        const int64_t weights_stride_3,
+        const int64_t weights_stride_4,
         const int problem_size)
         : weights(weights),
           values(values),
@@ -88,19 +91,11 @@ struct NeighborhoodNeighborhood3DBase {
           depth_dilation_in(depth_dilation_in),
           dim(dim),
           problem_size(problem_size),
-          weights_stride_4(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in),
-          weights_stride_3(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width),
-          weights_stride_2(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width *
-              height),
-          weights_stride_1(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width *
-              height * depth),
-          weights_stride_0(
-              kernel_size_in * kernel_size_in * depth_kernel_size_in * width *
-              height * depth * heads),
+          weights_stride_4(weights_stride_4),
+          weights_stride_3(weights_stride_3),
+          weights_stride_2(weights_stride_2),
+          weights_stride_1(weights_stride_1),
+          weights_stride_0(weights_stride_0),
           values_stride_4(dim),
           values_stride_3(dim * width),
           values_stride_2(dim * width * height),
@@ -150,7 +145,7 @@ struct NeighborhoodNeighborhood3DFull
     const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
     const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
       int indtmp1 = linearIndex / p.dim;
       const int d = linearIndex - indtmp1 * p.dim;
@@ -177,7 +172,7 @@ struct NeighborhoodNeighborhood3DFull
       int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
           k * p.weights_stride_2 + i * p.weights_stride_3 +
           j * p.weights_stride_4;
-      const int valuesOffset =
+      const int64_t valuesOffset =
           b * p.values_stride_0 + h * p.values_stride_1 + d;
 #pragma unroll
       for (int xk = nk; xk < nk + KERNEL_SIZE_D * dilation_d; xk += dilation_d)
@@ -185,7 +180,7 @@ struct NeighborhoodNeighborhood3DFull
         for (int xi = ni; xi < ni + KERNEL_SIZE * dilation; xi += dilation)
 #pragma unroll
           for (int xj = nj; xj < nj + KERNEL_SIZE * dilation; xj += dilation) {
-            const int valuesIndex = valuesOffset + xk * p.values_stride_2 +
+            const int64_t valuesIndex = valuesOffset + xk * p.values_stride_2 +
                 xi * p.values_stride_3 + xj * p.values_stride_4;
             updt += p.weights[weightsOffset] * p.values[valuesIndex];
             ++weightsOffset;
@@ -233,7 +228,7 @@ struct NeighborhoodNeighborhood3DHalf
     const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
     const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
       auto values2 = HalfHelper::typecast(p.values);
       auto output2 = HalfHelper::typecast(p.output);
@@ -262,7 +257,7 @@ struct NeighborhoodNeighborhood3DHalf
       int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
           k * p.weights_stride_2 + i * p.weights_stride_3 +
           j * p.weights_stride_4;
-      const int valuesOffset =
+      const int64_t valuesOffset =
           b * p.values_stride_0 + h * p.values_stride_1 + d;
 #pragma unroll
       for (int xk = nk; xk < nk + KERNEL_SIZE_D * dilation_d; xk += dilation_d)
@@ -270,7 +265,7 @@ struct NeighborhoodNeighborhood3DHalf
         for (int xi = ni; xi < ni + KERNEL_SIZE * dilation; xi += dilation)
 #pragma unroll
           for (int xj = nj; xj < nj + KERNEL_SIZE * dilation; xj += dilation) {
-            const int valuesIndex = valuesOffset + xk * p.values_stride_2 +
+            const int64_t valuesIndex = valuesOffset + xk * p.values_stride_2 +
                 xi * p.values_stride_3 + xj * p.values_stride_4;
             updt = HalfHelper::fma(
                 values2[valuesIndex], p.weights[weightsOffset], updt);
@@ -313,6 +308,7 @@ struct NeighborhoodNeighborhood3D {
 
   void operator()(
       const int cc,
+      cudaStream_t stream,
       void* attn_ptr,
       void* value_ptr,
       void* output_ptr,
@@ -322,6 +318,11 @@ struct NeighborhoodNeighborhood3D {
       int height,
       int width,
       int dim,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
       int kernel_size,
       int kernel_size_depth,
       int dilation,
@@ -330,7 +331,6 @@ struct NeighborhoodNeighborhood3D {
     int64_t problem_size = batch_size * heads * depth * height * width * dim;
     auto grid = Kernel::Base::get_grid(problem_size);
     auto block = Kernel::Base::get_block();
-    const auto stream = c10::cuda::getCurrentCUDAStream();
     auto params = Params(
         reinterpret_cast<scalar_t*>(attn_ptr),
         reinterpret_cast<scalar_t*>(value_ptr),
@@ -344,6 +344,11 @@ struct NeighborhoodNeighborhood3D {
         kernel_size_depth,
         dilation_depth,
         dim,
+        attn_stride_0,
+        attn_stride_1,
+        attn_stride_2,
+        attn_stride_3,
+        attn_stride_4,
         problem_size);
     launch_cuda_kernel<Kernel><<<grid, block, 0, stream>>>(params);
   }

@@ -222,6 +222,7 @@ COMMON_ARGS = [
     CArg("int", "kernel_size"),
     CArg("int", "dilation"),
     CArg("float", "scale"),
+    CArg("cudaStream_t", "stream"),
 ]
 
 PN_COMMON_ARGS = [
@@ -251,6 +252,10 @@ NA2D_PROBLEM_SIZE_ARGS = [
     CArg("int", "height"),
     CArg("int", "width"),
     CArg("int", "dim"),
+    CArg("int64_t", "attn_stride_0"),
+    CArg("int64_t", "attn_stride_1"),
+    CArg("int64_t", "attn_stride_2"),
+    CArg("int64_t", "attn_stride_3"),
 ]
 
 
@@ -554,6 +559,8 @@ class NAGemmKernel:
     def write_source_file(self, path):
         source_head = []
 
+        source_head += ["#include <iostream>\n"]
+
         source_head += [f"#include <{f}>\n" for f in self.header_files]
 
         source_head += ["\nnamespace natten { \n"]
@@ -581,6 +588,7 @@ class NAGemmKernel:
 def write_combined_source_file(path, filename, headers, sources):
     source_head = []
     source_head += ["#include <cuda_runtime.h>\n"]
+    source_head += ["#include <iostream>\n"]
 
     for header in headers:
         source_head += [f"#include <{header}>\n"]
