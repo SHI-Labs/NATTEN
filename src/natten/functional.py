@@ -134,17 +134,19 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         kernel_size: int,
         dilation: int,
     ) -> Tensor:
+        num_na_weights = kernel_size
         query = query.contiguous()
         key = key.contiguous()
         n_additional_tokens = check_additional_keys(query, additional_key)
         if bias is not None:
             bias = bias.to(key.dtype)
-        attn = make_attn_tensor_from_input(query, kernel_size + n_additional_tokens)
-        attn_na = attn[:, :, :, :kernel_size]
+        attn = make_attn_tensor_from_input(query, num_na_weights + n_additional_tokens)
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_key is not None
-            attn_add = attn[:, :, :, kernel_size:]
+            assert additional_key is not None and attn_add.numel() > 0
             qk_cross_forward(query, additional_key, attn_add)
 
         libnatten.na1d_qk_forward(attn_na, query, key, bias, kernel_size, dilation)
@@ -161,6 +163,7 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
+        num_na_weights = ctx.kernel_size
         assert len(grad_inputs) == 6
         query_t: Tensor = grad_inputs[0]
         key_t: Tensor = grad_inputs[1]
@@ -186,16 +189,19 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         query_t = query_t.contiguous()
         key_t = key_t.contiguous()
         attn_0 = make_attn_tensor_from_input(
-            query_t, ctx.kernel_size + n_additional_tokens
+            query_t, num_na_weights + n_additional_tokens
         )
         attn_1 = torch.empty_like(attn_0)
-        attn_na_0 = attn_0[:, :, :, : ctx.kernel_size]
-        attn_na_1 = attn_1[:, :, :, : ctx.kernel_size]
+        attn_na_0, attn_add_0 = attn_0.split(
+            [num_na_weights, attn_0.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na_1, attn_add_1 = attn_1.split(
+            [num_na_weights, attn_1.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
             assert additional_key_p is not None and additional_key_t is not None
-            attn_add_0 = attn_0[:, :, :, ctx.kernel_size :]
-            attn_add_1 = attn_1[:, :, :, ctx.kernel_size :]
+            assert attn_add_0.numel() > 0 and attn_add_1.numel() > 0
             qk_cross_forward(query_t, additional_key_p, attn_add_0)
             qk_cross_forward(query_p, additional_key_t, attn_add_1)
 
@@ -213,6 +219,7 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], Optional[Tensor], NoneType, NoneType]:
+        num_na_weights = ctx.kernel_size
         query, key, bias, additional_key = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
@@ -221,11 +228,12 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         d_additional_key = None
         n_additional_tokens = check_additional_keys(query, additional_key)
         d_query_add_key = None
-        d_attn_na = grad_out[:, :, :, : ctx.kernel_size]
+        d_attn_na, d_attn_add = grad_out.split(
+            [num_na_weights, grad_out.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_key is not None
-            d_attn_add = grad_out[:, :, :, ctx.kernel_size :]
+            assert additional_key is not None and d_attn_add.numel() > 0
             d_query_add_key, d_additional_key = torch.empty_like(
                 d_query
             ), torch.empty_like(additional_key)
@@ -261,17 +269,19 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         kernel_size: int,
         dilation: int,
     ):
+        num_na_weights = kernel_size
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
         n_additional_tokens = check_additional_values(
-            attn, additional_value, value, kernel_size
+            attn, additional_value, value, num_na_weights
         )
-        attn_na = attn[:, :, :, :kernel_size]
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_value is not None
-            attn_add = attn[:, :, :, kernel_size:]
+            assert additional_value is not None and attn_add.numel() > 0
             out_add = torch.empty_like(out)
             av_cross_forward(attn_add, additional_value, out_add)
 
@@ -293,6 +303,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
+        num_na_weights = ctx.kernel_size
         assert len(grad_inputs) == 5
         attn_t: Tensor = grad_inputs[0]
         value_t: Tensor = grad_inputs[1]
@@ -311,17 +322,20 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
         out_1 = torch.empty_like(out_0)
-        attn_na_t = attn_t[:, :, :, : ctx.kernel_size]
-        attn_na_p = attn_p[:, :, :, : ctx.kernel_size]
+        attn_na_t, attn_add_t = attn_t.split(
+            [num_na_weights, attn_t.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na_p, attn_add_p = attn_p.split(
+            [num_na_weights, attn_p.shape[-1] - num_na_weights], dim=-1
+        )
 
         out_0_add, out_1_add = None, None
         n_additional_tokens = check_additional_values(
-            attn_t, additional_value_t, value_t, ctx.kernel_size
+            attn_t, additional_value_t, value_t, num_na_weights
         )
         if n_additional_tokens:
             assert additional_value_p is not None and additional_value_t is not None
-            attn_add_t = attn_t[:, :, :, ctx.kernel_size :]
-            attn_add_p = attn_p[:, :, :, ctx.kernel_size :]
+            assert attn_add_p.numel() > 0 and attn_add_t.numel() > 0
             out_0_add, out_1_add = torch.empty_like(out_0), torch.empty_like(out_1)
             av_cross_forward(attn_add_t, additional_value_p, out_0_add)
             av_cross_forward(attn_add_p, additional_value_t, out_1_add)
@@ -346,22 +360,26 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType]:
+        num_na_weights = ctx.kernel_size
         attn, value, additional_value = ctx.saved_tensors
         d_out = grad_out.contiguous()
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
         d_additional_value = None
         n_additional_tokens = check_additional_values(
-            attn, additional_value, value, ctx.kernel_size
+            attn, additional_value, value, num_na_weights
         )
-        d_attn_na = d_attn[:, :, :, : ctx.kernel_size]
-        attn_na = attn[:, :, :, : ctx.kernel_size]
+        d_attn_na, d_attn_add = d_attn.split(
+            [num_na_weights, d_attn.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            d_additional_value = torch.empty_like(additional_value)
             assert additional_value is not None
-            d_attn_add = d_attn[:, :, :, ctx.kernel_size :]
-            attn_add = attn[:, :, :, ctx.kernel_size :]
+            assert d_attn_add.numel() > 0 and attn_add.numel() > 0
+            d_additional_value = torch.empty_like(additional_value)
             av_cross_backward(
                 d_out, additional_value, attn_add, d_attn_add, d_additional_value
             )
@@ -391,17 +409,19 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         kernel_size: int,
         dilation: int,
     ):
+        num_na_weights = kernel_size**2
         query = query.contiguous()
         key = key.contiguous()
         n_additional_tokens = check_additional_keys(query, additional_key)
         if bias is not None:
             bias = bias.to(key.dtype)
-        attn = make_attn_tensor_from_input(query, kernel_size**2 + n_additional_tokens)
-        attn_na = attn[:, :, :, :, : kernel_size**2]
+        attn = make_attn_tensor_from_input(query, num_na_weights + n_additional_tokens)
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_key is not None
-            attn_add = attn[:, :, :, :, kernel_size**2 :]
+            assert additional_key is not None and attn_add.numel() > 0
             qk_cross_forward(query, additional_key, attn_add)
 
         libnatten.na2d_qk_forward(attn_na, query, key, bias, kernel_size, dilation)
@@ -418,6 +438,7 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
+        num_na_weights = ctx.kernel_size**2
         assert len(grad_inputs) == 6
         query_t: Tensor = grad_inputs[0]
         key_t: Tensor = grad_inputs[1]
@@ -443,16 +464,19 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         query_t = query_t.contiguous()
         key_t = key_t.contiguous()
         attn_0 = make_attn_tensor_from_input(
-            query_t, ctx.kernel_size**2 + n_additional_tokens
+            query_t, num_na_weights + n_additional_tokens
         )
         attn_1 = torch.empty_like(attn_0)
-        attn_na_0 = attn_0[:, :, :, :, : ctx.kernel_size**2]
-        attn_na_1 = attn_1[:, :, :, :, : ctx.kernel_size**2]
+        attn_na_0, attn_add_0 = attn_0.split(
+            [num_na_weights, attn_0.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na_1, attn_add_1 = attn_1.split(
+            [num_na_weights, attn_1.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
             assert additional_key_p is not None and additional_key_t is not None
-            attn_add_0 = attn_0[:, :, :, :, ctx.kernel_size**2 :]
-            attn_add_1 = attn_1[:, :, :, :, ctx.kernel_size**2 :]
+            assert attn_add_0.numel() > 0 and attn_add_1.numel() > 0
             qk_cross_forward(query_t, additional_key_p, attn_add_0)
             qk_cross_forward(query_p, additional_key_t, attn_add_1)
 
@@ -469,6 +493,7 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], Optional[Tensor], NoneType, NoneType]:
+        num_na_weights = ctx.kernel_size**2
         query, key, bias, additional_key = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
@@ -477,11 +502,12 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         d_additional_key = None
         n_additional_tokens = check_additional_keys(query, additional_key)
         d_query_add_key = None
-        d_attn_na = grad_out[:, :, :, :, : ctx.kernel_size**2]
+        d_attn_na, d_attn_add = grad_out.split(
+            [num_na_weights, grad_out.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_key is not None
-            d_attn_add = grad_out[:, :, :, :, ctx.kernel_size**2 :]
+            assert additional_key is not None and d_attn_add.numel() > 0
             d_query_add_key, d_additional_key = torch.empty_like(
                 d_query
             ), torch.empty_like(additional_key)
@@ -517,17 +543,19 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         kernel_size: int,
         dilation: int,
     ) -> Tensor:
+        num_na_weights = kernel_size**2
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
         n_additional_tokens = check_additional_values(
-            attn, additional_value, value, kernel_size**2
+            attn, additional_value, value, num_na_weights
         )
-        attn_na = attn[:, :, :, :, : kernel_size**2]
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_value is not None
-            attn_add = attn[:, :, :, :, kernel_size**2 :]
+            assert additional_value is not None and attn_add.numel() > 0
             out_add = torch.empty_like(out)
             av_cross_forward(attn_add, additional_value, out_add)
 
@@ -549,6 +577,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
+        num_na_weights = ctx.kernel_size**2
         assert len(grad_inputs) == 5
         attn_t: Tensor = grad_inputs[0]
         value_t: Tensor = grad_inputs[1]
@@ -567,17 +596,20 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
         out_1 = torch.empty_like(out_0)
-        attn_na_t = attn_t[:, :, :, :, : ctx.kernel_size**2]
-        attn_na_p = attn_p[:, :, :, :, : ctx.kernel_size**2]
+        attn_na_t, attn_add_t = attn_t.split(
+            [num_na_weights, attn_t.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na_p, attn_add_p = attn_p.split(
+            [num_na_weights, attn_p.shape[-1] - num_na_weights], dim=-1
+        )
 
         out_0_add, out_1_add = None, None
         n_additional_tokens = check_additional_values(
-            attn_t, additional_value_t, value_t, ctx.kernel_size**2
+            attn_t, additional_value_t, value_t, num_na_weights
         )
         if n_additional_tokens:
             assert additional_value_p is not None and additional_value_t is not None
-            attn_add_t = attn_t[:, :, :, :, ctx.kernel_size**2 :]
-            attn_add_p = attn_p[:, :, :, :, ctx.kernel_size**2 :]
+            assert attn_add_p.numel() > 0 and attn_add_t.numel() > 0
             out_0_add, out_1_add = torch.empty_like(out_0), torch.empty_like(out_1)
             av_cross_forward(attn_add_t, additional_value_p, out_0_add)
             av_cross_forward(attn_add_p, additional_value_t, out_1_add)
@@ -602,22 +634,26 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType]:
+        num_na_weights = ctx.kernel_size**2
         attn, value, additional_value = ctx.saved_tensors
         d_out = grad_out.contiguous()
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
         d_additional_value = None
         n_additional_tokens = check_additional_values(
-            attn, additional_value, value, ctx.kernel_size**2
+            attn, additional_value, value, num_na_weights
         )
-        d_attn_na = d_attn[:, :, :, :, : ctx.kernel_size**2]
-        attn_na = attn[:, :, :, :, : ctx.kernel_size**2]
+        d_attn_na, d_attn_add = d_attn.split(
+            [num_na_weights, d_attn.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            d_additional_value = torch.empty_like(additional_value)
             assert additional_value is not None
-            d_attn_add = d_attn[:, :, :, :, ctx.kernel_size**2 :]
-            attn_add = attn[:, :, :, :, ctx.kernel_size**2 :]
+            assert d_attn_add.numel() > 0 and attn_add.numel() > 0
+            d_additional_value = torch.empty_like(additional_value)
             av_cross_backward(
                 d_out, additional_value, attn_add, d_attn_add, d_additional_value
             )
@@ -649,19 +685,19 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         dilation_d: int,
         dilation: int,
     ) -> Tensor:
+        num_na_weights = kernel_size_d * kernel_size * kernel_size
         query = query.contiguous()
         key = key.contiguous()
         n_additional_tokens = check_additional_keys(query, additional_key)
         if bias is not None:
             bias = bias.to(key.dtype)
-        attn = make_attn_tensor_from_input(
-            query, kernel_size * kernel_size * kernel_size_d + n_additional_tokens
+        attn = make_attn_tensor_from_input(query, num_na_weights + n_additional_tokens)
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
         )
-        attn_na = attn[:, :, :, :, :, : kernel_size * kernel_size * kernel_size_d]
 
         if n_additional_tokens:
-            assert additional_key is not None
-            attn_add = attn[:, :, :, :, :, kernel_size * kernel_size * kernel_size_d :]
+            assert additional_key is not None and attn_add.numel() > 0
             qk_cross_forward(query, additional_key, attn_add)
 
         libnatten.na3d_qk_forward(
@@ -683,6 +719,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
+        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
         assert len(grad_inputs) == 8
         query_t: Tensor = grad_inputs[0]
         key_t: Tensor = grad_inputs[1]
@@ -707,25 +744,19 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         query_t = query_t.contiguous()
         key_t = key_t.contiguous()
         attn_0 = make_attn_tensor_from_input(
-            query_t,
-            ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d + n_additional_tokens,
+            query_t, num_na_weights + n_additional_tokens
         )
         attn_1 = torch.empty_like(attn_0)
-        attn_na_0 = attn_0[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
-        attn_na_1 = attn_1[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
+        attn_na_0, attn_add_0 = attn_0.split(
+            [num_na_weights, attn_0.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na_1, attn_add_1 = attn_1.split(
+            [num_na_weights, attn_1.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
             assert additional_key_p is not None and additional_key_t is not None
-            attn_add_0 = attn_0[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
-            attn_add_1 = attn_1[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
+            assert attn_add_0.numel() > 0 and attn_add_1.numel() > 0
             qk_cross_forward(query_t, additional_key_p, attn_add_0)
             qk_cross_forward(query_p, additional_key_t, attn_add_1)
 
@@ -763,6 +794,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         NoneType,
         NoneType,
     ]:
+        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
         query, key, bias, additional_key = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
@@ -771,15 +803,12 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         d_additional_key = None
         n_additional_tokens = check_additional_keys(query, additional_key)
         d_query_add_key = None
-        d_attn_na = grad_out[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
+        d_attn_na, d_attn_add = grad_out.split(
+            [num_na_weights, grad_out.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_key is not None
-            d_attn_add = grad_out[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
+            assert additional_key is not None and d_attn_add.numel() > 0
             d_query_add_key, d_additional_key = torch.empty_like(
                 d_query
             ), torch.empty_like(additional_key)
@@ -819,17 +848,19 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         dilation_d: int,
         dilation: int,
     ) -> Tensor:
+        num_na_weights = kernel_size_d * kernel_size * kernel_size
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
         n_additional_tokens = check_additional_values(
-            attn, additional_value, value, kernel_size * kernel_size * kernel_size_d
+            attn, additional_value, value, num_na_weights
         )
-        attn_na = attn[:, :, :, :, :, : kernel_size * kernel_size * kernel_size_d]
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            assert additional_value is not None
-            attn_add = attn[:, :, :, :, :, kernel_size * kernel_size * kernel_size_d :]
+            assert additional_value is not None and attn_add.numel() > 0
             out_add = torch.empty_like(out)
             av_cross_forward(attn_add, additional_value, out_add)
 
@@ -855,6 +886,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
+        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
         assert len(grad_inputs) == 7
         attn_t: Tensor = grad_inputs[0]
         value_t: Tensor = grad_inputs[1]
@@ -873,19 +905,16 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
         out_1 = torch.empty_like(out_0)
-        attn_na_t = attn_t[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
-        attn_na_p = attn_p[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
+        attn_na_t, attn_add_t = attn_t.split(
+            [num_na_weights, attn_t.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na_p, attn_add_p = attn_p.split(
+            [num_na_weights, attn_p.shape[-1] - num_na_weights], dim=-1
+        )
 
         out_0_add, out_1_add = None, None
         n_additional_tokens = check_additional_values(
-            attn_t,
-            additional_value_t,
-            value_t,
-            ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d,
+            attn_t, additional_value_t, value_t, num_na_weights
         )
         if n_additional_tokens:
             assert additional_value_p is not None and additional_value_t is not None
@@ -933,33 +962,26 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
     ) -> Tuple[
         Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType, NoneType
     ]:
+        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
         attn, value, additional_value = ctx.saved_tensors
         d_out = grad_out.contiguous()
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
         d_additional_value = None
         n_additional_tokens = check_additional_values(
-            attn,
-            additional_value,
-            value,
-            ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d,
+            attn, additional_value, value, num_na_weights
         )
-        d_attn_na = d_attn[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
-        attn_na = attn[
-            :, :, :, :, :, : ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d
-        ]
+        d_attn_na, d_attn_add = d_attn.split(
+            [num_na_weights, d_attn.shape[-1] - num_na_weights], dim=-1
+        )
+        attn_na, attn_add = attn.split(
+            [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
+        )
 
         if n_additional_tokens:
-            d_additional_value = torch.empty_like(additional_value)
             assert additional_value is not None
-            d_attn_add = d_attn[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
-            attn_add = attn[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
+            assert d_attn_add.numel() > 0 and attn_add.numel() > 0
+            d_additional_value = torch.empty_like(additional_value)
             av_cross_backward(
                 d_out, additional_value, attn_add, d_attn_add, d_additional_value
             )

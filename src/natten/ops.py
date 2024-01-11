@@ -50,7 +50,6 @@ def qk_cross_backward(
         d_attn.shape[0] * d_attn.shape[1], -1, d_attn.shape[-1]
     )
     d_attn_transposed_bmm_view = d_attn_bmm_view.transpose(-2, -1)
-    assert d_attn.storage().data_ptr() == d_attn.storage().data_ptr()
     d_query_bmm_view = d_query.view(
         d_query.shape[0] * d_query.shape[1], -1, d_query.shape[-1]
     )

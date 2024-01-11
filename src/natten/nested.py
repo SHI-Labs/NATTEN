@@ -98,12 +98,13 @@ def na1d_qk_nested(
         ]
     )
     for q, k, a, k_add in zip(query, key, attn, additional_keys_list):
-        attn_na = a[:, :, :, :num_na_weights]
+        attn_na, attn_add = a.split(
+            [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
+        )
         libnatten.na1d_qk_forward(attn_na, q, k, rpb, kernel_size, dilation)
 
         if len(n_add_tokens_list):
-            assert k_add is not None
-            attn_add = a[:, :, :, num_na_weights:]
+            assert k_add is not None and attn_add.numel() > 0
             qk_cross_forward(q, k_add, attn_add)
 
     return attn
@@ -158,11 +159,13 @@ def na1d_av_nested(
     for a, v, o, v_add, o_add in zip(
         attn, value, out, additional_values_list, additional_outputs_list
     ):
-        attn_na = a[:, :, :, :num_na_weights]
+        attn_na, attn_add = a.split(
+            [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
+        )
         libnatten.na1d_av_forward(o, attn_na, v, kernel_size, dilation)
 
         if v_add is not None and o_add is not None:
-            attn_add = a[:, :, :, num_na_weights:]
+            assert attn_add.numel() > 0
             av_cross_forward(attn_add, v_add, o_add)
             o += o_add
 
@@ -224,12 +227,13 @@ def na2d_qk_nested(
     )
 
     for q, k, a, k_add in zip(query, key, attn, additional_keys_list):
-        attn_na = a[:, :, :, :, :num_na_weights]
+        attn_na, attn_add = a.split(
+            [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
+        )
         libnatten.na2d_qk_forward(attn_na, q, k, rpb, kernel_size, dilation)
 
         if len(n_add_tokens_list):
-            assert k_add is not None
-            attn_add = a[:, :, :, :, num_na_weights:]
+            assert k_add is not None and attn_add.numel() > 0
             qk_cross_forward(q, k_add, attn_add)
 
     return attn
@@ -284,11 +288,13 @@ def na2d_av_nested(
     for a, v, o, v_add, o_add in zip(
         attn, value, out, additional_values_list, additional_outputs_list
     ):
-        attn_na = a[:, :, :, :, :num_na_weights]
+        attn_na, attn_add = a.split(
+            [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
+        )
         libnatten.na2d_av_forward(o, attn_na, v, kernel_size, dilation)
 
         if v_add is not None and o_add is not None:
-            attn_add = a[:, :, :, :, num_na_weights:]
+            assert attn_add.numel() > 0
             av_cross_forward(attn_add, v_add, o_add)
             o += o_add
 
@@ -352,14 +358,15 @@ def na3d_qk_nested(
     )
 
     for q, k, a, k_add in zip(query, key, attn, additional_keys_list):
-        attn_na = a[:, :, :, :, :, :num_na_weights]
+        attn_na, attn_add = a.split(
+            [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
+        )
         libnatten.na3d_qk_forward(
             attn_na, q, k, rpb, kernel_size, dilation, kernel_size_d, dilation_d
         )
 
         if len(n_add_tokens_list):
-            assert k_add is not None
-            attn_add = a[:, :, :, :, :, num_na_weights:]
+            assert k_add is not None and attn_add.numel() > 0
             qk_cross_forward(q, k_add, attn_add)
 
     return attn
@@ -416,13 +423,15 @@ def na3d_av_nested(
     for a, v, o, v_add, o_add in zip(
         attn, value, out, additional_values_list, additional_outputs_list
     ):
-        attn_na = a[:, :, :, :, :, :num_na_weights]
+        attn_na, attn_add = a.split(
+            [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
+        )
         libnatten.na3d_av_forward(
             o, attn_na, v, kernel_size, dilation, kernel_size_d, dilation_d
         )
 
         if v_add is not None and o_add is not None:
-            attn_add = a[:, :, :, :, :, num_na_weights:]
+            assert attn_add.numel() > 0
             av_cross_forward(attn_add, v_add, o_add)
             o += o_add
 
