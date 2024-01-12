@@ -30,12 +30,12 @@ def qk_cross_forward(query: Tensor, key: Tensor, out: Tensor):
     Performs cross attention between arbitrary-rank tensors ([batch, heads, ..., dim]).
     Allows output to be a view.
     """
-    query_bmm_view = query.view(query.shape[0] * query.shape[1], -1, query.shape[-1])
+    query_bmm_view = query.view(query.shape[0], query.shape[1], -1, query.shape[-1])
     key_transposed_bmm_view = key.view(
-        key.shape[0] * key.shape[1], -1, key.shape[-1]
+        key.shape[0], key.shape[1], -1, key.shape[-1]
     ).transpose(-2, -1)
-    out_bmm_view = out.view(out.shape[0] * out.shape[1], -1, out.shape[-1])
-    torch.bmm(query_bmm_view, key_transposed_bmm_view, out=out_bmm_view)
+    out_bmm_view = out.view(out.shape[0], out.shape[1], -1, out.shape[-1])
+    torch.matmul(query_bmm_view, key_transposed_bmm_view, out=out_bmm_view)
 
 
 def qk_cross_backward(
@@ -44,30 +44,30 @@ def qk_cross_backward(
     """
     Backward pass for qk_cross_forward.
     """
-    query_bmm_view = query.view(query.shape[0] * query.shape[1], -1, query.shape[-1])
-    key_bmm_view = key.view(key.shape[0] * key.shape[1], -1, key.shape[-1])
+    query_bmm_view = query.view(query.shape[0], query.shape[1], -1, query.shape[-1])
+    key_bmm_view = key.view(key.shape[0], key.shape[1], -1, key.shape[-1])
     d_attn_bmm_view = d_attn.view(
-        d_attn.shape[0] * d_attn.shape[1], -1, d_attn.shape[-1]
+        d_attn.shape[0], d_attn.shape[1], -1, d_attn.shape[-1]
     )
     d_attn_transposed_bmm_view = d_attn_bmm_view.transpose(-2, -1)
     d_query_bmm_view = d_query.view(
-        d_query.shape[0] * d_query.shape[1], -1, d_query.shape[-1]
+        d_query.shape[0], d_query.shape[1], -1, d_query.shape[-1]
     )
-    d_key_bmm_view = d_key.view(d_key.shape[0] * d_key.shape[1], -1, d_key.shape[-1])
-    torch.bmm(d_attn_bmm_view, key_bmm_view, out=d_query_bmm_view)
-    torch.bmm(d_attn_transposed_bmm_view, query_bmm_view, out=d_key_bmm_view)
+    d_key_bmm_view = d_key.view(d_key.shape[0], d_key.shape[1], -1, d_key.shape[-1])
+    torch.matmul(d_attn_bmm_view, key_bmm_view, out=d_query_bmm_view)
+    torch.matmul(d_attn_transposed_bmm_view, query_bmm_view, out=d_key_bmm_view)
 
 
 def av_cross_forward(attn: Tensor, value: Tensor, output: Tensor):
     """
     Applies cross attention weights.
     """
-    attn_bmm_view = attn.view(attn.shape[0] * attn.shape[1], -1, attn.shape[-1])
-    value_bmm_view = value.view(value.shape[0] * value.shape[1], -1, value.shape[-1])
+    attn_bmm_view = attn.view(attn.shape[0], attn.shape[1], -1, attn.shape[-1])
+    value_bmm_view = value.view(value.shape[0], value.shape[1], -1, value.shape[-1])
     output_bmm_view = output.view(
-        output.shape[0] * output.shape[1], -1, output.shape[-1]
+        output.shape[0], output.shape[1], -1, output.shape[-1]
     )
-    torch.bmm(attn_bmm_view, value_bmm_view, out=output_bmm_view)
+    torch.matmul(attn_bmm_view, value_bmm_view, out=output_bmm_view)
 
 
 def av_cross_backward(
@@ -76,18 +76,18 @@ def av_cross_backward(
     """
     Backward pass for av_cross_forward.
     """
-    d_out_bmm_view = d_out.view(d_out.shape[0] * d_out.shape[1], -1, d_out.shape[-1])
+    d_out_bmm_view = d_out.view(d_out.shape[0], d_out.shape[1], -1, d_out.shape[-1])
     value_transposed_bmm_view = value.view(
-        value.shape[0] * value.shape[1], -1, value.shape[-1]
+        value.shape[0], value.shape[1], -1, value.shape[-1]
     ).transpose(-2, -1)
     d_value_bmm_view = d_value.view(
-        d_value.shape[0] * d_value.shape[1], -1, d_value.shape[-1]
+        d_value.shape[0], d_value.shape[1], -1, d_value.shape[-1]
     )
     attn_transposed_bmm_view = attn.view(
-        attn.shape[0] * attn.shape[1], -1, attn.shape[-1]
+        attn.shape[0], attn.shape[1], -1, attn.shape[-1]
     ).transpose(-2, -1)
     d_attn_bmm_view = d_attn.view(
-        d_attn.shape[0] * d_attn.shape[1], -1, d_attn.shape[-1]
+        d_attn.shape[0], d_attn.shape[1], -1, d_attn.shape[-1]
     )
-    torch.bmm(attn_transposed_bmm_view, d_out_bmm_view, out=d_value_bmm_view)
-    torch.bmm(d_out_bmm_view, value_transposed_bmm_view, out=d_attn_bmm_view)
+    torch.matmul(attn_transposed_bmm_view, d_out_bmm_view, out=d_value_bmm_view)
+    torch.matmul(d_out_bmm_view, value_transposed_bmm_view, out=d_attn_bmm_view)

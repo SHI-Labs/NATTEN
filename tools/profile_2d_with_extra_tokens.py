@@ -45,6 +45,7 @@ from utils.profiler_2d import profile_na2d_extra_tokens
 @click.option("--disable-tf32", is_flag=True)
 @click.option("--warmup-steps", default=10)
 @click.option("--disable-fusion", is_flag=True)
+@click.option("--broadcast-batch", is_flag=True)
 def profile_2d(
     batch_size: int,
     heads: int,
@@ -61,6 +62,7 @@ def profile_2d(
     disable_tf32: bool,
     warmup_steps: int,
     disable_fusion: bool,
+    broadcast_batch: bool,
 ):
 
     dtype = torch.float32
@@ -87,6 +89,7 @@ def profile_2d(
         dtype=dtype,
         warmup_steps=warmup_steps,
         disable_concat_fusion=disable_fusion,
+        broadcast_batch=broadcast_batch,
     )
 
     title = "Profiler results"

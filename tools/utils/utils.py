@@ -21,6 +21,7 @@
 #
 #################################################################################################
 
+from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -34,11 +35,11 @@ def qk_cross(query: Tensor, key: Tensor) -> Tensor:
     Performs cross attention between arbitrary-rank tensors ([batch, heads, ..., dim]).
     """
     output_shape = [x for x in query.shape[:-1]] + [key.shape[-2]]
-    query_bmm_view = query.view(query.shape[0] * query.shape[1], -1, query.shape[-1])
+    query_bmm_view = query.view(query.shape[0], query.shape[1], -1, query.shape[-1])
     key_transposed_bmm_view = key.view(
-        key.shape[0] * key.shape[1], -1, key.shape[-1]
+        key.shape[0], key.shape[1], -1, key.shape[-1]
     ).transpose(-2, -1)
-    output = torch.bmm(query_bmm_view, key_transposed_bmm_view)
+    output = torch.matmul(query_bmm_view, key_transposed_bmm_view)
     return output.reshape(*output_shape)
 
 
@@ -47,9 +48,9 @@ def av_cross(attn: Tensor, value: Tensor) -> Tensor:
     Applies cross attention weights.
     """
     output_shape = [x for x in attn.shape[:-1]] + [value.shape[-1]]
-    attn_bmm_view = attn.view(attn.shape[0] * attn.shape[1], -1, attn.shape[-1])
-    value_bmm_view = value.view(value.shape[0] * value.shape[1], -1, value.shape[-1])
-    output = torch.bmm(attn_bmm_view, value_bmm_view)
+    attn_bmm_view = attn.view(attn.shape[0], attn.shape[1], -1, attn.shape[-1])
+    value_bmm_view = value.view(value.shape[0], value.shape[1], -1, value.shape[-1])
+    output = torch.matmul(attn_bmm_view, value_bmm_view)
     return output.reshape(*output_shape)
 
 
@@ -75,6 +76,12 @@ class NAOp(Enum):
     LegacyIN = 13
 
 
+@dataclass(frozen=True)
+class CustomOp:
+    name: str
+    namespace: str
+
+
 def _format_time(time_us: float) -> str:
     """
     Source: https://github.com/pytorch/pytorch/blob/orig/release/1.13/torch/autograd/profiler_util.py
@@ -91,7 +98,7 @@ def _format_time(time_us: float) -> str:
 class Result:
     def __init__(
         self,
-        op: NAOp | str,
+        op: NAOp | CustomOp,
         op_str: str,
         time: float,
         index: int = -1,
@@ -99,7 +106,9 @@ class Result:
         tag: Optional[str] = None,
     ):
         self.kernel_type = "N/A"
-        if op in [
+        if isinstance(op, CustomOp):
+            self.kernel_type = op.namespace
+        elif op in [
             NAOp.QKRPB,
             NAOp.AV,
             NAOp.QGRAD,
@@ -112,9 +121,9 @@ class Result:
             NAOp.LegacyNN,
             NAOp.LegacyIN,
         ]:
-            self.kernel_type = "naive"
+            self.kernel_type = "natten.naive"
         elif op in [NAOp.PN, NAOp.NN, NAOp.IN]:
-            self.kernel_type = "gemm"
+            self.kernel_type = "natten.gemm"
         self.op = op
         self.op_str = op_str
         self.time = time
@@ -167,7 +176,7 @@ class Result:
 
 
 def convert_ops(
-    ops: Dict[NAOp | str, List[float]], tags: Dict
+    ops: Dict[NAOp | CustomOp, List[float]], tags: Dict
 ) -> Optional[List[Result]]:
     output = []
     for op, values in ops.items():
@@ -230,12 +239,12 @@ def convert_ops(
                     Result(op, NAOp.KGRAD.name, sum(values) / 2, 3, tag=tags[op])
                 )
                 continue
-            if len(values) != 1:
-                return None
+            assert len(values) == 1
             output.append(Result(op, op.name, values[0], op.value, tag=tags[op]))
         elif len(values):
-            assert isinstance(op, str)
-            output.append(Result(op, op, values[0], 999, tag="Non-NA"))
+            assert isinstance(op, CustomOp)
+            for value in values:
+                output.append(Result(op, op.name, value, 999, tag="-"))
     filtered_output = []
     rpb_op = None
     for res in output:
@@ -297,16 +306,32 @@ def str_to_na_op(
     return None, False, ""
 
 
-def custom_op_to_name(name: str) -> str:
-    return name.split("::")[-1].split("<")[0]
+def custom_op_to_name(name: str) -> Tuple[str, str]:
+    # TODO: figure out a mapping between known backend kernels
+    # (at least those that are more common) instead of this.
+    def remove_wrapper(s, wrapper):
+        if s.startswith(wrapper):
+            return s[len(wrapper) :], True
+        return s, False
+
+    name = name.strip()
+    name, is_cutlass = remove_wrapper(name, "void cutlass::Kernel<")
+    name, _ = remove_wrapper(name, "void (anonymous namespace)::")
+    name, _ = remove_wrapper(name, "void ")
+    name = name.split("<")[0].split(">")[0]
+    name = name.replace("(anonymous namespace)", "ANON")
+    namespace_split = name.split("::")
+    default_namespace = "-" if not is_cutlass else "cutlass"
+    if len(namespace_split) <= 1:
+        return default_namespace, name
+    return ".".join(namespace_split[:-1]), namespace_split[-1]
 
 
 def extract_na_ops(
     profiler: torch_profile, _keywords: Dict[str, List[str]]
 ) -> Optional[List[Result]]:
     events = profiler.events()
-    logged_ops: Dict[NAOp | str, List[float]] = {na_op: [] for na_op in NAOp}
-    custom_ops: Dict[str, int] = {}
+    logged_ops: Dict[NAOp | CustomOp, List[float]] = {na_op: [] for na_op in NAOp}
     tags: Dict[NAOp, Optional[str]] = {na_op: None for na_op in NAOp}
     for evt in events:
         op, valid, tag = str_to_na_op(sym=evt.key, **_keywords)
@@ -317,15 +342,12 @@ def extract_na_ops(
                 assert tags[op] == tag
             logged_ops[op].append(evt.cuda_time_total)
         elif evt.cuda_time_total > 0:
-            op_key = custom_op_to_name(evt.key)
-            if op_key in custom_ops:
-                custom_ops[op_key] += 1
-                op_key = f"{op_key}_{custom_ops[op_key]}"
+            op_namespace, op_name = custom_op_to_name(evt.key)
+            op_key = CustomOp(op_name, op_namespace)
+            if op_key not in logged_ops:
+                logged_ops[op_key] = [evt.cuda_time_total]
             else:
-                custom_ops[op_key] = 0
-                op_key = f"{op_key}_{custom_ops[op_key]}"
-            assert op_key not in logged_ops
-            logged_ops[op_key] = [evt.cuda_time_total]
+                logged_ops[op_key].append(evt.cuda_time_total)
 
     converted_ops = convert_ops(logged_ops, tags)
     return None if converted_ops is None else sorted(converted_ops)
