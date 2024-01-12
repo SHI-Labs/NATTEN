@@ -627,6 +627,7 @@ class NA3DTests(unittest.TestCase):
         device="cuda",
         eps=1e-6,
         L_extra=9,
+        broadcast_extra_kv_batch=False,
     ):
         assert L_extra > 0
         kwargs = {"device": device, "dtype": dtype}
@@ -649,9 +650,20 @@ class NA3DTests(unittest.TestCase):
                 )
                 rpb_ref = rpb.clone()
 
-            extra_k = torch.randn((B, H, L_extra, D), **kwargs)
-            extra_v = torch.randn((B, H, L_extra, D), **kwargs)
+            extra_k = torch.randn(
+                (1 if broadcast_extra_kv_batch else B, H, L_extra, D), **kwargs
+            )
+            extra_v = torch.randn(
+                (1 if broadcast_extra_kv_batch else B, H, L_extra, D), **kwargs
+            )
             extra_k_ref, extra_v_ref = extra_k.clone(), extra_v.clone()
+            if broadcast_extra_kv_batch:
+                extra_k, extra_v = extra_k.expand(B, H, L_extra, D), extra_v.expand(
+                    B, H, L_extra, D
+                )
+                extra_k_ref, extra_v_ref = extra_k_ref.repeat(
+                    B, 1, 1, 1
+                ), extra_v_ref.repeat(B, 1, 1, 1)
 
             # Reference implementation
             attn_extra_ref = (
@@ -746,6 +758,20 @@ class NA3DTests(unittest.TestCase):
             dtype=torch.float32,
             device="cpu",
         )
+        self._test_with_extra_tokens(
+            B=B,
+            H=H,
+            X=X,
+            Y=Y,
+            Z=Z,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            has_bias=has_bias,
+            dtype=torch.float32,
+            device="cpu",
+            broadcast_extra_kv_batch=True,
+        )
 
     def _test_cuda_with_extra_tokens(
         self, B, H, X, Y, Z, D, kernel_size, dilation, has_bias=False
@@ -762,6 +788,20 @@ class NA3DTests(unittest.TestCase):
             has_bias=has_bias,
             dtype=torch.float32,
             device="cuda",
+        )
+        self._test_with_extra_tokens(
+            B=B,
+            H=H,
+            X=X,
+            Y=Y,
+            Z=Z,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            has_bias=has_bias,
+            dtype=torch.float32,
+            device="cuda",
+            broadcast_extra_kv_batch=True,
         )
         if HAS_HALF:
             self._test_with_extra_tokens(

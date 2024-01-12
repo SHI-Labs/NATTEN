@@ -202,6 +202,7 @@ def _profile_na2d_extra_tokens_with_torch(
     dtype: Any,
     warmup_steps: int = 10,
     disable_concat_fusion: bool = False,
+    broadcast_batch: bool = False,
 ) -> torch_profile:
     q = torch.randn(
         (batch_size, heads, height, width, dim), requires_grad=False, dtype=dtype
@@ -213,11 +214,18 @@ def _profile_na2d_extra_tokens_with_torch(
         (batch_size, heads, height, width, dim), requires_grad=False, dtype=dtype
     ).cuda(0)
     k_ext = torch.randn(
-        (batch_size, heads, num_extra_tokens, dim), requires_grad=False, dtype=dtype
+        (1 if broadcast_batch else batch_size, heads, num_extra_tokens, dim),
+        requires_grad=False,
+        dtype=dtype,
     ).cuda(0)
     v_ext = torch.randn(
-        (batch_size, heads, num_extra_tokens, dim), requires_grad=False, dtype=dtype
+        (1 if broadcast_batch else batch_size, heads, num_extra_tokens, dim),
+        requires_grad=False,
+        dtype=dtype,
     ).cuda(0)
+    if broadcast_batch:
+        k_ext = k_ext.expand(batch_size, heads, num_extra_tokens, dim)
+        v_ext = v_ext.expand(batch_size, heads, num_extra_tokens, dim)
 
     return profile_extra_tokens_with_torch(
         na2d_qk,
@@ -246,6 +254,7 @@ def profile_na2d_extra_tokens(
     dtype: Any,
     warmup_steps: int = 10,
     disable_concat_fusion: bool = False,
+    broadcast_batch: bool = False,
 ):
     profile_result = _profile_na2d_extra_tokens_with_torch(
         batch_size=batch_size,
@@ -259,6 +268,7 @@ def profile_na2d_extra_tokens(
         dtype=dtype,
         warmup_steps=warmup_steps,
         disable_concat_fusion=disable_concat_fusion,
+        broadcast_batch=broadcast_batch,
     )
     out = extract_na_ops(profile_result, _NA_2D_C_KEYWORDS)
     exp_num_ops = 3
@@ -277,6 +287,7 @@ def profile_na2d_extra_tokens(
             dtype=dtype,
             warmup_steps=warmup_steps,
             disable_concat_fusion=disable_concat_fusion,
+            broadcast_batch=broadcast_batch,
         )
         out = extract_na_ops(profile_result, _NA_2D_C_KEYWORDS)
         captured_num_ops = 0 if not out else len(out)
