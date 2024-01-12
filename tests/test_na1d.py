@@ -51,44 +51,47 @@ HAS_BFLOAT = has_bfloat()
 logger = logging.getLogger(__name__)
 
 
-class NA1DTests(unittest.TestCase):
-    def _test_against_cpu(
-        self, B, H, L, D, kernel_size, dilation, has_bias, dtype, eps
-    ):
-        with torch.no_grad():
-            q, k, v = (
-                torch.randn((B, H, L, D)) * (D**-0.5),
-                torch.randn((B, H, L, D)),
-                torch.randn((B, H, L, D)),
-            )
-            rpb = None
-            if has_bias:
-                rpb = torch.randn(H, 2 * kernel_size - 1)
-            q_, k_, v_ = (
-                q.clone().cuda().to(dtype),
-                k.clone().cuda().to(dtype),
-                v.clone().cuda().to(dtype),
-            )
-            rpb_ = None if rpb is None else rpb.clone().cuda().to(dtype)
+def init_cpu_ref(B, H, L, D, kernel_size, dilation, has_bias):
+    with torch.no_grad():
+        q, k, v = (
+            torch.randn((B, H, L, D)) * (D**-0.5),
+            torch.randn((B, H, L, D)),
+            torch.randn((B, H, L, D)),
+        )
+        rpb = None if not has_bias else torch.randn(H, 2 * kernel_size - 1)
+        q_, k_, v_ = (
+            q.clone().cuda(),
+            k.clone().cuda(),
+            v.clone().cuda(),
+        )
+        rpb_ = None if rpb is None else rpb.clone().cuda()
 
-            attn_ref = na1d_qk_with_bias(q, k, rpb, kernel_size, dilation)
-            attn_ref = attn_ref.softmax(dim=-1)
-            out_ref = na1d_av(attn_ref, v, kernel_size, dilation)
+        attn_ref = na1d_qk_with_bias(q, k, rpb, kernel_size, dilation)
+        attn_ref = attn_ref.softmax(dim=-1)
+        out_ref = na1d_av(attn_ref, v, kernel_size, dilation)
+    return (q_, k_, v_, rpb_, kernel_size, dilation), (attn_ref.cuda(), out_ref.cuda())
+
+
+class NA1DTests(unittest.TestCase):
+    def _test_against_cpu(self, inputs, reference, eps, dtype):
+        q, k, v, rpb, kernel_size, dilation = inputs
+        attn_ref, out_ref = reference
+        with torch.no_grad():
+            q_, k_, v_ = q.clone().to(dtype), k.clone().to(dtype), v.clone().to(dtype)
+            rpb_ = rpb if rpb is None else rpb.clone().to(dtype)
+            assert q_.is_cuda and k_.is_cuda and v_.is_cuda
 
             attn = na1d_qk_with_bias(q_, k_, rpb_, kernel_size, dilation)
             attn = attn.softmax(dim=-1)
             out = na1d_av(attn, v_, kernel_size, dilation)
 
-            torch.testing.assert_close(attn.float().cpu(), attn_ref, atol=eps, rtol=0)
-            torch.testing.assert_close(out.float().cpu(), out_ref, atol=eps, rtol=0)
+            torch.testing.assert_close(attn.float(), attn_ref, atol=eps, rtol=0)
+            torch.testing.assert_close(out.float(), out_ref, atol=eps, rtol=0)
 
     def _test_all_dtypes_against_cpu(
         self, B, H, L, D, kernel_size, dilation, has_bias=False
     ):
-        # Test naive kernels
-        disable_gemm_na()
-        disable_tf32()
-        self._test_against_cpu(
+        inputs, reference = init_cpu_ref(
             B=B,
             H=H,
             L=L,
@@ -96,57 +99,44 @@ class NA1DTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             has_bias=has_bias,
+        )
+        # Test naive kernels
+        disable_gemm_na()
+        disable_tf32()
+        self._test_against_cpu(
+            inputs=inputs,
+            reference=reference,
             dtype=torch.float32,
             eps=1e-4,
         )
         if HAS_HALF:
             self._test_against_cpu(
-                B=B,
-                H=H,
-                L=L,
-                D=D,
-                kernel_size=kernel_size,
-                dilation=dilation,
-                has_bias=has_bias,
+                inputs=inputs,
+                reference=reference,
                 dtype=torch.float16,
                 eps=1e-1,
             )
         if HAS_BFLOAT:
             self._test_against_cpu(
-                B=B,
-                H=H,
-                L=L,
-                D=D,
-                kernel_size=kernel_size,
-                dilation=dilation,
-                has_bias=has_bias,
+                inputs=inputs,
+                reference=reference,
                 dtype=torch.bfloat16,
                 eps=1e-1,
             )
+        # Test GEMM-based kernels
         if HAS_GEMM:
-            # Test GEMM-based kernels
             enable_gemm_na()
             if HAS_FLOAT_GEMM:
                 self._test_against_cpu(
-                    B=B,
-                    H=H,
-                    L=L,
-                    D=D,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    has_bias=has_bias,
+                    inputs=inputs,
+                    reference=reference,
                     dtype=torch.float32,
                     eps=1e-2,
                 )
                 enable_tf32()
                 self._test_against_cpu(
-                    B=B,
-                    H=H,
-                    L=L,
-                    D=D,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    has_bias=has_bias,
+                    inputs=inputs,
+                    reference=reference,
                     dtype=torch.float32,
                     eps=1e-2,
                 )
@@ -154,32 +144,21 @@ class NA1DTests(unittest.TestCase):
                 HAS_HALF
             ), "GEMM kernels must support FP16 across on all supported architectures."
             self._test_against_cpu(
-                B=B,
-                H=H,
-                L=L,
-                D=D,
-                kernel_size=kernel_size,
-                dilation=dilation,
-                has_bias=has_bias,
+                inputs=inputs,
+                reference=reference,
                 dtype=torch.float16,
                 eps=1e-1,
             )
             if HAS_BFLOAT:
                 self._test_against_cpu(
-                    B=B,
-                    H=H,
-                    L=L,
-                    D=D,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    has_bias=has_bias,
+                    inputs=inputs,
+                    reference=reference,
                     dtype=torch.bfloat16,
                     eps=1e-1,
                 )
 
     @skip_if_cuda_is_not_supported()
     def test_cpu_vs_cuda(self):
-        torch.manual_seed(42)
         self._test_all_dtypes_against_cpu(
             B=1, H=1, L=16, D=32, kernel_size=7, dilation=1
         )
@@ -209,7 +188,6 @@ class NA1DTests(unittest.TestCase):
         self, B, H, L, D, kernel_size, dilation, eps, device, L_extra=0
     ):
         assert L_extra >= 0
-        torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         query = torch.randn((B, H, L, D), **kwargs)
         key = torch.randn((B, H, L, D), **kwargs)
@@ -231,7 +209,6 @@ class NA1DTests(unittest.TestCase):
         self, B, H, L, D, kernel_size, dilation, eps, device, L_extra=0
     ):
         assert L_extra >= 0
-        torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         attn = torch.randn((B, H, L, kernel_size + L_extra), **kwargs)
         value = torch.randn((B, H, L, D), **kwargs)
@@ -345,7 +322,6 @@ class NA1DTests(unittest.TestCase):
         )
 
     def _test_fwad_qk(self, B, H, L, D, kernel_size, dilation, device, L_extra=0):
-        torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         query = torch.randn((B, H, L, D), **kwargs)
         key = torch.randn((B, H, L, D), **kwargs)
@@ -363,7 +339,6 @@ class NA1DTests(unittest.TestCase):
         ), "Forward mode autograd check failed for NA1D: QK."
 
     def _test_fwad_av(self, B, H, L, D, kernel_size, dilation, device, L_extra=0):
-        torch.manual_seed(42)
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         attn = torch.randn((B, H, L, kernel_size + L_extra), **kwargs)
         value = torch.randn((B, H, L, D), **kwargs)
@@ -443,7 +418,6 @@ class NA1DTests(unittest.TestCase):
         self._test_fwad(B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, device="cuda")
 
     def _test_nested_qk_forward(self, dtype, device, test_additional_tokens=True):
-        torch.manual_seed(42)
         kernel_size, dilation = 7, 2
         kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
         query = torch.nested.nested_tensor(
@@ -493,7 +467,6 @@ class NA1DTests(unittest.TestCase):
                 torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
 
     def _test_nested_av_forward(self, dtype, device, test_additional_tokens=True):
-        torch.manual_seed(42)
         kernel_size, dilation = 7, 2
         kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
         attn = torch.nested.nested_tensor(
@@ -561,6 +534,428 @@ class NA1DTests(unittest.TestCase):
         self._test_nested_qk_forward(dtype=torch.float16, device="cuda")
         self._test_nested_av_forward(dtype=torch.float16, device="cuda")
 
+    def _test_with_extra_tokens(
+        self,
+        B,
+        H,
+        L,
+        D,
+        kernel_size,
+        dilation,
+        has_bias,
+        dtype,
+        device="cuda",
+        eps=1e-6,
+        L_extra=9,
+    ):
+        assert L_extra > 0
+        kwargs = {"device": device, "dtype": dtype}
+        with torch.no_grad():
+            q, k, v = (
+                torch.randn((B, H, L, D), **kwargs) * (D**-0.5),
+                torch.randn((B, H, L, D), **kwargs),
+                torch.randn((B, H, L, D), **kwargs),
+            )
+            q_ref, k_ref, v_ref = q.clone(), k.clone(), v.clone()
+
+            rpb, rpb_ref = None, None
+            if has_bias:
+                rpb = torch.randn(H, 2 * kernel_size - 1, **kwargs)
+                rpb_ref = rpb.clone()
+
+            extra_k = torch.randn((B, H, L_extra, D), **kwargs)
+            extra_v = torch.randn((B, H, L_extra, D), **kwargs)
+            extra_k_ref, extra_v_ref = extra_k.clone(), extra_v.clone()
+
+            # Reference implementation
+            attn_extra_ref = (
+                (
+                    q_ref.view(B * H, L, D).contiguous()
+                    @ extra_k_ref.view(B * H, L_extra, D).transpose(-2, -1).contiguous()
+                )
+                .view(B, H, L, L_extra)
+                .contiguous()
+            )
+            attn_na_ref = na1d_qk_with_bias(
+                q_ref, k_ref, rpb_ref, kernel_size, dilation
+            )
+            attn_ref = torch.cat([attn_na_ref, attn_extra_ref], dim=-1)
+            attn_ref_softmax = attn_ref.softmax(dim=-1)
+            attn_na_softmax_ref, attn_extra_softmax_ref = attn_ref_softmax.split(
+                [kernel_size, L_extra], dim=-1
+            )
+            attn_na_softmax_ref, attn_extra_softmax_ref = (
+                attn_na_softmax_ref.contiguous(),
+                attn_extra_softmax_ref.contiguous(),
+            )
+            out_na_ref = na1d_av(attn_na_softmax_ref, v_ref, kernel_size, dilation)
+            out_extra_ref = (
+                (
+                    attn_extra_softmax_ref.view(B * H, L, L_extra).contiguous()
+                    @ extra_v_ref.view(B * H, L_extra, D).contiguous()
+                )
+                .view(B, H, L, D)
+                .contiguous()
+            )
+            out_ref = out_extra_ref + out_na_ref
+
+            # Op
+            attn = na1d_qk_with_bias(
+                q, k, rpb, kernel_size, dilation, additional_keys=extra_k
+            )
+            attn_na, attn_extra = attn.split([kernel_size, L_extra], dim=-1)
+            attn_na, attn_extra = attn_na.contiguous(), attn_extra.contiguous()
+            attn_softmax = attn.softmax(dim=-1)
+            attn_na_softmax, attn_extra_softmax = attn_softmax.split(
+                [kernel_size, L_extra], dim=-1
+            )
+            attn_na_softmax, attn_extra_softmax = (
+                attn_na_softmax.contiguous(),
+                attn_extra_softmax.contiguous(),
+            )
+            out = na1d_av(
+                attn_softmax, v, kernel_size, dilation, additional_values=extra_v
+            )
+
+            # Elementwise checks
+            torch.testing.assert_close(attn_na, attn_na_ref, atol=eps, rtol=eps)
+            torch.testing.assert_close(
+                attn_na_softmax, attn_na_softmax_ref, atol=eps, rtol=eps
+            )
+            torch.testing.assert_close(attn_extra, attn_extra_ref, atol=eps, rtol=eps)
+            torch.testing.assert_close(
+                attn_extra_softmax, attn_extra_softmax_ref, atol=eps, rtol=eps
+            )
+            torch.testing.assert_close(attn, attn_ref, atol=eps, rtol=eps)
+            torch.testing.assert_close(out, out_ref, atol=eps, rtol=eps)
+
+    def _test_cpu_with_extra_tokens(
+        self, B, H, L, D, kernel_size, dilation, has_bias=False
+    ):
+        self._test_with_extra_tokens(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            has_bias=has_bias,
+            dtype=torch.float32,
+            device="cpu",
+        )
+
+    def _test_cuda_with_extra_tokens(
+        self, B, H, L, D, kernel_size, dilation, has_bias=False
+    ):
+        # Test naive kernels
+        disable_gemm_na()
+        disable_tf32()
+        self._test_with_extra_tokens(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            has_bias=has_bias,
+            dtype=torch.float32,
+            device="cuda",
+        )
+        if HAS_HALF:
+            self._test_with_extra_tokens(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.float16,
+                device="cuda",
+            )
+        if HAS_BFLOAT:
+            self._test_with_extra_tokens(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.bfloat16,
+                device="cuda",
+            )
+
+        # Test GEMM-based kernels
+        if HAS_GEMM:
+            enable_gemm_na()
+            if HAS_FLOAT_GEMM:
+                self._test_with_extra_tokens(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    has_bias=has_bias,
+                    dtype=torch.float32,
+                    device="cuda",
+                )
+                enable_tf32()
+                self._test_with_extra_tokens(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    has_bias=has_bias,
+                    dtype=torch.float32,
+                    device="cuda",
+                )
+            assert (
+                HAS_HALF
+            ), "GEMM kernels must support FP16 across on all supported architectures."
+            self._test_with_extra_tokens(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                has_bias=has_bias,
+                dtype=torch.float16,
+                device="cuda",
+            )
+            if HAS_BFLOAT:
+                self._test_with_extra_tokens(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    has_bias=has_bias,
+                    dtype=torch.bfloat16,
+                    device="cuda",
+                )
+
+    def test_cpu_with_extra_tokens(self):
+        self._test_cpu_with_extra_tokens(
+            B=1, H=1, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_cpu_with_extra_tokens(
+            B=2, H=1, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_cpu_with_extra_tokens(
+            B=2, H=2, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_cpu_with_extra_tokens(
+            B=4, H=4, L=100, D=32, kernel_size=3, dilation=1
+        )
+        self._test_cpu_with_extra_tokens(
+            B=4, H=8, L=100, D=32, kernel_size=3, dilation=4
+        )
+        self._test_cpu_with_extra_tokens(
+            B=4, H=4, L=100, D=32, kernel_size=13, dilation=1
+        )
+        self._test_cpu_with_extra_tokens(
+            B=4, H=8, L=100, D=32, kernel_size=13, dilation=2
+        )
+        self._test_cpu_with_extra_tokens(
+            B=4, H=8, L=100, D=32, has_bias=True, kernel_size=13, dilation=2
+        )
+
+    @skip_if_cuda_is_not_supported()
+    def test_cuda_with_extra_tokens(self):
+        self._test_cuda_with_extra_tokens(
+            B=1, H=1, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_cuda_with_extra_tokens(
+            B=2, H=1, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_cuda_with_extra_tokens(
+            B=2, H=2, L=16, D=32, kernel_size=7, dilation=1
+        )
+        self._test_cuda_with_extra_tokens(
+            B=4, H=4, L=100, D=32, kernel_size=3, dilation=1
+        )
+        self._test_cuda_with_extra_tokens(
+            B=4, H=8, L=100, D=32, kernel_size=3, dilation=4
+        )
+        self._test_cuda_with_extra_tokens(
+            B=4, H=4, L=100, D=32, kernel_size=13, dilation=1
+        )
+        self._test_cuda_with_extra_tokens(
+            B=4, H=8, L=100, D=32, kernel_size=13, dilation=2
+        )
+        self._test_cuda_with_extra_tokens(
+            B=4, H=8, L=100, D=32, has_bias=True, kernel_size=13, dilation=2
+        )
+
+    def _test_against_self_attention(
+        self,
+        B,
+        H,
+        L,
+        D,
+        dtype,
+        device="cuda",
+        eps=1e-6,
+    ):
+        # Only odd-sized kernels are valid in NA,
+        # and NA == SA when kernel size equals
+        # input size. NATTEN only allows square-sized
+        # kernels, so we need to make sure that the
+        # input size is an odd value across every
+        # spatial dim.
+        assert L % 2 == 1
+        kernel_size = L
+        dilation = 1
+        kwargs = {"device": device, "dtype": dtype}
+        with torch.no_grad():
+            q, k, v = (
+                torch.randn((B, H, L, D), **kwargs) * (D**-0.5),
+                torch.randn((B, H, L, D), **kwargs),
+                torch.randn((B, H, L, D), **kwargs),
+            )
+            q_ref, k_ref, v_ref = q.clone(), k.clone(), v.clone()
+
+            # Reference implementation
+            attn_ref = (
+                (
+                    q_ref.view(B * H, L, D).contiguous()
+                    @ k_ref.view(B * H, L, D).transpose(-2, -1).contiguous()
+                )
+                .view(B, H, L, L)
+                .contiguous()
+            )
+            attn_ref_softmax = attn_ref.softmax(dim=-1)
+            out_ref = (
+                (
+                    attn_ref_softmax.view(B * H, L, L).contiguous()
+                    @ v_ref.view(B * H, L, D).contiguous()
+                )
+                .view(B, H, L, D)
+                .contiguous()
+            )
+
+            # Op
+            attn = na1d_qk(q, k, kernel_size, dilation)
+            attn_softmax = attn.softmax(dim=-1)
+            out = na1d_av(attn_softmax, v, kernel_size, dilation)
+
+            # We can only check the outputs against each other, and
+            # not attention weights, because they are stored in a
+            # different order with NATTEN.
+            torch.testing.assert_close(out, out_ref, atol=eps, rtol=eps)
+
+    def _test_cpu_against_self_attention(self, B, H, L, D):
+        assert L % 2 == 1
+        self._test_against_self_attention(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            dtype=torch.float32,
+            device="cpu",
+        )
+
+    def _test_cuda_against_self_attention(self, B, H, L, D):
+        assert L % 2 == 1
+        # Test naive kernels
+        disable_gemm_na()
+        disable_tf32()
+        self._test_against_self_attention(
+            B=B,
+            H=H,
+            L=L,
+            D=D,
+            dtype=torch.float32,
+            device="cuda",
+            eps=1e-4,
+        )
+        if HAS_HALF:
+            self._test_against_self_attention(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                dtype=torch.float16,
+                device="cuda",
+                eps=1e-1,
+            )
+        if HAS_BFLOAT:
+            self._test_against_self_attention(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                dtype=torch.bfloat16,
+                device="cuda",
+                eps=1e-1,
+            )
+        # Test GEMM-based kernels
+        if HAS_GEMM:
+            enable_gemm_na()
+            if HAS_FLOAT_GEMM:
+                self._test_against_self_attention(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    dtype=torch.float32,
+                    device="cuda",
+                    eps=1e-2,
+                )
+                enable_tf32()
+                self._test_against_self_attention(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    dtype=torch.float32,
+                    device="cuda",
+                    eps=1e-2,
+                )
+            assert (
+                HAS_HALF
+            ), "GEMM kernels must support FP16 across on all supported architectures."
+            self._test_against_self_attention(
+                B=B,
+                H=H,
+                L=L,
+                D=D,
+                dtype=torch.float16,
+                device="cuda",
+                eps=1e-1,
+            )
+            if HAS_BFLOAT:
+                self._test_against_self_attention(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    dtype=torch.bfloat16,
+                    device="cuda",
+                    eps=1e-1,
+                )
+
+    def test_cpu_against_self_attention(self):
+        self._test_cpu_against_self_attention(B=1, H=2, L=7, D=32)
+        self._test_cpu_against_self_attention(B=1, H=2, L=15, D=32)
+
+    @skip_if_cuda_is_not_supported()
+    def test_cuda_against_self_attention(self):
+        self._test_cuda_against_self_attention(B=2, H=4, L=3, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, L=5, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, L=7, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, L=9, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, L=11, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, L=13, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, L=15, D=32)
+
 
 if __name__ == "__main__":
+    torch.manual_seed(42)
     unittest.main()

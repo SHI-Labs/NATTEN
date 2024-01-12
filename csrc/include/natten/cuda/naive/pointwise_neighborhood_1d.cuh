@@ -130,7 +130,7 @@ struct PointwiseNeighborhood1DBase {
     int KERNELTHREADS = min(CUDA_NUM_THREADS, kernel_size);
     int TOKENTHREADS = min(CUDA_NUM_THREADS / KERNELTHREADS, length);
     int BATCHTHREADS =
-        max(1, CUDA_NUM_THREADS / (TOKENTHREADS * KERNELTHREADS));
+        min(64, max(1, CUDA_NUM_THREADS / (TOKENTHREADS * KERNELTHREADS)));
     dim3 grid(
         (length + TOKENTHREADS - 1) / TOKENTHREADS,
         (kernel_size + KERNELTHREADS - 1) / KERNELTHREADS,

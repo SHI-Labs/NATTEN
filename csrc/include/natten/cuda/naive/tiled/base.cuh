@@ -148,7 +148,7 @@ struct PointwiseNeighborhood2DBase {
         min(CUDA_NUM_THREADS, attention_span /* == kernel_size^2 */);
     int PIXELTHREADS = min(int(CUDA_NUM_THREADS / KERNELTHREADS), spatial_size);
     int BATCHTHREADS =
-        max(1, CUDA_NUM_THREADS / (PIXELTHREADS * KERNELTHREADS));
+        min(64, max(1, CUDA_NUM_THREADS / (PIXELTHREADS * KERNELTHREADS)));
     dim3 grid(
         (spatial_size + PIXELTHREADS - 1) / PIXELTHREADS,
         (attention_span + KERNELTHREADS - 1) / KERNELTHREADS,
