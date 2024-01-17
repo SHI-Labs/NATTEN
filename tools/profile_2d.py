@@ -21,12 +21,20 @@
 #
 #################################################################################################
 
+from functools import partial
+
 import click
 
 import natten
 import torch
-from utils.pretty_printer import print_table
-from utils.profiler_2d import profile_na2d
+from natten import autotuner
+
+from utils import (
+    generate_2d_problem,
+    print_table,
+    profile_fmha_with_torch,
+    profile_na_with_torch,
+)
 
 
 @click.command()
@@ -40,10 +48,16 @@ from utils.profiler_2d import profile_na2d
 @click.option("--fp16", is_flag=True)
 @click.option("--bf16", is_flag=True)
 @click.option("--bias", is_flag=True)
+@click.option("--causal", is_flag=True)
 @click.option("--disable-tiled", is_flag=True)
 @click.option("--disable-gemm", is_flag=True)
 @click.option("--disable-tf32", is_flag=True)
+@click.option("--disable-autotuner", is_flag=True)
 @click.option("--warmup-steps", default=10)
+@click.option("--fuse", is_flag=True)
+@click.option("--fmha", is_flag=True)
+@click.option("--fav2", is_flag=True)
+@click.option("--backprop", is_flag=True)
 def profile_2d(
     batch_size: int,
     heads: int,
@@ -55,10 +69,16 @@ def profile_2d(
     fp16: bool,
     bf16: bool,
     bias: bool,
+    causal: bool,
     disable_tiled: bool,
     disable_gemm: bool,
     disable_tf32: bool,
+    disable_autotuner: bool,
     warmup_steps: int,
+    fuse: bool,
+    fmha: bool,
+    fav2: bool,
+    backprop: bool,
 ):
 
     dtype = torch.float32
@@ -66,14 +86,25 @@ def profile_2d(
         dtype = torch.float16
     if bf16:
         dtype = torch.bfloat16
+
     if disable_tiled:
         natten.libnatten.set_tiled_na(False)
     if disable_gemm:
         natten.libnatten.set_gemm_na(False)
     if disable_tf32:
         natten.libnatten.set_gemm_tf32(False)
+    if disable_autotuner:
+        autotuner.disable_autotuner()
+    else:
+        autotuner.enable_autotuner()
 
-    logged_ops = profile_na2d(
+    func = partial(profile_na_with_torch, fuse=fuse)
+    if fmha:
+        func = partial(profile_fmha_with_torch, xformers=True)
+    if fav2:
+        func = partial(profile_fmha_with_torch, xformers=False)
+
+    problem = generate_2d_problem(
         batch_size=batch_size,
         heads=heads,
         height=height,
@@ -82,8 +113,13 @@ def profile_2d(
         kernel_size=kernel_size,
         dilation=dilation,
         dtype=dtype,
+        has_bias=bias,
+        is_causal=causal,
+    )
+    logged_ops = func(
+        problem=problem,
         warmup_steps=warmup_steps,
-        enable_bias=bias,
+        disable_backward=not backprop,
     )
 
     title = "Profiler results"

@@ -21,8 +21,10 @@
 #
 #################################################################################################
 
-import logging
+import os
+
 import unittest
+from itertools import product
 
 import torch
 
@@ -38,7 +40,8 @@ from natten import (
     has_gemm,
     has_half,
 )
-from natten.functional import na2d_av, na2d_qk, na2d_qk_with_bias
+from natten.functional import na2d_av, na2d_qk
+from natten.utils import check_all_args, get_num_na_weights
 from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
     skip_if_gemm_does_not_support_double_precision,
@@ -48,7 +51,7 @@ from torch.autograd import gradcheck
 
 # NOTE: It is important to disable CUDNN benchmarking and TF32
 # because some tests are written with the assumption of relatively
-# good determinisim. This affects certain torch builds, in particular
+# good determinism. This affects certain torch builds, in particular
 # those in NGC images (mostly just built from source with different flags
 # compared to PyPI.)
 torch.backends.cudnn.benchmark = False
@@ -59,10 +62,17 @@ HAS_GEMM = has_gemm()
 HAS_FLOAT_GEMM = has_fp32_gemm()
 HAS_HALF = has_half()
 HAS_BFLOAT = has_bfloat()
-logger = logging.getLogger(__name__)
+
+_FAST_GRADCHECK = os.environ.get("NATTEN_SLOW_GRADCHECK", 0) == 0
 
 
-def init_cpu_ref(B, H, X, Y, D, kernel_size, dilation, has_bias):
+def check_args(kernel_size, dilation, is_causal):
+    return check_all_args(2, kernel_size, dilation, is_causal)
+
+
+def init_cpu_ref(B, H, X, Y, D, kernel_size, dilation, has_bias, is_causal=None):
+    kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
+    assert not has_bias or not any(is_causal)
     with torch.no_grad():
         q, k, v = (
             torch.randn((B, H, X, Y, D)) * (D**-0.5),
@@ -72,7 +82,7 @@ def init_cpu_ref(B, H, X, Y, D, kernel_size, dilation, has_bias):
         rpb = (
             None
             if not has_bias
-            else torch.randn(H, 2 * kernel_size - 1, 2 * kernel_size - 1)
+            else torch.randn(H, 2 * kernel_size[0] - 1, 2 * kernel_size[1] - 1)
         )
         q_, k_, v_ = (
             q.clone().cuda(),
@@ -81,31 +91,56 @@ def init_cpu_ref(B, H, X, Y, D, kernel_size, dilation, has_bias):
         )
         rpb_ = None if rpb is None else rpb.clone().cuda()
 
-        attn_ref = na2d_qk_with_bias(q, k, rpb, kernel_size, dilation)
+        attn_ref = na2d_qk(
+            q,
+            k,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            is_causal=is_causal,
+            rpb=rpb,
+        )
         attn_ref = attn_ref.softmax(dim=-1)
-        out_ref = na2d_av(attn_ref, v, kernel_size, dilation)
+        out_ref = na2d_av(
+            attn_ref, v, kernel_size=kernel_size, dilation=dilation, is_causal=is_causal
+        )
     return (q_, k_, v_, rpb_, kernel_size, dilation), (attn_ref.cuda(), out_ref.cuda())
 
 
 class NA2DTests(unittest.TestCase):
-    def _test_against_cpu(self, inputs, reference, eps, dtype):
+    def _test_against_cpu(self, inputs, reference, eps, dtype, is_causal=None):
         q, k, v, rpb, kernel_size, dilation = inputs
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         attn_ref, out_ref = reference
         with torch.no_grad():
             q_, k_, v_ = q.clone().to(dtype), k.clone().to(dtype), v.clone().to(dtype)
             rpb_ = rpb if rpb is None else rpb.clone().to(dtype)
             assert q_.is_cuda and k_.is_cuda and v_.is_cuda
 
-            attn = na2d_qk_with_bias(q_, k_, rpb_, kernel_size, dilation)
+            attn = na2d_qk(
+                q_,
+                k_,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+                rpb=rpb_,
+            )
             attn = attn.softmax(dim=-1)
-            out = na2d_av(attn, v_, kernel_size, dilation)
+            out = na2d_av(
+                attn,
+                v_,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+            )
 
             torch.testing.assert_close(attn.float(), attn_ref, atol=eps, rtol=0)
             torch.testing.assert_close(out.float(), out_ref, atol=eps, rtol=0)
 
     def _test_all_dtypes_against_cpu(
-        self, B, H, X, Y, D, kernel_size, dilation, has_bias=False
+        self, B, H, X, Y, D, kernel_size, dilation, has_bias=False, is_causal=None
     ):
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
+        assert not has_bias or not any(is_causal)
         inputs, reference = init_cpu_ref(
             B=B,
             H=H,
@@ -115,6 +150,7 @@ class NA2DTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             has_bias=has_bias,
+            is_causal=is_causal,
         )
         # Test naive kernels
         disable_tiled_na()
@@ -125,6 +161,7 @@ class NA2DTests(unittest.TestCase):
             reference=reference,
             dtype=torch.float32,
             eps=1e-4,
+            is_causal=is_causal,
         )
         if HAS_HALF:
             self._test_against_cpu(
@@ -132,6 +169,7 @@ class NA2DTests(unittest.TestCase):
                 reference=reference,
                 dtype=torch.float16,
                 eps=1e-1,
+                is_causal=is_causal,
             )
         if HAS_BFLOAT:
             self._test_against_cpu(
@@ -139,8 +177,15 @@ class NA2DTests(unittest.TestCase):
                 reference=reference,
                 dtype=torch.bfloat16,
                 eps=1e-1,
+                is_causal=is_causal,
             )
-        if kernel_size < 15 and D == 32:
+        # TODO: change when GEMM/tiled kernels support causal
+        if any(is_causal):
+            return
+        # TODO: change when GEMM/tiled kernels support varying kernel sizes / dilations
+        if kernel_size[0] != kernel_size[1] or dilation[0] != dilation[1]:
+            return
+        if kernel_size[0] < 15 and D == 32:
             # Test tiled kernels
             enable_tiled_na()
             self._test_against_cpu(
@@ -148,6 +193,7 @@ class NA2DTests(unittest.TestCase):
                 reference=reference,
                 dtype=torch.float32,
                 eps=1e-4,
+                is_causal=is_causal,
             )
             if HAS_HALF:
                 self._test_against_cpu(
@@ -155,6 +201,7 @@ class NA2DTests(unittest.TestCase):
                     reference=reference,
                     dtype=torch.float16,
                     eps=1e-1,
+                    is_causal=is_causal,
                 )
             if HAS_BFLOAT:
                 self._test_against_cpu(
@@ -162,6 +209,7 @@ class NA2DTests(unittest.TestCase):
                     reference=reference,
                     dtype=torch.bfloat16,
                     eps=1e-1,
+                    is_causal=is_causal,
                 )
         # Test GEMM-based kernels
         if HAS_GEMM:
@@ -172,6 +220,7 @@ class NA2DTests(unittest.TestCase):
                     reference=reference,
                     dtype=torch.float32,
                     eps=1e-2,
+                    is_causal=is_causal,
                 )
                 enable_tf32()
                 self._test_against_cpu(
@@ -179,6 +228,7 @@ class NA2DTests(unittest.TestCase):
                     reference=reference,
                     dtype=torch.float32,
                     eps=1e-2,
+                    is_causal=is_causal,
                 )
             assert (
                 HAS_HALF
@@ -188,6 +238,7 @@ class NA2DTests(unittest.TestCase):
                 reference=reference,
                 dtype=torch.float16,
                 eps=1e-1,
+                is_causal=is_causal,
             )
             if HAS_BFLOAT:
                 self._test_against_cpu(
@@ -195,6 +246,7 @@ class NA2DTests(unittest.TestCase):
                     reference=reference,
                     dtype=torch.bfloat16,
                     eps=1e-1,
+                    is_causal=is_causal,
                 )
 
     @skip_if_cuda_is_not_supported()
@@ -230,38 +282,229 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=1280, Y=1920, D=8, kernel_size=5, dilation=1
         )
 
+    @skip_if_cuda_is_not_supported()
+    def test_causal_cpu_vs_cuda(self):
+        # Technically the case where all are False is redundant, but it's
+        # kept to increase API coverage.
+        for causal_h, causal_w in product([True, False], [True, False]):
+            causal_mask = [causal_h, causal_w]
+            self._test_all_dtypes_against_cpu(
+                B=1,
+                H=1,
+                X=16,
+                Y=16,
+                D=32,
+                kernel_size=7,
+                dilation=1,
+                is_causal=causal_mask,
+            )
+            self._test_all_dtypes_against_cpu(
+                B=2,
+                H=1,
+                X=16,
+                Y=16,
+                D=32,
+                kernel_size=7,
+                dilation=1,
+                is_causal=causal_mask,
+            )
+            self._test_all_dtypes_against_cpu(
+                B=2,
+                H=2,
+                X=16,
+                Y=16,
+                D=32,
+                kernel_size=7,
+                dilation=1,
+                is_causal=causal_mask,
+            )
+            self._test_all_dtypes_against_cpu(
+                B=1,
+                H=2,
+                X=28,
+                Y=28,
+                D=32,
+                kernel_size=3,
+                dilation=1,
+                is_causal=causal_mask,
+            )
+            self._test_all_dtypes_against_cpu(
+                B=1,
+                H=2,
+                X=28,
+                Y=28,
+                D=32,
+                kernel_size=3,
+                dilation=4,
+                is_causal=causal_mask,
+            )
+            self._test_all_dtypes_against_cpu(
+                B=1,
+                H=2,
+                X=28,
+                Y=28,
+                D=32,
+                kernel_size=13,
+                dilation=1,
+                is_causal=causal_mask,
+            )
+            self._test_all_dtypes_against_cpu(
+                B=1,
+                H=2,
+                X=28,
+                Y=28,
+                D=32,
+                kernel_size=13,
+                dilation=2,
+                is_causal=causal_mask,
+            )
+
+    @skip_if_cuda_is_not_supported()
+    def test_varying_args_cpu_vs_cuda(self):
+        for causal_h, causal_w in product([True, False], [True, False]):
+            causal_mask = [causal_h, causal_w]
+            self._test_all_dtypes_against_cpu(
+                B=2,
+                H=4,
+                X=32,
+                Y=32,
+                D=16,
+                is_causal=causal_mask,
+                kernel_size=[7, 5],
+                dilation=[1, 1],
+            )
+            self._test_all_dtypes_against_cpu(
+                B=2,
+                H=4,
+                X=32,
+                Y=32,
+                D=16,
+                is_causal=causal_mask,
+                kernel_size=[7, 5],
+                dilation=[1, 2],
+            )
+            self._test_all_dtypes_against_cpu(
+                B=2,
+                H=4,
+                X=32,
+                Y=32,
+                D=16,
+                is_causal=causal_mask,
+                kernel_size=[3, 5],
+                dilation=[5, 2],
+            )
+        self._test_all_dtypes_against_cpu(
+            B=2,
+            H=4,
+            X=32,
+            Y=32,
+            D=16,
+            has_bias=True,
+            kernel_size=[7, 5],
+            dilation=[1, 1],
+        )
+        self._test_all_dtypes_against_cpu(
+            B=2,
+            H=4,
+            X=32,
+            Y=32,
+            D=16,
+            has_bias=True,
+            kernel_size=[7, 5],
+            dilation=[1, 2],
+        )
+        self._test_all_dtypes_against_cpu(
+            B=2,
+            H=4,
+            X=32,
+            Y=32,
+            D=16,
+            has_bias=True,
+            kernel_size=[3, 5],
+            dilation=[5, 2],
+        )
+
     def _test_autograd_qk(
-        self, B, H, X, Y, D, kernel_size, dilation, eps, device, L_extra=0
+        self,
+        B,
+        H,
+        X,
+        Y,
+        D,
+        kernel_size,
+        dilation,
+        eps,
+        device,
+        L_extra=0,
+        is_causal=None,
     ):
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         assert L_extra >= 0
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         query = torch.randn((B, H, X, Y, D), **kwargs)
         key = torch.randn((B, H, X, Y, D), **kwargs)
         extra_key = None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
-        rpb = torch.randn((H, 2 * kernel_size - 1, 2 * kernel_size - 1), **kwargs)
-        variables = [query, key, rpb, kernel_size, dilation, extra_key]
+        # TODO: remove when RPB + causal is supported
+        rpb = None
+        if not any(is_causal):
+            rpb = torch.randn(
+                (H, 2 * kernel_size[0] - 1, 2 * kernel_size[1] - 1), **kwargs
+            )
+        variables = [query, key, kernel_size, dilation, extra_key, is_causal, rpb]
+
+        op = na2d_qk
+        if any(is_causal):
+            # NOTE: Gradcheck ends up with NaNs when it hits the -inf values
+            # in the attention weights due to causal masking. That's why
+            # we're pairing the QK op with softmax to avoid that.
+            def new_op(q, k, kernel_size, dilation, additional_keys, is_causal, rpb):
+                return na2d_qk(
+                    q,
+                    k,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    additional_keys=additional_keys,
+                    is_causal=is_causal,
+                    rpb=rpb,
+                ).softmax(-1)
+
+            op = new_op
 
         assert gradcheck(
-            na2d_qk_with_bias,
+            op,
             variables,
             eps=1e-6,
             atol=eps,
             rtol=1e-4,
-            nondet_tol=0,
-            fast_mode=False,
+            nondet_tol=0 if rpb is None else 1e-6,  # dRPB uses atomics
+            fast_mode=_FAST_GRADCHECK,
         ), "Autograd check failed for NA2D: QK."
 
     def _test_autograd_av(
-        self, B, H, X, Y, D, kernel_size, dilation, eps, device, L_extra=0
+        self,
+        B,
+        H,
+        X,
+        Y,
+        D,
+        kernel_size,
+        dilation,
+        eps,
+        device,
+        L_extra=0,
+        is_causal=None,
     ):
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         assert L_extra >= 0
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
-        attn = torch.randn((B, H, X, Y, kernel_size**2 + L_extra), **kwargs)
+        attn = torch.randn(
+            (B, H, X, Y, get_num_na_weights(kernel_size) + L_extra), **kwargs
+        )
         value = torch.randn((B, H, X, Y, D), **kwargs)
         extra_value = (
             None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
         )
-        variables = [attn, value, kernel_size, dilation, extra_value]
+        variables = [attn, value, kernel_size, dilation, extra_value, is_causal]
 
         assert gradcheck(
             na2d_av,
@@ -270,10 +513,12 @@ class NA2DTests(unittest.TestCase):
             atol=eps,
             rtol=1e-4,
             nondet_tol=0,
-            fast_mode=False,
+            fast_mode=_FAST_GRADCHECK,
         ), "Autograd check failed for NA2D: AV."
 
-    def _test_autograd(self, B, H, X, Y, D, kernel_size, dilation, eps, device):
+    def _test_autograd(
+        self, B, H, X, Y, D, kernel_size, dilation, eps, device, is_causal=None
+    ):
         self._test_autograd_qk(
             B=B,
             H=H,
@@ -284,6 +529,7 @@ class NA2DTests(unittest.TestCase):
             dilation=dilation,
             eps=eps,
             device=device,
+            is_causal=is_causal,
         )
         self._test_autograd_qk(
             B=B,
@@ -296,6 +542,7 @@ class NA2DTests(unittest.TestCase):
             eps=eps,
             device=device,
             L_extra=9,
+            is_causal=is_causal,
         )
         self._test_autograd_av(
             B=B,
@@ -307,6 +554,7 @@ class NA2DTests(unittest.TestCase):
             dilation=dilation,
             eps=eps,
             device=device,
+            is_causal=is_causal,
         )
         self._test_autograd_av(
             B=B,
@@ -319,6 +567,7 @@ class NA2DTests(unittest.TestCase):
             eps=eps,
             device=device,
             L_extra=9,
+            is_causal=is_causal,
         )
 
     def test_autograd_cpu(self):
@@ -328,6 +577,62 @@ class NA2DTests(unittest.TestCase):
         self._test_autograd(
             B=1, H=1, X=7, Y=7, D=4, kernel_size=3, dilation=2, eps=1e-6, device="cpu"
         )
+
+    def test_causal_autograd_cpu(self):
+        for causal_h, causal_w in product([True, False], [True, False]):
+            causal_mask = [causal_h, causal_w]
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=5,
+                Y=6,
+                D=4,
+                kernel_size=5,
+                dilation=1,
+                eps=1e-6,
+                device="cpu",
+                is_causal=causal_mask,
+            )
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=7,
+                Y=6,
+                D=4,
+                kernel_size=3,
+                dilation=2,
+                eps=1e-6,
+                device="cpu",
+                is_causal=causal_mask,
+            )
+
+    def test_varying_args_autograd_cpu(self):
+        for causal_h, causal_w in product([True, False], [True, False]):
+            causal_mask = [causal_h, causal_w]
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=5,
+                Y=6,
+                D=4,
+                kernel_size=[5, 3],
+                dilation=[1, 2],
+                eps=1e-6,
+                device="cpu",
+                is_causal=causal_mask,
+            )
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=6,
+                Y=5,
+                D=4,
+                kernel_size=[3, 5],
+                dilation=[2, 1],
+                eps=1e-6,
+                device="cpu",
+                is_causal=causal_mask,
+            )
 
     @skip_if_cuda_is_not_supported()
     def test_autograd_cuda_naive(self):
@@ -348,6 +653,70 @@ class NA2DTests(unittest.TestCase):
             eps=1e-6,
             device="cuda",
         )
+
+    @skip_if_cuda_is_not_supported()
+    def test_causal_autograd_cuda_naive(self):
+        disable_tiled_na()
+        disable_gemm_na()
+        disable_tf32()
+        for causal_h, causal_w in product([True, False], [True, False]):
+            causal_mask = [causal_h, causal_w]
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=5,
+                Y=5,
+                D=8,
+                kernel_size=5,
+                dilation=1,
+                eps=1e-6,
+                device="cuda",
+                is_causal=causal_mask,
+            )
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=14,
+                Y=15,
+                D=16,
+                kernel_size=7,
+                dilation=2,
+                eps=1e-6,
+                device="cuda",
+                is_causal=causal_mask,
+            )
+
+    @skip_if_cuda_is_not_supported()
+    def test_varying_args_autograd_cuda_naive(self):
+        disable_tiled_na()
+        disable_gemm_na()
+        disable_tf32()
+        for causal_h, causal_w in product([True, False], [True, False]):
+            causal_mask = [causal_h, causal_w]
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=5,
+                Y=5,
+                D=8,
+                kernel_size=[3, 5],
+                dilation=[1, 1],
+                eps=1e-6,
+                device="cuda",
+                is_causal=causal_mask,
+            )
+            self._test_autograd(
+                B=1,
+                H=1,
+                X=14,
+                Y=15,
+                D=16,
+                kernel_size=[5, 3],
+                dilation=[2, 5],
+                eps=1e-6,
+                device="cuda",
+                is_causal=causal_mask,
+            )
 
     @skip_if_cuda_is_not_supported()
     def test_autograd_cuda_tiled(self):
@@ -398,13 +767,14 @@ class NA2DTests(unittest.TestCase):
         )
 
     def _test_fwad_qk(self, B, H, X, Y, D, kernel_size, dilation, device, L_extra=0):
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, False)
         assert L_extra >= 0
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
         query = torch.randn((B, H, X, Y, D), **kwargs)
         key = torch.randn((B, H, X, Y, D), **kwargs)
         extra_key = None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
 
-        variables = [query, key, kernel_size, dilation, extra_key]
+        variables = [query, key, kernel_size, dilation, extra_key, is_causal]
         assert gradcheck(
             na2d_qk,
             variables,
@@ -413,17 +783,21 @@ class NA2DTests(unittest.TestCase):
             check_undefined_grad=False,
             check_batched_grad=False,
             check_grad_dtypes=False,
+            fast_mode=_FAST_GRADCHECK,
         ), "Forward mode autograd check failed for NA2D: QK."
 
     def _test_fwad_av(self, B, H, X, Y, D, kernel_size, dilation, device, L_extra=0):
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, False)
         assert L_extra >= 0
         kwargs = {"dtype": torch.float64, "device": device, "requires_grad": True}
-        attn = torch.randn((B, H, X, Y, kernel_size**2 + L_extra), **kwargs)
+        attn = torch.randn(
+            (B, H, X, Y, get_num_na_weights(kernel_size) + L_extra), **kwargs
+        )
         value = torch.randn((B, H, X, Y, D), **kwargs)
         extra_value = (
             None if L_extra <= 0 else torch.randn((B, H, L_extra, D), **kwargs)
         )
-        variables = [attn, value, kernel_size, dilation, extra_value]
+        variables = [attn, value, kernel_size, dilation, extra_value, is_causal]
 
         assert gradcheck(
             na2d_av,
@@ -433,6 +807,7 @@ class NA2DTests(unittest.TestCase):
             check_undefined_grad=False,
             check_batched_grad=False,
             check_grad_dtypes=False,
+            fast_mode=_FAST_GRADCHECK,
         ), "Forward mode autograd check failed for NA2D: AV."
 
     def _test_fwad(self, B, H, X, Y, D, kernel_size, dilation, device):
@@ -487,6 +862,14 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=7, Y=7, D=4, kernel_size=3, dilation=2, device="cpu"
         )
 
+    def test_varying_args_fwad_cpu(self):
+        self._test_fwad(
+            B=1, H=1, X=8, Y=7, D=8, kernel_size=(5, 3), dilation=(1, 2), device="cpu"
+        )
+        self._test_fwad(
+            B=1, H=1, X=7, Y=7, D=4, kernel_size=(3, 5), dilation=(2, 1), device="cpu"
+        )
+
     @skip_if_cuda_is_not_supported()
     def test_fwad_cuda_naive(self):
         disable_tiled_na()
@@ -503,6 +886,42 @@ class NA2DTests(unittest.TestCase):
             D=16,
             kernel_size=7,
             dilation=2,
+            device="cuda",
+        )
+
+    @skip_if_cuda_is_not_supported()
+    def test_varying_fwad_cuda_naive(self):
+        disable_tiled_na()
+        disable_gemm_na()
+        disable_tf32()
+        self._test_fwad(
+            B=1,
+            H=1,
+            X=8,
+            Y=9,
+            D=8,
+            kernel_size=[5, 3],
+            dilation=[1, 1],
+            device="cuda",
+        )
+        self._test_fwad(
+            B=1,
+            H=1,
+            X=8,
+            Y=9,
+            D=8,
+            kernel_size=[5, 3],
+            dilation=[1, 3],
+            device="cuda",
+        )
+        self._test_fwad(
+            B=1,
+            H=1,
+            X=14,
+            Y=15,
+            D=16,
+            kernel_size=[7, 5],
+            dilation=[2, 3],
             device="cuda",
         )
 
@@ -542,7 +961,7 @@ class NA2DTests(unittest.TestCase):
         )
 
     def _test_nested_qk_forward(self, dtype, device, test_additional_tokens=True):
-        kernel_size, dilation = 7, 2
+        kernel_size, dilation = (3, 7), (3, 2)
         kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
         query = torch.nested.nested_tensor(
             [
@@ -560,10 +979,10 @@ class NA2DTests(unittest.TestCase):
             ],
             **kwargs,
         )
-        out_nested = na2d_qk(query, key, kernel_size, dilation)
+        out_nested = na2d_qk(query, key, kernel_size=kernel_size, dilation=dilation)
         out_ref = []
         for q, k in zip(query, key):
-            out_ref.append(na2d_qk(q, k, kernel_size, dilation))
+            out_ref.append(na2d_qk(q, k, kernel_size=kernel_size, dilation=dilation))
 
         for o, o_ref in zip(out_nested, out_ref):
             torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
@@ -579,25 +998,36 @@ class NA2DTests(unittest.TestCase):
                 **kwargs,
             )
             out_nested = na2d_qk(
-                query, key, kernel_size, dilation, additional_keys=additional_keys
+                query,
+                key,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                additional_keys=additional_keys,
             )
             out_ref = []
             for q, k, k_add in zip(query, key, additional_keys):
                 out_ref.append(
-                    na2d_qk(q, k, kernel_size, dilation, additional_keys=k_add)
+                    na2d_qk(
+                        q,
+                        k,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        additional_keys=k_add,
+                    )
                 )
 
             for o, o_ref in zip(out_nested, out_ref):
                 torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
 
     def _test_nested_av_forward(self, dtype, device, test_additional_tokens=True):
-        kernel_size, dilation = 7, 2
+        kernel_size, dilation = (3, 7), (3, 2)
+        num_na_weights = get_num_na_weights(kernel_size)
         kwargs = {"dtype": dtype, "device": device, "requires_grad": False}
         attn = torch.nested.nested_tensor(
             [
-                torch.randn(1, 2, 14, 16, kernel_size**2),
-                torch.randn(2, 8, 16, 18, kernel_size**2),
-                torch.randn(4, 1, 32, 20, kernel_size**2),
+                torch.randn(1, 2, 14, 16, num_na_weights),
+                torch.randn(2, 8, 16, 18, num_na_weights),
+                torch.randn(4, 1, 32, 20, num_na_weights),
             ],
             **kwargs,
         )
@@ -609,10 +1039,10 @@ class NA2DTests(unittest.TestCase):
             ],
             **kwargs,
         )
-        out_nested = na2d_av(attn, value, kernel_size, dilation)
+        out_nested = na2d_av(attn, value, kernel_size=kernel_size, dilation=dilation)
         out_ref = []
         for a, v in zip(attn, value):
-            out_ref.append(na2d_av(a, v, kernel_size, dilation))
+            out_ref.append(na2d_av(a, v, kernel_size=kernel_size, dilation=dilation))
 
         for o, o_ref in zip(out_nested, out_ref):
             torch.testing.assert_close(o, o_ref, atol=1e-6, rtol=0)
@@ -621,9 +1051,9 @@ class NA2DTests(unittest.TestCase):
             n_extra_tokens = 9
             attn = torch.nested.nested_tensor(
                 [
-                    torch.randn(1, 2, 14, 16, kernel_size**2 + n_extra_tokens),
-                    torch.randn(2, 8, 16, 18, kernel_size**2 + n_extra_tokens),
-                    torch.randn(4, 1, 32, 20, kernel_size**2 + n_extra_tokens),
+                    torch.randn(1, 2, 14, 16, num_na_weights + n_extra_tokens),
+                    torch.randn(2, 8, 16, 18, num_na_weights + n_extra_tokens),
+                    torch.randn(4, 1, 32, 20, num_na_weights + n_extra_tokens),
                 ],
                 **kwargs,
             )
@@ -636,12 +1066,22 @@ class NA2DTests(unittest.TestCase):
                 **kwargs,
             )
             out_nested = na2d_av(
-                attn, value, kernel_size, dilation, additional_values=additional_values
+                attn,
+                value,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                additional_values=additional_values,
             )
             out_ref = []
             for a, v, v_add in zip(attn, value, additional_values):
                 out_ref.append(
-                    na2d_av(a, v, kernel_size, dilation, additional_values=v_add)
+                    na2d_av(
+                        a,
+                        v,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        additional_values=v_add,
+                    )
                 )
 
             for o, o_ref in zip(out_nested, out_ref):
@@ -713,8 +1153,12 @@ class NA2DTests(unittest.TestCase):
                 .view(B, H, X, Y, L_extra)
                 .contiguous()
             )
-            attn_na_ref = na2d_qk_with_bias(
-                q_ref, k_ref, rpb_ref, kernel_size, dilation
+            attn_na_ref = na2d_qk(
+                q_ref,
+                k_ref,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                rpb=rpb_ref,
             )
             attn_ref = torch.cat([attn_na_ref, attn_extra_ref], dim=-1)
             attn_ref_softmax = attn_ref.softmax(dim=-1)
@@ -725,7 +1169,9 @@ class NA2DTests(unittest.TestCase):
                 attn_na_softmax_ref.contiguous(),
                 attn_extra_softmax_ref.contiguous(),
             )
-            out_na_ref = na2d_av(attn_na_softmax_ref, v_ref, kernel_size, dilation)
+            out_na_ref = na2d_av(
+                attn_na_softmax_ref, v_ref, kernel_size=kernel_size, dilation=dilation
+            )
             out_extra_ref = (
                 (
                     attn_extra_softmax_ref.view(B * H, X * Y, L_extra).contiguous()
@@ -737,8 +1183,13 @@ class NA2DTests(unittest.TestCase):
             out_ref = out_extra_ref + out_na_ref
 
             # Op
-            attn = na2d_qk_with_bias(
-                q, k, rpb, kernel_size, dilation, additional_keys=extra_k
+            attn = na2d_qk(
+                q,
+                k,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                additional_keys=extra_k,
+                rpb=rpb,
             )
             attn_na, attn_extra = attn.split([kernel_size**2, L_extra], dim=-1)
             attn_na, attn_extra = attn_na.contiguous(), attn_extra.contiguous()
@@ -751,7 +1202,11 @@ class NA2DTests(unittest.TestCase):
                 attn_extra_softmax.contiguous(),
             )
             out = na2d_av(
-                attn_softmax, v, kernel_size, dilation, additional_values=extra_v
+                attn_softmax,
+                v,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                additional_values=extra_v,
             )
 
             # Elementwise checks
@@ -1018,12 +1473,9 @@ class NA2DTests(unittest.TestCase):
     ):
         # Only odd-sized kernels are valid in NA,
         # and NA == SA when kernel size equals
-        # input size. NATTEN only allows square-sized
-        # kernels, so we need to make sure that the
-        # input size is an odd value across every
-        # spatial dim.
-        assert X == Y and X % 2 == 1
-        kernel_size = X
+        # input size.
+        assert X % 2 == 1 and Y % 2 == 1
+        kernel_size = (X, Y)
         dilation = 1
         kwargs = {"device": device, "dtype": dtype}
         with torch.no_grad():
@@ -1054,9 +1506,9 @@ class NA2DTests(unittest.TestCase):
             )
 
             # Op
-            attn = na2d_qk(q, k, kernel_size, dilation)
+            attn = na2d_qk(q, k, kernel_size=kernel_size, dilation=dilation)
             attn_softmax = attn.softmax(dim=-1)
-            out = na2d_av(attn_softmax, v, kernel_size, dilation)
+            out = na2d_av(attn_softmax, v, kernel_size=kernel_size, dilation=dilation)
 
             # We can only check the outputs against each other, and
             # not attention weights, because they are stored in a
@@ -1064,7 +1516,7 @@ class NA2DTests(unittest.TestCase):
             torch.testing.assert_close(out, out_ref, atol=eps, rtol=eps)
 
     def _test_cpu_against_self_attention(self, B, H, X, Y, D):
-        assert X == Y and X % 2 == 1
+        assert X % 2 == 1 and Y % 2 == 1
         self._test_against_self_attention(
             B=B,
             H=H,
@@ -1076,8 +1528,7 @@ class NA2DTests(unittest.TestCase):
         )
 
     def _test_cuda_against_self_attention(self, B, H, X, Y, D):
-        assert X == Y and X % 2 == 1
-        kernel_size = X
+        assert X % 2 == 1 and Y % 2 == 1
         # Test naive kernels
         disable_tiled_na()
         disable_gemm_na()
@@ -1114,7 +1565,10 @@ class NA2DTests(unittest.TestCase):
                 device="cuda",
                 eps=1e-1,
             )
-        if kernel_size < 15:
+        # TODO: change when GEMM/tiled kernels support varying kernel sizes / dilations
+        if X != Y:
+            return
+        if X < 15 and D == 32:
             # Test tiled kernels
             enable_tiled_na()
             self._test_against_self_attention(
@@ -1122,7 +1576,7 @@ class NA2DTests(unittest.TestCase):
                 H=H,
                 X=X,
                 Y=Y,
-                D=32,
+                D=D,
                 dtype=torch.float32,
                 device="cuda",
                 eps=1e-4,
@@ -1133,7 +1587,7 @@ class NA2DTests(unittest.TestCase):
                     H=H,
                     X=X,
                     Y=Y,
-                    D=32,
+                    D=D,
                     dtype=torch.float16,
                     device="cuda",
                     eps=1e-1,
@@ -1144,7 +1598,7 @@ class NA2DTests(unittest.TestCase):
                     H=H,
                     X=X,
                     Y=Y,
-                    D=32,
+                    D=D,
                     dtype=torch.bfloat16,
                     device="cuda",
                     eps=1e-1,
@@ -1200,8 +1654,11 @@ class NA2DTests(unittest.TestCase):
                 )
 
     def test_cpu_against_self_attention(self):
-        self._test_cpu_against_self_attention(B=1, H=2, X=7, Y=7, D=32)
-        self._test_cpu_against_self_attention(B=1, H=2, X=15, Y=15, D=32)
+        self._test_cpu_against_self_attention(B=2, H=4, X=7, Y=7, D=4)
+        self._test_cpu_against_self_attention(B=2, H=4, X=15, Y=15, D=4)
+        # Non-square inputs
+        self._test_cpu_against_self_attention(B=2, H=4, X=7, Y=11, D=4)
+        self._test_cpu_against_self_attention(B=2, H=4, X=5, Y=13, D=4)
 
     @skip_if_cuda_is_not_supported()
     def test_cuda_against_self_attention(self):
@@ -1212,6 +1669,10 @@ class NA2DTests(unittest.TestCase):
         self._test_cuda_against_self_attention(B=2, H=4, X=11, Y=11, D=32)
         self._test_cuda_against_self_attention(B=2, H=4, X=13, Y=13, D=32)
         self._test_cuda_against_self_attention(B=2, H=4, X=15, Y=15, D=32)
+        # Non-square inputs
+        self._test_cuda_against_self_attention(B=2, H=4, X=5, Y=11, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, X=3, Y=13, D=32)
+        self._test_cuda_against_self_attention(B=2, H=4, X=7, Y=15, D=32)
 
 
 if __name__ == "__main__":

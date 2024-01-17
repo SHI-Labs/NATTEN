@@ -22,19 +22,25 @@
 #################################################################################################
 
 from .functional import (
+    disable_autotuner,
+    disable_fused_na,
     disable_gemm_na,
     disable_tf32,
     disable_tiled_na,
+    enable_autotuner,
+    enable_fused_na,
     enable_gemm_na,
     enable_tf32,
     enable_tiled_na,
     has_bfloat,
     has_cuda,
+    has_fna,
     has_fp32_gemm,
     has_fp64_gemm,
     has_gemm,
     has_half,
     has_tf32_gemm,
+    is_fna_enabled,
 )
 from .natten1d import NeighborhoodAttention1D
 from .natten2d import NeighborhoodAttention2D
@@ -53,10 +59,16 @@ __all__ = [
     "has_bfloat",
     "has_cuda",
     "has_gemm",
+    "has_fna",
     "has_half",
     "has_tf32_gemm",
     "has_fp32_gemm",
     "has_fp64_gemm",
+    "disable_autotuner",
+    "enable_autotuner",
+    "is_fna_enabled",
+    "disable_fused_na",
+    "enable_fused_na",
 ]
 
-__version__ = "0.15.1"
+__version__ = "0.16.0"

@@ -40,7 +40,8 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten/cpu/naive/natten_cpu_commons.h"
+#include <natten/cpu/naive/natten_cpu_commons.h>
+#include <natten/natten.h>
 
 namespace natten {
 namespace cpu {
@@ -51,25 +52,26 @@ namespace naive {
 template <typename scalar_t>
 struct PointwiseNeighborhood3D {
   void operator()(
+      bool is_grad,
       void* query_ptr,
       void* key_ptr,
       void* attn_ptr,
-      int batch_size,
-      int heads,
-      int depth,
-      int height,
-      int width,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
       int64_t attn_stride_3,
       int64_t attn_stride_4,
-      int kernel_size,
-      int kernel_size_depth,
-      int dilation,
-      int dilation_depth) {
+      const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+      const std::tuple<int32_t, int32_t, int32_t>& dilation,
+      const std::tuple<bool, bool, bool>& is_causal) {
     launch(
+        is_grad,
         reinterpret_cast<scalar_t*>(query_ptr),
         reinterpret_cast<scalar_t*>(key_ptr),
         reinterpret_cast<scalar_t*>(attn_ptr),
@@ -77,87 +79,144 @@ struct PointwiseNeighborhood3D {
         height,
         width,
         heads,
-        kernel_size,
-        kernel_size_depth,
-        dilation,
-        dilation_depth,
+        std::get<0>(kernel_size),
+        std::get<1>(kernel_size),
+        std::get<2>(kernel_size),
+        std::get<0>(dilation),
+        std::get<1>(dilation),
+        std::get<2>(dilation),
         dim,
         batch_size,
         attn_stride_0,
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        attn_stride_4);
+        attn_stride_4,
+        is_causal);
   }
 
   void launch( // QK    / A-grad
+      bool is_grad,
       scalar_t* query, // query / d_out
       scalar_t* key, // key   / value
       scalar_t* attn, // attn  / d_attn
-      const int depth,
-      const int height,
-      const int width,
-      const int heads,
-      const int kernel_size,
-      const int kernel_size_d,
-      const int dilation,
-      const int dilation_d,
-      const int dim,
-      const int batch_size,
-      const int64_t attn_stride_0,
-      const int64_t attn_stride_1,
-      const int64_t attn_stride_2,
-      const int64_t attn_stride_3,
-      const int64_t attn_stride_4) {
-    const int neighborhood_size = kernel_size / 2;
-    const int neighborhood_size_d = kernel_size_d / 2;
-    const int query_stride_4 = dim;
-    const int query_stride_3 = width * query_stride_4;
-    const int query_stride_2 = height * query_stride_3;
-    const int query_stride_1 = depth * query_stride_2;
-    const int query_stride_0 = heads * query_stride_1;
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t heads,
+      int32_t kernel_size_0,
+      int32_t kernel_size_1,
+      int32_t kernel_size_2,
+      int32_t dilation_0,
+      int32_t dilation_1,
+      int32_t dilation_2,
+      int32_t dim,
+      int32_t batch_size,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4,
+      const std::tuple<bool, bool, bool>& is_causal) {
+    auto is_causal_0 = std::get<0>(is_causal);
+    auto is_causal_1 = std::get<1>(is_causal);
+    auto is_causal_2 = std::get<2>(is_causal);
+    auto neighborhood_size_0 = kernel_size_0 / 2;
+    auto neighborhood_size_1 = kernel_size_1 / 2;
+    auto neighborhood_size_2 = kernel_size_2 / 2;
+    int64_t query_stride_4 = dim;
+    int64_t query_stride_3 = width * query_stride_4;
+    int64_t query_stride_2 = height * query_stride_3;
+    int64_t query_stride_1 = depth * query_stride_2;
+    int64_t query_stride_0 = heads * query_stride_1;
+    auto mask_value = AttnMask<scalar_t>::value(is_grad);
     at::parallel_for(
         0,
         batch_size * heads * depth * height * width,
         GRAIN_SIZE,
-        [&](int start, int end) {
-          for (int x = start; x < end; x++) {
-            int indtmp1 = x / width;
-            const int j = x - indtmp1 * width;
-            int indtmp2 = indtmp1 / height;
-            const int i = indtmp1 - indtmp2 * height;
+        [&](int32_t start, int32_t end) {
+          for (int32_t x = start; x < end; x++) {
+            int32_t indtmp1 = x / width;
+            auto j = x - indtmp1 * width;
+            int32_t indtmp2 = indtmp1 / height;
+            auto i = indtmp1 - indtmp2 * height;
             indtmp1 = indtmp2;
             indtmp2 = indtmp1 / depth;
-            const int k = indtmp1 - indtmp2 * depth;
+            auto k = indtmp1 - indtmp2 * depth;
             indtmp1 = indtmp2;
             indtmp2 = indtmp1 / heads;
-            const int h = indtmp1 - indtmp2 * heads;
-            const int b = indtmp2;
-            const int ni = get_window_start(
-                i, height, kernel_size, neighborhood_size, dilation);
-            const int nj = get_window_start(
-                j, width, kernel_size, neighborhood_size, dilation);
-            const int nk = get_window_start(
-                k, depth, kernel_size_d, neighborhood_size_d, dilation_d);
-            for (int kk = 0; kk < kernel_size_d; kk++) {
-              for (int ki = 0; ki < kernel_size; ki++) {
-                for (int kj = 0; kj < kernel_size; kj++) {
+            auto h = indtmp1 - indtmp2 * heads;
+            auto& b = indtmp2;
+            auto nk = get_window_start(
+                k,
+                depth,
+                kernel_size_0,
+                neighborhood_size_0,
+                dilation_0,
+                is_causal_0);
+            auto ni = get_window_start(
+                i,
+                height,
+                kernel_size_1,
+                neighborhood_size_1,
+                dilation_1,
+                is_causal_1);
+            auto nj = get_window_start(
+                j,
+                width,
+                kernel_size_2,
+                neighborhood_size_2,
+                dilation_2,
+                is_causal_2);
+            auto ek = get_window_end(
+                k,
+                nk,
+                depth,
+                kernel_size_0,
+                neighborhood_size_0,
+                dilation_0,
+                is_causal_0);
+            auto ei = get_window_end(
+                i,
+                ni,
+                height,
+                kernel_size_1,
+                neighborhood_size_1,
+                dilation_1,
+                is_causal_1);
+            auto ej = get_window_end(
+                j,
+                nj,
+                width,
+                kernel_size_2,
+                neighborhood_size_2,
+                dilation_2,
+                is_causal_2);
+            for (int32_t kk = 0; kk < kernel_size_0; kk++) {
+              auto key_idx_k = kk * dilation_0 + nk;
+              for (int32_t ki = 0; ki < kernel_size_1; ki++) {
+                auto key_idx_i = ki * dilation_1 + ni;
+                for (int32_t kj = 0; kj < kernel_size_2; kj++) {
+                  auto key_idx_j = kj * dilation_2 + nj;
                   scalar_t updt = scalar_t(0);
-                  const int64_t batchHeadOffset =
+                  int64_t batchHeadOffset =
                       b * query_stride_0 + h * query_stride_1;
-                  const int64_t queryOffset = batchHeadOffset + k * query_stride_2 +
+                  int64_t queryOffset = batchHeadOffset + k * query_stride_2 +
                       i * query_stride_3 + j * query_stride_4;
-                  const int64_t keyOffset = batchHeadOffset +
-                      (kk * dilation_d + nk) * query_stride_2 +
-                      (ki * dilation + ni) * query_stride_3 +
-                      (kj * dilation + nj) * query_stride_4;
-                  for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
-                    updt += query[queryOffset + dimOffset] *
-                        key[keyOffset + dimOffset];
-                  const int64_t index = b * attn_stride_0 + h * attn_stride_1 +
+                  if (key_idx_k < ek && key_idx_i < ei && key_idx_j < ej) {
+                    int64_t keyOffset = batchHeadOffset +
+                        key_idx_k * query_stride_2 +
+                        key_idx_i * query_stride_3 + key_idx_j * query_stride_4;
+                    for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
+                      updt += query[queryOffset + dimOffset] *
+                          key[keyOffset + dimOffset];
+                  } else {
+                    updt = mask_value;
+                  }
+                  int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                       k * attn_stride_2 + i * attn_stride_3 +
-                      j * attn_stride_4 + kk * (kernel_size * kernel_size) +
-                      ki * kernel_size + kj;
+                      j * attn_stride_4 + kk * (kernel_size_1 * kernel_size_2) +
+                      ki * kernel_size_2 + kj;
                   attn[index] = updt;
                 }
               }
@@ -174,21 +233,23 @@ struct PointwiseNeighborhood3DWithBias {
       void* key_ptr,
       void* bias_ptr,
       void* attn_ptr,
-      int batch_size,
-      int heads,
-      int depth,
-      int height,
-      int width,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
       int64_t attn_stride_3,
       int64_t attn_stride_4,
-      int kernel_size,
-      int kernel_size_depth,
-      int dilation,
-      int dilation_depth) {
+      const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+      const std::tuple<int32_t, int32_t, int32_t>& dilation,
+      const std::tuple<bool, bool, bool>& is_causal) {
+    NATTEN_CHECK(
+        !any_true(is_causal),
+        "Neighborhood attention with causal masking does not support positional biases yet.");
     launch(
         reinterpret_cast<scalar_t*>(query_ptr),
         reinterpret_cast<scalar_t*>(key_ptr),
@@ -198,10 +259,12 @@ struct PointwiseNeighborhood3DWithBias {
         height,
         width,
         heads,
-        kernel_size,
-        kernel_size_depth,
-        dilation,
-        dilation_depth,
+        std::get<0>(kernel_size),
+        std::get<1>(kernel_size),
+        std::get<2>(kernel_size),
+        std::get<0>(dilation),
+        std::get<1>(dilation),
+        std::get<2>(dilation),
         dim,
         batch_size,
         attn_stride_0,
@@ -216,80 +279,98 @@ struct PointwiseNeighborhood3DWithBias {
       scalar_t* key, // key   / value
       scalar_t* bias, // relative positional bias tensor
       scalar_t* attn, // attn  / d_attn
-      const int depth,
-      const int height,
-      const int width,
-      const int heads,
-      const int kernel_size,
-      const int kernel_size_d,
-      const int dilation,
-      const int dilation_d,
-      const int dim,
-      const int batch_size,
-      const int64_t attn_stride_0,
-      const int64_t attn_stride_1,
-      const int64_t attn_stride_2,
-      const int64_t attn_stride_3,
-      const int64_t attn_stride_4) {
-    const int neighborhood_size = kernel_size / 2;
-    const int neighborhood_size_d = kernel_size_d / 2;
-    const int bias_stride_2 = (2 * kernel_size - 1);
-    const int bias_stride_1 = (2 * kernel_size - 1) * bias_stride_2;
-    const int bias_stride_0 = (2 * kernel_size_d - 1) * bias_stride_1;
-    const int query_stride_4 = dim;
-    const int query_stride_3 = width * query_stride_4;
-    const int query_stride_2 = height * query_stride_3;
-    const int query_stride_1 = depth * query_stride_2;
-    const int query_stride_0 = heads * query_stride_1;
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t heads,
+      int32_t kernel_size_0,
+      int32_t kernel_size_1,
+      int32_t kernel_size_2,
+      int32_t dilation_0,
+      int32_t dilation_1,
+      int32_t dilation_2,
+      int32_t dim,
+      int32_t batch_size,
+      int64_t attn_stride_0,
+      int64_t attn_stride_1,
+      int64_t attn_stride_2,
+      int64_t attn_stride_3,
+      int64_t attn_stride_4) {
+    auto neighborhood_size_0 = kernel_size_0 / 2;
+    auto neighborhood_size_1 = kernel_size_1 / 2;
+    auto neighborhood_size_2 = kernel_size_2 / 2;
+    int64_t bias_stride_2 = (2 * kernel_size_2 - 1);
+    int64_t bias_stride_1 = (2 * kernel_size_1 - 1) * bias_stride_2;
+    int64_t bias_stride_0 = (2 * kernel_size_0 - 1) * bias_stride_1;
+    int64_t query_stride_4 = dim;
+    int64_t query_stride_3 = width * query_stride_4;
+    int64_t query_stride_2 = height * query_stride_3;
+    int64_t query_stride_1 = depth * query_stride_2;
+    int64_t query_stride_0 = heads * query_stride_1;
     at::parallel_for(
         0,
         batch_size * heads * depth * height * width,
         GRAIN_SIZE,
-        [&](int start, int end) {
-          for (int x = start; x < end; x++) {
-            int indtmp1 = x / width;
-            const int j = x - indtmp1 * width;
-            int indtmp2 = indtmp1 / height;
-            const int i = indtmp1 - indtmp2 * height;
+        [&](int32_t start, int32_t end) {
+          for (int32_t x = start; x < end; x++) {
+            int32_t indtmp1 = x / width;
+            auto j = x - indtmp1 * width;
+            int32_t indtmp2 = indtmp1 / height;
+            auto i = indtmp1 - indtmp2 * height;
             indtmp1 = indtmp2;
             indtmp2 = indtmp1 / depth;
-            const int k = indtmp1 - indtmp2 * depth;
+            auto k = indtmp1 - indtmp2 * depth;
             indtmp1 = indtmp2;
             indtmp2 = indtmp1 / heads;
-            const int h = indtmp1 - indtmp2 * heads;
-            const int b = indtmp2;
-            const int ni = get_window_start(
-                i, height, kernel_size, neighborhood_size, dilation);
-            const int nj = get_window_start(
-                j, width, kernel_size, neighborhood_size, dilation);
-            const int nk = get_window_start(
-                k, depth, kernel_size_d, neighborhood_size_d, dilation_d);
-            const int pi = get_pb_start(
-                i, height, kernel_size, neighborhood_size, dilation);
-            const int pj = get_pb_start(
-                j, width, kernel_size, neighborhood_size, dilation);
-            const int pk = get_pb_start(
-                k, depth, kernel_size_d, neighborhood_size_d, dilation_d);
-            for (int kk = 0; kk < kernel_size_d; kk++) {
-              for (int ki = 0; ki < kernel_size; ki++) {
-                for (int kj = 0; kj < kernel_size; kj++) {
+            auto h = indtmp1 - indtmp2 * heads;
+            auto& b = indtmp2;
+            auto ni = get_window_start(
+                i,
+                height,
+                kernel_size_1,
+                neighborhood_size_1,
+                dilation_1,
+                false);
+            auto nj = get_window_start(
+                j,
+                width,
+                kernel_size_2,
+                neighborhood_size_2,
+                dilation_2,
+                false);
+            auto nk = get_window_start(
+                k,
+                depth,
+                kernel_size_0,
+                neighborhood_size_0,
+                dilation_0,
+                false);
+            auto pi = get_pb_start(
+                i, height, kernel_size_1, neighborhood_size_1, dilation_1);
+            auto pj = get_pb_start(
+                j, width, kernel_size_2, neighborhood_size_2, dilation_2);
+            auto pk = get_pb_start(
+                k, depth, kernel_size_0, neighborhood_size_0, dilation_0);
+            for (int32_t kk = 0; kk < kernel_size_0; kk++) {
+              for (int32_t ki = 0; ki < kernel_size_1; ki++) {
+                for (int32_t kj = 0; kj < kernel_size_2; kj++) {
                   scalar_t updt = scalar_t(0);
-                  const int64_t batchHeadOffset =
+                  int64_t batchHeadOffset =
                       b * query_stride_0 + h * query_stride_1;
-                  const int64_t queryOffset = batchHeadOffset + k * query_stride_2 +
+                  int64_t queryOffset = batchHeadOffset + k * query_stride_2 +
                       i * query_stride_3 + j * query_stride_4;
-                  const int64_t keyOffset = batchHeadOffset +
-                      (kk * dilation_d + nk) * query_stride_2 +
-                      (ki * dilation + ni) * query_stride_3 +
-                      (kj * dilation + nj) * query_stride_4;
+                  int64_t keyOffset = batchHeadOffset +
+                      (kk * dilation_0 + nk) * query_stride_2 +
+                      (ki * dilation_1 + ni) * query_stride_3 +
+                      (kj * dilation_2 + nj) * query_stride_4;
                   for (int64_t dimOffset = 0; dimOffset < dim; ++dimOffset)
                     updt += query[queryOffset + dimOffset] *
                         key[keyOffset + dimOffset];
-                  const int64_t index = b * attn_stride_0 + h * attn_stride_1 +
+                  int64_t index = b * attn_stride_0 + h * attn_stride_1 +
                       k * attn_stride_2 + i * attn_stride_3 +
-                      j * attn_stride_4 + kk * (kernel_size * kernel_size) +
-                      ki * kernel_size + kj;
-                  const int64_t biasIndex = h * bias_stride_0 +
+                      j * attn_stride_4 + kk * (kernel_size_1 * kernel_size_2) +
+                      ki * kernel_size_2 + kj;
+                  int64_t biasIndex = h * bias_stride_0 +
                       (pk + kk) * bias_stride_1 + (pi + ki) * bias_stride_2 +
                       (pj + kj);
                   updt += bias[biasIndex];

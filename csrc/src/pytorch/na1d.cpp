@@ -24,39 +24,92 @@
     \brief Neighborhood Attention 1D Torch interface
 */
 
-#include "natten/pytorch/cpu/na1d.h"
 #include <ATen/ATen.h>
 #include <torch/extension.h>
-#ifdef NATTEN_WITH_CUDA
-#include "natten/pytorch/cuda/na1d.cuh"
-#endif
 
-#include "natten/pytorch/helpers.h"
+#include <natten/natten.h>
+#include <natten/pytorch/cpu/na1d.h>
+#ifdef NATTEN_WITH_CUDA
+#include <natten/pytorch/cuda/na1d.cuh>
+#endif
+#include <natten/pytorch/helpers.h>
 
 namespace natten {
 namespace pytorch {
+
+void na1d_forward(
+    at::Tensor& out,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::optional<at::Tensor>& rpb,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t>& query_tile_size,
+    const std::tuple<int32_t>& key_tile_size) {
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
+  CHECK_CONTIGUOUS(value);
+  CheckArgs(kernel_size, dilation);
+  CheckIfPropertiesMatch(query, key, value);
+  CheckIfTensorShapesMatch<1>(query, key);
+  CheckIfTensorShapesMatch<1>(query, value);
+  CheckIfTensorShapesMatch<1>(out, value);
+  int32_t batch_size = query.size(0);
+  int32_t length = query.size(1);
+  int32_t heads = query.size(2);
+  int32_t dim = query.size(3);
+  CheckArgsAgainstDim({length}, kernel_size, dilation);
+  if (rpb.has_value()) {
+    CheckBias<1>(query, rpb.value(), heads, kernel_size);
+  }
+  DISPATCH_DEVICE(
+      query.device(),
+      na1d_forward,
+      query,
+      key,
+      value,
+      out,
+      rpb,
+      batch_size,
+      length,
+      heads,
+      dim,
+      kernel_size,
+      dilation,
+      is_causal,
+      attn_scale,
+      query_tile_size,
+      key_tile_size);
+}
 
 void na1d_qk_forward(
     at::Tensor& attn,
     const at::Tensor& query,
     const at::Tensor& key,
     const at::optional<at::Tensor>& bias,
-    const int kernel_size,
-    const int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
+  NATTEN_CHECK(
+      !any_true(is_causal) || !bias.has_value(),
+      "Neighborhood attention with causal masking does not support positional biases yet.");
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
   CheckIfPropertiesMatch(query, key, attn);
   CheckIfTensorShapesMatch<1>(query, key);
   CheckAttnShape<1>(query, attn, kernel_size);
+  int32_t batch_size = query.size(0);
+  int32_t heads = query.size(1);
+  int32_t length = query.size(2);
+  int32_t dim = query.size(3);
+  CheckArgsAgainstDim({length}, kernel_size, dilation);
   if (bias.has_value()) {
-    CheckBias<1>(query, bias.value(), kernel_size);
+    CheckBias<1>(query, bias.value(), heads, kernel_size);
   }
-  int batch_size = query.size(0);
-  int heads = query.size(1);
-  int length = query.size(2);
-  int dim = query.size(3);
-  CheckArgsAgainstDim(length, kernel_size, dilation);
   DISPATCH_DEVICE(
       query.device(),
       na1d_qk_forward,
@@ -69,7 +122,8 @@ void na1d_qk_forward(
       length,
       dim,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na1d_qk_backward(
@@ -79,8 +133,12 @@ void na1d_qk_backward(
     const at::Tensor& d_attn,
     const at::Tensor& query,
     const at::Tensor& key,
-    const int kernel_size,
-    const int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
+  NATTEN_CHECK(
+      !any_true(is_causal) || !d_bias.has_value(),
+      "Neighborhood attention with causal masking does not support positional biases yet.");
   CHECK_CONTIGUOUS(d_query);
   CHECK_CONTIGUOUS(d_key);
   CHECK_CONTIGUOUS(query);
@@ -92,14 +150,14 @@ void na1d_qk_backward(
   CheckIfTensorShapesMatch<1>(d_query, d_key);
   CheckIfTensorShapesMatch<1>(query, d_key);
   CheckAttnShape<1>(query, d_attn, kernel_size);
+  int32_t batch_size = query.size(0);
+  int32_t heads = query.size(1);
+  int32_t length = query.size(2);
+  int32_t dim = query.size(3);
+  CheckArgsAgainstDim({length}, kernel_size, dilation);
   if (d_bias.has_value()) {
-    CheckBias<1>(query, d_bias.value(), kernel_size);
+    CheckBias<1>(query, d_bias.value(), heads, kernel_size);
   }
-  int batch_size = query.size(0);
-  int heads = query.size(1);
-  int length = query.size(2);
-  int dim = query.size(3);
-  CheckArgsAgainstDim(length, kernel_size, dilation);
   DISPATCH_DEVICE(
       d_attn.device(),
       na1d_qk_backward,
@@ -114,26 +172,28 @@ void na1d_qk_backward(
       length,
       dim,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na1d_av_forward(
     at::Tensor& out,
     const at::Tensor& attn,
     const at::Tensor& value,
-    const int kernel_size,
-    const int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   CHECK_CONTIGUOUS(out);
   CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
   CheckIfPropertiesMatch(out, value, attn);
   CheckIfTensorShapesMatch<1>(out, value);
   CheckAttnShape<1>(value, attn, kernel_size);
-  int batch_size = value.size(0);
-  int heads = value.size(1);
-  int length = value.size(2);
-  int dim = value.size(3);
-  CheckArgsAgainstDim(length, kernel_size, dilation);
+  int32_t batch_size = value.size(0);
+  int32_t heads = value.size(1);
+  int32_t length = value.size(2);
+  int32_t dim = value.size(3);
+  CheckArgsAgainstDim({length}, kernel_size, dilation);
   DISPATCH_DEVICE(
       attn.device(),
       na1d_av_forward,
@@ -145,7 +205,8 @@ void na1d_av_forward(
       length,
       dim,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na1d_av_backward(
@@ -154,8 +215,9 @@ void na1d_av_backward(
     const at::Tensor& d_out,
     const at::Tensor& attn,
     const at::Tensor& value,
-    const int kernel_size,
-    const int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   CHECK_CONTIGUOUS(d_out);
   CHECK_CONTIGUOUS(d_value);
   CHECK_CONTIGUOUS(value);
@@ -166,11 +228,11 @@ void na1d_av_backward(
   CheckIfTensorShapesMatch<1>(attn, d_attn);
   CheckIfTensorShapesMatch<1>(value, d_out);
   CheckAttnShape<1>(value, attn, kernel_size);
-  int batch_size = value.size(0);
-  int heads = value.size(1);
-  int length = value.size(2);
-  int dim = value.size(3);
-  CheckArgsAgainstDim(length, kernel_size, dilation);
+  int32_t batch_size = value.size(0);
+  int32_t heads = value.size(1);
+  int32_t length = value.size(2);
+  int32_t dim = value.size(3);
+  CheckArgsAgainstDim({length}, kernel_size, dilation);
   DISPATCH_DEVICE(
       attn.device(),
       na1d_av_backward,
@@ -184,7 +246,8 @@ void na1d_av_backward(
       length,
       dim,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 } // namespace pytorch

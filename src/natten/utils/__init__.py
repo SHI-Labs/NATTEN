@@ -21,6 +21,14 @@
 #
 #################################################################################################
 
+from .checks import (
+    check_all_args,
+    check_causal_arg,
+    check_dilation_arg,
+    check_kernel_size_arg,
+    check_tiling_config,
+    get_num_na_weights,
+)
 from .tensor import (
     check_additional_keys,
     check_additional_values,
@@ -31,6 +39,12 @@ from .typing import NoneType
 __all__ = [
     "check_additional_keys",
     "check_additional_values",
+    "check_all_args",
+    "check_causal_arg",
+    "check_dilation_arg",
+    "check_kernel_size_arg",
+    "check_tiling_config",
+    "get_num_na_weights",
     "make_attn_tensor_from_input",
     "NoneType",
 ]

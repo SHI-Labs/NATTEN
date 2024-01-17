@@ -39,7 +39,8 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten/cpu/naive/natten_cpu_commons.h"
+#include <natten/cpu/naive/natten_cpu_commons.h>
+#include <natten/natten.h>
 
 namespace natten {
 namespace cpu {
@@ -55,71 +56,85 @@ struct InverseNeighborhood1D {
       void* attn_ptr,
       void* d_output_ptr,
       void* d_value_ptr,
-      int batch_size,
-      int heads,
-      int length,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t length,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
-      int kernel_size,
-      int dilation) {
+      const std::tuple<int32_t>& kernel_size,
+      const std::tuple<int32_t>& dilation,
+      const std::tuple<bool>& is_causal) {
     launch(
         reinterpret_cast<scalar_t*>(attn_ptr),
         reinterpret_cast<scalar_t*>(d_output_ptr),
         reinterpret_cast<scalar_t*>(d_value_ptr),
         length,
         heads,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size),
+        std::get<0>(dilation),
         dim,
         batch_size,
         attn_stride_0,
         attn_stride_1,
-        attn_stride_2);
+        attn_stride_2,
+        is_causal);
   }
 
   void launch( // K-grad / V-grad
       scalar_t* weights, // d_attn / attn
       scalar_t* values, // query  / d_out
       scalar_t* output, // d_key  / d_value
-      const int length,
-      const int heads,
-      const int kernel_size,
-      const int dilation,
-      const int dim,
-      const int batch_size,
-      const int64_t weights_stride_0,
-      const int64_t weights_stride_1,
-      const int64_t weights_stride_2) {
-    const int neighborhood_size = kernel_size / 2;
-    const int values_stride_2 = dim;
-    const int values_stride_1 = length * values_stride_2;
-    const int values_stride_0 = heads * values_stride_1;
-    for (int b = 0; b < batch_size; b++) {
-      at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
-        for (int h = start; h < end; h++) {
-          for (int i = 0; i < length; i++) {
-            const int ni = get_backward_window_start(
-                i, kernel_size, neighborhood_size, dilation);
-            const int ei = get_backward_window_end(
-                i, length, kernel_size, neighborhood_size, dilation);
-            for (int d = 0; d < dim; d++) {
-              const int64_t weightsOffset =
+      int32_t length,
+      int32_t heads,
+      int32_t kernel_size,
+      int32_t dilation,
+      int32_t dim,
+      int32_t batch_size,
+      int64_t weights_stride_0,
+      int64_t weights_stride_1,
+      int64_t weights_stride_2,
+      const std::tuple<bool>& is_causal) {
+    auto is_causal_0 = std::get<0>(is_causal);
+    auto neighborhood_size = kernel_size / 2;
+    int64_t values_stride_2 = dim;
+    int64_t values_stride_1 = length * values_stride_2;
+    int64_t values_stride_0 = heads * values_stride_1;
+    for (int32_t b = 0; b < batch_size; b++) {
+      at::parallel_for(0, heads, GRAIN_SIZE, [&](int32_t start, int32_t end) {
+        for (int32_t h = start; h < end; h++) {
+          for (int32_t i = 0; i < length; i++) {
+            auto ni = get_backward_window_start(
+                i, kernel_size, neighborhood_size, dilation, is_causal_0);
+            auto ei = get_backward_window_end(
+                i,
+                length,
+                kernel_size,
+                neighborhood_size,
+                dilation,
+                is_causal_0);
+            for (int32_t d = 0; d < dim; d++) {
+              int64_t weightsOffset =
                   b * weights_stride_0 + h * weights_stride_1;
-              const int64_t valuesOffset =
+              int64_t valuesOffset =
                   b * values_stride_0 + h * values_stride_1 + d;
               scalar_t output_update = scalar_t(0);
-              for (int xi = ni; xi < ei; xi += dilation) {
-                const int oni = get_window_start(
-                    xi, length, kernel_size, neighborhood_size, dilation);
-                const int64_t valuesIndex = valuesOffset + xi * values_stride_2;
-                const int64_t weightsIndex = weightsOffset + xi * weights_stride_2 +
-                    int((i - oni) / dilation);
+              for (int32_t xi = ni; xi < ei; xi += dilation) {
+                auto oni = get_window_start(
+                    xi,
+                    length,
+                    kernel_size,
+                    neighborhood_size,
+                    dilation,
+                    is_causal_0);
+                int64_t valuesIndex = valuesOffset + xi * values_stride_2;
+                int64_t weightsIndex = weightsOffset + xi * weights_stride_2 +
+                    int32_t((i - oni) / dilation);
                 output_update += values[valuesIndex] * weights[weightsIndex];
               }
-              const int64_t linearIndex = b * values_stride_0 +
-                  h * values_stride_1 + i * values_stride_2 + d;
+              int64_t linearIndex = b * values_stride_0 + h * values_stride_1 +
+                  i * values_stride_2 + d;
               output[linearIndex] = output_update;
             }
           }

@@ -27,16 +27,32 @@
 #pragma once
 #include <ATen/ATen.h>
 
+#include <natten/natten.h>
+
 namespace natten {
 namespace pytorch {
+
+void na2d_forward(
+    at::Tensor& out,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::optional<at::Tensor>& rpb,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t>& key_tile_size);
 
 void na2d_qk_forward(
     at::Tensor& attn,
     const at::Tensor& query,
     const at::Tensor& key,
     const at::optional<at::Tensor>& bias,
-    const int kernel_size,
-    const int dilation);
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal);
 
 void na2d_qk_backward(
     at::Tensor& d_query,
@@ -45,15 +61,17 @@ void na2d_qk_backward(
     const at::Tensor& d_attn,
     const at::Tensor& query,
     const at::Tensor& key,
-    const int kernel_size,
-    const int dilation);
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal);
 
 void na2d_av_forward(
     at::Tensor& out,
     const at::Tensor& attn,
     const at::Tensor& value,
-    const int kernel_size,
-    const int dilation);
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal);
 
 void na2d_av_backward(
     at::Tensor& d_attn,
@@ -61,8 +79,9 @@ void na2d_av_backward(
     const at::Tensor& d_out,
     const at::Tensor& attn,
     const at::Tensor& value,
-    const int kernel_size,
-    const int dilation);
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal);
 
 } // namespace pytorch
 } // namespace natten

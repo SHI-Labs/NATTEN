@@ -24,8 +24,9 @@
 #pragma once
 #include <ATen/ATen.h>
 
-#define CHECK_CONTIGUOUS(x) \
-  TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
+#define CHECK_CONTIGUOUS(x)                                  \
+  TORCH_CHECK(!x.is_sparse(), #x " must be a dense tensor"); \
+  TORCH_CHECK(x.is_contiguous(), #x " must be contiguous");
 
 #ifdef NATTEN_WITH_CUDA
 #define DISPATCH_DEVICE(c10_type, kernel_name, ...)                          \
@@ -59,7 +60,7 @@
 namespace natten {
 namespace pytorch {
 
-inline void CheckArgs(int kernel_size, int dilation) {
+inline void CheckArgs(int32_t kernel_size, int32_t dilation) {
   TORCH_CHECK(
       kernel_size > 1 && kernel_size % 2 == 1,
       "Kernel size must be an odd number greater than 1, got ",
@@ -72,7 +73,31 @@ inline void CheckArgs(int kernel_size, int dilation) {
       ".");
 }
 
-inline void CheckArgsAgainstDim(int dim, int kernel_size, int dilation) {
+inline void CheckArgs(
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation) {
+  CheckArgs(std::get<0>(kernel_size), std::get<0>(dilation));
+}
+
+inline void CheckArgs(
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation) {
+  CheckArgs(std::get<0>(kernel_size), std::get<0>(dilation));
+  CheckArgs(std::get<1>(kernel_size), std::get<1>(dilation));
+}
+
+inline void CheckArgs(
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation) {
+  CheckArgs(std::get<0>(kernel_size), std::get<0>(dilation));
+  CheckArgs(std::get<1>(kernel_size), std::get<1>(dilation));
+  CheckArgs(std::get<2>(kernel_size), std::get<2>(dilation));
+}
+
+inline void CheckArgsAgainstDim(
+    int32_t dim,
+    int32_t kernel_size,
+    int32_t dilation) {
   TORCH_CHECK(
       kernel_size * dilation <= dim,
       "Input axes must be less than or equal to the product of kernel size and dilation. "
@@ -83,6 +108,36 @@ inline void CheckArgsAgainstDim(int dim, int kernel_size, int dilation) {
       ", but dimension size was ",
       dim,
       ".");
+}
+
+inline void CheckArgsAgainstDim(
+    const std::tuple<int32_t>& dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation) {
+  CheckArgsAgainstDim(
+      std::get<0>(dim), std::get<0>(kernel_size), std::get<0>(dilation));
+}
+
+inline void CheckArgsAgainstDim(
+    const std::tuple<int32_t, int32_t>& dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation) {
+  CheckArgsAgainstDim(
+      std::get<0>(dim), std::get<0>(kernel_size), std::get<0>(dilation));
+  CheckArgsAgainstDim(
+      std::get<1>(dim), std::get<1>(kernel_size), std::get<1>(dilation));
+}
+
+inline void CheckArgsAgainstDim(
+    const std::tuple<int32_t, int32_t, int32_t>& dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation) {
+  CheckArgsAgainstDim(
+      std::get<0>(dim), std::get<0>(kernel_size), std::get<0>(dilation));
+  CheckArgsAgainstDim(
+      std::get<1>(dim), std::get<1>(kernel_size), std::get<1>(dilation));
+  CheckArgsAgainstDim(
+      std::get<2>(dim), std::get<2>(kernel_size), std::get<2>(dilation));
 }
 
 inline void CheckIfPropertiesMatch(const at::Tensor& a, const at::Tensor& b) {
@@ -124,11 +179,11 @@ void CheckIfTensorShapesMatch(const at::Tensor& a, const at::Tensor& b) {
   }
 }
 
-template <size_t NaDim>
+template <size_t NaDim, typename KernelType>
 void CheckAttnShape(
     const at::Tensor& input,
     const at::Tensor& attn,
-    int kernel_size) {
+    KernelType kernel_size) {
   static_assert(NaDim >= 1 && NaDim < 4);
   TORCH_CHECK(attn.dim() == NaDim + 3, "Expected ", NaDim + 3, "-D tensors.");
   for (size_t i = 0; i < NaDim + 2; ++i) {
@@ -141,7 +196,7 @@ void CheckAttnShape(
         " != ",
         input.size(i));
   }
-  auto expected_kernel_size = std::pow(kernel_size, NaDim);
+  auto expected_kernel_size = natten::flatten(kernel_size);
   TORCH_CHECK(
       attn.size(NaDim + 2) == expected_kernel_size,
       "Expected attention dim was ",
@@ -150,11 +205,12 @@ void CheckAttnShape(
       attn.size(NaDim + 2));
 }
 
-template <size_t NaDim>
+template <size_t NaDim, typename KernelType>
 void CheckBias(
     const at::Tensor& input,
     const at::Tensor& bias,
-    int kernel_size) {
+    int32_t num_heads,
+    KernelType kernel_size) {
   static_assert(NaDim >= 1 && NaDim < 4);
   TORCH_CHECK(
       input.scalar_type() == bias.scalar_type(),
@@ -163,80 +219,9 @@ void CheckBias(
       bias.device().is_cuda() == input.device().is_cuda(),
       "Expected positional bias to be on the same device as the inputs.");
   CHECK_CONTIGUOUS(bias);
-  TORCH_CHECK(
-      bias.size(0) == input.size(1),
-      "Expected bias.shape[0] == input.shape[1] == heads.");
+  TORCH_CHECK(bias.size(0) == num_heads, "Expected bias.shape[0] == heads.");
   for (size_t i = 0; i < NaDim; ++i) {
-    auto expected_bias_dim = kernel_size * 2 - 1;
-    TORCH_CHECK(
-        bias.size(i + 1) == expected_bias_dim,
-        "Invalid bias shape at dim ",
-        i + 1,
-        "; "
-        "expected ",
-        expected_bias_dim,
-        ", got ",
-        bias.size(i + 1),
-        ".");
-  }
-}
-
-// TODO: I resent this; please do it the right way.
-template <size_t NaDim>
-void CheckAttnShape(
-    const at::Tensor& input,
-    const at::Tensor& attn,
-    int kernel_size,
-    int kernel_size_d) {
-  static_assert(NaDim == 3);
-  TORCH_CHECK(attn.dim() == NaDim + 3, "Expected ", NaDim + 3, "-D tensors.");
-  for (size_t i = 0; i < NaDim + 2; ++i) {
-    TORCH_CHECK(
-        input.size(i) == attn.size(i),
-        "Tensor shape mismatch at dimension ",
-        i,
-        ": ",
-        input.size(i),
-        " != ",
-        input.size(i));
-  }
-  auto expected_kernel_size = kernel_size * kernel_size * kernel_size_d;
-  TORCH_CHECK(
-      attn.size(NaDim + 2) == expected_kernel_size,
-      "Expected attention dim was ",
-      expected_kernel_size,
-      ", got ",
-      attn.size(NaDim + 2));
-}
-
-template <size_t NaDim>
-void CheckBias(
-    const at::Tensor& input,
-    const at::Tensor& bias,
-    int kernel_size,
-    int kernel_size_d) {
-  static_assert(NaDim == 3);
-  TORCH_CHECK(
-      input.scalar_type() == bias.scalar_type(),
-      "Inputs and bias must match in dtype.");
-  TORCH_CHECK(
-      bias.device().is_cuda() == input.device().is_cuda(),
-      "Expected positional bias to be on the same device as the inputs.");
-  CHECK_CONTIGUOUS(bias);
-  TORCH_CHECK(
-      bias.size(0) == input.size(1),
-      "Expected bias.shape[0] == input.shape[1] == heads.");
-
-  auto expected_bias_dim_0 = kernel_size_d * 2 - 1;
-  TORCH_CHECK(
-      bias.size(1) == expected_bias_dim_0,
-      "Invalid bias shape at dim 1; expected ",
-      expected_bias_dim_0,
-      ", got ",
-      bias.size(1),
-      ".");
-  for (size_t i = 1; i < NaDim; ++i) {
-    auto expected_bias_dim = kernel_size * 2 - 1;
+    auto expected_bias_dim = natten::get_from_tuple(kernel_size, i) * 2 - 1;
     TORCH_CHECK(
         bias.size(i + 1) == expected_bias_dim,
         "Invalid bias shape at dim ",

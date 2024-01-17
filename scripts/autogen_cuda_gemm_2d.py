@@ -903,7 +903,7 @@ def generate_cuda_kernels(path, max_kernel_size, sm, num_splits=4):
             source_list.append(kernel)
             kernels_emitted.append(kernel_idx)
         write_combined_source_file(
-            path_to_sources, f"source_{split_idx}.cu", pth_set, source_list
+            path_to_sources, f"source_{split_idx}.cu", sorted(pth_set), source_list
         )
     assert split_idx == num_splits - 1, f"Expected {split_idx=} == {num_splits=} - 1"
     assert len(kernels_emitted) == len(kernels) and sorted(kernels_emitted) == [

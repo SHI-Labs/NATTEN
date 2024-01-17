@@ -45,46 +45,53 @@ namespace naive {
 template <typename scalar_t>
 struct PointwiseNeighborhood2DBase {
   struct Params {
+    bool is_grad;
     scalar_t* query; // query / d_out
     scalar_t* key; // key   / value
     scalar_t* bias = nullptr; // optional: bias
     scalar_t* attn; // attn  / d_attn
-    const int height;
-    const int width;
-    const int heads;
-    const int kernel_size_in;
-    const int dilation_in;
-    const int dim;
-    const int batch_size;
-    const int64_t attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3;
-    const int64_t query_stride_0, query_stride_1, query_stride_2, query_stride_3;
-    const int64_t bias_stride_0, bias_stride_1;
+    int32_t height;
+    int32_t width;
+    int32_t heads;
+    int32_t kernel_size_0, kernel_size_1;
+    int32_t dilation_0, dilation_1;
+    int32_t dim;
+    int32_t batch_size;
+    int64_t attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3;
+    int64_t query_stride_0, query_stride_1, query_stride_2, query_stride_3;
+    int64_t bias_stride_0, bias_stride_1;
 
     __device__ __host__ Params() {}
 
     __device__ __host__ Params(
+        bool is_grad,
         scalar_t* query,
         scalar_t* key,
         scalar_t* attn,
-        const int height,
-        const int width,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int dim,
-        const int batch_size,
-        const int64_t attn_stride_0,
-        const int64_t attn_stride_1,
-        const int64_t attn_stride_2,
-        const int64_t attn_stride_3)
-        : query(query),
+        int32_t height,
+        int32_t width,
+        int32_t heads,
+        int32_t kernel_size_0,
+        int32_t kernel_size_1,
+        int32_t dilation_0,
+        int32_t dilation_1,
+        int32_t dim,
+        int32_t batch_size,
+        int64_t attn_stride_0,
+        int64_t attn_stride_1,
+        int64_t attn_stride_2,
+        int64_t attn_stride_3)
+        : is_grad(is_grad),
+          query(query),
           key(key),
           attn(attn),
           height(height),
           width(width),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
+          kernel_size_0(kernel_size_0),
+          kernel_size_1(kernel_size_1),
+          dilation_0(dilation_0),
+          dilation_1(dilation_1),
           dim(dim),
           batch_size(batch_size),
           bias_stride_1(0),
@@ -104,30 +111,35 @@ struct PointwiseNeighborhood2DBase {
         scalar_t* key, // value  / key
         scalar_t* bias, // relative positional bias tensor
         scalar_t* attn, // output / d_query
-        const int height,
-        const int width,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int dim,
-        const int batch_size,
-        const int64_t attn_stride_0,
-        const int64_t attn_stride_1,
-        const int64_t attn_stride_2,
-        const int64_t attn_stride_3)
-        : query(query),
+        int32_t height,
+        int32_t width,
+        int32_t heads,
+        int32_t kernel_size_0,
+        int32_t kernel_size_1,
+        int32_t dilation_0,
+        int32_t dilation_1,
+        int32_t dim,
+        int32_t batch_size,
+        int64_t attn_stride_0,
+        int64_t attn_stride_1,
+        int64_t attn_stride_2,
+        int64_t attn_stride_3)
+        : is_grad(false),
+          query(query),
           key(key),
           bias(bias),
           attn(attn),
           height(height),
           width(width),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
+          kernel_size_0(kernel_size_0),
+          kernel_size_1(kernel_size_1),
+          dilation_0(dilation_0),
+          dilation_1(dilation_1),
           dim(dim),
           batch_size(batch_size),
-          bias_stride_1(2 * kernel_size_in - 1),
-          bias_stride_0((2 * kernel_size_in - 1) * (2 * kernel_size_in - 1)),
+          bias_stride_1(2 * kernel_size_1 - 1),
+          bias_stride_0((2 * kernel_size_0 - 1) * (2 * kernel_size_1 - 1)),
           attn_stride_3(attn_stride_3),
           attn_stride_2(attn_stride_2),
           attn_stride_1(attn_stride_1),
@@ -141,13 +153,14 @@ struct PointwiseNeighborhood2DBase {
   __device__ __host__ PointwiseNeighborhood2DBase() {}
 
   static LaunchParams get_launch_params(
-      int batch_dim,
-      int spatial_size,
-      int attention_span) {
-    int KERNELTHREADS =
+      int32_t batch_dim,
+      int32_t spatial_size,
+      int32_t attention_span) {
+    int32_t KERNELTHREADS =
         min(CUDA_NUM_THREADS, attention_span /* == kernel_size^2 */);
-    int PIXELTHREADS = min(int(CUDA_NUM_THREADS / KERNELTHREADS), spatial_size);
-    int BATCHTHREADS =
+    int32_t PIXELTHREADS =
+        min(int32_t(CUDA_NUM_THREADS / KERNELTHREADS), spatial_size);
+    int32_t BATCHTHREADS =
         min(64, max(1, CUDA_NUM_THREADS / (PIXELTHREADS * KERNELTHREADS)));
     dim3 grid(
         (spatial_size + PIXELTHREADS - 1) / PIXELTHREADS,

@@ -26,40 +26,105 @@
 
 #pragma once
 
+#include <natten/natten.h>
 #include <natten_autogen/cuda/naive/interface.h>
 #ifdef NATTEN_WITH_CUTLASS
 #include <natten_autogen/cuda/gemm/2d/interface.h>
+#include <natten/cuda/fna/fna_forward.cuh>
 #endif
 
 namespace natten {
 namespace cuda {
 
 template <typename T>
+void na2d_forward(
+    int32_t cc,
+    size_t max_smem,
+    cudaStream_t stream,
+    void* query_ptr,
+    void* key_ptr,
+    void* value_ptr,
+    void* out_ptr,
+    void* rpb_ptr,
+    int32_t batch_size,
+    int32_t height,
+    int32_t width,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t>& key_tile_size) {
+#ifdef NATTEN_WITH_CUTLASS
+  if (cc >= 80 || (cc >= 50 && !std::is_same<T, natten::bfloat16>::value)) {
+    natten::cuda::fna::fna_forward_generic<T>(
+        cc,
+        max_smem,
+        stream,
+        query_ptr,
+        key_ptr,
+        value_ptr,
+        out_ptr,
+        rpb_ptr,
+        batch_size,
+        {height, width},
+        heads,
+        dim,
+        dim, // dim_value
+        kernel_size,
+        dilation,
+        is_causal,
+        attn_scale,
+        nullptr, // TODO: pass logsumexp_ptr when backward kernel is implemented
+        query_tile_size,
+        key_tile_size);
+  } else {
+#endif
+    NATTEN_FAILURE(
+        "Fused kernels are only available on devices with "
+        "compute capability >= 50 for FP16/FP32 inputs, and devices with "
+        "compute capability >= 80 for FP32, BF16, and FP16 inputs.");
+#ifdef NATTEN_WITH_CUTLASS
+  }
+#endif
+}
+
+template <typename T>
 void na2d_qk_forward(
-    const int cc,
+    int32_t cc,
+    size_t max_smem,
     cudaStream_t stream,
     void* query_ptr,
     void* key_ptr,
     void* bias_ptr,
     void* attn_ptr,
-    int batch_size,
-    int heads,
-    int height,
-    int width,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
     int64_t attn_stride_3,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
 #ifdef NATTEN_WITH_CUTLASS
   if (natten::kEnableGemmNA &&
+      !any_true(is_causal) && // TODO: remove when GEMM supports causal masking
+      all_dims_match(kernel_size) && // TODO: remove when GEMM supports varying
+                                     // kernel sizes
+      all_dims_match(
+          dilation) && // TODO: remove when GEMM supports varying dilations
       (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
     LAUNCH_na2d_pn_cuda_gemm(
         cc,
         T,
-        kernel_size,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
         dim,
         query_ptr,
         key_ptr,
@@ -74,8 +139,10 @@ void na2d_qk_forward(
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
+        std::get<0>(
+            dilation), // TODO: remove when GEMM supports varying dilations
         1.0,
         stream);
   } else {
@@ -83,10 +150,12 @@ void na2d_qk_forward(
     if (bias_ptr == nullptr) {
       DISPATCH_DTYPE_na2d_pn_cuda_naive(
           T,
-          kernel_size,
-          dilation,
+          is_causal,
+          // kernel_size,
+          // dilation,
           cc,
           stream,
+          /* is_grad = */ false,
           query_ptr,
           key_ptr,
           attn_ptr,
@@ -102,10 +171,14 @@ void na2d_qk_forward(
           kernel_size,
           dilation);
     } else {
+      NATTEN_CHECK(
+          !any_true(is_causal),
+          "Neighborhood attention with causal masking does not support positional biases yet.");
       DISPATCH_DTYPE_na2d_pn_bias_cuda_naive(
           T,
-          kernel_size,
-          dilation,
+          is_causal,
+          // kernel_size,
+          // dilation,
           cc,
           stream,
           query_ptr,
@@ -131,7 +204,8 @@ void na2d_qk_forward(
 
 template <typename T>
 void na2d_qk_backward(
-    const int cc,
+    int32_t cc,
+    size_t max_smem,
     cudaStream_t stream,
     void* query_ptr,
     void* key_ptr,
@@ -139,24 +213,31 @@ void na2d_qk_backward(
     void* d_query_ptr,
     void* d_key_ptr,
     void* d_bias_ptr,
-    int batch_size,
-    int heads,
-    int height,
-    int width,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
     int64_t attn_stride_3,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
 #ifdef NATTEN_WITH_CUTLASS
   if (natten::kEnableGemmNA &&
+      !any_true(is_causal) && // TODO: remove when GEMM supports causal masking
+      all_dims_match(kernel_size) && // TODO: remove when GEMM supports varying
+                                     // kernel sizes
+      all_dims_match(
+          dilation) && // TODO: remove when GEMM supports varying dilations
       (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
     LAUNCH_na2d_nn_cuda_gemm(
         cc,
         T,
-        kernel_size,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
         dim,
         d_attn_ptr,
         key_ptr,
@@ -170,14 +251,17 @@ void na2d_qk_backward(
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
+        std::get<0>(
+            dilation), // TODO: remove when GEMM supports varying dilations
         1.0,
         stream);
     LAUNCH_na2d_in_cuda_gemm(
         cc,
         T,
-        kernel_size,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
         dim,
         d_attn_ptr,
         query_ptr,
@@ -191,16 +275,19 @@ void na2d_qk_backward(
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
+        std::get<0>(
+            dilation), // TODO: remove when GEMM supports varying dilations
         1.0,
         stream);
   } else {
 #endif
     DISPATCH_DTYPE_na2d_nn_cuda_naive(
         T,
-        kernel_size,
-        dilation,
+        is_causal,
+        // kernel_size,
+        // dilation,
         cc,
         stream,
         d_attn_ptr,
@@ -219,8 +306,9 @@ void na2d_qk_backward(
         dilation);
     DISPATCH_DTYPE_na2d_in_cuda_naive(
         T,
-        kernel_size,
-        dilation,
+        is_causal,
+        // kernel_size,
+        // dilation,
         cc,
         stream,
         d_attn_ptr,
@@ -241,10 +329,14 @@ void na2d_qk_backward(
   }
 #endif
   if (d_bias_ptr != nullptr) {
+    NATTEN_CHECK(
+        !any_true(is_causal),
+        "Neighborhood attention with causal masking does not support positional biases yet.");
     DISPATCH_DTYPE_na2d_rpbgrad_cuda_naive(
         T,
-        kernel_size,
-        dilation,
+        is_causal,
+        // kernel_size,
+        // dilation,
         cc,
         stream,
         d_bias_ptr,
@@ -265,29 +357,37 @@ void na2d_qk_backward(
 
 template <typename T>
 void na2d_av_forward(
-    const int cc,
+    int32_t cc,
+    size_t max_smem,
     cudaStream_t stream,
     void* attn_ptr,
     void* value_ptr,
     void* output_ptr,
-    int batch_size,
-    int heads,
-    int height,
-    int width,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
     int64_t attn_stride_3,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
 #ifdef NATTEN_WITH_CUTLASS
   if (natten::kEnableGemmNA &&
+      !any_true(is_causal) && // TODO: remove when GEMM supports causal masking
+      all_dims_match(kernel_size) && // TODO: remove when GEMM supports varying
+                                     // kernel sizes
+      all_dims_match(
+          dilation) && // TODO: remove when GEMM supports varying dilations
       (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
     LAUNCH_na2d_nn_cuda_gemm(
         cc,
         T,
-        kernel_size,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
         dim,
         attn_ptr,
         value_ptr,
@@ -301,16 +401,19 @@ void na2d_av_forward(
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
+        std::get<0>(
+            dilation), // TODO: remove when GEMM supports varying dilations
         1.0,
         stream);
   } else {
 #endif
     DISPATCH_DTYPE_na2d_nn_cuda_naive(
         T,
-        kernel_size,
-        dilation,
+        is_causal,
+        // kernel_size,
+        // dilation,
         cc,
         stream,
         attn_ptr,
@@ -334,31 +437,39 @@ void na2d_av_forward(
 
 template <typename T>
 void na2d_av_backward(
-    const int cc,
+    int32_t cc,
+    size_t max_smem,
     cudaStream_t stream,
     void* attn_ptr,
     void* value_ptr,
     void* d_output_ptr,
     void* d_attn_ptr,
     void* d_value_ptr,
-    int batch_size,
-    int heads,
-    int height,
-    int width,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
     int64_t attn_stride_3,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
 #ifdef NATTEN_WITH_CUTLASS
   if (natten::kEnableGemmNA &&
+      !any_true(is_causal) && // TODO: remove when GEMM supports causal masking
+      all_dims_match(kernel_size) && // TODO: remove when GEMM supports varying
+                                     // kernel sizes
+      all_dims_match(
+          dilation) && // TODO: remove when GEMM supports varying dilations
       (cc >= 80 || (cc >= 70 && std::is_same<T, natten::float16>::value))) {
     LAUNCH_na2d_pn_cuda_gemm(
         cc,
         T,
-        kernel_size,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
         dim,
         d_output_ptr,
         value_ptr,
@@ -373,14 +484,17 @@ void na2d_av_backward(
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
+        std::get<0>(
+            dilation), // TODO: remove when GEMM supports varying dilations
         1.0,
         stream);
     LAUNCH_na2d_in_cuda_gemm(
         cc,
         T,
-        kernel_size,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
         dim,
         attn_ptr,
         d_output_ptr,
@@ -394,18 +508,22 @@ void na2d_av_backward(
         attn_stride_1,
         attn_stride_2,
         attn_stride_3,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size), // TODO: remove when GEMM supports varying
+                                  // kernel sizes
+        std::get<0>(
+            dilation), // TODO: remove when GEMM supports varying dilations
         1.0,
         stream);
   } else {
 #endif
     DISPATCH_DTYPE_na2d_pn_cuda_naive(
         T,
-        kernel_size,
-        dilation,
+        is_causal,
+        // kernel_size,
+        // dilation,
         cc,
         stream,
+        /* is_grad = */ true,
         d_output_ptr,
         value_ptr,
         d_attn_ptr,
@@ -422,8 +540,9 @@ void na2d_av_backward(
         dilation);
     DISPATCH_DTYPE_na2d_in_cuda_naive(
         T,
-        kernel_size,
-        dilation,
+        is_causal,
+        // kernel_size,
+        // dilation,
         cc,
         stream,
         attn_ptr,

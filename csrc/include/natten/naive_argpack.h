@@ -26,21 +26,37 @@
 namespace natten {
 namespace naive {
 
-template <typename scalar_t, int KernelSize_, int Dilation_>
-struct ArgumentPack {
-  static constexpr int KernelSize = (KernelSize_ <= 0) ? -1 : KernelSize_;
-  static constexpr int DepthKernelSize = -1;
+// TODO:
 
-  static_assert(KernelSize <= 0 || (KernelSize > 1 && KernelSize % 2 == 1));
-
-  static constexpr int NeighborhoodSize =
-      (KernelSize <= 0) ? -1 : KernelSize / 2;
-  static constexpr int DepthNeighborhoodSize = -1;
-
-  static constexpr int Dilation = (Dilation_ <= 0) ? -1 : Dilation_;
-  static constexpr int DepthDilation = -1;
-
+template <typename scalar_t, bool CausalMask0_>
+struct ArgumentPack1D {
   using Dtype = scalar_t;
+  struct CausalMask {
+    static constexpr bool Dim0 = CausalMask0_;
+  };
+};
+
+template <typename scalar_t, bool CausalMask0_, bool CausalMask1_>
+struct ArgumentPack2D {
+  using Dtype = scalar_t;
+  struct CausalMask {
+    static constexpr bool Dim0 = CausalMask0_;
+    static constexpr bool Dim1 = CausalMask1_;
+  };
+};
+
+template <
+    typename scalar_t,
+    bool CausalMask0_,
+    bool CausalMask1_,
+    bool CausalMask2_>
+struct ArgumentPack3D {
+  using Dtype = scalar_t;
+  struct CausalMask {
+    static constexpr bool Dim0 = CausalMask0_;
+    static constexpr bool Dim1 = CausalMask1_;
+    static constexpr bool Dim2 = CausalMask2_;
+  };
 };
 
 } // namespace naive

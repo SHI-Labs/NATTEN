@@ -37,7 +37,8 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten/cpu/naive/natten_cpu_commons.h"
+#include <natten/cpu/naive/natten_cpu_commons.h>
+#include <natten/natten.h>
 
 namespace natten {
 namespace cpu {
@@ -52,22 +53,26 @@ struct RelPosBiasGradient1D {
   void operator()(
       void* d_bias_ptr,
       void* d_attn_ptr,
-      int batch_size,
-      int heads,
-      int length,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t length,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
-      int kernel_size,
-      int dilation) {
+      const std::tuple<int32_t>& kernel_size,
+      const std::tuple<int32_t>& dilation,
+      const std::tuple<bool>& is_causal) {
+    NATTEN_CHECK(
+        !any_true(is_causal),
+        "Neighborhood attention with causal masking does not support positional biases yet.");
     launch(
         reinterpret_cast<scalar_t*>(d_bias_ptr),
         reinterpret_cast<scalar_t*>(d_attn_ptr),
         length,
         heads,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size),
+        std::get<0>(dilation),
         batch_size,
         attn_stride_0,
         attn_stride_1,
@@ -77,29 +82,29 @@ struct RelPosBiasGradient1D {
   void launch(
       scalar_t* d_bias,
       scalar_t* d_attn,
-      const int length,
-      const int heads,
-      const int kernel_size,
-      const int dilation,
-      const int batch_size,
-      const int64_t d_attn_stride_0,
-      const int64_t d_attn_stride_1,
-      const int64_t d_attn_stride_2) {
-    const int neighborhood_size = kernel_size / 2;
-    const int d_bias_stride_0 = 2 * kernel_size - 1;
-    at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
-      for (int h = start; h < end; h++) {
-        for (int i = 0; i < length; i++) {
-          const int pi =
+      int32_t length,
+      int32_t heads,
+      int32_t kernel_size,
+      int32_t dilation,
+      int32_t batch_size,
+      int64_t d_attn_stride_0,
+      int64_t d_attn_stride_1,
+      int64_t d_attn_stride_2) {
+    auto neighborhood_size = kernel_size / 2;
+    int64_t d_bias_stride_0 = 2 * kernel_size - 1;
+    at::parallel_for(0, heads, GRAIN_SIZE, [&](int32_t start, int32_t end) {
+      for (int32_t h = start; h < end; h++) {
+        for (int32_t i = 0; i < length; i++) {
+          auto pi =
               get_pb_start(i, length, kernel_size, neighborhood_size, dilation);
-          for (int ki = 0; ki < kernel_size; ki++) {
+          for (int32_t ki = 0; ki < kernel_size; ki++) {
             scalar_t d_bias_update = scalar_t(0);
             int64_t attnOffset = h * d_attn_stride_1 + i * d_attn_stride_2 + ki;
-            for (int b = 0; b < batch_size; ++b) {
+            for (int32_t b = 0; b < batch_size; ++b) {
               d_bias_update += d_attn[attnOffset];
               attnOffset += d_attn_stride_0;
             }
-            const int64_t index = h * d_bias_stride_0 + (pi + ki);
+            int64_t index = h * d_bias_stride_0 + (pi + ki);
             d_bias[index] += d_bias_update;
           }
         }

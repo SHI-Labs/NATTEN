@@ -30,14 +30,15 @@
     cudaDeviceProp* device_props =                                           \
         at::cuda::getDeviceProperties(device_index);                         \
     const int cc = device_props->major * 10 + device_props->minor;           \
+    const size_t max_smem = device_props->sharedMemPerBlockOptin;            \
     if (c10_dtype == torch::kFloat) {                                        \
-      fn_name<natten::float32>(cc, stream, __VA_ARGS__);                     \
+      fn_name<natten::float32>(cc, max_smem, stream, __VA_ARGS__);           \
     } else if (c10_dtype == torch::kDouble) {                                \
-      fn_name<natten::float64>(cc, stream, __VA_ARGS__);                     \
+      fn_name<natten::float64>(cc, max_smem, stream, __VA_ARGS__);           \
     } else if (c10_dtype == torch::kFloat16 && cc >= 60) {                   \
-      fn_name<natten::float16>(cc, stream, __VA_ARGS__);                     \
+      fn_name<natten::float16>(cc, max_smem, stream, __VA_ARGS__);           \
     } else if (c10_dtype == torch::kBFloat16 && cc >= 80) {                  \
-      fn_name<natten::bfloat16>(cc, stream, __VA_ARGS__);                    \
+      fn_name<natten::bfloat16>(cc, max_smem, stream, __VA_ARGS__);          \
     } else {                                                                 \
       std::cerr << "NATTEN (CUDA) does not support data type " << c10_dtype  \
                 << " on device with index " << device_index << " (SM " << cc \

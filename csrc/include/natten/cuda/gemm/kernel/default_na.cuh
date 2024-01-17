@@ -50,7 +50,26 @@
 namespace natten {
 namespace cuda {
 namespace gemm {
-namespace kernel {} // namespace kernel
+namespace kernel {
+
+namespace {
+
+template <typename ArchTag, typename EpilogueBase>
+struct GetFragmentsPerIter {
+  static_assert(
+      ArchTag::kMinComputeCapability == 80 ||
+      ArchTag::kMinComputeCapability == 75);
+  static constexpr int value = EpilogueBase::kFragmentsPerIteration;
+};
+
+template <typename EpilogueBase>
+struct GetFragmentsPerIter<cutlass::arch::Sm70, EpilogueBase> {
+  static constexpr int value = 1;
+};
+
+} // namespace
+
+} // namespace kernel
 } // namespace gemm
 } // namespace cuda
 } // namespace natten

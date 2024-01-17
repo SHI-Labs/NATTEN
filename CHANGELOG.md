@@ -1,5 +1,24 @@
 # Changelog
 
+## [Main branch]
+* Fused neighborhood attention (FNA) kernels (forward pass only for now)
+  * 1D, 2D and 3D Neighborhood Attention are supported,
+  * Causal neighborhood attention is implemented,
+  * Window (kernel) size, dilation, and causality can be defined *per-axis*,
+  * All GPU architectures since Maxwell (SM50) are supported,
+    * SM50 up to SM70 are SIMT-only, but support both FP16 and FP32,
+    * SM70 and SM75 target Tensor Cores in FP16, and SIMT-style in FP32,
+    * SM80 and above target Tensor Cores in FP16, BF16, and FP32.
+  * Relative positional biases are implemented (not defined for causal masking yet),
+  * Memory layout in FNA is different from existing kernels (`[B, *, heads, dim]` instead of `[B, heads, *, dim]`.)
+    * Eventually this layout can skip over the permute/explicit reshape step in the attention module following
+    the QKV projection.
+* Naive kernels now implement and allow causal masking,
+* Naive kernels (CPU and CUDA) now allow varying parameters (window size, dilation, causal) across axes,
+* Major bug fix in Volta GEMM kernels
+  * The epilogue was different for Volta, and it slipped through unit tests,
+  * Tests are now more aggressive, and the issue has been fixed.
+
 ## [0.15.1] - 2024-01-24
 * Attention tensors can now be views, which allows combining neighborhood and any other attention pattern (i.e. registers,
   cross attention tokens, and the like) without extra copies. ([#85](https://github.com/SHI-Labs/NATTEN/pull/85) and [#87](https://github.com/SHI-Labs/NATTEN/pull/87)).

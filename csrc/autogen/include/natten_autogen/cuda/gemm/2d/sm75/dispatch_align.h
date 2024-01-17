@@ -330,6 +330,306 @@ namespace gemm {
     } \
 }();
 
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_pn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
 #define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks3(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
@@ -650,6 +950,306 @@ namespace gemm {
     } \
 }();
 
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks35 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks37 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks39 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks41 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks43 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks45 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks47 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks49 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks51 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks53 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks55 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks57 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks59 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks61 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_nn_cuda_gemm_half_128x128x32_64x64x32_16x8x8_2_sm75_ks63 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
 #define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks3(dim, ...) \
   [&] { \
     if (dim % 8 == 0) { \
@@ -964,6 +1564,306 @@ namespace gemm {
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
                 << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks33 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks35(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks35_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks35_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks35_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks35 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks37(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks37_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks37_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks37_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks37 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks39(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks39_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks39_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks39_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks39 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks41(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks41_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks41_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks41_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks41 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks43(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks43_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks43_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks43_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks43 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks45(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks45_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks45_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks45_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks45 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks47(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks47_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks47_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks47_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks47 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks49(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks49_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks49_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks49_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks49 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks51(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks51_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks51_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks51_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks51 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks53(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks53_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks53_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks53_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks53 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks55(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks55_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks55_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks55_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks55 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks57(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks57_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks57_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks57_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks57 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks59(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks59_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks59_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks59_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks59 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks61(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks61_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks61_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks61_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks61 requires at least 32-bit alignment." \
+                << "Got dim=" << dim << ", dtype=half. " \
+                << std::endl; \
+      exit(EXIT_FAILURE); \
+    } \
+}();
+
+#define DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks63(dim, ...) \
+  [&] { \
+    if (dim % 8 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks63_align8(__VA_ARGS__); \
+    } \
+    else if (dim % 4 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks63_align4(__VA_ARGS__); \
+    } \
+    else if (dim % 2 == 0) { \
+      natten::cuda::gemm::na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks63_align2(__VA_ARGS__); \
+    } \
+    else { \
+      std::cerr << "NATTEN kernel launch failed!" \
+                << "na2d_in_cuda_gemm_half_64x64x32_32x32x32_16x8x8_2_sm75_ks63 requires at least 32-bit alignment." \
                 << "Got dim=" << dim << ", dtype=half. " \
                 << std::endl; \
       exit(EXIT_FAILURE); \

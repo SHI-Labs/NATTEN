@@ -28,6 +28,7 @@
 #include <ATen/cuda/CUDAContext.h>
 #include <torch/extension.h>
 
+#include <natten/natten.h>
 #include <natten/cuda/na1d.cuh>
 #include <natten/dtypes.cuh>
 #include <natten/pytorch/cuda/helpers.cuh>
@@ -36,20 +37,59 @@ namespace natten {
 namespace pytorch {
 namespace cuda {
 
+void na1d_forward(
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    at::Tensor& out,
+    const at::optional<at::Tensor>& rpb,
+    int32_t batch_size,
+    int32_t length,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t>& query_tile_size,
+    const std::tuple<int32_t>& key_tile_size) {
+  DISPATCH_DTYPE(
+      query.device().index(),
+      at::cuda::getCurrentCUDAStream(query.device().index()),
+      query.scalar_type(),
+      natten::cuda::na1d_forward,
+      static_cast<void*>(query.data_ptr()),
+      static_cast<void*>(key.data_ptr()),
+      static_cast<void*>(value.data_ptr()),
+      static_cast<void*>(out.data_ptr()),
+      rpb.has_value() ? static_cast<void*>(rpb.value().data_ptr()) : nullptr,
+      batch_size,
+      length,
+      heads,
+      dim,
+      kernel_size,
+      dilation,
+      is_causal,
+      attn_scale,
+      query_tile_size,
+      key_tile_size);
+}
+
 void na1d_qk_forward(
     const at::Tensor& query,
     const at::Tensor& key,
     const at::optional<at::Tensor>& bias,
     at::Tensor& attn,
-    const int batch_size,
-    const int heads,
-    const int length,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE(
       query.device().index(),
-      at::cuda::getCurrentCUDAStream(),
+      at::cuda::getCurrentCUDAStream(query.device().index()),
       query.scalar_type(),
       natten::cuda::na1d_qk_forward,
       static_cast<void*>(query.data_ptr()),
@@ -64,7 +104,8 @@ void na1d_qk_forward(
       attn.stride(1),
       attn.stride(2),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na1d_qk_backward(
@@ -74,15 +115,16 @@ void na1d_qk_backward(
     at::Tensor& d_query,
     at::Tensor& d_key,
     at::optional<at::Tensor>& d_bias,
-    const int batch_size,
-    const int heads,
-    const int length,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE(
       d_attn.device().index(),
-      at::cuda::getCurrentCUDAStream(),
+      at::cuda::getCurrentCUDAStream(query.device().index()),
       d_attn.scalar_type(),
       natten::cuda::na1d_qk_backward,
       static_cast<void*>(query.data_ptr()),
@@ -100,22 +142,24 @@ void na1d_qk_backward(
       d_attn.stride(1),
       d_attn.stride(2),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na1d_av_forward(
     const at::Tensor& attn,
     const at::Tensor& value,
     at::Tensor& output,
-    const int batch_size,
-    const int heads,
-    const int length,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE(
       attn.device().index(),
-      at::cuda::getCurrentCUDAStream(),
+      at::cuda::getCurrentCUDAStream(attn.device().index()),
       attn.scalar_type(),
       natten::cuda::na1d_av_forward,
       static_cast<void*>(attn.data_ptr()),
@@ -129,7 +173,8 @@ void na1d_av_forward(
       attn.stride(1),
       attn.stride(2),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na1d_av_backward(
@@ -138,15 +183,16 @@ void na1d_av_backward(
     const at::Tensor& value,
     at::Tensor& d_attn,
     at::Tensor& d_value,
-    const int batch_size,
-    const int heads,
-    const int length,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE(
       d_out.device().index(),
-      at::cuda::getCurrentCUDAStream(),
+      at::cuda::getCurrentCUDAStream(attn.device().index()),
       d_out.scalar_type(),
       natten::cuda::na1d_av_backward,
       static_cast<void*>(attn.data_ptr()),
@@ -162,7 +208,8 @@ void na1d_av_backward(
       attn.stride(1),
       attn.stride(2),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 } // namespace cuda

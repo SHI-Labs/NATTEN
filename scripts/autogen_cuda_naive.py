@@ -103,6 +103,13 @@ ALL_SIZES = [
 ]
 
 
+DIM2SIZE = {
+    Problem.NA1D: 1,
+    Problem.NA2D: 2,
+    Problem.NA3D: 3,
+}
+
+
 dim_to_cc = {
     Problem.NA1D: "1d",
     Problem.NA2D: "2d",
@@ -135,21 +142,27 @@ class CArg:
 
 
 CC_ARG = [
-    CArg("const int", "cc"),
+    CArg("int32_t", "cc"),
     CArg("cudaStream_t", "stream"),
 ]
 
-COMMON_ARGS = [
-    CArg("int", "kernel_size"),
-    CArg("int", "dilation"),
+ARGS_1D = [
+    CArg("const std::tuple<int32_t>&", "kernel_size"),
+    CArg("const std::tuple<int32_t>&", "dilation"),
 ]
 
-EXTRA_3D_ARGS = [
-    CArg("int", "kernel_size_d"),
-    CArg("int", "dilation_d"),
+ARGS_2D = [
+    CArg("const std::tuple<int32_t, int32_t>&", "kernel_size"),
+    CArg("const std::tuple<int32_t, int32_t>&", "dilation"),
+]
+
+ARGS_3D = [
+    CArg("const std::tuple<int32_t, int32_t, int32_t>&", "kernel_size"),
+    CArg("const std::tuple<int32_t, int32_t, int32_t>&", "dilation"),
 ]
 
 PN_COMMON_ARGS = [
+    CArg("bool", "is_grad"),
     CArg("void *", "query_ptr"),
     CArg("void *", "key_ptr"),
     CArg("void *", "attn_ptr"),
@@ -180,21 +193,21 @@ RPBGRAD_COMMON_ARGS = [
 ]
 
 NA1D_PROBLEM_SIZE_ARGS = [
-    CArg("int", "batch_size"),
-    CArg("int", "heads"),
-    CArg("int", "length"),
-    CArg("int", "dim"),
+    CArg("int32_t", "batch_size"),
+    CArg("int32_t", "heads"),
+    CArg("int32_t", "length"),
+    CArg("int32_t", "dim"),
     CArg("int64_t", "attn_stride_0"),
     CArg("int64_t", "attn_stride_1"),
     CArg("int64_t", "attn_stride_2"),
 ]
 
 NA2D_PROBLEM_SIZE_ARGS = [
-    CArg("int", "batch_size"),
-    CArg("int", "heads"),
-    CArg("int", "height"),
-    CArg("int", "width"),
-    CArg("int", "dim"),
+    CArg("int32_t", "batch_size"),
+    CArg("int32_t", "heads"),
+    CArg("int32_t", "height"),
+    CArg("int32_t", "width"),
+    CArg("int32_t", "dim"),
     CArg("int64_t", "attn_stride_0"),
     CArg("int64_t", "attn_stride_1"),
     CArg("int64_t", "attn_stride_2"),
@@ -202,12 +215,12 @@ NA2D_PROBLEM_SIZE_ARGS = [
 ]
 
 NA3D_PROBLEM_SIZE_ARGS = [
-    CArg("int", "batch_size"),
-    CArg("int", "heads"),
-    CArg("int", "depth"),
-    CArg("int", "height"),
-    CArg("int", "width"),
-    CArg("int", "dim"),
+    CArg("int32_t", "batch_size"),
+    CArg("int32_t", "heads"),
+    CArg("int32_t", "depth"),
+    CArg("int32_t", "height"),
+    CArg("int32_t", "width"),
+    CArg("int32_t", "dim"),
     CArg("int64_t", "attn_stride_0"),
     CArg("int64_t", "attn_stride_1"),
     CArg("int64_t", "attn_stride_2"),
@@ -218,62 +231,36 @@ NA3D_PROBLEM_SIZE_ARGS = [
 
 carg_map = {
     Problem.NA1D: {
-        Operation.PN: CC_ARG + PN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
+        Operation.PN: CC_ARG + PN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
         Operation.PN_BIAS: (
-            CC_ARG + PN_BIAS_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS
+            CC_ARG + PN_BIAS_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D
         ),
-        Operation.NN: CC_ARG + NN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.IN: CC_ARG + IN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
+        Operation.NN: CC_ARG + NN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
+        Operation.IN: CC_ARG + IN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
         Operation.RPBGRAD: (
-            CC_ARG + RPBGRAD_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS
+            CC_ARG + RPBGRAD_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D
         ),
     },
     Problem.NA2D: {
-        Operation.PN: CC_ARG + PN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
+        Operation.PN: CC_ARG + PN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
         Operation.PN_BIAS: (
-            CC_ARG + PN_BIAS_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS
+            CC_ARG + PN_BIAS_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D
         ),
-        Operation.NN: CC_ARG + NN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.IN: CC_ARG + IN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
+        Operation.NN: CC_ARG + NN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
+        Operation.IN: CC_ARG + IN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
         Operation.RPBGRAD: (
-            CC_ARG + RPBGRAD_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS
+            CC_ARG + RPBGRAD_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D
         ),
     },
     Problem.NA3D: {
-        Operation.PN: (
-            CC_ARG
-            + PN_COMMON_ARGS
-            + NA3D_PROBLEM_SIZE_ARGS
-            + COMMON_ARGS
-            + EXTRA_3D_ARGS
-        ),
+        Operation.PN: CC_ARG + PN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
         Operation.PN_BIAS: (
-            CC_ARG
-            + PN_BIAS_COMMON_ARGS
-            + NA3D_PROBLEM_SIZE_ARGS
-            + COMMON_ARGS
-            + EXTRA_3D_ARGS
+            CC_ARG + PN_BIAS_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D
         ),
-        Operation.NN: (
-            CC_ARG
-            + NN_COMMON_ARGS
-            + NA3D_PROBLEM_SIZE_ARGS
-            + COMMON_ARGS
-            + EXTRA_3D_ARGS
-        ),
-        Operation.IN: (
-            CC_ARG
-            + IN_COMMON_ARGS
-            + NA3D_PROBLEM_SIZE_ARGS
-            + COMMON_ARGS
-            + EXTRA_3D_ARGS
-        ),
+        Operation.NN: CC_ARG + NN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
+        Operation.IN: CC_ARG + IN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
         Operation.RPBGRAD: (
-            CC_ARG
-            + RPBGRAD_COMMON_ARGS
-            + NA3D_PROBLEM_SIZE_ARGS
-            + COMMON_ARGS
-            + EXTRA_3D_ARGS
+            CC_ARG + RPBGRAD_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D
         ),
     },
 }
@@ -298,20 +285,29 @@ class NaiveNAKernel:
         dtype: DataType,
         operation: Operation,
         dim: Problem,
-        kernel_size: TemplateIntParameter,
-        dilation: TemplateIntParameter,
+        causal_mask: List,
+        # kernel_size: TemplateIntParameter,
+        # dilation: TemplateIntParameter,
     ):
         self.dtype = dtype
         self.operation = operation
         self.dim = dim
         self.arguments = carg_map[dim][operation]
-        self.kernel_size = kernel_size
-        self.dilation = dilation
+        # self.kernel_size = kernel_size
+        # self.dilation = dilation
+        self.causal_mask = causal_mask
         self.name_cc = (
             f"na{dim_to_cc[dim]}_{operation.name.lower()}_cuda_naive_{dtype.name}"
         )
-        self.name_cc += f"_ks_{self.kernel_size}"
-        self.name_cc += f"_di_{self.dilation}"
+        cm_str = ""
+        assert len(self.causal_mask) == DIM2SIZE[self.dim]
+        for i in range(DIM2SIZE[self.dim]):
+            cm_str += str(self.causal_mask[i])
+            if i < DIM2SIZE[self.dim] - 1:
+                cm_str += "_"
+        self.name_cc += f"_cm_{cm_str}"
+        # self.name_cc += f"_ks_{self.kernel_size}"
+        # self.name_cc += f"_di_{self.dilation}"
         self.template_name = naive_op_to_template_name(operation, dim)
 
     @property
@@ -341,7 +337,10 @@ class NaiveNAKernel:
     def argpack_parameters(self):
         params_str = ""
         params_str += f"{self.dtype.natten_dtype}, "
-        params_str += f"{self.kernel_size.value}, {self.dilation.value}"
+        # params_str += f"{self.kernel_size.value}, {self.dilation.value}"
+        # params_str += f"-1, -1"
+        params_str += ", ".join([str(x) for x in self.causal_mask])
+        # params_str += f"CausalMask{DIM2SIZE[self.dim]}D<{cm_args}>"
         return params_str
 
     def method_decl(self):
@@ -357,7 +356,7 @@ class NaiveNAKernel:
 
     def method_def(self):
         launch_str = ""
-        launch_str += f"  using Arguments = natten::naive::ArgumentPack<{self.argpack_parameters()}>;\n"
+        launch_str += f"  using Arguments = natten::naive::ArgumentPack{DIM2SIZE[self.dim]}D<{self.argpack_parameters()}>;\n"
         launch_str += f"  using Kernel = {self.template_name}<Arguments>;\n"
         launch_str += "  Kernel kernel;\n"
         launch_str += "  kernel(\n"
@@ -470,16 +469,20 @@ class DataTypeDispatcher:
         self.dim = dim
         self.name_base = f"na{dim_to_cc[dim]}_{operation.name.lower()}_cuda_naive"
         self.name_cc = f"DISPATCH_DTYPE_{self.name_base}"
-        self.name_target = f"DISPATCH_KERNEL_{self.name_base}"
+        # self.name_target = f"DISPATCH_KERNEL_{self.name_base}"
+        # self.name_target = f"naive::{self.name_base}"  # prepends namespace
+        self.name_target = f"DISPATCH_CM_{self.name_base}"
 
     def append(self, dtype: DataType):
         self.dtypes.append(dtype)
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += (
-            f"#define {self.name_cc}(dtype, kernel_size, dilation, ...) \\\n"
-        )
+        # dispatcher_str += (
+        #    f"#define {self.name_cc}(dtype, kernel_size, dilation, ...) \\\n"
+        # )
+        # dispatcher_str += f"#define {self.name_cc}(dtype, ...) \\\n"
+        dispatcher_str += f"#define {self.name_cc}(dtype, is_causal, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, dtype in enumerate(self.dtypes):
             dispatcher_str += "    "
@@ -488,7 +491,11 @@ class DataTypeDispatcher:
             dispatcher_str += f"if (std::is_same<dtype, {dtype.natten_dtype}>::value)"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name_target}_{dtype.name}(kernel_size, dilation, __VA_ARGS__); \\\n"
+            # dispatcher_str += f"  {self.name_target}_{dtype.name}(kernel_size, dilation, __VA_ARGS__); \\\n"
+            # dispatcher_str += f"  {self.name_target}_{dtype.name}(__VA_ARGS__); \\\n"
+            dispatcher_str += (
+                f"  {self.name_target}_{dtype.name}(is_causal, __VA_ARGS__); \\\n"
+            )
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "NATTEN kernel launch failed!" \\\n'
@@ -505,7 +512,7 @@ class DataTypeDispatcher:
         return dispatcher_str
 
 
-class KernelSizeDispatcher:
+class CausalMaskDispatcher:
     def __init__(
         self,
         dtype: DataType,
@@ -517,88 +524,151 @@ class KernelSizeDispatcher:
         self.dim = dim
         self.name_base = f"na{dim_to_cc[dim]}_{operation.name.lower()}_cuda_naive"
         self.name_base += f"_{dtype.name}"
-        self.name_cc = f"DISPATCH_KERNEL_{self.name_base}"
-        self.name_target = f"DISPATCH_DILATION_{self.name_base}"
-        self.kernels: List[TemplateIntParameter] = []
-
-    def append(self, kernel: TemplateIntParameter):
-        self.kernels.append(kernel)
-
-    def get_dispatcher(self):
-        dispatcher_str = ""
-        dispatcher_str += f"#define {self.name_cc}(kernel_size, dilation, ...) \\\n"
-        dispatcher_str += "  [&] { \\\n"
-        i = 0
-        for ks in self.kernels:
-            dispatcher_str += "    "
-            if i > 0:
-                dispatcher_str += "else "
-            if ks.is_default():
-                # Skip the default case, we'll handle that in the else
-                continue
-            i += 1
-            dispatcher_str += f"if (kernel_size == {ks.value})"
-            dispatcher_str += " { \\\n"
-            dispatcher_str += "    "
-            dispatcher_str += (
-                f"  {self.name_target}_ks_{ks}(dilation, __VA_ARGS__); \\\n"
-            )
-            dispatcher_str += "    } \\\n"
-        dispatcher_str += "    else { \\\n"
-        dispatcher_str += "    "
-        dispatcher_str += f"  {self.name_target}_ks_any(dilation, __VA_ARGS__); \\\n"
-        dispatcher_str += "    } \\\n"
-        dispatcher_str += "}();"
-        dispatcher_str += "\n\n"
-        return dispatcher_str
-
-
-class DilationDispatcher:
-    def __init__(
-        self,
-        dtype: DataType,
-        kernel_size: TemplateIntParameter,
-        operation: Operation,
-        dim: Problem,
-    ):
-        self.dtype = dtype
-        self.operation = operation
-        self.dim = dim
-        self.kernel_size = kernel_size
-        self.name_base = f"na{dim_to_cc[dim]}_{operation.name.lower()}_cuda_naive"
-        self.name_base += f"_{dtype.name}_ks_{kernel_size}"
-        self.name_cc = f"DISPATCH_DILATION_{self.name_base}"
+        self.name_cc = f"DISPATCH_CM_{self.name_base}"
         self.name_target = f"naive::{self.name_base}"  # prepends namespace
-        self.dilations: List[TemplateIntParameter] = []
+        self.cms: List = []
 
-    def append(self, dilation: TemplateIntParameter):
-        self.dilations.append(dilation)
+    def append(self, cm):
+        assert len(cm) == DIM2SIZE[self.dim]
+        self.cms.append(cm)
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name_cc}(dilation, ...) \\\n"
+        dispatcher_str += f"#define {self.name_cc}(is_causal, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
         i = 0
-        for di in self.dilations:
+        for cm in self.cms:
             dispatcher_str += "    "
             if i > 0:
                 dispatcher_str += "else "
-            if di.is_default():
-                # Skip the default case, we'll handle that in the else
-                continue
             i += 1
-            dispatcher_str += f"if (dilation == {di.value})"
+            cm_str = ""
+            dispatcher_str += "if ("
+            for dim in range(DIM2SIZE[self.dim]):
+                dispatcher_str += (
+                    f"std::get<{dim}>(is_causal)"
+                    if cm[dim]
+                    else f"!std::get<{dim}>(is_causal)"
+                )
+                cm_str += str(cm[dim])
+                if dim != DIM2SIZE[self.dim] - 1:
+                    dispatcher_str += " && "
+                    cm_str += "_"
+            dispatcher_str += ")"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name_target}_di_{di}(__VA_ARGS__); \\\n"
+            dispatcher_str += f"  {self.name_target}_cm_{cm_str}(__VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += "    "
-        dispatcher_str += f"  {self.name_target}_di_any(__VA_ARGS__); \\\n"
+        dispatcher_str += '      std::cerr << "NATTEN kernel launch failed!" \\\n'
+        dispatcher_str += (
+            '                << "'
+            + f"{self.name_base} got invalid causal mask!"
+            + '" \\\n'
+        )
+        dispatcher_str += "                << std::endl; \\\n"
+        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
         return dispatcher_str
+
+
+# class KernelSizeDispatcher:
+#    def __init__(
+#        self,
+#        dtype: DataType,
+#        operation: Operation,
+#        dim: Problem,
+#    ):
+#        self.dtype = dtype
+#        self.operation = operation
+#        self.dim = dim
+#        self.name_base = f"na{dim_to_cc[dim]}_{operation.name.lower()}_cuda_naive"
+#        self.name_base += f"_{dtype.name}"
+#        self.name_cc = f"DISPATCH_KERNEL_{self.name_base}"
+#        self.name_target = f"DISPATCH_DILATION_{self.name_base}"
+#        self.kernels: List[TemplateIntParameter] = []
+#
+#    def append(self, kernel: TemplateIntParameter):
+#        self.kernels.append(kernel)
+#
+#    def get_dispatcher(self):
+#        dispatcher_str = ""
+#        dispatcher_str += f"#define {self.name_cc}(kernel_size, dilation, ...) \\\n"
+#        dispatcher_str += "  [&] { \\\n"
+#        i = 0
+#        for ks in self.kernels:
+#            dispatcher_str += "    "
+#            if i > 0:
+#                dispatcher_str += "else "
+#            if ks.is_default():
+#                # Skip the default case, we'll handle that in the else
+#                continue
+#            i += 1
+#            dispatcher_str += f"if (kernel_size == {ks.value})"
+#            dispatcher_str += " { \\\n"
+#            dispatcher_str += "    "
+#            dispatcher_str += (
+#                f"  {self.name_target}_ks_{ks}(dilation, __VA_ARGS__); \\\n"
+#            )
+#            dispatcher_str += "    } \\\n"
+#        dispatcher_str += "    else { \\\n"
+#        dispatcher_str += "    "
+#        dispatcher_str += f"  {self.name_target}_ks_any(dilation, __VA_ARGS__); \\\n"
+#        dispatcher_str += "    } \\\n"
+#        dispatcher_str += "}();"
+#        dispatcher_str += "\n\n"
+#        return dispatcher_str
+#
+#
+# class DilationDispatcher:
+#    def __init__(
+#        self,
+#        dtype: DataType,
+#        kernel_size: TemplateIntParameter,
+#        operation: Operation,
+#        dim: Problem,
+#    ):
+#        self.dtype = dtype
+#        self.operation = operation
+#        self.dim = dim
+#        self.kernel_size = kernel_size
+#        self.name_base = f"na{dim_to_cc[dim]}_{operation.name.lower()}_cuda_naive"
+#        self.name_base += f"_{dtype.name}_ks_{kernel_size}"
+#        self.name_cc = f"DISPATCH_DILATION_{self.name_base}"
+#        self.name_target = f"naive::{self.name_base}"  # prepends namespace
+#        self.dilations: List[TemplateIntParameter] = []
+#
+#    def append(self, dilation: TemplateIntParameter):
+#        self.dilations.append(dilation)
+#
+#    def get_dispatcher(self):
+#        dispatcher_str = ""
+#        dispatcher_str += f"#define {self.name_cc}(dilation, ...) \\\n"
+#        dispatcher_str += "  [&] { \\\n"
+#        i = 0
+#        for di in self.dilations:
+#            dispatcher_str += "    "
+#            if i > 0:
+#                dispatcher_str += "else "
+#            if di.is_default():
+#                # Skip the default case, we'll handle that in the else
+#                continue
+#            i += 1
+#            dispatcher_str += f"if (dilation == {di.value})"
+#            dispatcher_str += " { \\\n"
+#            dispatcher_str += "    "
+#            dispatcher_str += f"  {self.name_target}_di_{di}(__VA_ARGS__); \\\n"
+#            dispatcher_str += "    } \\\n"
+#        dispatcher_str += "    else { \\\n"
+#        dispatcher_str += "    "
+#        dispatcher_str += f"  {self.name_target}_di_any(__VA_ARGS__); \\\n"
+#        dispatcher_str += "    } \\\n"
+#        dispatcher_str += "}();"
+#        dispatcher_str += "\n\n"
+#        return dispatcher_str
 
 
 def write_header_file(content, path, namespaces, extra_includes=[]):
@@ -618,7 +688,7 @@ def write_header_file(content, path, namespaces, extra_includes=[]):
         "\n\n",
     ]
     for namespace in namespaces:
-        header_foot += ["} ", "// namespace {namespace}", " \n"]
+        header_foot += ["} ", f"// namespace {namespace}", " \n"]
     header_foot += [
         "\n",
     ]
@@ -640,39 +710,66 @@ def generate_cuda_kernels(path, num_splits=2):
     CUDA_OPS = ALL_OPS
     CUDA_SIZES = ALL_SIZES
 
-    CUDA_KERNEL_SIZES = [-1] + [k for k in range(3, 15, 2)]
-    CUDA_DILATIONS = [-1] + [k for k in range(1, 2)]
+    # CUDA_KERNEL_SIZES = [-1] + [k for k in range(3, 15, 2)]
+    # CUDA_DILATIONS = [-1] + [k for k in range(1, 2)]
+
+    CAUSAL_MASKS = {
+        Problem.NA1D: [[0], [1]],
+        Problem.NA2D: [[0, 0], [0, 1], [1, 0], [1, 1]],
+        Problem.NA3D: [
+            [0, 0, 0],
+            [0, 0, 1],
+            [0, 1, 0],
+            [0, 1, 1],
+            [1, 0, 0],
+            [1, 0, 1],
+            [1, 1, 0],
+            [1, 1, 1],
+        ],
+    }
+    OPS_WITHOUT_CAUSAL_SUPPORT = [Operation.PN_BIAS, Operation.RPBGRAD]
 
     dtype_dispatchers = []
-    kernel_dispatchers = []
-    dilation_dispatchers = []
+    cm_dispatchers = []
+    # kernel_dispatchers = []
+    # dilation_dispatchers = []
     kernels = []
 
     for op, dim in product(CUDA_OPS, CUDA_SIZES):
         new_dispatcher = DataTypeDispatcher(operation=op, dim=dim)
         for dtype in CUDA_DTYPES:
             new_dispatcher.append(dtype)
-            kernel_dispatcher = KernelSizeDispatcher(dtype=dtype, operation=op, dim=dim)
-            for ks_int in CUDA_KERNEL_SIZES:
-                kernel_dispatcher.append(TemplateIntParameter(ks_int))
-                dilation_dispatcher = DilationDispatcher(
+            cm_dispatcher = CausalMaskDispatcher(dtype=dtype, operation=op, dim=dim)
+            cm_list = (
+                CAUSAL_MASKS[dim]
+                if op not in OPS_WITHOUT_CAUSAL_SUPPORT
+                else [[0 for _ in range(DIM2SIZE[dim])]]
+            )
+            for cm in cm_list:
+                cm_dispatcher.append(cm)
+                # kernel_dispatcher = KernelSizeDispatcher(dtype=dtype, operation=op, dim=dim)
+                # for ks_int in CUDA_KERNEL_SIZES:
+                #     kernel_dispatcher.append(TemplateIntParameter(ks_int))
+                #     dilation_dispatcher = DilationDispatcher(
+                #         dtype=dtype,
+                #         kernel_size=TemplateIntParameter(ks_int),
+                #         operation=op,
+                #         dim=dim,
+                #     )
+                #     for di_int in CUDA_DILATIONS:
+                #         dilation_dispatcher.append(TemplateIntParameter(di_int))
+                new_kernel = NaiveNAKernel(
                     dtype=dtype,
-                    kernel_size=TemplateIntParameter(ks_int),
                     operation=op,
                     dim=dim,
+                    causal_mask=cm,
+                    # kernel_size=TemplateIntParameter(ks_int),
+                    # dilation=TemplateIntParameter(di_int),
                 )
-                for di_int in CUDA_DILATIONS:
-                    dilation_dispatcher.append(TemplateIntParameter(di_int))
-                    new_kernel = NaiveNAKernel(
-                        dtype=dtype,
-                        operation=op,
-                        dim=dim,
-                        kernel_size=TemplateIntParameter(ks_int),
-                        dilation=TemplateIntParameter(di_int),
-                    )
-                    kernels.append(new_kernel)
-                dilation_dispatchers.append(dilation_dispatcher)
-            kernel_dispatchers.append(kernel_dispatcher)
+                kernels.append(new_kernel)
+            #     dilation_dispatchers.append(dilation_dispatcher)
+            # kernel_dispatchers.append(kernel_dispatcher)
+            cm_dispatchers.append(cm_dispatcher)
         dtype_dispatchers.append(new_dispatcher)
 
     #
@@ -686,24 +783,30 @@ def generate_cuda_kernels(path, num_splits=2):
 
     path_headers = f"{path_to_header_dir}/kernels.h"
     path_dtype = f"{path_to_header_dir}/interface.h"
-    path_ks = f"{path_to_header_dir}/dispatch_ks.h"
-    path_di = f"{path_to_header_dir}/dispatch_di.h"
+    path_cm = f"{path_to_header_dir}/dispatch_cm.h"
+    # path_ks = f"{path_to_header_dir}/dispatch_ks.h"
+    # path_di = f"{path_to_header_dir}/dispatch_di.h"
 
     rel_path_headers = f"{rel_header}kernels.h"
-    rel_path_ks = f"{rel_header}dispatch_ks.h"
-    rel_path_di = f"{rel_header}dispatch_di.h"
+    rel_path_cm = f"{rel_header}dispatch_cm.h"
+    # rel_path_ks = f"{rel_header}dispatch_ks.h"
+    # rel_path_di = f"{rel_header}dispatch_di.h"
 
     dtype_disp = ""
     for dispatcher in dtype_dispatchers:
         dtype_disp += dispatcher.get_dispatcher()
 
-    ks_disp = ""
-    for dispatcher in kernel_dispatchers:
-        ks_disp += dispatcher.get_dispatcher()
+    cm_disp = ""
+    for dispatcher in cm_dispatchers:
+        cm_disp += dispatcher.get_dispatcher()
 
-    di_disp = ""
-    for dispatcher in dilation_dispatchers:
-        di_disp += dispatcher.get_dispatcher()
+    # ks_disp = ""
+    # for dispatcher in kernel_dispatchers:
+    #     ks_disp += dispatcher.get_dispatcher()
+
+    # di_disp = ""
+    # for dispatcher in dilation_dispatchers:
+    #     di_disp += dispatcher.get_dispatcher()
 
     headers = ""
     for kernel in kernels:
@@ -722,7 +825,7 @@ def generate_cuda_kernels(path, num_splits=2):
             source_list.append(kernel)
             kernels_emitted.append(kernel_idx)
         write_combined_source_file(
-            path_to_sources, f"source_{split_idx}.cu", pth_set, source_list
+            path_to_sources, f"source_{split_idx}.cu", sorted(pth_set), source_list
         )
     assert split_idx == num_splits - 1, f"Expected {split_idx=} == {num_splits=} - 1"
     assert len(kernels_emitted) == len(kernels) and sorted(kernels_emitted) == [
@@ -731,9 +834,11 @@ def generate_cuda_kernels(path, num_splits=2):
 
     namespaces = ["natten", "cuda", "naive"]
     cuda_headers = ["natten/dtypes.cuh"]
-    write_header_file(dtype_disp, path_dtype, namespaces, cuda_headers + [rel_path_ks])
-    write_header_file(ks_disp, path_ks, namespaces, cuda_headers + [rel_path_di])
-    write_header_file(di_disp, path_di, namespaces, cuda_headers + [rel_path_headers])
+    # write_header_file(dtype_disp, path_dtype, namespaces, cuda_headers + [rel_path_ks])
+    write_header_file(dtype_disp, path_dtype, namespaces, cuda_headers + [rel_path_cm])
+    write_header_file(cm_disp, path_cm, namespaces, cuda_headers + [rel_path_headers])
+    # write_header_file(ks_disp, path_ks, namespaces, cuda_headers + [rel_path_di])
+    # write_header_file(di_disp, path_di, namespaces, cuda_headers + [rel_path_headers])
     write_header_file(headers, path_headers, namespaces, cuda_headers)
 
 
