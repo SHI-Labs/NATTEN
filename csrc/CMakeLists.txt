@@ -14,9 +14,13 @@ endif()
 set(CXX_STD "17" CACHE STRING "C++ standard")
 
 
-# Find Python
-find_package(Python 3.7 COMPONENTS Interpreter Development REQUIRED)
-set(PYTHON_PATH "python" CACHE STRING "Python path")
+if(NOT DEFINED PYTHON_PATH)
+    # Find Python
+		message("Python path not specified; looking up local python.")
+    find_package(Python 3.8 COMPONENTS Interpreter Development REQUIRED)
+    set(PYTHON_PATH "python" CACHE STRING "Python path")
+endif()
+message("Python: " ${PYTHON_PATH})
 
 ## Python includes 
 execute_process(COMMAND ${PYTHON_PATH} "-c" "from __future__ import print_function; from distutils import sysconfig; print(sysconfig.get_python_inc());"
