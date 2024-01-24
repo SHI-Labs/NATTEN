@@ -144,6 +144,7 @@ def na1d_av_nested(
             "nested."
         )
 
+    attn = attn.to(value.dtype)
     out = torch.empty_like(value)
     additional_values_list: List | Tensor = (
         [None for _ in range(attn.size(0))]
@@ -273,6 +274,7 @@ def na2d_av_nested(
             "nested."
         )
 
+    attn = attn.to(value.dtype)
     out = torch.empty_like(value)
     additional_values_list: List | Tensor = (
         [None for _ in range(attn.size(0))]
@@ -408,6 +410,7 @@ def na3d_av_nested(
             "nested."
         )
 
+    attn = attn.to(value.dtype)
     out = torch.empty_like(value)
     additional_values_list: List | Tensor = (
         [None for _ in range(attn.size(0))]
