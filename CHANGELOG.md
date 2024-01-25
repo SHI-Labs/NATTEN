@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.15.1] - 2024-01-24
+* Attention tensors can now be views, which allows combining neighborhood and any other attention pattern (i.e. registers,
+  cross attention tokens, and the like) without extra copies. (#85 and #87).
+* Minor bug fixes (#86).
+
 ## [0.15.0] - 2024-01-09
 * Refactored kernels
   * The backend is messy, particularly the CUDA backend. A step in the right direction is at least factoring out duplicated.

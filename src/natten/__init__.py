@@ -59,4 +59,4 @@ __all__ = [
     "has_fp64_gemm",
 ]
 
-__version__ = "0.15.0"
+__version__ = "0.15.1"
