@@ -36,7 +36,6 @@ release:
 
 clean: 
 	@echo "Cleaning up"
-	rm -rf build/ 
 	rm -rf dist/ 
 	rm -rf natten.egg-info/ 
 	rm -rf src/natten/_C.* 
