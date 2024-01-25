@@ -1,0 +1,7 @@
+recursive-include csrc *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc
+recursive-include third_party/cutlass/include *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc
+prune webpage/
+prune tools/
+prune scripts/
+prune tests/
+graft assets/

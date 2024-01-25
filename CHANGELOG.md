@@ -1,20 +1,25 @@
 # Changelog
 
+## [0.15.1] - 2024-01-24
+* Attention tensors can now be views, which allows combining neighborhood and any other attention pattern (i.e. registers,
+  cross attention tokens, and the like) without extra copies. ([#85](https://github.com/SHI-Labs/NATTEN/pull/85) and [#87](https://github.com/SHI-Labs/NATTEN/pull/87)).
+* Minor bug fixes ([#86](https://github.com/SHI-Labs/NATTEN/pull/86) and [#94](https://github.com/SHI-Labs/NATTEN/pull/94)).
+
 ## [0.15.0] - 2024-01-09
 * Refactored kernels
   * The backend is messy, particularly the CUDA backend. A step in the right direction is at least factoring out duplicated.
   * Out of the 7 operations in NATTEN's backend, 6 have duplicates (really 3 underlying ops with different inputs.)
-  * See #26 for more details.
+  * See [#26](https://github.com/SHI-Labs/NATTEN/pull/26) for more details.
 * 3D Neighborhood Attention: naive CPU and CUDA kernels were added.
-* Major refactoring of the C++ API (#38, #47, #53, and #81)
-* GEMM kernels (#38 and #47)
-* New build system with cmake (#38, #53, #81)
-* Bfloat16 support (#38 and #81)
-* Kepler and Maxwell support (#81)
-* Forward mode automatic differentiation support (#74)
-* Experimental support for Nested Tensors (inference only) (#76)
-* Type checking, clang format, and other typesetting/formatting changes (#80)
-* Added profiling scripts (#81)
+* Major refactoring of the C++ API ([#38](https://github.com/SHI-Labs/NATTEN/pull/38), [#47](https://github.com/SHI-Labs/NATTEN/pull/47), [#53](https://github.com/SHI-Labs/NATTEN/pull/53), and [#81](https://github.com/SHI-Labs/NATTEN/pull/81))
+* GEMM kernels ([#38](https://github.com/SHI-Labs/NATTEN/pull/38) and [#47](https://github.com/SHI-Labs/NATTEN/pull/47))
+* New build system with cmake ([#38](https://github.com/SHI-Labs/NATTEN/pull/38), [#53](https://github.com/SHI-Labs/NATTEN/pull/53), [#81](https://github.com/SHI-Labs/NATTEN/pull/81))
+* Bfloat16 support ([#38](https://github.com/SHI-Labs/NATTEN/pull/38) and [#81](https://github.com/SHI-Labs/NATTEN/pull/81))
+* Kepler and Maxwell support ([#81](https://github.com/SHI-Labs/NATTEN/pull/81))
+* Forward mode automatic differentiation support ([#74](https://github.com/SHI-Labs/NATTEN/pull/74))
+* Experimental support for Nested Tensors (inference only) ([#76](https://github.com/SHI-Labs/NATTEN/pull/76))
+* Type checking, clang format, and other typesetting/formatting changes ([#80](https://github.com/SHI-Labs/NATTEN/pull/80))
+* Added profiling scripts ([#81](https://github.com/SHI-Labs/NATTEN/pull/81))
 
 ## [0.14.6] - 2023-03-21
 Just a really small update that syncs the changes to the private branch.

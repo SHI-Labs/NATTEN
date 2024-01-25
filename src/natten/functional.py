@@ -270,6 +270,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         dilation: int,
     ):
         num_na_weights = kernel_size
+        attn = attn.to(value.dtype)
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
@@ -318,6 +319,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
                 "Expected either both additional_value_t and additional_value_p, or neither."
             )
 
+        attn_t = attn_t.to(value_t.dtype)
         attn_t = attn_t.contiguous()
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
@@ -544,6 +546,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         dilation: int,
     ) -> Tensor:
         num_na_weights = kernel_size**2
+        attn = attn.to(value.dtype)
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
@@ -592,6 +595,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
                 "Expected either both additional_value_t and additional_value_p, or neither."
             )
 
+        attn_t = attn_t.to(value_t.dtype)
         attn_t = attn_t.contiguous()
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)
@@ -849,6 +853,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         dilation: int,
     ) -> Tensor:
         num_na_weights = kernel_size_d * kernel_size * kernel_size
+        attn = attn.to(value.dtype)
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
@@ -901,6 +906,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
                 "Expected either both additional_value_t and additional_value_p, or neither."
             )
 
+        attn_t = attn_t.to(value_t.dtype)
         attn_t = attn_t.contiguous()
         value_t = value_t.contiguous()
         out_0 = torch.empty_like(value_p)

@@ -133,6 +133,3 @@ dmypy.json
 
 # Output files
 *.out
-
-# Don't commit manifest.in
-MANIFEST.in
