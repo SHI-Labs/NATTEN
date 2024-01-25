@@ -166,6 +166,7 @@ class BuildExtension(build_ext):
             print(f"Current arch list: {cuda_arch_list} (max: {max_sm})")
 
         cmake_args = [
+            f"-DPYTHON_PATH={sys.executable}",
             f"-DOUTPUT_FILE_NAME={output_so_name}",
             f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list_str}",
             f"-DNATTEN_IS_WINDOWS={int(IS_WINDOWS)}",

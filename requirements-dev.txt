@@ -1,0 +1,8 @@
+-f https://download.pytorch.org/whl/cu121
+torch==2.1.2
+cmake==3.20.3
+ufmt==2.3.0
+flake8==7.0.0
+mypy==1.8.0
+pytest==7.4.4
+click==8.1.7
