@@ -79,7 +79,7 @@ if cuda_arch == "":
 
 n_workers = os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)
 # In case the env variable is set, but to an empty string
-if n_workers == "":DEFAULT_CUDA_ARCH_LIST
+if n_workers == "":
     n_workers = DEFAULT_N_WORKERS
 
 if HAS_CUDA:
