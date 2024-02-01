@@ -56,7 +56,7 @@ HAS_CUDA = (
 )
 NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", 0))
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
-DEFAULT_CUDA_ARCH_LIST = os.getenv("TORCH_CUDA_ARCH_LIST", "")
+cuda_arch = os.getenv("NATTEN_CUDA_ARCH", "")
 if HAS_CUDA:
     if not DEFAULT_CUDA_ARCH_LIST:
         cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
