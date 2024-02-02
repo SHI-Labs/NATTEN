@@ -71,9 +71,6 @@ if HAS_CUDA:
 
     assert CUDA_VERSION >= [11, 0], "NATTEN only supports CUDA 11.0 and above."
 
-# In case the env variable is set, but to an empty string
-if cuda_arch == "":
-    cuda_arch = DEFAULT_CUDA_ARCH_LIST
 
 n_workers = os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)
 # In case the env variable is set, but to an empty string
