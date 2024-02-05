@@ -56,11 +56,12 @@ HAS_CUDA = (
 )
 NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", 0))
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
-DEFAULT_CUDA_ARCH_LIST = ""
+cuda_arch = os.getenv("NATTEN_CUDA_ARCH", "")
 if HAS_CUDA:
-    cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
-    sm = cuda_device.major + cuda_device.minor * 0.1
-    DEFAULT_CUDA_ARCH_LIST = f"{sm}"
+    if not cuda_arch:
+        cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
+        sm = cuda_device.major + cuda_device.minor * 0.1
+        cuda_arch = f"{sm}"
 
     # TODO: raise an error or at least a warning when torch cuda doesn't match
     # system.
@@ -70,10 +71,6 @@ if HAS_CUDA:
 
     assert CUDA_VERSION >= [11, 0], "NATTEN only supports CUDA 11.0 and above."
 
-cuda_arch = os.environ.get("NATTEN_CUDA_ARCH", DEFAULT_CUDA_ARCH_LIST)
-# In case the env variable is set, but to an empty string
-if cuda_arch == "":
-    cuda_arch = DEFAULT_CUDA_ARCH_LIST
 
 n_workers = os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)
 # In case the env variable is set, but to an empty string
