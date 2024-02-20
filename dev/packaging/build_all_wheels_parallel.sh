@@ -29,17 +29,6 @@ build_one() {
 
   py_versions=(3.8 3.9 3.10 3.11)
 
-	# Torch started supporting python 3.12 since
-	# 2.2.0
-	# NOTE: I can't surpress the warning from sub
-	# when --output-delimiter is "", and I'm not
-	# spending more time on this.
-	torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter=";")
-	torch_major=${torch_major/;/}
-	if [[ $torch_major -ge 22 ]]; then
-    py_versions+=(3.12)
-  fi
-
   for py in "${py_versions[@]}"; do
     container_name_="${container_name}_${py}"
 
