@@ -81,11 +81,11 @@ endif()
 
 set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -std=c++17")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler -Wall -ldl")
+set(CMAKE_CUDA_FLAGS "-Xcompiler -Wall -ldl")
 
 set(CMAKE_C_FLAGS_DEBUG    "${CMAKE_C_FLAGS_DEBUG}    -Wall -O0")
 set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG}  -Wall -O0")
-set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -O0 -G -Xcompiler -Wall")
+set(CMAKE_CUDA_FLAGS_DEBUG "-O0 -G -Xcompiler -Wall")
 
 set(CMAKE_CXX_STANDARD "${CXX_STD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -103,7 +103,13 @@ if(${NATTEN_WITH_CUDA})
 	message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
 endif()
 
-add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
+if(${IS_LIBTORCH_BUILT_WITH_CXX11_ABI})
+	message("Building with -D_GLIBCXX_USE_CXX11_ABI=1")
+  add_definitions("-D_GLIBCXX_USE_CXX11_ABI=1")
+else()
+	message("Building with -D_GLIBCXX_USE_CXX11_ABI=0")
+  add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
+endif()
 
 if(${NATTEN_WITH_CUDA})
 	# CUDA flags
