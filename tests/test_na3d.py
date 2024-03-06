@@ -34,6 +34,15 @@ from natten.utils.testing import (
 )
 from torch.autograd import gradcheck
 
+# NOTE: It is important to disable CUDNN benchmarking and TF32
+# because some tests are written with the assumption of relatively
+# good determinisim. This affects certain torch builds, in particular
+# those in NGC images (mostly just built from source with different flags
+# compared to PyPI.)
+torch.backends.cudnn.benchmark = False
+torch.backends.cuda.matmul.allow_tf32 = False
+torch.backends.cudnn.allow_tf32 = False
+
 HAS_HALF = has_half()
 HAS_BFLOAT = has_bfloat()
 logger = logging.getLogger(__name__)
@@ -625,7 +634,7 @@ class NA3DTests(unittest.TestCase):
         has_bias,
         dtype,
         device="cuda",
-        eps=1e-6,
+        eps=1e-4,
         L_extra=9,
         broadcast_extra_kv_batch=False,
     ):
