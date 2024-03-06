@@ -39,6 +39,7 @@ from torch.utils.cpp_extension import CUDA_HOME, LIB_EXT
 IS_WINDOWS = sys.platform == "win32"
 IS_MACOS = sys.platform.startswith("darwin")
 IS_LINUX = sys.platform.startswith("linux")
+IS_LIBTORCH_BUILT_WITH_CXX11_ABI = torch._C._GLIBCXX_USE_CXX11_ABI
 
 this_directory = Path(__file__).parent
 try:
@@ -168,6 +169,7 @@ class BuildExtension(build_ext):
             f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list_str}",
             f"-DNATTEN_IS_WINDOWS={int(IS_WINDOWS)}",
             f"-DNATTEN_IS_MAC={int(IS_MACOS)}",
+            f"-DIS_LIBTORCH_BUILT_WITH_CXX11_ABI={int(IS_LIBTORCH_BUILT_WITH_CXX11_ABI)}",
         ]
 
         if AVX_INT:
