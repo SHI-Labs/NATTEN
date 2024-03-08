@@ -32,6 +32,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#include <natten/naive_argpack.h>
+#include <natten/natten.h>
 #include <natten/cuda/naive/natten_commons.cuh>
 
 namespace natten {
@@ -41,58 +43,63 @@ namespace naive {
 template <typename scalar_t>
 struct PointwiseNeighborhood3DBase {
   struct Params {
+    bool is_grad;
     scalar_t* query; // query / d_out
     scalar_t* key; // key   / value
     scalar_t* bias = nullptr; // optional: bias
     scalar_t* attn; // attn  / d_attn
-    const int depth;
-    const int height;
-    const int width;
-    const int heads;
-    const int kernel_size_in;
-    const int dilation_in;
-    const int depth_kernel_size_in;
-    const int depth_dilation_in;
-    const int dim;
-    const int batch_size;
-    const int64_t attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3,
+    int32_t depth;
+    int32_t height;
+    int32_t width;
+    int32_t heads;
+    int32_t kernel_size_0, kernel_size_1, kernel_size_2;
+    int32_t dilation_0, dilation_1, dilation_2;
+    int32_t dim;
+    int32_t batch_size;
+    int64_t attn_stride_0, attn_stride_1, attn_stride_2, attn_stride_3,
         attn_stride_4;
-    const int64_t query_stride_0, query_stride_1, query_stride_2, query_stride_3,
+    int64_t query_stride_0, query_stride_1, query_stride_2, query_stride_3,
         query_stride_4;
-    const int64_t bias_stride_0, bias_stride_1, bias_stride_2;
+    int64_t bias_stride_0, bias_stride_1, bias_stride_2;
 
     __device__ __host__ Params() {}
 
     __device__ __host__ Params(
+        bool is_grad,
         scalar_t* query,
         scalar_t* key,
         scalar_t* attn,
-        const int depth,
-        const int height,
-        const int width,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int depth_kernel_size_in,
-        const int depth_dilation_in,
-        const int dim,
-        const int batch_size,
-        const int64_t attn_stride_0,
-        const int64_t attn_stride_1,
-        const int64_t attn_stride_2,
-        const int64_t attn_stride_3,
-        const int64_t attn_stride_4)
-        : query(query),
+        int32_t depth,
+        int32_t height,
+        int32_t width,
+        int32_t heads,
+        int32_t kernel_size_0,
+        int32_t kernel_size_1,
+        int32_t kernel_size_2,
+        int32_t dilation_0,
+        int32_t dilation_1,
+        int32_t dilation_2,
+        int32_t dim,
+        int32_t batch_size,
+        int64_t attn_stride_0,
+        int64_t attn_stride_1,
+        int64_t attn_stride_2,
+        int64_t attn_stride_3,
+        int64_t attn_stride_4)
+        : is_grad(is_grad),
+          query(query),
           key(key),
           attn(attn),
           depth(depth),
           height(height),
           width(width),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
-          depth_kernel_size_in(depth_kernel_size_in),
-          depth_dilation_in(depth_dilation_in),
+          kernel_size_0(kernel_size_0),
+          kernel_size_1(kernel_size_1),
+          kernel_size_2(kernel_size_2),
+          dilation_0(dilation_0),
+          dilation_1(dilation_1),
+          dilation_2(dilation_2),
           dim(dim),
           batch_size(batch_size),
           bias_stride_2(0),
@@ -115,22 +122,25 @@ struct PointwiseNeighborhood3DBase {
         scalar_t* key, // value  / key
         scalar_t* bias, // relative positional bias tensor
         scalar_t* attn, // output / d_query
-        const int depth,
-        const int height,
-        const int width,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int depth_kernel_size_in,
-        const int depth_dilation_in,
-        const int dim,
-        const int batch_size,
-        const int64_t attn_stride_0,
-        const int64_t attn_stride_1,
-        const int64_t attn_stride_2,
-        const int64_t attn_stride_3,
-        const int64_t attn_stride_4)
-        : query(query),
+        int32_t depth,
+        int32_t height,
+        int32_t width,
+        int32_t heads,
+        int32_t kernel_size_0,
+        int32_t kernel_size_1,
+        int32_t kernel_size_2,
+        int32_t dilation_0,
+        int32_t dilation_1,
+        int32_t dilation_2,
+        int32_t dim,
+        int32_t batch_size,
+        int64_t attn_stride_0,
+        int64_t attn_stride_1,
+        int64_t attn_stride_2,
+        int64_t attn_stride_3,
+        int64_t attn_stride_4)
+        : is_grad(false),
+          query(query),
           key(key),
           bias(bias),
           attn(attn),
@@ -138,17 +148,19 @@ struct PointwiseNeighborhood3DBase {
           height(height),
           width(width),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
-          depth_kernel_size_in(depth_kernel_size_in),
-          depth_dilation_in(depth_dilation_in),
+          kernel_size_0(kernel_size_0),
+          kernel_size_1(kernel_size_1),
+          kernel_size_2(kernel_size_2),
+          dilation_0(dilation_0),
+          dilation_1(dilation_1),
+          dilation_2(dilation_2),
           dim(dim),
           batch_size(batch_size),
-          bias_stride_2(2 * kernel_size_in - 1),
-          bias_stride_1((2 * kernel_size_in - 1) * (2 * kernel_size_in - 1)),
+          bias_stride_2(2 * kernel_size_2 - 1),
+          bias_stride_1((2 * kernel_size_1 - 1) * (2 * kernel_size_2 - 1)),
           bias_stride_0(
-              (2 * kernel_size_in - 1) * (2 * kernel_size_in - 1) *
-              (2 * depth_kernel_size_in - 1)),
+              (2 * kernel_size_0 - 1) * (2 * kernel_size_1 - 1) *
+              (2 * kernel_size_2 - 1)),
           attn_stride_4(attn_stride_4),
           attn_stride_3(attn_stride_3),
           attn_stride_2(attn_stride_2),
@@ -164,14 +176,19 @@ struct PointwiseNeighborhood3DBase {
   __device__ __host__ PointwiseNeighborhood3DBase() {}
 
   static LaunchParams get_launch_params(
-      int batch_dim,
-      int spatial_size,
-      int attention_span) {
-    int KERNELTHREADS =
-        min(CUDA_NUM_THREADS, attention_span /* == kernel_size^3 */);
-    int PIXELTHREADS = min(int(CUDA_NUM_THREADS / KERNELTHREADS), spatial_size);
-    int BATCHTHREADS =
-        min(64, max(1, CUDA_NUM_THREADS / (PIXELTHREADS * KERNELTHREADS)));
+      int32_t batch_dim,
+      int32_t spatial_size,
+      int32_t attention_span) {
+    // NOTE: was 1024 as of 01/30/2024, but since adding causal masks,
+    // runs out of registers with certain causal masks (F, T, T) with
+    // 1024 threads per CTA.
+    int32_t num_threads = 512;
+    int32_t KERNELTHREADS =
+        min(num_threads, attention_span /* == kernel_size^3 */);
+    int32_t PIXELTHREADS =
+        min(int32_t(num_threads / KERNELTHREADS), spatial_size);
+    int32_t BATCHTHREADS =
+        min(64, max(1, num_threads / (PIXELTHREADS * KERNELTHREADS)));
     dim3 grid(
         (spatial_size + PIXELTHREADS - 1) / PIXELTHREADS,
         (attention_span + KERNELTHREADS - 1) / KERNELTHREADS,
@@ -181,88 +198,84 @@ struct PointwiseNeighborhood3DBase {
   }
 };
 
-template <
-    typename scalar_t,
-    int KS,
-    int NS,
-    int DILATION,
-    int DKS,
-    int DNS,
-    int DDILATION>
+template <typename scalar_t, typename CausalMask_>
 struct PointwiseNeighborhood3DFull : PointwiseNeighborhood3DBase<scalar_t> {
   using Base = PointwiseNeighborhood3DBase<scalar_t>;
   using Params = typename Base::Params;
+  using CausalMask = CausalMask_;
   static constexpr bool IsBF16Kernel = false;
   static constexpr bool IsHalfKernel = false;
   static constexpr bool UsesSmem = false;
 
   __device__ __host__ PointwiseNeighborhood3DFull() : Base() {}
 
-  static __host__ int get_dim(int dim) {
+  static __host__ int32_t get_dim(int32_t dim) {
     return dim;
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int KERNEL_SIZE_D = (DKS > 1) ? DKS : p.depth_kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int z = blockIdx.z * blockDim.z + threadIdx.z;
+    auto mask_value = AttnMask<scalar_t>::value(p.is_grad);
+    auto mask_0 = NeighborhoodMask<CausalMask::Dim0>(
+        p.depth, p.kernel_size_0, p.dilation_0);
+    auto mask_1 = NeighborhoodMask<CausalMask::Dim1>(
+        p.height, p.kernel_size_1, p.dilation_1);
+    auto mask_2 = NeighborhoodMask<CausalMask::Dim2>(
+        p.width, p.kernel_size_2, p.dilation_2);
+    int32_t z = blockIdx.z * blockDim.z + threadIdx.z;
     if (z < p.batch_size * p.heads) {
-      const int x = blockIdx.x * blockDim.x + threadIdx.x;
+      int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
       if (x < p.depth * p.height * p.width) {
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-        if (y < KERNEL_SIZE_D * KERNEL_SIZE * KERNEL_SIZE) {
-          int indtmp1 = y / KERNEL_SIZE;
-          const int kk = indtmp1 / KERNEL_SIZE;
-          const int kj = y - indtmp1 * KERNEL_SIZE;
-          const int ki = indtmp1 - kk * KERNEL_SIZE;
+        int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+        if (y < p.kernel_size_0 * p.kernel_size_1 * p.kernel_size_2) {
+          int32_t indtmp1 = y / p.kernel_size_2;
+          auto kk = indtmp1 / p.kernel_size_1;
+          auto kj = y - indtmp1 * p.kernel_size_2;
+          auto ki = indtmp1 - kk * p.kernel_size_1;
 
           indtmp1 = x / p.width;
-          const int k = indtmp1 / p.height;
-          const int j = x - indtmp1 * p.width;
-          const int i = indtmp1 - k * p.height;
+          auto k = indtmp1 / p.height;
+          auto j = x - indtmp1 * p.width;
+          auto i = indtmp1 - k * p.height;
 
-          const int b = z / p.heads;
-          const int h = z - b * p.heads;
+          auto b = z / p.heads;
+          auto h = z - b * p.heads;
 
-          const int ni = get_window_start(
-              i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-          const int nj = get_window_start(
-              j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-          const int nk = get_window_start(
-              k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
+          auto nk = mask_0.get_window_start(k);
+          auto ni = mask_1.get_window_start(i);
+          auto nj = mask_2.get_window_start(j);
+          auto ek = mask_0.get_window_end(k, nk);
+          auto ei = mask_1.get_window_end(i, ni);
+          auto ej = mask_2.get_window_end(j, nj);
 
+          auto key_idx_k = kk * p.dilation_0 + nk;
+          auto key_idx_i = ki * p.dilation_1 + ni;
+          auto key_idx_j = kj * p.dilation_2 + nj;
           scalar_t updt = scalar_t(0);
-          const int64_t batchHeadOffset =
-              b * p.query_stride_0 + h * p.query_stride_1;
-          const int64_t queryOffset = batchHeadOffset + k * p.query_stride_2 +
-              i * p.query_stride_3 + j * p.query_stride_4;
-          const int64_t keyOffset = batchHeadOffset +
-              (kk * dilation_d + nk) * p.query_stride_2 +
-              (ki * dilation + ni) * p.query_stride_3 +
-              (kj * dilation + nj) * p.query_stride_4;
-#pragma unroll
-          for (int dimOffset = 0; dimOffset < p.dim; ++dimOffset)
-            updt +=
-                p.query[queryOffset + dimOffset] * p.key[keyOffset + dimOffset];
-          const int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
+          if (key_idx_i < ei && key_idx_j < ej && key_idx_k < ek) {
+            int64_t batchHeadOffset =
+                b * p.query_stride_0 + h * p.query_stride_1;
+            int64_t queryOffset = batchHeadOffset + k * p.query_stride_2 +
+                i * p.query_stride_3 + j * p.query_stride_4;
+            int64_t keyOffset = batchHeadOffset + key_idx_k * p.query_stride_2 +
+                key_idx_i * p.query_stride_3 + key_idx_j * p.query_stride_4;
+            for (int32_t dimOffset = 0; dimOffset < p.dim; ++dimOffset)
+              updt += p.query[queryOffset + dimOffset] *
+                  p.key[keyOffset + dimOffset];
+            if (p.bias) {
+              auto pk = mask_0.get_pb_start(k);
+              auto pi = mask_1.get_pb_start(i);
+              auto pj = mask_2.get_pb_start(j);
+              int64_t biasIndex = h * p.bias_stride_0 +
+                  (pk + kk) * p.bias_stride_1 + (pi + ki) * p.bias_stride_2 +
+                  (pj + kj);
+              updt += p.bias[biasIndex];
+            }
+          } else {
+            updt = mask_value;
+          }
+          int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
               k * p.attn_stride_2 + i * p.attn_stride_3 + j * p.attn_stride_4 +
               y;
-          if (p.bias) {
-            const int pi = get_pb_start(
-                i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            const int pj = get_pb_start(
-                j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            const int pk = get_pb_start(
-                k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
-            const int64_t biasIndex = h * p.bias_stride_0 +
-                (pk + kk) * p.bias_stride_1 + (pi + ki) * p.bias_stride_2 +
-                (pj + kj);
-            updt += p.bias[biasIndex];
-          }
           p.attn[index] = updt;
         }
       }
@@ -270,17 +283,11 @@ struct PointwiseNeighborhood3DFull : PointwiseNeighborhood3DBase<scalar_t> {
   }
 };
 
-template <
-    typename scalar_t,
-    int KS,
-    int NS,
-    int DILATION,
-    int DKS,
-    int DNS,
-    int DDILATION>
+template <typename scalar_t, typename CausalMask_>
 struct PointwiseNeighborhood3DHalf : PointwiseNeighborhood3DBase<scalar_t> {
   using Base = PointwiseNeighborhood3DBase<scalar_t>;
   using Params = typename Base::Params;
+  using CausalMask = CausalMask_;
   static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
   static constexpr bool IsHalfKernel = true;
   static constexpr bool UsesSmem = false;
@@ -289,7 +296,7 @@ struct PointwiseNeighborhood3DHalf : PointwiseNeighborhood3DBase<scalar_t> {
 
   using HalfHelper = typename HalfArray<scalar_t>::Base;
 
-  static __host__ int get_dim(int dim) {
+  static __host__ int32_t get_dim(int32_t dim) {
     if (dim % 2 != 0) {
       std::cerr
           << "Naive NATTEN half-precision kernels only support 32-bit alignment. "
@@ -301,71 +308,75 @@ struct PointwiseNeighborhood3DHalf : PointwiseNeighborhood3DBase<scalar_t> {
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int KERNEL_SIZE_D = (DKS > 1) ? DKS : p.depth_kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int z = blockIdx.z * blockDim.z + threadIdx.z;
+    auto mask_value = AttnMask<scalar_t>::value(p.is_grad);
+    auto mask_0 = NeighborhoodMask<CausalMask::Dim0>(
+        p.depth, p.kernel_size_0, p.dilation_0);
+    auto mask_1 = NeighborhoodMask<CausalMask::Dim1>(
+        p.height, p.kernel_size_1, p.dilation_1);
+    auto mask_2 = NeighborhoodMask<CausalMask::Dim2>(
+        p.width, p.kernel_size_2, p.dilation_2);
+    int32_t z = blockIdx.z * blockDim.z + threadIdx.z;
     if (z < p.batch_size * p.heads) {
-      const int x = blockIdx.x * blockDim.x + threadIdx.x;
+      int32_t x = blockIdx.x * blockDim.x + threadIdx.x;
       if (x < p.depth * p.height * p.width) {
-        const int y = blockIdx.y * blockDim.y + threadIdx.y;
-        if (y < KERNEL_SIZE_D * KERNEL_SIZE * KERNEL_SIZE) {
+        int32_t y = blockIdx.y * blockDim.y + threadIdx.y;
+        if (y < p.kernel_size_0 * p.kernel_size_1 * p.kernel_size_2) {
           auto query2 = HalfHelper::typecast(p.query);
           auto key2 = HalfHelper::typecast(p.key);
-          int indtmp1 = y / KERNEL_SIZE;
-          const int kk = indtmp1 / KERNEL_SIZE;
-          const int kj = y - indtmp1 * KERNEL_SIZE;
-          const int ki = indtmp1 - kk * KERNEL_SIZE;
+          int32_t indtmp1 = y / p.kernel_size_2;
+          auto kk = indtmp1 / p.kernel_size_1;
+          auto kj = y - indtmp1 * p.kernel_size_2;
+          auto ki = indtmp1 - kk * p.kernel_size_1;
 
           indtmp1 = x / p.width;
-          const int k = indtmp1 / p.height;
-          const int j = x - indtmp1 * p.width;
-          const int i = indtmp1 - k * p.height;
+          auto k = indtmp1 / p.height;
+          auto j = x - indtmp1 * p.width;
+          auto i = indtmp1 - k * p.height;
 
-          const int b = z / p.heads;
-          const int h = z - b * p.heads;
+          auto b = z / p.heads;
+          auto h = z - b * p.heads;
 
-          const int ni = get_window_start(
-              i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-          const int nj = get_window_start(
-              j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-          const int nk = get_window_start(
-              k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
+          auto nk = mask_0.get_window_start(k);
+          auto ni = mask_1.get_window_start(i);
+          auto nj = mask_2.get_window_start(j);
+          auto ek = mask_0.get_window_end(k, nk);
+          auto ei = mask_1.get_window_end(i, ni);
+          auto ej = mask_2.get_window_end(j, nj);
 
-          auto updt = HalfHelper::zero();
-          const int64_t batchHeadOffset =
-              b * p.query_stride_0 + h * p.query_stride_1;
-          const int64_t queryOffset = batchHeadOffset + k * p.query_stride_2 +
-              i * p.query_stride_3 + j * p.query_stride_4;
-          const int64_t keyOffset = batchHeadOffset +
-              (kk * dilation_d + nk) * p.query_stride_2 +
-              (ki * dilation + ni) * p.query_stride_3 +
-              (kj * dilation + nj) * p.query_stride_4;
-#pragma unroll
-          for (int dimOffset = 0; dimOffset < p.dim; ++dimOffset)
-            updt = HalfHelper::fma(
-                query2[queryOffset + dimOffset],
-                key2[keyOffset + dimOffset],
-                updt);
-          const int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
+          auto key_idx_k = kk * p.dilation_0 + nk;
+          auto key_idx_i = ki * p.dilation_1 + ni;
+          auto key_idx_j = kj * p.dilation_2 + nj;
+          scalar_t acc = HalfHelper::zero();
+
+          if (key_idx_i < ei && key_idx_j < ej && key_idx_k < ek) {
+            auto updt = HalfHelper::zeros();
+            int64_t batchHeadOffset =
+                b * p.query_stride_0 + h * p.query_stride_1;
+            int64_t queryOffset = batchHeadOffset + k * p.query_stride_2 +
+                i * p.query_stride_3 + j * p.query_stride_4;
+            int64_t keyOffset = batchHeadOffset + key_idx_k * p.query_stride_2 +
+                key_idx_i * p.query_stride_3 + key_idx_j * p.query_stride_4;
+            for (int32_t dimOffset = 0; dimOffset < p.dim; ++dimOffset)
+              updt = HalfHelper::fma(
+                  query2[queryOffset + dimOffset],
+                  key2[keyOffset + dimOffset],
+                  updt);
+            acc = HalfHelper::cast_back(HalfHelper::add(updt.x, updt.y));
+            if (p.bias) {
+              auto pk = mask_0.get_pb_start(k);
+              auto pi = mask_1.get_pb_start(i);
+              auto pj = mask_2.get_pb_start(j);
+              int64_t biasIndex = h * p.bias_stride_0 +
+                  (pk + kk) * p.bias_stride_1 + (pi + ki) * p.bias_stride_2 +
+                  (pj + kj);
+              acc = HalfHelper::add(acc, p.bias[biasIndex]);
+            }
+          } else {
+            acc = mask_value;
+          }
+          int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
               k * p.attn_stride_2 + i * p.attn_stride_3 + j * p.attn_stride_4 +
               y;
-          scalar_t acc = HalfHelper::cast_back(HalfHelper::add(updt.x, updt.y));
-          if (p.bias) {
-            const int pi = get_pb_start(
-                i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            const int pj = get_pb_start(
-                j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-            const int pk = get_pb_start(
-                k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
-            const int64_t biasIndex = h * p.bias_stride_0 +
-                (pk + kk) * p.bias_stride_1 + (pi + ki) * p.bias_stride_2 +
-                (pj + kj);
-            acc = HalfHelper::add(acc, p.bias[biasIndex]);
-          }
           p.attn[index] = acc;
         }
       }
@@ -376,60 +387,41 @@ struct PointwiseNeighborhood3DHalf : PointwiseNeighborhood3DBase<scalar_t> {
 template <typename Args_>
 struct PointwiseNeighborhood3D {
   using Args = Args_;
-  static constexpr int KS = Args::KernelSize;
-  static constexpr int NS = Args::NeighborhoodSize;
-  static constexpr int DKS = Args::DepthKernelSize;
-  static constexpr int DNS = Args::DepthNeighborhoodSize;
-  static constexpr int DILATION = Args::Dilation;
-  static constexpr int DDILATION = Args::DepthDilation;
   using scalar_t = typename Args::Dtype;
+  using CausalMask = typename Args::CausalMask;
   using Kernel = typename std::conditional<
       sizeof(scalar_t) >= 4,
-      PointwiseNeighborhood3DFull<
-          scalar_t,
-          KS,
-          NS,
-          DILATION,
-          DKS,
-          DNS,
-          DDILATION>,
-      PointwiseNeighborhood3DHalf<
-          scalar_t,
-          KS,
-          NS,
-          DILATION,
-          DKS,
-          DNS,
-          DDILATION>>::type;
+      PointwiseNeighborhood3DFull<scalar_t, CausalMask>,
+      PointwiseNeighborhood3DHalf<scalar_t, CausalMask>>::type;
   using Params = typename Kernel::Params;
 
   void operator()(
-      const int cc,
+      int32_t cc,
       cudaStream_t stream,
+      bool is_grad,
       void* query_ptr,
       void* key_ptr,
       void* attn_ptr,
-      int batch_size,
-      int heads,
-      int depth,
-      int height,
-      int width,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
       int64_t attn_stride_3,
       int64_t attn_stride_4,
-      int kernel_size,
-      int kernel_size_depth,
-      int dilation,
-      int dilation_depth) {
+      const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+      const std::tuple<int32_t, int32_t, int32_t>& dilation) {
     dim = Kernel::get_dim(dim);
     LaunchParams lp = Kernel::Base::get_launch_params(
         batch_size * heads,
         depth * height * width,
-        kernel_size_depth * kernel_size * kernel_size);
+        natten::flatten(kernel_size));
     auto params = Params(
+        is_grad,
         reinterpret_cast<scalar_t*>(query_ptr),
         reinterpret_cast<scalar_t*>(key_ptr),
         reinterpret_cast<scalar_t*>(attn_ptr),
@@ -437,10 +429,12 @@ struct PointwiseNeighborhood3D {
         height,
         width,
         heads,
-        kernel_size,
-        dilation,
-        kernel_size_depth,
-        dilation_depth,
+        std::get<0>(kernel_size),
+        std::get<1>(kernel_size),
+        std::get<2>(kernel_size),
+        std::get<0>(dilation),
+        std::get<1>(dilation),
+        std::get<2>(dilation),
         dim,
         batch_size,
         attn_stride_0,
@@ -455,60 +449,43 @@ struct PointwiseNeighborhood3D {
 template <typename Args_>
 struct PointwiseNeighborhood3DWithBias {
   using Args = Args_;
-  static constexpr int KS = Args::KernelSize;
-  static constexpr int NS = Args::NeighborhoodSize;
-  static constexpr int DKS = Args::DepthKernelSize;
-  static constexpr int DNS = Args::DepthNeighborhoodSize;
-  static constexpr int DILATION = Args::Dilation;
-  static constexpr int DDILATION = Args::DepthDilation;
   using scalar_t = typename Args::Dtype;
+  using CausalMask = typename Args::CausalMask;
   using Kernel = typename std::conditional<
       sizeof(scalar_t) >= 4,
-      PointwiseNeighborhood3DFull<
-          scalar_t,
-          KS,
-          NS,
-          DILATION,
-          DKS,
-          DNS,
-          DDILATION>,
-      PointwiseNeighborhood3DHalf<
-          scalar_t,
-          KS,
-          NS,
-          DILATION,
-          DKS,
-          DNS,
-          DDILATION>>::type;
+      PointwiseNeighborhood3DFull<scalar_t, CausalMask>,
+      PointwiseNeighborhood3DHalf<scalar_t, CausalMask>>::type;
   using Params = typename Kernel::Params;
 
+  static_assert(
+      !CausalMask::Dim0 && !CausalMask::Dim1 && !CausalMask::Dim2,
+      "PN+Bias does not support causal masking.");
+
   void operator()(
-      const int cc,
+      int32_t cc,
       cudaStream_t stream,
       void* query_ptr,
       void* key_ptr,
       void* bias_ptr,
       void* attn_ptr,
-      int batch_size,
-      int heads,
-      int depth,
-      int height,
-      int width,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
       int64_t attn_stride_3,
       int64_t attn_stride_4,
-      int kernel_size,
-      int kernel_size_depth,
-      int dilation,
-      int dilation_depth) {
+      const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+      const std::tuple<int32_t, int32_t, int32_t>& dilation) {
     dim = Kernel::get_dim(dim);
     LaunchParams lp = Kernel::Base::get_launch_params(
         batch_size * heads,
         depth * height * width,
-        kernel_size_depth * kernel_size * kernel_size);
+        natten::flatten(kernel_size));
     auto params = Params(
         reinterpret_cast<scalar_t*>(query_ptr),
         reinterpret_cast<scalar_t*>(key_ptr),
@@ -518,10 +495,12 @@ struct PointwiseNeighborhood3DWithBias {
         height,
         width,
         heads,
-        kernel_size,
-        dilation,
-        kernel_size_depth,
-        dilation_depth,
+        std::get<0>(kernel_size),
+        std::get<1>(kernel_size),
+        std::get<2>(kernel_size),
+        std::get<0>(dilation),
+        std::get<1>(dilation),
+        std::get<2>(dilation),
         dim,
         batch_size,
         attn_stride_0,

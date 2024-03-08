@@ -31,6 +31,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#include <natten/naive_argpack.h>
+#include <natten/natten.h>
 #include <natten/cuda/naive/natten_commons.cuh>
 
 namespace natten {
@@ -43,14 +45,14 @@ struct InverseNeighborhood1DBase {
     scalar_t* weights;
     scalar_t* values;
     scalar_t* output;
-    const int length;
-    const int heads;
-    const int kernel_size_in;
-    const int dilation_in;
-    const int dim;
-    const int64_t problem_size;
-    const int64_t weights_stride_0, weights_stride_1, weights_stride_2;
-    const int64_t values_stride_0, values_stride_1, values_stride_2;
+    int32_t length;
+    int32_t heads;
+    int32_t kernel_size;
+    int32_t dilation;
+    int32_t dim;
+    int64_t problem_size;
+    int64_t weights_stride_0, weights_stride_1, weights_stride_2;
+    int64_t values_stride_0, values_stride_1, values_stride_2;
 
     __device__ __host__ Params() {}
 
@@ -58,22 +60,22 @@ struct InverseNeighborhood1DBase {
         scalar_t* weights, // d_attn / attn
         scalar_t* values, // query  / d_out
         scalar_t* output, // d_key  / d_value
-        const int length,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int dim,
-        const int64_t weights_stride_0,
-        const int64_t weights_stride_1,
-        const int64_t weights_stride_2,
-        const int64_t output_numel)
+        int32_t length,
+        int32_t heads,
+        int32_t kernel_size,
+        int32_t dilation,
+        int32_t dim,
+        int64_t weights_stride_0,
+        int64_t weights_stride_1,
+        int64_t weights_stride_2,
+        int64_t output_numel)
         : weights(weights),
           values(values),
           output(output),
           length(length),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
+          kernel_size(kernel_size),
+          dilation(dilation),
           dim(dim),
           problem_size(output_numel),
           weights_stride_2(weights_stride_2),
@@ -97,49 +99,46 @@ struct InverseNeighborhood1DBase {
   }
 };
 
-template <typename scalar_t, int KS, int NS, int DILATION>
+template <typename scalar_t, typename CausalMask_>
 struct InverseNeighborhood1DFull : InverseNeighborhood1DBase<scalar_t> {
   using Base = InverseNeighborhood1DBase<scalar_t>;
   using Params = typename Base::Params;
+  using CausalMask = CausalMask_;
   static constexpr bool IsBF16Kernel = false;
   static constexpr bool IsHalfKernel = false;
   static constexpr bool UsesSmem = false;
 
   __device__ __host__ InverseNeighborhood1DFull() : Base() {}
 
-  static __host__ int get_dim(int dim) {
+  static __host__ int32_t get_dim(int32_t dim) {
     return dim;
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    auto mask_0 =
+        NeighborhoodMask<CausalMask::Dim0>(p.length, p.kernel_size, p.dilation);
+    int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
-      int indtmp1 = linearIndex / p.dim;
-      const int d = linearIndex - indtmp1 * p.dim;
-      int indtmp2 = indtmp1 / p.length;
-      const int i = indtmp1 - indtmp2 * p.length;
+      int32_t indtmp1 = linearIndex / p.dim;
+      auto d = linearIndex - indtmp1 * p.dim;
+      int32_t indtmp2 = indtmp1 / p.length;
+      auto i = indtmp1 - indtmp2 * p.length;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.heads;
-      const int h = indtmp1 - indtmp2 * p.heads;
-      const int b = indtmp2;
-      const int ni = get_backward_window_start(
-          i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int ei = get_backward_window_end(
-          i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int64_t weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1;
-      const int64_t valuesOffset =
-          b * p.values_stride_0 + h * p.values_stride_1 + d;
+      auto h = indtmp1 - indtmp2 * p.heads;
+      auto& b = indtmp2;
+
+      auto ni = mask_0.get_backward_window_start(i);
+      auto ei = mask_0.get_backward_window_end(i);
+
+      int64_t weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1;
+      int64_t valuesOffset = b * p.values_stride_0 + h * p.values_stride_1 + d;
       scalar_t output_update = scalar_t(0);
-#pragma unroll
-      for (int xi = ni; xi < ei; xi += dilation) {
-        const int oni = get_window_start(
-            xi, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int64_t valuesIndex = valuesOffset + xi * p.values_stride_2;
-        const int64_t weightsIndex =
-            weightsOffset + xi * p.weights_stride_2 + int((i - oni) / dilation);
+      for (int32_t xi = ni; xi < ei; xi += p.dilation) {
+        auto oni = mask_0.get_window_start(xi);
+        int64_t valuesIndex = valuesOffset + xi * p.values_stride_2;
+        int64_t weightsIndex = weightsOffset + xi * p.weights_stride_2 +
+            int32_t((i - oni) / p.dilation);
         output_update += p.weights[weightsIndex] * p.values[valuesIndex];
       }
       p.output[linearIndex] = output_update;
@@ -147,10 +146,11 @@ struct InverseNeighborhood1DFull : InverseNeighborhood1DBase<scalar_t> {
   }
 };
 
-template <typename scalar_t, int KS, int NS, int DILATION>
+template <typename scalar_t, typename CausalMask_>
 struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
   using Base = InverseNeighborhood1DBase<scalar_t>;
   using Params = typename Base::Params;
+  using CausalMask = CausalMask_;
   static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
   static constexpr bool IsHalfKernel = true;
   static constexpr bool UsesSmem = false;
@@ -158,7 +158,7 @@ struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
   __device__ __host__ InverseNeighborhood1DHalf() : Base() {}
   using HalfHelper = typename HalfArray<scalar_t>::Base;
 
-  static __host__ int get_dim(int dim) {
+  static __host__ int32_t get_dim(int32_t dim) {
     if (dim % 2 != 0) {
       std::cerr
           << "Naive NATTEN half-precision kernels only support 32-bit alignment. "
@@ -170,36 +170,33 @@ struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    auto mask_0 =
+        NeighborhoodMask<CausalMask::Dim0>(p.length, p.kernel_size, p.dilation);
+    int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
       auto values2 = HalfHelper::typecast(p.values);
       auto output2 = HalfHelper::typecast(p.output);
-      int indtmp1 = linearIndex / p.dim;
-      const int d = linearIndex - indtmp1 * p.dim;
-      int indtmp2 = indtmp1 / p.length;
-      const int i = indtmp1 - indtmp2 * p.length;
+      int32_t indtmp1 = linearIndex / p.dim;
+      auto d = linearIndex - indtmp1 * p.dim;
+      int32_t indtmp2 = indtmp1 / p.length;
+      auto i = indtmp1 - indtmp2 * p.length;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.heads;
-      const int h = indtmp1 - indtmp2 * p.heads;
-      const int b = indtmp2;
-      const int ni = get_backward_window_start(
-          i, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int ei = get_backward_window_end(
-          i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1;
-      const int valuesOffset =
+      auto h = indtmp1 - indtmp2 * p.heads;
+      auto& b = indtmp2;
+
+      auto ni = mask_0.get_backward_window_start(i);
+      auto ei = mask_0.get_backward_window_end(i);
+
+      int32_t weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1;
+      int32_t valuesOffset =
           b * (p.dim * p.length * p.heads) + h * (p.dim * p.length) + d;
-      auto output_update = HalfHelper::zero();
-#pragma unroll
-      for (int xi = ni; xi < ei; xi += dilation) {
-        const int oni = get_window_start(
-            xi, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-        const int64_t valuesIndex = valuesOffset + xi * p.dim;
-        const int64_t weightsIndex =
-            weightsOffset + xi * p.weights_stride_2 + int((i - oni) / dilation);
+      auto output_update = HalfHelper::zeros();
+      for (int32_t xi = ni; xi < ei; xi += p.dilation) {
+        auto oni = mask_0.get_window_start(xi);
+        int64_t valuesIndex = valuesOffset + xi * p.dim;
+        int64_t weightsIndex = weightsOffset + xi * p.weights_stride_2 +
+            int32_t((i - oni) / p.dilation);
         scalar_t a = p.weights[weightsIndex];
         output_update = HalfHelper::fma(values2[valuesIndex], a, output_update);
       }
@@ -211,31 +208,29 @@ struct InverseNeighborhood1DHalf : InverseNeighborhood1DBase<scalar_t> {
 template <typename Args_>
 struct InverseNeighborhood1D {
   using Args = Args_;
-  static constexpr int KS = Args::KernelSize;
-  static constexpr int NS = Args::NeighborhoodSize;
-  static constexpr int DILATION = Args::Dilation;
   using scalar_t = typename Args::Dtype;
+  using CausalMask = typename Args::CausalMask;
   using Kernel = typename std::conditional<
       sizeof(scalar_t) >= 4,
-      InverseNeighborhood1DFull<scalar_t, KS, NS, DILATION>,
-      InverseNeighborhood1DHalf<scalar_t, KS, NS, DILATION>>::type;
+      InverseNeighborhood1DFull<scalar_t, CausalMask>,
+      InverseNeighborhood1DHalf<scalar_t, CausalMask>>::type;
   using Params = typename Kernel::Params;
 
   void operator()(
-      const int cc,
+      int32_t cc,
       cudaStream_t stream,
       void* attn_ptr,
       void* d_output_ptr,
       void* d_value_ptr,
-      int batch_size,
-      int heads,
-      int length,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t length,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
-      int kernel_size,
-      int dilation) {
+      const std::tuple<int32_t>& kernel_size,
+      const std::tuple<int32_t>& dilation) {
     dim = Kernel::get_dim(dim);
     int64_t problem_size = batch_size * heads * length * dim;
     auto grid = Kernel::Base::get_grid(problem_size);
@@ -246,8 +241,8 @@ struct InverseNeighborhood1D {
         reinterpret_cast<scalar_t*>(d_value_ptr),
         length,
         heads,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size),
+        std::get<0>(dilation),
         dim,
         attn_stride_0,
         attn_stride_1,

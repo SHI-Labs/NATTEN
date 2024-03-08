@@ -30,6 +30,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#include <natten/naive_argpack.h>
+#include <natten/natten.h>
 #include <natten/cuda/naive/natten_commons.cuh>
 
 namespace natten {
@@ -42,20 +44,18 @@ struct NeighborhoodNeighborhood3DBase {
     scalar_t* weights;
     scalar_t* values;
     scalar_t* output;
-    const int depth;
-    const int height;
-    const int width;
-    const int heads;
-    const int kernel_size_in;
-    const int dilation_in;
-    const int depth_kernel_size_in;
-    const int depth_dilation_in;
-    const int dim;
-    const int64_t problem_size;
-    const int64_t weights_stride_0, weights_stride_1, weights_stride_2,
+    int32_t depth;
+    int32_t height;
+    int32_t width;
+    int32_t heads;
+    int32_t kernel_size_0, kernel_size_1, kernel_size_2;
+    int32_t dilation_0, dilation_1, dilation_2;
+    int32_t dim;
+    int64_t problem_size;
+    int64_t weights_stride_0, weights_stride_1, weights_stride_2,
         weights_stride_3, weights_stride_4;
-    const int64_t values_stride_0, values_stride_1, values_stride_2,
-        values_stride_3, values_stride_4;
+    int64_t values_stride_0, values_stride_1, values_stride_2, values_stride_3,
+        values_stride_4;
 
     __device__ __host__ Params() {}
 
@@ -63,21 +63,23 @@ struct NeighborhoodNeighborhood3DBase {
         scalar_t* weights, // attn   / d_attn
         scalar_t* values, // value  / key
         scalar_t* output, // output / d_query
-        const int depth,
-        const int height,
-        const int width,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int depth_kernel_size_in,
-        const int depth_dilation_in,
-        const int dim,
-        const int64_t weights_stride_0,
-        const int64_t weights_stride_1,
-        const int64_t weights_stride_2,
-        const int64_t weights_stride_3,
-        const int64_t weights_stride_4,
-        const int problem_size)
+        int32_t depth,
+        int32_t height,
+        int32_t width,
+        int32_t heads,
+        int32_t kernel_size_0,
+        int32_t kernel_size_1,
+        int32_t kernel_size_2,
+        int32_t dilation_0,
+        int32_t dilation_1,
+        int32_t dilation_2,
+        int32_t dim,
+        int64_t weights_stride_0,
+        int64_t weights_stride_1,
+        int64_t weights_stride_2,
+        int64_t weights_stride_3,
+        int64_t weights_stride_4,
+        int32_t problem_size)
         : weights(weights),
           values(values),
           output(output),
@@ -85,10 +87,12 @@ struct NeighborhoodNeighborhood3DBase {
           height(height),
           width(width),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
-          depth_kernel_size_in(depth_kernel_size_in),
-          depth_dilation_in(depth_dilation_in),
+          kernel_size_0(kernel_size_0),
+          kernel_size_1(kernel_size_1),
+          kernel_size_2(kernel_size_2),
+          dilation_0(dilation_0),
+          dilation_1(dilation_1),
+          dilation_2(dilation_2),
           dim(dim),
           problem_size(problem_size),
           weights_stride_4(weights_stride_4),
@@ -116,92 +120,81 @@ struct NeighborhoodNeighborhood3DBase {
   }
 };
 
-template <
-    typename scalar_t,
-    int KS,
-    int NS,
-    int DILATION,
-    int DKS,
-    int DNS,
-    int DDILATION>
+template <typename scalar_t, typename CausalMask_>
 struct NeighborhoodNeighborhood3DFull
     : NeighborhoodNeighborhood3DBase<scalar_t> {
   using Base = NeighborhoodNeighborhood3DBase<scalar_t>;
   using Params = typename Base::Params;
+  using CausalMask = CausalMask_;
   static constexpr bool IsBF16Kernel = false;
   static constexpr bool IsHalfKernel = false;
   static constexpr bool UsesSmem = false;
 
   __device__ __host__ NeighborhoodNeighborhood3DFull() : Base() {}
 
-  static __host__ int get_dim(int dim) {
+  static __host__ int32_t get_dim(int32_t dim) {
     return dim;
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int KERNEL_SIZE_D = (DKS > 1) ? DKS : p.depth_kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    auto mask_0 = NeighborhoodMask<CausalMask::Dim0>(
+        p.depth, p.kernel_size_0, p.dilation_0);
+    auto mask_1 = NeighborhoodMask<CausalMask::Dim1>(
+        p.height, p.kernel_size_1, p.dilation_1);
+    auto mask_2 = NeighborhoodMask<CausalMask::Dim2>(
+        p.width, p.kernel_size_2, p.dilation_2);
+    int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
-      int indtmp1 = linearIndex / p.dim;
-      const int d = linearIndex - indtmp1 * p.dim;
-      int indtmp2 = indtmp1 / p.width;
-      const int j = indtmp1 - indtmp2 * p.width;
+      int32_t indtmp1 = linearIndex / p.dim;
+      auto d = linearIndex - indtmp1 * p.dim;
+      int32_t indtmp2 = indtmp1 / p.width;
+      auto j = indtmp1 - indtmp2 * p.width;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.height;
-      const int i = indtmp1 - indtmp2 * p.height;
+      auto i = indtmp1 - indtmp2 * p.height;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.depth;
-      const int k = indtmp1 - indtmp2 * p.depth;
+      auto k = indtmp1 - indtmp2 * p.depth;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.heads;
-      const int h = indtmp1 - indtmp2 * p.heads;
-      const int b = indtmp2;
+      auto h = indtmp1 - indtmp2 * p.heads;
+      auto& b = indtmp2;
 
-      const int ni = get_window_start(
-          i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int nj = get_window_start(
-          j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int nk = get_window_start(
-          k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
+      auto nk = mask_0.get_window_start(k);
+      auto ni = mask_1.get_window_start(i);
+      auto nj = mask_2.get_window_start(j);
+      auto ek = mask_0.get_window_end(k, nk);
+      auto ei = mask_1.get_window_end(i, ni);
+      auto ej = mask_2.get_window_end(j, nj);
+
       scalar_t updt = scalar_t(0);
-      int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
+      int64_t weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
           k * p.weights_stride_2 + i * p.weights_stride_3 +
           j * p.weights_stride_4;
-      const int64_t valuesOffset =
-          b * p.values_stride_0 + h * p.values_stride_1 + d;
-#pragma unroll
-      for (int xk = nk; xk < nk + KERNEL_SIZE_D * dilation_d; xk += dilation_d)
-#pragma unroll
-        for (int xi = ni; xi < ni + KERNEL_SIZE * dilation; xi += dilation)
-#pragma unroll
-          for (int xj = nj; xj < nj + KERNEL_SIZE * dilation; xj += dilation) {
-            const int64_t valuesIndex = valuesOffset + xk * p.values_stride_2 +
+      int64_t valuesOffset = b * p.values_stride_0 + h * p.values_stride_1 + d;
+      for (int32_t xk = nk; xk < ek; xk += p.dilation_0)
+        for (int32_t xi = ni; xi < ei; xi += p.dilation_1)
+          for (int32_t xj = nj; xj < ej; xj += p.dilation_2) {
+            int64_t valuesIndex = valuesOffset + xk * p.values_stride_2 +
                 xi * p.values_stride_3 + xj * p.values_stride_4;
-            updt += p.weights[weightsOffset] * p.values[valuesIndex];
-            ++weightsOffset;
+            int64_t weightsIndex = weightsOffset +
+                int32_t((xk - nk) / p.dilation_0) *
+                    (p.kernel_size_1 * p.kernel_size_2) +
+                int32_t((xi - ni) / p.dilation_1) * p.kernel_size_2 +
+                int32_t((xj - nj) / p.dilation_2);
+            updt += p.weights[weightsIndex] * p.values[valuesIndex];
           }
       p.output[linearIndex] = updt;
     }
   }
 };
 
-template <
-    typename scalar_t,
-    int KS,
-    int NS,
-    int DILATION,
-    int DKS,
-    int DNS,
-    int DDILATION>
+template <typename scalar_t, typename CausalMask_>
 struct NeighborhoodNeighborhood3DHalf
     : NeighborhoodNeighborhood3DBase<scalar_t> {
   using Base = NeighborhoodNeighborhood3DBase<scalar_t>;
   using Params = typename Base::Params;
+  using CausalMask = CausalMask_;
   static constexpr bool IsBF16Kernel = IsBF16<scalar_t>::value;
   static constexpr bool IsHalfKernel = true;
   static constexpr bool UsesSmem = false;
@@ -210,7 +203,7 @@ struct NeighborhoodNeighborhood3DHalf
 
   using HalfHelper = typename HalfArray<scalar_t>::Base;
 
-  static __host__ int get_dim(int dim) {
+  static __host__ int32_t get_dim(int32_t dim) {
     if (dim % 2 != 0) {
       std::cerr
           << "Naive NATTEN half-precision kernels only support 32-bit alignment. "
@@ -222,54 +215,55 @@ struct NeighborhoodNeighborhood3DHalf
   }
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int KERNEL_SIZE_D = (DKS > 1) ? DKS : p.depth_kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int NEIGHBORHOOD_SIZE_D = (DNS > 0) ? DNS : KERNEL_SIZE_D / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int dilation_d = (DDILATION > 0) ? DDILATION : p.depth_dilation_in;
-    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    auto mask_0 = NeighborhoodMask<CausalMask::Dim0>(
+        p.depth, p.kernel_size_0, p.dilation_0);
+    auto mask_1 = NeighborhoodMask<CausalMask::Dim1>(
+        p.height, p.kernel_size_1, p.dilation_1);
+    auto mask_2 = NeighborhoodMask<CausalMask::Dim2>(
+        p.width, p.kernel_size_2, p.dilation_2);
+    int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.problem_size) {
       auto values2 = HalfHelper::typecast(p.values);
       auto output2 = HalfHelper::typecast(p.output);
-      int indtmp1 = linearIndex / p.dim;
-      const int d = linearIndex - indtmp1 * p.dim;
-      int indtmp2 = indtmp1 / p.width;
-      const int j = indtmp1 - indtmp2 * p.width;
+      int32_t indtmp1 = linearIndex / p.dim;
+      auto d = linearIndex - indtmp1 * p.dim;
+      int32_t indtmp2 = indtmp1 / p.width;
+      auto j = indtmp1 - indtmp2 * p.width;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.height;
-      const int i = indtmp1 - indtmp2 * p.height;
+      auto i = indtmp1 - indtmp2 * p.height;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.depth;
-      const int k = indtmp1 - indtmp2 * p.depth;
+      auto k = indtmp1 - indtmp2 * p.depth;
       indtmp1 = indtmp2;
       indtmp2 = indtmp1 / p.heads;
-      const int h = indtmp1 - indtmp2 * p.heads;
-      const int b = indtmp2;
+      auto h = indtmp1 - indtmp2 * p.heads;
+      auto& b = indtmp2;
 
-      const int ni = get_window_start(
-          i, p.height, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int nj = get_window_start(
-          j, p.width, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
-      const int nk = get_window_start(
-          k, p.depth, KERNEL_SIZE_D, NEIGHBORHOOD_SIZE_D, dilation_d);
-      auto updt = HalfHelper::zero();
-      int weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
+      auto nk = mask_0.get_window_start(k);
+      auto ni = mask_1.get_window_start(i);
+      auto nj = mask_2.get_window_start(j);
+      auto ek = mask_0.get_window_end(k, nk);
+      auto ei = mask_1.get_window_end(i, ni);
+      auto ej = mask_2.get_window_end(j, nj);
+
+      auto updt = HalfHelper::zeros();
+      int64_t weightsOffset = b * p.weights_stride_0 + h * p.weights_stride_1 +
           k * p.weights_stride_2 + i * p.weights_stride_3 +
           j * p.weights_stride_4;
-      const int64_t valuesOffset =
-          b * p.values_stride_0 + h * p.values_stride_1 + d;
-#pragma unroll
-      for (int xk = nk; xk < nk + KERNEL_SIZE_D * dilation_d; xk += dilation_d)
-#pragma unroll
-        for (int xi = ni; xi < ni + KERNEL_SIZE * dilation; xi += dilation)
-#pragma unroll
-          for (int xj = nj; xj < nj + KERNEL_SIZE * dilation; xj += dilation) {
-            const int64_t valuesIndex = valuesOffset + xk * p.values_stride_2 +
+      int64_t valuesOffset = b * p.values_stride_0 + h * p.values_stride_1 + d;
+      for (int32_t xk = nk; xk < ek; xk += p.dilation_0)
+        for (int32_t xi = ni; xi < ei; xi += p.dilation_1)
+          for (int32_t xj = nj; xj < ej; xj += p.dilation_2) {
+            int64_t valuesIndex = valuesOffset + xk * p.values_stride_2 +
                 xi * p.values_stride_3 + xj * p.values_stride_4;
+            int64_t weightsIndex = weightsOffset +
+                int32_t((xk - nk) / p.dilation_0) *
+                    (p.kernel_size_1 * p.kernel_size_2) +
+                int32_t((xi - ni) / p.dilation_1) * p.kernel_size_2 +
+                int32_t((xj - nj) / p.dilation_2);
             updt = HalfHelper::fma(
-                values2[valuesIndex], p.weights[weightsOffset], updt);
-            ++weightsOffset;
+                values2[valuesIndex], p.weights[weightsIndex], updt);
           }
       output2[linearIndex] = updt;
     }
@@ -279,54 +273,33 @@ struct NeighborhoodNeighborhood3DHalf
 template <typename Args_>
 struct NeighborhoodNeighborhood3D {
   using Args = Args_;
-  static constexpr int KS = Args::KernelSize;
-  static constexpr int NS = Args::NeighborhoodSize;
-  static constexpr int DKS = Args::DepthKernelSize;
-  static constexpr int DNS = Args::DepthNeighborhoodSize;
-  static constexpr int DILATION = Args::Dilation;
-  static constexpr int DDILATION = Args::DepthDilation;
   using scalar_t = typename Args::Dtype;
+  using CausalMask = typename Args::CausalMask;
   using Kernel = typename std::conditional<
       sizeof(scalar_t) >= 4,
-      NeighborhoodNeighborhood3DFull<
-          scalar_t,
-          KS,
-          NS,
-          DILATION,
-          DKS,
-          DNS,
-          DDILATION>,
-      NeighborhoodNeighborhood3DHalf<
-          scalar_t,
-          KS,
-          NS,
-          DILATION,
-          DKS,
-          DNS,
-          DDILATION>>::type;
+      NeighborhoodNeighborhood3DFull<scalar_t, CausalMask>,
+      NeighborhoodNeighborhood3DHalf<scalar_t, CausalMask>>::type;
   using Params = typename Kernel::Params;
 
   void operator()(
-      const int cc,
+      int32_t cc,
       cudaStream_t stream,
       void* attn_ptr,
       void* value_ptr,
       void* output_ptr,
-      int batch_size,
-      int heads,
-      int depth,
-      int height,
-      int width,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
       int64_t attn_stride_3,
       int64_t attn_stride_4,
-      int kernel_size,
-      int kernel_size_depth,
-      int dilation,
-      int dilation_depth) {
+      const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+      const std::tuple<int32_t, int32_t, int32_t>& dilation) {
     dim = Kernel::get_dim(dim);
     int64_t problem_size = batch_size * heads * depth * height * width * dim;
     auto grid = Kernel::Base::get_grid(problem_size);
@@ -339,10 +312,12 @@ struct NeighborhoodNeighborhood3D {
         height,
         width,
         heads,
-        kernel_size,
-        dilation,
-        kernel_size_depth,
-        dilation_depth,
+        std::get<0>(kernel_size),
+        std::get<1>(kernel_size),
+        std::get<2>(kernel_size),
+        std::get<0>(dilation),
+        std::get<1>(dilation),
+        std::get<2>(dilation),
         dim,
         attn_stride_0,
         attn_stride_1,

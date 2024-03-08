@@ -155,6 +155,7 @@ if(${NATTEN_WITH_CUDA})
 		file(GLOB AUTOGEN_CUDA_GEMM_SM70 ./autogen/src/cuda/gemm/1d/sm70/*.cu ./autogen/src/cuda/gemm/2d/sm70/*.cu)
 		file(GLOB AUTOGEN_CUDA_GEMM_SM75 ./autogen/src/cuda/gemm/1d/sm75/*.cu ./autogen/src/cuda/gemm/2d/sm75/*.cu)
 		file(GLOB AUTOGEN_CUDA_GEMM_SM80 ./autogen/src/cuda/gemm/1d/sm80/*.cu ./autogen/src/cuda/gemm/2d/sm80/*.cu)
+		file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu)
 	endif()
 endif()
 
@@ -167,6 +168,7 @@ file(GLOB ALL_SOURCES
 	${AUTOGEN_CUDA_GEMM_SM70} 
 	${AUTOGEN_CUDA_GEMM_SM75} 
 	${AUTOGEN_CUDA_GEMM_SM80} 
+	${AUTOGEN_FNA} 
 	${MISC_SOURCES} 
 	${MISC_SOURCES_CUDA} 
 	${MAIN_SOURCE} 

@@ -134,17 +134,26 @@ class CArg:
         return f"{self.dtype} {self.name}"
 
 
-COMMON_ARGS = [
-    CArg("int", "kernel_size"),
-    CArg("int", "dilation"),
+ARGS_1D = [
+    CArg("const std::tuple<int32_t>&", "kernel_size"),
+    CArg("const std::tuple<int32_t>&", "dilation"),
+    CArg("const std::tuple<bool>&", "is_causal"),
 ]
 
-EXTRA_3D_ARGS = [
-    CArg("int", "kernel_size_d"),
-    CArg("int", "dilation_d"),
+ARGS_2D = [
+    CArg("const std::tuple<int32_t, int32_t>&", "kernel_size"),
+    CArg("const std::tuple<int32_t, int32_t>&", "dilation"),
+    CArg("const std::tuple<bool, bool>&", "is_causal"),
+]
+
+ARGS_3D = [
+    CArg("const std::tuple<int32_t, int32_t, int32_t>&", "kernel_size"),
+    CArg("const std::tuple<int32_t, int32_t, int32_t>&", "dilation"),
+    CArg("const std::tuple<bool, bool, bool>&", "is_causal"),
 ]
 
 PN_COMMON_ARGS = [
+    CArg("bool", "is_grad"),
     CArg("void *", "query_ptr"),
     CArg("void *", "key_ptr"),
     CArg("void *", "attn_ptr"),
@@ -175,21 +184,21 @@ RPBGRAD_COMMON_ARGS = [
 ]
 
 NA1D_PROBLEM_SIZE_ARGS = [
-    CArg("int", "batch_size"),
-    CArg("int", "heads"),
-    CArg("int", "length"),
-    CArg("int", "dim"),
+    CArg("int32_t", "batch_size"),
+    CArg("int32_t", "heads"),
+    CArg("int32_t", "length"),
+    CArg("int32_t", "dim"),
     CArg("int64_t", "attn_stride_0"),
     CArg("int64_t", "attn_stride_1"),
     CArg("int64_t", "attn_stride_2"),
 ]
 
 NA2D_PROBLEM_SIZE_ARGS = [
-    CArg("int", "batch_size"),
-    CArg("int", "heads"),
-    CArg("int", "height"),
-    CArg("int", "width"),
-    CArg("int", "dim"),
+    CArg("int32_t", "batch_size"),
+    CArg("int32_t", "heads"),
+    CArg("int32_t", "height"),
+    CArg("int32_t", "width"),
+    CArg("int32_t", "dim"),
     CArg("int64_t", "attn_stride_0"),
     CArg("int64_t", "attn_stride_1"),
     CArg("int64_t", "attn_stride_2"),
@@ -197,12 +206,12 @@ NA2D_PROBLEM_SIZE_ARGS = [
 ]
 
 NA3D_PROBLEM_SIZE_ARGS = [
-    CArg("int", "batch_size"),
-    CArg("int", "heads"),
-    CArg("int", "depth"),
-    CArg("int", "height"),
-    CArg("int", "width"),
-    CArg("int", "dim"),
+    CArg("int32_t", "batch_size"),
+    CArg("int32_t", "heads"),
+    CArg("int32_t", "depth"),
+    CArg("int32_t", "height"),
+    CArg("int32_t", "width"),
+    CArg("int32_t", "dim"),
     CArg("int64_t", "attn_stride_0"),
     CArg("int64_t", "attn_stride_1"),
     CArg("int64_t", "attn_stride_2"),
@@ -213,35 +222,25 @@ NA3D_PROBLEM_SIZE_ARGS = [
 
 carg_map = {
     Problem.NA1D: {
-        Operation.PN: PN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.PN_BIAS: PN_BIAS_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.NN: NN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.IN: IN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.RPBGRAD: RPBGRAD_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
+        Operation.PN: PN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
+        Operation.PN_BIAS: PN_BIAS_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
+        Operation.NN: NN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
+        Operation.IN: IN_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
+        Operation.RPBGRAD: RPBGRAD_COMMON_ARGS + NA1D_PROBLEM_SIZE_ARGS + ARGS_1D,
     },
     Problem.NA2D: {
-        Operation.PN: PN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.PN_BIAS: PN_BIAS_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.NN: NN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.IN: IN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
-        Operation.RPBGRAD: RPBGRAD_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + COMMON_ARGS,
+        Operation.PN: PN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
+        Operation.PN_BIAS: PN_BIAS_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
+        Operation.NN: NN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
+        Operation.IN: IN_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
+        Operation.RPBGRAD: RPBGRAD_COMMON_ARGS + NA2D_PROBLEM_SIZE_ARGS + ARGS_2D,
     },
     Problem.NA3D: {
-        Operation.PN: (
-            PN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + COMMON_ARGS + EXTRA_3D_ARGS
-        ),
-        Operation.PN_BIAS: (
-            PN_BIAS_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + COMMON_ARGS + EXTRA_3D_ARGS
-        ),
-        Operation.NN: (
-            NN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + COMMON_ARGS + EXTRA_3D_ARGS
-        ),
-        Operation.IN: (
-            IN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + COMMON_ARGS + EXTRA_3D_ARGS
-        ),
-        Operation.RPBGRAD: (
-            RPBGRAD_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + COMMON_ARGS + EXTRA_3D_ARGS
-        ),
+        Operation.PN: PN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
+        Operation.PN_BIAS: PN_BIAS_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
+        Operation.NN: NN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
+        Operation.IN: IN_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
+        Operation.RPBGRAD: RPBGRAD_COMMON_ARGS + NA3D_PROBLEM_SIZE_ARGS + ARGS_3D,
     },
 }
 
@@ -526,7 +525,7 @@ def generate_cpu_kernels(path, num_splits=2):
             source_list.append(kernel)
             kernels_emitted.append(kernel_idx)
         write_combined_source_file(
-            path_to_sources, f"source_{split_idx}.cpp", pth_set, source_list
+            path_to_sources, f"source_{split_idx}.cpp", sorted(pth_set), source_list
         )
     assert split_idx == num_splits - 1, f"Expected {split_idx=} == {num_splits=} - 1"
     assert len(kernels_emitted) == len(kernels) and sorted(kernels_emitted) == [

@@ -224,12 +224,12 @@ class NA1dPNOutputTileIterator {
     state_[0] = state_[1] = state_[2] = 0;
   }
 
-  /// Adds a pointer offset in units of Element
-  CUTLASS_HOST_DEVICE
-  void add_pointer_offset(LongIndex pointer_offset) {
-    store_byte_pointer_ +=
-        pointer_offset * cutlass::sizeof_bits<Element>::value / 8;
-  }
+  ///// Adds a pointer offset in units of Element
+  // CUTLASS_HOST_DEVICE
+  // void add_pointer_offset(LongIndex pointer_offset) {
+  //  store_byte_pointer_ +=
+  //      pointer_offset * cutlass::sizeof_bits<Element>::value / 8;
+  //}
 
   /// Loads a fragment from memory
   CUTLASS_DEVICE
@@ -291,14 +291,14 @@ class NA1dPNOutputTileIterator {
           }
         }
 
-        if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
-        }
+        // if (group + 1 < ThreadMap::Iterations::kGroup) {
+        //  byte_pointer += params_.increment_group;
+        //}
       }
 
-      if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
-      }
+      // if (cluster + 1 < ThreadMap::Iterations::kCluster) {
+      //  byte_pointer += params_.increment_cluster;
+      //}
     }
   }
 
@@ -392,14 +392,14 @@ class NA1dPNOutputTileIterator {
           }
         }
 
-        if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
-        }
+        // if (group + 1 < ThreadMap::Iterations::kGroup) {
+        //  byte_pointer += params_.increment_group;
+        //}
       }
 
-      if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
-      }
+      // if (cluster + 1 < ThreadMap::Iterations::kCluster) {
+      //  byte_pointer += params_.increment_cluster;
+      //}
     }
   }
 
@@ -436,7 +436,7 @@ class NA1dPNOutputTileIterator {
     if (state_[0] == ThreadMap::Count::kRow) {
       state_[0] = 0;
       ++state_[1];
-      store_byte_pointer_ += params_.advance_group;
+      // store_byte_pointer_ += params_.advance_group;
 
       thread_start_row_ += (ThreadMap::Shape::kGroup - 1) *
           ThreadMap::Shape::kRow * ThreadMap::Count::kRow;
@@ -444,7 +444,7 @@ class NA1dPNOutputTileIterator {
       if (state_[1] == ThreadMap::Count::kGroup) {
         state_[1] = 0;
         ++state_[2];
-        store_byte_pointer_ += params_.advance_cluster;
+        // store_byte_pointer_ += params_.advance_cluster;
 
         thread_start_row_ += ThreadMap::Count::kGroup *
             ThreadMap::Shape::kGroup * ThreadMap::Count::kRow *
@@ -452,7 +452,7 @@ class NA1dPNOutputTileIterator {
 
         if (state_[2] == ThreadMap::Count::kCluster) {
           state_[2] = 0;
-          store_byte_pointer_ += params_.advance_tile;
+          // store_byte_pointer_ += params_.advance_tile;
 
           thread_start_row_ += ThreadMap::Shape::kGroup *
               ThreadMap::Shape::kRow * ThreadMap::Shape::kCluster *
@@ -472,7 +472,7 @@ class NA1dPNOutputTileIterator {
     int increment_row = state_[0] / ThreadMap::Count::kRow;
     state_[0] = state_[0] % ThreadMap::Count::kRow;
 
-    store_byte_pointer_ += (params_.advance_row * increment);
+    // store_byte_pointer_ += (params_.advance_row * increment);
     thread_start_row_ += (ThreadMap::Shape::kRow * increment);
 
     // Group
@@ -480,7 +480,7 @@ class NA1dPNOutputTileIterator {
     int increment_group = state_[1] / ThreadMap::Count::kGroup;
     state_[1] = state_[1] % ThreadMap::Count::kGroup;
 
-    store_byte_pointer_ += (params_.advance_group * increment_row);
+    // store_byte_pointer_ += (params_.advance_group * increment_row);
     thread_start_row_ += (ThreadMap::Shape::kGroup - 1) *
         ThreadMap::Shape::kRow * ThreadMap::Count::kRow * increment_row;
 
@@ -489,12 +489,12 @@ class NA1dPNOutputTileIterator {
     int increment_cluster = state_[2] / ThreadMap::Count::kCluster;
     state_[2] = state_[2] % ThreadMap::Count::kCluster;
 
-    store_byte_pointer_ += (params_.advance_cluster * increment_group);
+    // store_byte_pointer_ += (params_.advance_cluster * increment_group);
     thread_start_row_ += ThreadMap::Count::kGroup * ThreadMap::Shape::kGroup *
         ThreadMap::Count::kRow * ThreadMap::Shape::kRow * increment_group;
 
     // Tile
-    store_byte_pointer_ += (params_.advance_tile * increment_cluster);
+    // store_byte_pointer_ += (params_.advance_tile * increment_cluster);
     thread_start_row_ += ThreadMap::Shape::kGroup * ThreadMap::Shape::kRow *
         ThreadMap::Shape::kCluster * ThreadMap::Shape::kTile *
         increment_cluster;

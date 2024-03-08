@@ -33,6 +33,15 @@ namespace natten {
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def(
+      "na1d_forward", &natten::pytorch::na1d_forward, "NA1D forward (fused)");
+
+  m.def(
+      "na2d_forward", &natten::pytorch::na2d_forward, "NA2D forward (fused)");
+
+  m.def(
+      "na3d_forward", &natten::pytorch::na3d_forward, "NA3D forward (fused)");
+
+  m.def(
       "na1d_qk_forward", &natten::pytorch::na1d_qk_forward, "NA1D QK forward");
   m.def(
       "na1d_qk_backward",

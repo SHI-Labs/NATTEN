@@ -50,7 +50,7 @@ namespace naive {
 ///////////////////////////////////////////////////////////////////////////////
 
 /////////////// 5x5
-template <typename scalar_t, int DILATION>
+template <typename scalar_t>
 struct PointwiseNeighborhood2DFull5x5 : PointwiseNeighborhood2DBase<scalar_t> {
   using Base = PointwiseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
@@ -60,40 +60,37 @@ struct PointwiseNeighborhood2DFull5x5 : PointwiseNeighborhood2DBase<scalar_t> {
 
   __device__ __host__ PointwiseNeighborhood2DFull5x5() : Base() {}
 
-  static __host__ int get_dim(int dim) {
-    return 32;
-  }
-
   __device__ void launch(Params p) {
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     // Because batch heads have stride 1 per threadblock, we can just use
     // blockIdx since blockDim will be 1 and threadIdx will always be 0. const
     // int z = blockIdx.z * blockDim.z + threadIdx.z;
-    const int z = blockIdx.z;
-    const int b = z / p.heads;
-    const int h = z - b * p.heads;
+    // TODO: remove when/if tiled kernels allow varying dilations
+    auto dilation = p.dilation_0;
+    int z = blockIdx.z;
+    int b = z / p.heads;
+    int h = z - b * p.heads;
     // Not needed again because it will always be true.
     // if (z < batch_size * heads)
     // {
-    const int lti = threadIdx.y * (TILE_5 * KERNEL_SIZE_5) + threadIdx.x;
-    const int64_t batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
-    const int si = int(blockIdx.y / dilation) * (TILE_5 * dilation) +
+    int lti = threadIdx.y * (TILE_5 * KERNEL_SIZE_5) + threadIdx.x;
+    int64_t batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
+    int si = int(blockIdx.y / dilation) * (TILE_5 * dilation) +
         (blockIdx.y % dilation);
-    const int sj = int(blockIdx.x / dilation) * (TILE_5 * dilation) +
+    int sj = int(blockIdx.x / dilation) * (TILE_5 * dilation) +
         (blockIdx.x % dilation);
-    const int sni = get_window_start(
+    int sni = get_window_start(
         si, p.height, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-    const int snj = get_window_start(
+    int snj = get_window_start(
         sj, p.width, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
     __shared__ scalar_t tile[TILE_5 * TILE_5][DIM_32 + 3];
     __shared__ scalar_t kTile[KTILE_5 * KTILE_5][DIM_32 + 3];
 
     /* query tile */
-    const int qtx = lti / QSTRIDE_5;
-    const int qty = (lti - qtx * QSTRIDE_5) * QITERS_5;
+    int qtx = lti / QSTRIDE_5;
+    int qty = (lti - qtx * QSTRIDE_5) * QITERS_5;
     if (qtx < TILE_5 * TILE_5) {
       int qi = qtx / TILE_5;
-      const int qj = (qtx - qi * TILE_5) * dilation + sj;
+      int qj = (qtx - qi * TILE_5) * dilation + sj;
       qi = qi * dilation + si;
       if (qi < p.height && qj < p.width) {
 #pragma unroll
@@ -104,14 +101,14 @@ struct PointwiseNeighborhood2DFull5x5 : PointwiseNeighborhood2DBase<scalar_t> {
       }
     }
     /* key tile */
-    const int ktx = lti / KSTRIDE_32;
-    const int kty = (lti - ktx * KSTRIDE_32) * KITERS_32;
+    int ktx = lti / KSTRIDE_32;
+    int kty = (lti - ktx * KSTRIDE_32) * KITERS_32;
     if (ktx < KTILE_5 * KTILE_5) {
       int bi = ktx / KTILE_5;
-      const int bj = (ktx - bi * KTILE_5) * dilation + snj;
+      int bj = (ktx - bi * KTILE_5) * dilation + snj;
       bi = bi * dilation + sni;
       if (bi < p.height && bj < p.width) {
-        const int64_t keyOffset = batchHeadOffset + bi * p.query_stride_2 +
+        int64_t keyOffset = batchHeadOffset + bi * p.query_stride_2 +
             bj * p.query_stride_3 + kty;
 #pragma unroll
         for (int ti = 0; ti < KITERS_32; ++ti)
@@ -119,33 +116,33 @@ struct PointwiseNeighborhood2DFull5x5 : PointwiseNeighborhood2DBase<scalar_t> {
       }
     }
     __syncthreads();
-    const int ii = threadIdx.y / KERNEL_SIZE_5;
-    const int ki = threadIdx.y - ii * KERNEL_SIZE_5;
-    const int jj = threadIdx.x / KERNEL_SIZE_5;
-    const int kj = threadIdx.x - jj * KERNEL_SIZE_5;
-    const int i = si + ii * dilation, j = sj + jj * dilation;
+    int ii = threadIdx.y / KERNEL_SIZE_5;
+    int ki = threadIdx.y - ii * KERNEL_SIZE_5;
+    int jj = threadIdx.x / KERNEL_SIZE_5;
+    int kj = threadIdx.x - jj * KERNEL_SIZE_5;
+    int i = si + ii * dilation, j = sj + jj * dilation;
     if (i < p.height && j < p.width) {
-      const int ni = get_window_start(
+      int ni = get_window_start(
           i, p.height, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-      const int nj = get_window_start(
+      int nj = get_window_start(
           j, p.width, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
       scalar_t updt = scalar_t(0);
-      const int queryIdx = ii * TILE_5 + jj;
-      const int keyIdx = int((ni + ki * dilation - sni) / dilation) * KTILE_5 +
+      int queryIdx = ii * TILE_5 + jj;
+      int keyIdx = int((ni + ki * dilation - sni) / dilation) * KTILE_5 +
           int((nj + kj * dilation - snj) / dilation);
 
 #pragma unroll
       for (int dimOffset = 0; dimOffset < DIM_32; ++dimOffset)
         updt += tile[queryIdx][dimOffset] * kTile[keyIdx][dimOffset];
 
-      const int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
+      int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
           i * p.attn_stride_2 + j * p.attn_stride_3 + ki * KERNEL_SIZE_5 + kj;
       if (p.bias) {
-        const int pi = get_pb_start(
+        int pi = get_pb_start(
             i, p.height, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-        const int pj = get_pb_start(
+        int pj = get_pb_start(
             j, p.width, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-        const int64_t biasIndex =
+        int64_t biasIndex =
             h * p.bias_stride_0 + (pi + ki) * p.bias_stride_1 + (pj + kj);
         updt += p.bias[biasIndex];
       }
@@ -174,7 +171,7 @@ struct PointwiseNeighborhood2DFull5x5 : PointwiseNeighborhood2DBase<scalar_t> {
   }
 };
 
-template <typename scalar_t, int DILATION>
+template <typename scalar_t>
 struct PointwiseNeighborhood2DHalf5x5 : PointwiseNeighborhood2DBase<scalar_t> {
   using Base = PointwiseNeighborhood2DBase<scalar_t>;
   using Params = typename Base::Params;
@@ -187,31 +184,28 @@ struct PointwiseNeighborhood2DHalf5x5 : PointwiseNeighborhood2DBase<scalar_t> {
   using HalfHelper = typename HalfArray<scalar_t>::Base;
   using HalfType = typename HalfHelper::ElementVector;
 
-  static __host__ int get_dim(int dim) {
-    return 16;
-  }
-
   __device__ void launch(Params p) {
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
     // Because batch heads have stride 1 per threadblock, we can just use
     // blockIdx since blockDim will be 1 and threadIdx will always be 0. const
     // int z = blockIdx.z * blockDim.z + threadIdx.z;
-    const int z = blockIdx.z;
-    const int b = z / p.heads;
-    const int h = z - b * p.heads;
+    // TODO: remove when/if tiled kernels allow varying dilations
+    auto dilation = p.dilation_0;
+    int z = blockIdx.z;
+    int b = z / p.heads;
+    int h = z - b * p.heads;
     // Not needed again because it will always be true.
     // if (z < batch_size * heads)
     // {
-    const int lti = threadIdx.y * (TILE_5 * KERNEL_SIZE_5) + threadIdx.x;
-    const int stride2 = DIMHALF_32 * p.width;
-    const int64_t batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
-    const int si = int(blockIdx.y / dilation) * (TILE_5 * dilation) +
+    int lti = threadIdx.y * (TILE_5 * KERNEL_SIZE_5) + threadIdx.x;
+    int stride2 = DIMHALF_32 * p.width;
+    int64_t batchHeadOffset = b * p.query_stride_0 + h * p.query_stride_1;
+    int si = int(blockIdx.y / dilation) * (TILE_5 * dilation) +
         (blockIdx.y % dilation);
-    const int sj = int(blockIdx.x / dilation) * (TILE_5 * dilation) +
+    int sj = int(blockIdx.x / dilation) * (TILE_5 * dilation) +
         (blockIdx.x % dilation);
-    const int sni = get_window_start(
+    int sni = get_window_start(
         si, p.height, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-    const int snj = get_window_start(
+    int snj = get_window_start(
         sj, p.width, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
     __shared__ HalfType tile[TILE_5 * TILE_5][DIM_32 + 3];
     __shared__ HalfType kTile[KTILE_5 * KTILE_5][DIM_32 + 3];
@@ -219,11 +213,11 @@ struct PointwiseNeighborhood2DHalf5x5 : PointwiseNeighborhood2DBase<scalar_t> {
     auto key2 = HalfHelper::typecast(p.key);
 
     /* query tile */
-    const int qtx = lti / DIMHALF_32;
-    const int qty = lti - qtx * DIMHALF_32;
+    int qtx = lti / DIMHALF_32;
+    int qty = lti - qtx * DIMHALF_32;
     if (qtx < TILE_5 * TILE_5) {
       int qi = qtx / TILE_5;
-      const int qj = (qtx - qi * TILE_5) * dilation + sj;
+      int qj = (qtx - qi * TILE_5) * dilation + sj;
       qi = qi * dilation + si;
       if (qi < p.height && qj < p.width) {
         tile[qtx][qty] =
@@ -231,14 +225,14 @@ struct PointwiseNeighborhood2DHalf5x5 : PointwiseNeighborhood2DBase<scalar_t> {
       }
     }
     /* key tile */
-    const int ktx = lti / KSTRIDE_32;
-    const int kty = (lti - ktx * KSTRIDE_32) * KHALFITERS_32;
+    int ktx = lti / KSTRIDE_32;
+    int kty = (lti - ktx * KSTRIDE_32) * KHALFITERS_32;
     if (ktx < KTILE_5 * KTILE_5) {
       int bi = ktx / KTILE_5;
-      const int bj = (ktx - bi * KTILE_5) * dilation + snj;
+      int bj = (ktx - bi * KTILE_5) * dilation + snj;
       bi = bi * dilation + sni;
       if (bi < p.height && bj < p.width) {
-        const int64_t keyOffset =
+        int64_t keyOffset =
             batchHeadOffset + bi * stride2 + bj * DIMHALF_32 + kty;
 #pragma unroll
         for (int ti = 0; ti < KHALFITERS_32; ++ti)
@@ -246,19 +240,19 @@ struct PointwiseNeighborhood2DHalf5x5 : PointwiseNeighborhood2DBase<scalar_t> {
       }
     }
     __syncthreads();
-    const int ii = threadIdx.y / KERNEL_SIZE_5;
-    const int ki = threadIdx.y - ii * KERNEL_SIZE_5;
-    const int jj = threadIdx.x / KERNEL_SIZE_5;
-    const int kj = threadIdx.x - jj * KERNEL_SIZE_5;
-    const int i = si + ii * dilation, j = sj + jj * dilation;
+    int ii = threadIdx.y / KERNEL_SIZE_5;
+    int ki = threadIdx.y - ii * KERNEL_SIZE_5;
+    int jj = threadIdx.x / KERNEL_SIZE_5;
+    int kj = threadIdx.x - jj * KERNEL_SIZE_5;
+    int i = si + ii * dilation, j = sj + jj * dilation;
     if (i < p.height && j < p.width) {
-      const int ni = get_window_start(
+      int ni = get_window_start(
           i, p.height, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-      const int nj = get_window_start(
+      int nj = get_window_start(
           j, p.width, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-      auto updt = HalfHelper::zero();
-      const int queryIdx = ii * TILE_5 + jj;
-      const int keyIdx = int((ni + ki * dilation - sni) / dilation) * KTILE_5 +
+      auto updt = HalfHelper::zeros();
+      int queryIdx = ii * TILE_5 + jj;
+      int keyIdx = int((ni + ki * dilation - sni) / dilation) * KTILE_5 +
           int((nj + kj * dilation - snj) / dilation);
 
 #pragma unroll
@@ -266,15 +260,15 @@ struct PointwiseNeighborhood2DHalf5x5 : PointwiseNeighborhood2DBase<scalar_t> {
         updt = HalfHelper::fma(
             tile[queryIdx][dimOffset], kTile[keyIdx][dimOffset], updt);
 
-      const int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
+      int64_t index = b * p.attn_stride_0 + h * p.attn_stride_1 +
           i * p.attn_stride_2 + j * p.attn_stride_3 + ki * KERNEL_SIZE_5 + kj;
       scalar_t acc = HalfHelper::cast_back(HalfHelper::add(updt.x, updt.y));
       if (p.bias) {
-        const int pi = get_pb_start(
+        int pi = get_pb_start(
             i, p.height, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-        const int pj = get_pb_start(
+        int pj = get_pb_start(
             j, p.width, KERNEL_SIZE_5, NEIGHBORHOOD_SIZE_5, dilation);
-        const int64_t biasIndex =
+        int64_t biasIndex =
             h * p.bias_stride_0 + (pi + ki) * p.bias_stride_1 + (pj + kj);
         acc = HalfHelper::add(acc, p.bias[biasIndex]);
       }

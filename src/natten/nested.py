@@ -20,7 +20,7 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -39,6 +39,8 @@ from .ops import av_cross_forward, qk_cross_forward
 from .utils import (
     check_additional_keys,
     check_additional_values,
+    check_all_args,
+    get_num_na_weights,
     make_attn_tensor_from_input,
 )
 
@@ -46,23 +48,33 @@ from .utils import (
 def na1d_qk_nested(
     query: Tensor,
     key: Tensor,
-    rpb: Optional[Tensor],
-    kernel_size: int,
-    dilation: int,
+    bias: Optional[Tensor],
+    kernel_size: int | Tuple[int],
+    dilation: int | Tuple[int],
     additional_keys: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool]] = False,
 ) -> Tensor:
-    num_na_weights = kernel_size
+    kernel_size, dilation, is_causal = check_all_args(
+        1, kernel_size, dilation, is_causal
+    )
+    num_na_weights = get_num_na_weights(kernel_size)
+
+    if any(is_causal) and bias is not None:
+        raise NotImplementedError(
+            "Positional biases for causal neighborhood attention is not yet implemented."
+        )
+
     if not query.is_nested or not key.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not query.is_leaf or not key.is_leaf:
         raise ValueError("Only one level of nested tensors is supported at the moment.")
     if query.requires_grad or key.requires_grad:
         raise ValueError("Autograd is not supported for nested tensors.")
-    if rpb is not None and rpb.is_nested:
+    if bias is not None and bias.is_nested:
         raise ValueError("Positional biases cannot be nested.")
 
-    if rpb is not None:
-        rpb = rpb.contiguous().to(key.dtype)
+    if bias is not None:
+        bias = bias.contiguous().to(key.dtype)
 
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
@@ -101,7 +113,7 @@ def na1d_qk_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na1d_qk_forward(attn_na, q, k, rpb, kernel_size, dilation)
+        libnatten.na1d_qk_forward(attn_na, q, k, bias, kernel_size, dilation, is_causal)
 
         if len(n_add_tokens_list):
             assert k_add is not None and attn_add.numel() > 0
@@ -113,11 +125,16 @@ def na1d_qk_nested(
 def na1d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int,
-    dilation: int,
+    kernel_size: int | Tuple[int],
+    dilation: int | Tuple[int],
     additional_values: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool]] = False,
 ):
-    num_na_weights = kernel_size
+    kernel_size, dilation, is_causal = check_all_args(
+        1, kernel_size, dilation, is_causal
+    )
+    num_na_weights = get_num_na_weights(kernel_size)
+
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not attn.is_leaf or not value.is_leaf:
@@ -163,7 +180,7 @@ def na1d_av_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na1d_av_forward(o, attn_na, v, kernel_size, dilation)
+        libnatten.na1d_av_forward(o, attn_na, v, kernel_size, dilation, is_causal)
 
         if v_add is not None and o_add is not None:
             assert attn_add.numel() > 0
@@ -176,23 +193,33 @@ def na1d_av_nested(
 def na2d_qk_nested(
     query: Tensor,
     key: Tensor,
-    rpb: Optional[Tensor],
-    kernel_size: int,
-    dilation: int,
+    bias: Optional[Tensor],
+    kernel_size: int | Tuple[int, int],
+    dilation: int | Tuple[int, int],
     additional_keys: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool]] = False,
 ) -> Tensor:
-    num_na_weights = kernel_size**2
+    kernel_size, dilation, is_causal = check_all_args(
+        2, kernel_size, dilation, is_causal
+    )
+    num_na_weights = get_num_na_weights(kernel_size)
+
+    if any(is_causal) and bias is not None:
+        raise NotImplementedError(
+            "Positional biases for causal neighborhood attention is not yet implemented."
+        )
+
     if not query.is_nested or not key.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not query.is_leaf or not key.is_leaf:
         raise ValueError("Only one level of nested tensors is supported at the moment.")
     if query.requires_grad or key.requires_grad:
         raise ValueError("Autograd is not supported for nested tensors.")
-    if rpb is not None and rpb.is_nested:
+    if bias is not None and bias.is_nested:
         raise ValueError("Positional biases cannot be nested.")
 
-    if rpb is not None:
-        rpb = rpb.contiguous().to(key.dtype)
+    if bias is not None:
+        bias = bias.contiguous().to(key.dtype)
 
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
@@ -231,7 +258,7 @@ def na2d_qk_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na2d_qk_forward(attn_na, q, k, rpb, kernel_size, dilation)
+        libnatten.na2d_qk_forward(attn_na, q, k, bias, kernel_size, dilation, is_causal)
 
         if len(n_add_tokens_list):
             assert k_add is not None and attn_add.numel() > 0
@@ -243,11 +270,16 @@ def na2d_qk_nested(
 def na2d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int],
+    dilation: int | Tuple[int, int],
     additional_values: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool]] = False,
 ):
-    num_na_weights = kernel_size**2
+    kernel_size, dilation, is_causal = check_all_args(
+        2, kernel_size, dilation, is_causal
+    )
+    num_na_weights = get_num_na_weights(kernel_size)
+
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not attn.is_leaf or not value.is_leaf:
@@ -293,7 +325,7 @@ def na2d_av_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na2d_av_forward(o, attn_na, v, kernel_size, dilation)
+        libnatten.na2d_av_forward(o, attn_na, v, kernel_size, dilation, is_causal)
 
         if v_add is not None and o_add is not None:
             assert attn_add.numel() > 0
@@ -306,25 +338,33 @@ def na2d_av_nested(
 def na3d_qk_nested(
     query: Tensor,
     key: Tensor,
-    rpb: Optional[Tensor],
-    kernel_size_d: int,
-    kernel_size: int,
-    dilation_d: int,
-    dilation: int,
+    bias: Optional[Tensor],
+    kernel_size: int | Tuple[int, int, int],
+    dilation: int | Tuple[int, int, int],
     additional_keys: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
 ) -> Tensor:
-    num_na_weights = kernel_size_d * kernel_size * kernel_size
+    kernel_size, dilation, is_causal = check_all_args(
+        3, kernel_size, dilation, is_causal
+    )
+    num_na_weights = get_num_na_weights(kernel_size)
+
+    if any(is_causal) and bias is not None:
+        raise NotImplementedError(
+            "Positional biases for causal neighborhood attention is not yet implemented."
+        )
+
     if not query.is_nested or not key.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not query.is_leaf or not key.is_leaf:
         raise ValueError("Only one level of nested tensors is supported at the moment.")
     if query.requires_grad or key.requires_grad:
         raise ValueError("Autograd is not supported for nested tensors.")
-    if rpb is not None and rpb.is_nested:
+    if bias is not None and bias.is_nested:
         raise ValueError("Positional biases cannot be nested.")
 
-    if rpb is not None:
-        rpb = rpb.contiguous().to(key.dtype)
+    if bias is not None:
+        bias = bias.contiguous().to(key.dtype)
 
     if query.size(0) != key.size(0):
         raise ValueError("Got nested inputs, but they don't match in size.")
@@ -363,9 +403,7 @@ def na3d_qk_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na3d_qk_forward(
-            attn_na, q, k, rpb, kernel_size, dilation, kernel_size_d, dilation_d
-        )
+        libnatten.na3d_qk_forward(attn_na, q, k, bias, kernel_size, dilation, is_causal)
 
         if len(n_add_tokens_list):
             assert k_add is not None and attn_add.numel() > 0
@@ -377,13 +415,16 @@ def na3d_qk_nested(
 def na3d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size_d: int,
-    kernel_size: int,
-    dilation_d: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int, int],
+    dilation: int | Tuple[int, int, int],
     additional_values: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
 ):
-    num_na_weights = kernel_size_d * kernel_size * kernel_size
+    kernel_size, dilation, is_causal = check_all_args(
+        3, kernel_size, dilation, is_causal
+    )
+    num_na_weights = get_num_na_weights(kernel_size)
+
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
     if not attn.is_leaf or not value.is_leaf:
@@ -429,9 +470,7 @@ def na3d_av_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na3d_av_forward(
-            o, attn_na, v, kernel_size, dilation, kernel_size_d, dilation_d
-        )
+        libnatten.na3d_av_forward(o, attn_na, v, kernel_size, dilation, is_causal)
 
         if v_add is not None and o_add is not None:
             assert attn_add.numel() > 0

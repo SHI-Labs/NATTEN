@@ -217,32 +217,6 @@ carg_map = {
 op_and_dtype_2_config = {
     70: {
         Operation.PN: {
-            NATTEN_Double: GemmConfig(
-                M=128,
-                N=128,
-                K=8,
-                warp_M=32,
-                warp_N=64,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=70,
-            ),
-            NATTEN_Float: GemmConfig(
-                M=128,
-                N=128,
-                K=8,
-                warp_M=32,
-                warp_N=64,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=70,
-            ),
             NATTEN_Half: GemmConfig(
                 M=128,
                 N=128,
@@ -258,32 +232,6 @@ op_and_dtype_2_config = {
             ),
         },
         Operation.NN: {
-            NATTEN_Double: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=70,
-            ),
-            NATTEN_Float: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=70,
-            ),
             NATTEN_Half: GemmConfig(
                 M=64,
                 N=64,
@@ -299,32 +247,6 @@ op_and_dtype_2_config = {
             ),
         },
         Operation.IN: {
-            NATTEN_Double: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=70,
-            ),
-            NATTEN_Float: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=70,
-            ),
             NATTEN_Half: GemmConfig(
                 M=64,
                 N=64,
@@ -342,32 +264,6 @@ op_and_dtype_2_config = {
     },
     75: {
         Operation.PN: {
-            NATTEN_Double: GemmConfig(
-                M=128,
-                N=128,
-                K=8,
-                warp_M=32,
-                warp_N=64,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=75,
-            ),
-            NATTEN_Float: GemmConfig(
-                M=128,
-                N=128,
-                K=8,
-                warp_M=32,
-                warp_N=64,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=75,
-            ),
             NATTEN_Half: GemmConfig(
                 M=128,
                 N=128,
@@ -383,32 +279,6 @@ op_and_dtype_2_config = {
             ),
         },
         Operation.NN: {
-            NATTEN_Double: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=75,
-            ),
-            NATTEN_Float: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=75,
-            ),
             NATTEN_Half: GemmConfig(
                 M=64,
                 N=64,
@@ -424,32 +294,6 @@ op_and_dtype_2_config = {
             ),
         },
         Operation.IN: {
-            NATTEN_Double: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=75,
-            ),
-            NATTEN_Float: GemmConfig(
-                M=64,
-                N=32,
-                K=8,
-                warp_M=32,
-                warp_N=16,
-                warp_K=8,
-                math_M=1,
-                math_N=1,
-                math_K=1,
-                stages=4,
-                sm=75,
-            ),
             NATTEN_Half: GemmConfig(
                 M=64,
                 N=64,
@@ -1016,7 +860,7 @@ def generate_cuda_kernels(path, sm, num_splits=4):
             source_list.append(kernel)
             kernels_emitted.append(kernel_idx)
         write_combined_source_file(
-            path_to_sources, f"source_{split_idx}.cu", pth_set, source_list
+            path_to_sources, f"source_{split_idx}.cu", sorted(pth_set), source_list
         )
     assert split_idx == num_splits - 1, f"Expected {split_idx=} == {num_splits=} - 1"
     assert len(kernels_emitted) == len(kernels) and sorted(kernels_emitted) == [

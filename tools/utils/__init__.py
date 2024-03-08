@@ -21,15 +21,16 @@
 #
 #################################################################################################
 
+from .na_profiler import profile_fmha_with_torch, profile_na_with_torch
 from .pretty_printer import print_table
-from .profiler_1d import profile_na1d
-from .profiler_2d import profile_na2d
-from .utils import extract_na_ops, profile_with_torch
+from .problem import generate_1d_problem, generate_2d_problem, generate_3d_problem
 
 __all__ = [
     "print_table",
-    "extract_na_ops",
     "profile_with_torch",
-    "profile_na1d",
-    "profile_na2d",
+    "profile_fmha_with_torch",
+    "profile_na_with_torch",
+    "generate_1d_problem",
+    "generate_2d_problem",
+    "generate_3d_problem",
 ]

@@ -28,6 +28,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#include <natten/natten.h>
 #include <natten/cuda/naive/natten_commons.cuh>
 
 // TODO: We're still using ATen's atomic add!
@@ -45,41 +46,41 @@ struct RelPosBiasGradient1DBase {
   struct Params {
     acc_t* d_bias;
     scalar_t* d_attn;
-    const int length;
-    const int heads;
-    const int kernel_size_in;
-    const int dilation_in;
-    const int batch_size;
-    const int num_threads;
-    const int64_t problem_size;
-    const int64_t attn_stride_0, attn_stride_1, attn_stride_2;
-    const int64_t bias_stride_0;
+    int32_t length;
+    int32_t heads;
+    int32_t kernel_size;
+    int32_t dilation;
+    int32_t batch_size;
+    int32_t num_threads;
+    int64_t problem_size;
+    int64_t attn_stride_0, attn_stride_1, attn_stride_2;
+    int64_t bias_stride_0;
 
     __device__ __host__ Params() {}
 
     __device__ __host__ Params(
         acc_t* d_bias,
         scalar_t* d_attn,
-        const int length,
-        const int heads,
-        const int kernel_size_in,
-        const int dilation_in,
-        const int batch_size,
-        const int64_t attn_stride_0,
-        const int64_t attn_stride_1,
-        const int64_t attn_stride_2,
-        const int64_t problem_size,
-        const int num_threads)
+        int32_t length,
+        int32_t heads,
+        int32_t kernel_size,
+        int32_t dilation,
+        int32_t batch_size,
+        int64_t attn_stride_0,
+        int64_t attn_stride_1,
+        int64_t attn_stride_2,
+        int64_t problem_size,
+        int32_t num_threads)
         : d_bias(d_bias),
           d_attn(d_attn),
           length(length),
           heads(heads),
-          kernel_size_in(kernel_size_in),
-          dilation_in(dilation_in),
+          kernel_size(kernel_size),
+          dilation(dilation),
           batch_size(batch_size),
           problem_size(problem_size),
           num_threads(num_threads),
-          bias_stride_0(2 * kernel_size_in - 1),
+          bias_stride_0(2 * kernel_size - 1),
           attn_stride_2(attn_stride_2),
           attn_stride_1(attn_stride_1),
           attn_stride_0(attn_stride_0) {}
@@ -87,14 +88,14 @@ struct RelPosBiasGradient1DBase {
 
   __device__ __host__ RelPosBiasGradient1DBase() {}
 
-  static LaunchParams get_launch_params(int n_threads) {
+  static LaunchParams get_launch_params(int32_t n_threads) {
     dim3 grid(GET_BLOCKS(n_threads, 64));
     dim3 block(64);
     return LaunchParams(grid, block);
   }
 };
 
-template <typename scalar_t, typename acc_t, int KS, int NS, int DILATION>
+template <typename scalar_t, typename acc_t>
 struct RelPosBiasGradient1DFull : RelPosBiasGradient1DBase<scalar_t, acc_t> {
   using Base = RelPosBiasGradient1DBase<scalar_t, acc_t>;
   using Params = typename Base::Params;
@@ -105,32 +106,30 @@ struct RelPosBiasGradient1DFull : RelPosBiasGradient1DBase<scalar_t, acc_t> {
   __device__ __host__ RelPosBiasGradient1DFull() : Base() {}
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    auto kernel_size_half = p.kernel_size / 2;
+    int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.num_threads) {
-      int indtmp1 = linearIndex / KERNEL_SIZE;
-      const int ki = linearIndex - indtmp1 * KERNEL_SIZE;
-      const int h = indtmp1 / p.length;
-      const int i = indtmp1 - h * p.length;
-      const int pi =
-          get_pb_start(i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+      int32_t indtmp1 = linearIndex / p.kernel_size;
+      auto ki = linearIndex - indtmp1 * p.kernel_size;
+      auto h = indtmp1 / p.length;
+      auto i = indtmp1 - h * p.length;
+      auto pi = get_pb_start(
+          i, p.length, p.kernel_size, kernel_size_half, p.dilation);
       acc_t d_rpb_update = acc_t(0);
       int64_t attnOffset = h * p.attn_stride_1 + i * p.attn_stride_2 + ki;
 #pragma unroll
-      for (int b = 0; b < p.batch_size; ++b) {
+      for (int32_t b = 0; b < p.batch_size; ++b) {
         d_rpb_update += static_cast<acc_t>(p.d_attn[attnOffset]);
         attnOffset += p.attn_stride_0;
       }
-      const int64_t index = h * p.bias_stride_0 + (pi + ki);
+      int64_t index = h * p.bias_stride_0 + (pi + ki);
       at::native::fastAtomicAdd(
           p.d_bias, index, p.problem_size, d_rpb_update, true);
     }
   }
 };
 
-template <typename scalar_t, typename acc_t, int KS, int NS, int DILATION>
+template <typename scalar_t, typename acc_t>
 struct RelPosBiasGradient1DHalf : RelPosBiasGradient1DBase<scalar_t, acc_t> {
   using Base = RelPosBiasGradient1DBase<scalar_t, acc_t>;
   using Params = typename Base::Params;
@@ -143,25 +142,23 @@ struct RelPosBiasGradient1DHalf : RelPosBiasGradient1DBase<scalar_t, acc_t> {
   using HalfHelper = typename HalfArray<scalar_t>::Base;
 
   __device__ void launch(Params p) {
-    const int KERNEL_SIZE = (KS > 1) ? KS : p.kernel_size_in;
-    const int NEIGHBORHOOD_SIZE = (NS > 0) ? NS : KERNEL_SIZE / 2;
-    const int dilation = (DILATION > 0) ? DILATION : p.dilation_in;
-    const int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    auto kernel_size_half = p.kernel_size / 2;
+    int64_t linearIndex = blockIdx.x * blockDim.x + threadIdx.x;
     if (linearIndex < p.num_threads) {
-      int indtmp1 = linearIndex / KERNEL_SIZE;
-      const int ki = linearIndex - indtmp1 * KERNEL_SIZE;
-      const int h = indtmp1 / p.length;
-      const int i = indtmp1 - h * p.length;
-      const int pi =
-          get_pb_start(i, p.length, KERNEL_SIZE, NEIGHBORHOOD_SIZE, dilation);
+      int32_t indtmp1 = linearIndex / p.kernel_size;
+      auto ki = linearIndex - indtmp1 * p.kernel_size;
+      auto h = indtmp1 / p.length;
+      auto i = indtmp1 - h * p.length;
+      auto pi = get_pb_start(
+          i, p.length, p.kernel_size, kernel_size_half, p.dilation);
       acc_t d_rpb_update = acc_t(0);
       int64_t attnOffset = h * p.attn_stride_1 + i * p.attn_stride_2 + ki;
 #pragma unroll
-      for (int b = 0; b < p.batch_size; ++b) {
+      for (int32_t b = 0; b < p.batch_size; ++b) {
         d_rpb_update += HalfHelper::to_float(p.d_attn[attnOffset]);
         attnOffset += p.attn_stride_0;
       }
-      const int64_t index = h * p.bias_stride_0 + (pi + ki);
+      int64_t index = h * p.bias_stride_0 + (pi + ki);
       at::native::fastAtomicAdd(
           p.d_bias, index, p.problem_size, d_rpb_update, true);
     }
@@ -171,42 +168,42 @@ struct RelPosBiasGradient1DHalf : RelPosBiasGradient1DBase<scalar_t, acc_t> {
 template <typename Args_>
 struct RelPosBiasGradient1D {
   using Args = Args_;
-  static constexpr int KS = Args::KernelSize;
-  static constexpr int NS = Args::NeighborhoodSize;
-  static constexpr int DILATION = Args::Dilation;
   using scalar_t = typename Args::Dtype;
+  using CausalMask = typename Args::CausalMask;
   using acc_t =
       typename std::conditional<sizeof(scalar_t) >= 4, scalar_t, float>::type;
   using Kernel = typename std::conditional<
       sizeof(scalar_t) >= 4,
-      RelPosBiasGradient1DFull<scalar_t, acc_t, KS, NS, DILATION>,
-      RelPosBiasGradient1DHalf<scalar_t, acc_t, KS, NS, DILATION>>::type;
+      RelPosBiasGradient1DFull<scalar_t, acc_t>,
+      RelPosBiasGradient1DHalf<scalar_t, acc_t>>::type;
   using Params = typename Kernel::Params;
 
+  static_assert(!CausalMask::Dim0, "PN+Bias does not support causal masking.");
+
   void operator()(
-      const int cc,
+      int32_t cc,
       cudaStream_t stream,
       void* d_bias_ptr,
       void* d_attn_ptr,
-      int batch_size,
-      int heads,
-      int length,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t length,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
-      int kernel_size,
-      int dilation) {
-    int num_threads = heads * length * kernel_size;
-    int64_t problem_size = heads * (2 * kernel_size - 1);
+      const std::tuple<int32_t>& kernel_size,
+      const std::tuple<int32_t>& dilation) {
+    int32_t num_threads = heads * length * natten::flatten(kernel_size);
+    int64_t problem_size = heads * (2 * std::get<0>(kernel_size) - 1);
     LaunchParams lp = Kernel::Base::get_launch_params(num_threads);
     auto params = Params(
         reinterpret_cast<acc_t*>(d_bias_ptr),
         reinterpret_cast<scalar_t*>(d_attn_ptr),
         length,
         heads,
-        kernel_size,
-        dilation,
+        std::get<0>(kernel_size),
+        std::get<0>(dilation),
         batch_size,
         attn_stride_0,
         attn_stride_1,

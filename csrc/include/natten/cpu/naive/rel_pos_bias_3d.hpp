@@ -37,7 +37,8 @@
 #include <ATen/cpu/vec/vec.h>
 #endif
 
-#include "natten/cpu/naive/natten_cpu_commons.h"
+#include <natten/cpu/naive/natten_cpu_commons.h>
+#include <natten/natten.h>
 
 namespace natten {
 namespace cpu {
@@ -50,21 +51,23 @@ struct RelPosBiasGradient3D {
   void operator()(
       void* d_bias_ptr,
       void* d_attn_ptr,
-      int batch_size,
-      int heads,
-      int depth,
-      int height,
-      int width,
-      int dim,
+      int32_t batch_size,
+      int32_t heads,
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t dim,
       int64_t attn_stride_0,
       int64_t attn_stride_1,
       int64_t attn_stride_2,
       int64_t attn_stride_3,
       int64_t attn_stride_4,
-      int kernel_size,
-      int kernel_size_depth,
-      int dilation,
-      int dilation_depth) {
+      const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+      const std::tuple<int32_t, int32_t, int32_t>& dilation,
+      const std::tuple<bool, bool, bool>& is_causal) {
+    NATTEN_CHECK(
+        !any_true(is_causal),
+        "Neighborhood attention with causal masking does not support positional biases yet.");
     launch(
         reinterpret_cast<scalar_t*>(d_bias_ptr),
         reinterpret_cast<scalar_t*>(d_attn_ptr),
@@ -72,10 +75,12 @@ struct RelPosBiasGradient3D {
         height,
         width,
         heads,
-        kernel_size,
-        kernel_size_depth,
-        dilation,
-        dilation_depth,
+        std::get<0>(kernel_size),
+        std::get<1>(kernel_size),
+        std::get<2>(kernel_size),
+        std::get<0>(dilation),
+        std::get<1>(dilation),
+        std::get<2>(dilation),
         batch_size,
         attn_stride_0,
         attn_stride_1,
@@ -87,49 +92,53 @@ struct RelPosBiasGradient3D {
   void launch(
       scalar_t* d_bias,
       scalar_t* d_attn,
-      const int depth,
-      const int height,
-      const int width,
-      const int heads,
-      const int kernel_size,
-      const int kernel_size_d,
-      const int dilation,
-      const int dilation_d,
-      const int batch_size,
-      const int64_t d_attn_stride_0,
-      const int64_t d_attn_stride_1,
-      const int64_t d_attn_stride_2,
-      const int64_t d_attn_stride_3,
-      const int64_t d_attn_stride_4) {
-    const int neighborhood_size = kernel_size / 2;
-    const int neighborhood_size_d = kernel_size_d / 2;
-    const int d_bias_stride_2 = (2 * kernel_size - 1);
-    const int d_bias_stride_1 = (2 * kernel_size - 1) * d_bias_stride_2;
-    const int d_bias_stride_0 = (2 * kernel_size_d - 1) * d_bias_stride_1;
-    at::parallel_for(0, heads, GRAIN_SIZE, [&](int start, int end) {
-      for (int h = start; h < end; h++) {
-        for (int k = 0; k < depth; k++) {
-          const int pk = get_pb_start(
-              k, depth, kernel_size_d, neighborhood_size_d, dilation_d);
-          for (int i = 0; i < height; i++) {
-            const int pi = get_pb_start(
-                i, height, kernel_size, neighborhood_size, dilation);
-            for (int j = 0; j < width; j++) {
-              const int pj = get_pb_start(
-                  j, width, kernel_size, neighborhood_size, dilation);
-              for (int kk = 0; kk < kernel_size_d; kk++) {
-                for (int ki = 0; ki < kernel_size; ki++) {
-                  for (int kj = 0; kj < kernel_size; kj++) {
+      int32_t depth,
+      int32_t height,
+      int32_t width,
+      int32_t heads,
+      int32_t kernel_size_0,
+      int32_t kernel_size_1,
+      int32_t kernel_size_2,
+      int32_t dilation_0,
+      int32_t dilation_1,
+      int32_t dilation_2,
+      int32_t batch_size,
+      int64_t d_attn_stride_0,
+      int64_t d_attn_stride_1,
+      int64_t d_attn_stride_2,
+      int64_t d_attn_stride_3,
+      int64_t d_attn_stride_4) {
+    auto neighborhood_size_0 = kernel_size_0 / 2;
+    auto neighborhood_size_1 = kernel_size_1 / 2;
+    auto neighborhood_size_2 = kernel_size_2 / 2;
+    int64_t d_bias_stride_2 = (2 * kernel_size_2 - 1);
+    int64_t d_bias_stride_1 = (2 * kernel_size_1 - 1) * d_bias_stride_2;
+    int64_t d_bias_stride_0 = (2 * kernel_size_0 - 1) * d_bias_stride_1;
+    at::parallel_for(0, heads, GRAIN_SIZE, [&](int32_t start, int32_t end) {
+      for (int32_t h = start; h < end; h++) {
+        for (int32_t k = 0; k < depth; k++) {
+          auto pk = get_pb_start(
+              k, depth, kernel_size_0, neighborhood_size_0, dilation_0);
+          for (int32_t i = 0; i < height; i++) {
+            auto pi = get_pb_start(
+                i, height, kernel_size_1, neighborhood_size_1, dilation_1);
+            for (int32_t j = 0; j < width; j++) {
+              auto pj = get_pb_start(
+                  j, width, kernel_size_2, neighborhood_size_2, dilation_2);
+              for (int32_t kk = 0; kk < kernel_size_0; kk++) {
+                for (int32_t ki = 0; ki < kernel_size_1; ki++) {
+                  for (int32_t kj = 0; kj < kernel_size_2; kj++) {
                     scalar_t d_bias_update = scalar_t(0);
-                    int64_t attnOffset = h * d_attn_stride_1 + k * d_attn_stride_2 +
-                        i * d_attn_stride_3 + j * d_attn_stride_4 +
-                        kk * (kernel_size * kernel_size) + ki * kernel_size +
-                        kj;
-                    for (int b = 0; b < batch_size; ++b) {
+                    int64_t attnOffset = h * d_attn_stride_1 +
+                        k * d_attn_stride_2 + i * d_attn_stride_3 +
+                        j * d_attn_stride_4 +
+                        kk * (kernel_size_1 * kernel_size_2) +
+                        ki * kernel_size_2 + kj;
+                    for (int32_t b = 0; b < batch_size; ++b) {
                       d_bias_update += d_attn[attnOffset];
                       attnOffset += d_attn_stride_0;
                     }
-                    const int64_t index = h * d_bias_stride_0 +
+                    int64_t index = h * d_bias_stride_0 +
                         (pk + kk) * d_bias_stride_1 +
                         (pi + ki) * d_bias_stride_2 + (pj + kj);
                     d_bias[index] += d_bias_update;

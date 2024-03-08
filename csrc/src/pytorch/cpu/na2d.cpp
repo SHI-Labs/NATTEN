@@ -27,26 +27,49 @@
 #include <ATen/ATen.h>
 #include <torch/extension.h>
 
-#include "natten/cpu/na2d.h"
-#include "natten/dtypes.h"
-#include "natten/pytorch/cpu/helpers.h"
+#include <natten/cpu/na2d.h>
+#include <natten/dtypes.h>
+#include <natten/natten.h>
+#include <natten/pytorch/cpu/helpers.h>
 
 namespace natten {
 namespace pytorch {
 namespace cpu {
+
+void na2d_forward(
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    at::Tensor& out,
+    const at::optional<at::Tensor>& rpb,
+    int32_t batch_size,
+    int32_t height,
+    int32_t width,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t>& key_tile_size) {
+  // TODO: implement CPU reference
+  NATTEN_FAILURE("Fused kernels are not available on CPU yet.");
+}
 
 void na2d_qk_forward(
     const at::Tensor& query,
     const at::Tensor& key,
     const at::optional<at::Tensor>& bias,
     at::Tensor& attn,
-    const int batch_size,
-    const int heads,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
   DISPATCH_DTYPE(
       query.scalar_type(),
       natten::cpu::na2d_qk_forward,
@@ -64,7 +87,8 @@ void na2d_qk_forward(
       attn.stride(2),
       attn.stride(3),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na2d_qk_backward(
@@ -74,13 +98,14 @@ void na2d_qk_backward(
     at::Tensor& d_query,
     at::Tensor& d_key,
     at::optional<at::Tensor>& d_bias,
-    const int batch_size,
-    const int heads,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
   DISPATCH_DTYPE(
       d_attn.scalar_type(),
       natten::cpu::na2d_qk_backward,
@@ -101,20 +126,22 @@ void na2d_qk_backward(
       d_attn.stride(2),
       d_attn.stride(3),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na2d_av_forward(
     const at::Tensor& attn,
     const at::Tensor& value,
     at::Tensor& output,
-    const int batch_size,
-    const int heads,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
   DISPATCH_DTYPE(
       attn.scalar_type(),
       natten::cpu::na2d_av_forward,
@@ -131,7 +158,8 @@ void na2d_av_forward(
       attn.stride(2),
       attn.stride(3),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 void na2d_av_backward(
@@ -140,13 +168,14 @@ void na2d_av_backward(
     const at::Tensor& value,
     at::Tensor& d_attn,
     at::Tensor& d_value,
-    const int batch_size,
-    const int heads,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation) {
+    int32_t batch_size,
+    int32_t heads,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal) {
   DISPATCH_DTYPE(
       d_out.scalar_type(),
       natten::cpu::na2d_av_backward,
@@ -165,7 +194,8 @@ void na2d_av_backward(
       attn.stride(2),
       attn.stride(3),
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 } // namespace cpu

@@ -60,6 +60,51 @@ namespace gemm {
     else if (kernel_size == 33) { \
       DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks33(dim, __VA_ARGS__); \
     } \
+    else if (kernel_size == 35) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks35(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 37) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks37(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 39) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks39(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 41) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks41(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 43) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks43(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 45) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks45(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 47) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks47(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 49) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks49(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 51) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks51(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 53) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks53(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 55) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks55(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 57) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks57(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 59) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks59(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 61) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks61(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 63) { \
+      DISPATCH_ALIGNMENT_na2d_pn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks63(dim, __VA_ARGS__); \
+    } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
                 << "na2d_pn_cuda_gemm_sm70_half does not support implement " \
@@ -121,6 +166,51 @@ namespace gemm {
     else if (kernel_size == 33) { \
       DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks33(dim, __VA_ARGS__); \
     } \
+    else if (kernel_size == 35) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks35(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 37) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks37(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 39) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks39(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 41) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks41(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 43) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks43(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 45) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks45(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 47) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks47(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 49) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks49(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 51) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks51(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 53) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks53(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 55) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks55(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 57) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks57(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 59) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks59(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 61) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks61(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 63) { \
+      DISPATCH_ALIGNMENT_na2d_nn_cuda_gemm_half_128x128x32_64x64x32_8x8x4_2_sm70_ks63(dim, __VA_ARGS__); \
+    } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \
                 << "na2d_nn_cuda_gemm_sm70_half does not support implement " \
@@ -181,6 +271,51 @@ namespace gemm {
     } \
     else if (kernel_size == 33) { \
       DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks33(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 35) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks35(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 37) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks37(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 39) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks39(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 41) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks41(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 43) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks43(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 45) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks45(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 47) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks47(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 49) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks49(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 51) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks51(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 53) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks53(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 55) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks55(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 57) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks57(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 59) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks59(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 61) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks61(dim, __VA_ARGS__); \
+    } \
+    else if (kernel_size == 63) { \
+      DISPATCH_ALIGNMENT_na2d_in_cuda_gemm_half_64x64x32_32x32x32_8x8x4_2_sm70_ks63(dim, __VA_ARGS__); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed! " \

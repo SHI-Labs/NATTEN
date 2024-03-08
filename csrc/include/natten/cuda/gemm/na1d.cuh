@@ -33,13 +33,13 @@
 #include <cutlass/cutlass.h>
 #include <cutlass/gemm/device/gemm.h>
 
+#include <natten/cuda/utils/cutlass.h>
 #include <natten/cuda/gemm/device/implicit_gemm_na1d.cuh>
 #include <natten/cuda/gemm/kernel/default_na1d_in.cuh>
 #include <natten/cuda/gemm/kernel/default_na1d_nn.cuh>
 #include <natten/cuda/gemm/kernel/default_na1d_pn.cuh>
 #include <natten/cuda/gemm/neighborhood_attention.cuh>
 #include <natten/cuda/gemm/threadblock/threadblock_swizzle.cuh>
-#include <natten/cuda/gemm/utils.cuh>
 
 namespace natten {
 namespace cuda {
@@ -93,13 +93,13 @@ struct NA1DLauncher {
     DeviceKernel gemm;
 
     cutlass::Status status = gemm.can_implement(arguments);
-    CUTLASS_CHECK(status);
+    NATTEN_CUTLASS_CHECK(status);
 
     status = gemm.initialize(arguments, nullptr, stream);
-    CUTLASS_CHECK(status);
+    NATTEN_CUTLASS_CHECK(status);
 
     status = gemm(stream);
-    CUTLASS_CHECK(status);
+    NATTEN_CUTLASS_CHECK(status);
   }
 
  public:

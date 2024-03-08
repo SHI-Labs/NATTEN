@@ -33,13 +33,13 @@
 #include <cutlass/cutlass.h>
 #include <cutlass/gemm/device/gemm.h>
 
+#include <natten/cuda/utils/cutlass.h>
 #include <natten/cuda/gemm/device/implicit_gemm_na2d.cuh>
 #include <natten/cuda/gemm/kernel/default_na2d_in.cuh>
 #include <natten/cuda/gemm/kernel/default_na2d_nn.cuh>
 #include <natten/cuda/gemm/kernel/default_na2d_pn.cuh>
 #include <natten/cuda/gemm/neighborhood_attention.cuh>
 #include <natten/cuda/gemm/threadblock/threadblock_swizzle.cuh>
-#include <natten/cuda/gemm/utils.cuh>
 
 namespace natten {
 namespace cuda {
@@ -93,13 +93,13 @@ struct NA2DLauncher {
     DeviceKernel gemm;
 
     cutlass::Status status = gemm.can_implement(arguments);
-    CUTLASS_CHECK(status);
+    NATTEN_CUTLASS_CHECK(status);
 
     status = gemm.initialize(arguments, nullptr, stream);
-    CUTLASS_CHECK(status);
+    NATTEN_CUTLASS_CHECK(status);
 
     status = gemm(stream);
-    CUTLASS_CHECK(status);
+    NATTEN_CUTLASS_CHECK(status);
   }
 
  public:
@@ -251,7 +251,8 @@ struct PointwiseNeighborhood2D {
     // PN refs
     auto layout_ab = LayoutOperand(
         dim, dim * width, dim * height * width, dim * height * width * heads);
-    auto layout_c = LayoutOperand(attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
+    auto layout_c = LayoutOperand(
+        attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
     auto ref_a = RefOperand(static_cast<ElementOperand*>(ptr_query), layout_ab);
     auto ref_b = RefOperand(static_cast<ElementOperand*>(ptr_key), layout_ab);
     auto ref_c = RefOutput(static_cast<ElementOutput*>(ptr_attn), layout_c);
@@ -374,7 +375,8 @@ struct NeighborhoodNeighborhood2D {
       const float scale,
       cudaStream_t stream) {
     // NN refs
-    auto layout_a = LayoutOperand(attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
+    auto layout_a = LayoutOperand(
+        attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
     auto layout_bc = LayoutOperand(
         dim, dim * width, dim * height * width, dim * height * width * heads);
     auto ref_a = RefOperand(static_cast<ElementOperand*>(ptr_attn), layout_a);
@@ -477,7 +479,8 @@ struct InverseNeighborhood2D {
       const float scale,
       cudaStream_t stream) {
     // IN refs
-    auto layout_a = LayoutOperand(attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
+    auto layout_a = LayoutOperand(
+        attn_stride_3, attn_stride_2, attn_stride_1, attn_stride_0);
     auto layout_bc = LayoutOperand(
         dim, dim * width, dim * height * width, dim * height * width * heads);
     auto ref_a = RefOperand(static_cast<ElementOperand*>(ptr_attn), layout_a);

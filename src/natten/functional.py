@@ -38,6 +38,8 @@ except ImportError:
         " correct torch build: shi-labs.com/natten ."
     )
 
+from .autotuner import autotune_fna, disable_autotuner, enable_autotuner
+from .fna import disable_fna, enable_fna, is_fna_enabled
 from .nested import (
     na1d_av_nested,
     na1d_qk_nested,
@@ -52,12 +54,22 @@ from .ops import (
     qk_cross_backward,
     qk_cross_forward,
 )
-from .utils.tensor import (
+from .utils import (
     check_additional_keys,
     check_additional_values,
+    check_all_args,
+    check_tiling_config,
+    get_num_na_weights,
     make_attn_tensor_from_input,
 )
 from .utils.typing import NoneType
+
+
+disable_autotuner = disable_autotuner
+enable_autotuner = enable_autotuner
+is_fna_enabled = is_fna_enabled
+disable_fused_na = disable_fna
+enable_fused_na = enable_fna
 
 
 def get_device_cc(device_index: Optional[_device_t] = None) -> int:
@@ -90,6 +102,10 @@ has_fp32_gemm = has_tf32_gemm
 
 def has_fp64_gemm(device_index: Optional[_device_t] = None) -> bool:
     return has_cuda() and get_device_cc(device_index) >= 80 and libnatten.has_gemm()
+
+
+def has_fna(device_index: Optional[_device_t] = None) -> bool:
+    return has_cuda() and get_device_cc(device_index) >= 50 and libnatten.has_gemm()
 
 
 def enable_tf32() -> bool:
@@ -129,17 +145,27 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         ctx,
         query: Tensor,
         key: Tensor,
-        bias: Optional[Tensor],
+        rpb: Optional[Tensor],
         additional_key: Optional[Tensor],
-        kernel_size: int,
-        dilation: int,
+        kernel_size: int | Tuple[int],
+        dilation: int | Tuple[int],
+        is_causal: bool | Tuple[bool],
     ) -> Tensor:
-        num_na_weights = kernel_size
+        kernel_size, dilation, is_causal = check_all_args(
+            1, kernel_size, dilation, is_causal
+        )
+        num_na_weights = get_num_na_weights(kernel_size)
+
+        if any(is_causal) and rpb is not None:
+            raise NotImplementedError(
+                "Positional biases for causal neighborhood attention is not yet implemented."
+            )
+
         query = query.contiguous()
         key = key.contiguous()
         n_additional_tokens = check_additional_keys(query, additional_key)
-        if bias is not None:
-            bias = bias.to(key.dtype)
+        if rpb is not None:
+            rpb = rpb.to(key.dtype)
         attn = make_attn_tensor_from_input(query, num_na_weights + n_additional_tokens)
         attn_na, attn_add = attn.split(
             [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
@@ -149,10 +175,13 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
             assert additional_key is not None and attn_add.numel() > 0
             qk_cross_forward(query, additional_key, attn_add)
 
-        libnatten.na1d_qk_forward(attn_na, query, key, bias, kernel_size, dilation)
-        ctx.save_for_backward(query, key, bias, additional_key)
+        libnatten.na1d_qk_forward(
+            attn_na, query, key, rpb, kernel_size, dilation, is_causal
+        )
+        ctx.save_for_backward(query, key, rpb, additional_key)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
+        ctx.is_causal = is_causal
 
         return attn
 
@@ -163,15 +192,21 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
-        num_na_weights = ctx.kernel_size
-        assert len(grad_inputs) == 6
+        if any(ctx.is_causal):
+            raise ValueError(
+                "Causal neighborhood attention doesn't support forward mode "
+                "auto-diff yet."
+            )
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        assert len(grad_inputs) == 7
         query_t: Tensor = grad_inputs[0]
         key_t: Tensor = grad_inputs[1]
-        bias: Optional[Tensor] = grad_inputs[2]
+        rpb: Optional[Tensor] = grad_inputs[2]
         additional_key_t: Optional[Tensor] = grad_inputs[3]
         n_additional_tokens = check_additional_keys(query_t, additional_key_t)
 
-        if bias is not None:
+        if rpb is not None:
             raise ValueError(
                 "Positional biases are currently not supported "
                 "in forward mode autodiff."
@@ -206,10 +241,22 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
             qk_cross_forward(query_p, additional_key_t, attn_add_1)
 
         libnatten.na1d_qk_forward(
-            attn_na_0, query_t, key_p, None, ctx.kernel_size, ctx.dilation
+            attn_na_0,
+            query_t,
+            key_p,
+            None,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
         libnatten.na1d_qk_forward(
-            attn_na_1, query_p, key_t, None, ctx.kernel_size, ctx.dilation
+            attn_na_1,
+            query_p,
+            key_t,
+            None,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
 
         return attn_0 + attn_1
@@ -218,13 +265,16 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
     @custom_bwd
     def backward(
         ctx, grad_out: Tensor
-    ) -> Tuple[Tensor, Tensor, Optional[Tensor], Optional[Tensor], NoneType, NoneType]:
-        num_na_weights = ctx.kernel_size
-        query, key, bias, additional_key = ctx.saved_tensors
+    ) -> Tuple[
+        Tensor, Tensor, Optional[Tensor], Optional[Tensor], NoneType, NoneType, NoneType
+    ]:
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        query, key, rpb, additional_key = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
-        # d_bias has to be zero filled
-        d_bias = None if bias is None else torch.zeros_like(bias)
+        # d_rpb has to be zero filled
+        d_rpb = None if rpb is None else torch.zeros_like(rpb)
         d_additional_key = None
         n_additional_tokens = check_additional_keys(query, additional_key)
         d_query_add_key = None
@@ -244,18 +294,19 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         libnatten.na1d_qk_backward(
             d_query,
             d_key,
-            d_bias,
+            d_rpb,
             d_attn_na,
             query,
             key,
             ctx.kernel_size,
             ctx.dilation,
+            ctx.is_causal,
         )
 
         if d_query_add_key is not None:
             d_query += d_query_add_key
 
-        return d_query, d_key, d_bias, d_additional_key, None, None
+        return d_query, d_key, d_rpb, d_additional_key, None, None, None
 
 
 class NeighborhoodAttention1DAVAutogradFunction(Function):
@@ -266,11 +317,16 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         attn: Tensor,
         value: Tensor,
         additional_value: Optional[Tensor],
-        kernel_size: int,
-        dilation: int,
+        kernel_size: int | Tuple[int],
+        dilation: int | Tuple[int],
+        is_causal: bool | Tuple[bool],
     ):
-        num_na_weights = kernel_size
+        kernel_size, dilation, is_causal = check_all_args(
+            1, kernel_size, dilation, is_causal
+        )
+        num_na_weights = get_num_na_weights(kernel_size)
         attn = attn.to(value.dtype)
+
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
@@ -286,11 +342,12 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
             out_add = torch.empty_like(out)
             av_cross_forward(attn_add, additional_value, out_add)
 
-        libnatten.na1d_av_forward(out, attn_na, value, kernel_size, dilation)
+        libnatten.na1d_av_forward(out, attn_na, value, kernel_size, dilation, is_causal)
 
         ctx.save_for_backward(attn, value, additional_value)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
+        ctx.is_causal = is_causal
 
         if out_add is not None:
             out += out_add
@@ -304,8 +361,14 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
-        num_na_weights = ctx.kernel_size
-        assert len(grad_inputs) == 5
+        if any(ctx.is_causal):
+            raise ValueError(
+                "Causal neighborhood attention doesn't support forward mode "
+                "auto-diff yet."
+            )
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        assert len(grad_inputs) == 6
         attn_t: Tensor = grad_inputs[0]
         value_t: Tensor = grad_inputs[1]
         additional_value_t: Optional[Tensor] = grad_inputs[2]
@@ -343,10 +406,20 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
             av_cross_forward(attn_add_p, additional_value_t, out_1_add)
 
         libnatten.na1d_av_forward(
-            out_0, attn_na_t, value_p, ctx.kernel_size, ctx.dilation
+            out_0,
+            attn_na_t,
+            value_p,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
         libnatten.na1d_av_forward(
-            out_1, attn_na_p, value_t, ctx.kernel_size, ctx.dilation
+            out_1,
+            attn_na_p,
+            value_t,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
 
         if out_0_add is not None and out_1_add is not None:
@@ -361,8 +434,9 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
     @custom_bwd
     def backward(
         ctx, grad_out: Tensor
-    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType]:
-        num_na_weights = ctx.kernel_size
+    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType]:
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
         attn, value, additional_value = ctx.saved_tensors
         d_out = grad_out.contiguous()
         d_attn = torch.empty_like(attn)
@@ -394,9 +468,10 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
             value,
             ctx.kernel_size,
             ctx.dilation,
+            ctx.is_causal,
         )
 
-        return d_attn, d_value, d_additional_value, None, None
+        return d_attn, d_value, d_additional_value, None, None, None
 
 
 class NeighborhoodAttention2DQKAutogradFunction(Function):
@@ -406,17 +481,27 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         ctx,
         query: Tensor,
         key: Tensor,
-        bias: Optional[Tensor],
+        rpb: Optional[Tensor],
         additional_key: Optional[Tensor],
-        kernel_size: int,
-        dilation: int,
+        kernel_size: int | Tuple[int, int],
+        dilation: int | Tuple[int, int],
+        is_causal: bool | Tuple[bool, bool],
     ):
-        num_na_weights = kernel_size**2
+        kernel_size, dilation, is_causal = check_all_args(
+            2, kernel_size, dilation, is_causal
+        )
+        num_na_weights = get_num_na_weights(kernel_size)
+
+        if any(is_causal) and rpb is not None:
+            raise NotImplementedError(
+                "Positional biases for causal neighborhood attention is not yet implemented."
+            )
+
         query = query.contiguous()
         key = key.contiguous()
         n_additional_tokens = check_additional_keys(query, additional_key)
-        if bias is not None:
-            bias = bias.to(key.dtype)
+        if rpb is not None:
+            rpb = rpb.to(key.dtype)
         attn = make_attn_tensor_from_input(query, num_na_weights + n_additional_tokens)
         attn_na, attn_add = attn.split(
             [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
@@ -426,10 +511,13 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
             assert additional_key is not None and attn_add.numel() > 0
             qk_cross_forward(query, additional_key, attn_add)
 
-        libnatten.na2d_qk_forward(attn_na, query, key, bias, kernel_size, dilation)
-        ctx.save_for_backward(query, key, bias, additional_key)
+        libnatten.na2d_qk_forward(
+            attn_na, query, key, rpb, kernel_size, dilation, is_causal
+        )
+        ctx.save_for_backward(query, key, rpb, additional_key)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
+        ctx.is_causal = is_causal
 
         return attn
 
@@ -440,15 +528,21 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
-        num_na_weights = ctx.kernel_size**2
-        assert len(grad_inputs) == 6
+        if any(ctx.is_causal):
+            raise ValueError(
+                "Causal neighborhood attention doesn't support forward mode "
+                "auto-diff yet."
+            )
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        assert len(grad_inputs) == 7
         query_t: Tensor = grad_inputs[0]
         key_t: Tensor = grad_inputs[1]
-        bias: Optional[Tensor] = grad_inputs[2]
+        rpb: Optional[Tensor] = grad_inputs[2]
         additional_key_t: Optional[Tensor] = grad_inputs[3]
         n_additional_tokens = check_additional_keys(query_t, additional_key_t)
 
-        if bias is not None:
+        if rpb is not None:
             raise ValueError(
                 "Positional biases are currently not supported "
                 "in forward mode autodiff."
@@ -483,10 +577,22 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
             qk_cross_forward(query_p, additional_key_t, attn_add_1)
 
         libnatten.na2d_qk_forward(
-            attn_na_0, query_t, key_p, None, ctx.kernel_size, ctx.dilation
+            attn_na_0,
+            query_t,
+            key_p,
+            None,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
         libnatten.na2d_qk_forward(
-            attn_na_1, query_p, key_t, None, ctx.kernel_size, ctx.dilation
+            attn_na_1,
+            query_p,
+            key_t,
+            None,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
         return attn_0 + attn_1
 
@@ -494,13 +600,16 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
     @custom_bwd
     def backward(
         ctx, grad_out: Tensor
-    ) -> Tuple[Tensor, Tensor, Optional[Tensor], Optional[Tensor], NoneType, NoneType]:
-        num_na_weights = ctx.kernel_size**2
-        query, key, bias, additional_key = ctx.saved_tensors
+    ) -> Tuple[
+        Tensor, Tensor, Optional[Tensor], Optional[Tensor], NoneType, NoneType, NoneType
+    ]:
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        query, key, rpb, additional_key = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
         # d_bias has to be zero filled
-        d_bias = None if bias is None else torch.zeros_like(bias)
+        d_bias = None if rpb is None else torch.zeros_like(rpb)
         d_additional_key = None
         n_additional_tokens = check_additional_keys(query, additional_key)
         d_query_add_key = None
@@ -526,12 +635,13 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
             key,
             ctx.kernel_size,
             ctx.dilation,
+            ctx.is_causal,
         )
 
         if d_query_add_key is not None:
             d_query += d_query_add_key
 
-        return d_query, d_key, d_bias, d_additional_key, None, None
+        return d_query, d_key, d_bias, d_additional_key, None, None, None
 
 
 class NeighborhoodAttention2DAVAutogradFunction(Function):
@@ -542,11 +652,16 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         attn: Tensor,
         value: Tensor,
         additional_value: Optional[Tensor],
-        kernel_size: int,
-        dilation: int,
+        kernel_size: int | Tuple[int, int],
+        dilation: int | Tuple[int, int],
+        is_causal: bool | Tuple[bool, bool],
     ) -> Tensor:
-        num_na_weights = kernel_size**2
+        kernel_size, dilation, is_causal = check_all_args(
+            2, kernel_size, dilation, is_causal
+        )
+        num_na_weights = get_num_na_weights(kernel_size)
         attn = attn.to(value.dtype)
+
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
@@ -562,11 +677,12 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
             out_add = torch.empty_like(out)
             av_cross_forward(attn_add, additional_value, out_add)
 
-        libnatten.na2d_av_forward(out, attn_na, value, kernel_size, dilation)
+        libnatten.na2d_av_forward(out, attn_na, value, kernel_size, dilation, is_causal)
 
         ctx.save_for_backward(attn, value, additional_value)
         ctx.kernel_size = kernel_size
         ctx.dilation = dilation
+        ctx.is_causal = is_causal
 
         if out_add is not None:
             out += out_add
@@ -580,8 +696,14 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
-        num_na_weights = ctx.kernel_size**2
-        assert len(grad_inputs) == 5
+        if any(ctx.is_causal):
+            raise ValueError(
+                "Causal neighborhood attention doesn't support forward mode "
+                "auto-diff yet."
+            )
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        assert len(grad_inputs) == 6
         attn_t: Tensor = grad_inputs[0]
         value_t: Tensor = grad_inputs[1]
         additional_value_t: Optional[Tensor] = grad_inputs[2]
@@ -619,10 +741,20 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
             av_cross_forward(attn_add_p, additional_value_t, out_1_add)
 
         libnatten.na2d_av_forward(
-            out_0, attn_na_t, value_p, ctx.kernel_size, ctx.dilation
+            out_0,
+            attn_na_t,
+            value_p,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
         libnatten.na2d_av_forward(
-            out_1, attn_na_p, value_t, ctx.kernel_size, ctx.dilation
+            out_1,
+            attn_na_p,
+            value_t,
+            ctx.kernel_size,
+            ctx.dilation,
+            ctx.is_causal,
         )
 
         if out_0_add is not None and out_1_add is not None:
@@ -637,8 +769,9 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
     @custom_bwd
     def backward(
         ctx, grad_out: Tensor
-    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType]:
-        num_na_weights = ctx.kernel_size**2
+    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType]:
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
         attn, value, additional_value = ctx.saved_tensors
         d_out = grad_out.contiguous()
         d_attn = torch.empty_like(attn)
@@ -670,9 +803,10 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
             value,
             ctx.kernel_size,
             ctx.dilation,
+            ctx.is_causal,
         )
 
-        return d_attn, d_value, d_additional_value, None, None
+        return d_attn, d_value, d_additional_value, None, None, None
 
 
 class NeighborhoodAttention3DQKAutogradFunction(Function):
@@ -682,19 +816,27 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         ctx,
         query: Tensor,
         key: Tensor,
-        bias: Optional[Tensor],
+        rpb: Optional[Tensor],
         additional_key: Optional[Tensor],
-        kernel_size_d: int,
-        kernel_size: int,
-        dilation_d: int,
-        dilation: int,
+        kernel_size: int | Tuple[int, int, int],
+        dilation: int | Tuple[int, int, int],
+        is_causal: bool | Tuple[bool, bool, bool],
     ) -> Tensor:
-        num_na_weights = kernel_size_d * kernel_size * kernel_size
+        kernel_size, dilation, is_causal = check_all_args(
+            3, kernel_size, dilation, is_causal
+        )
+        num_na_weights = get_num_na_weights(kernel_size)
+
+        if any(is_causal) and rpb is not None:
+            raise NotImplementedError(
+                "Positional biases for causal neighborhood attention is not yet implemented."
+            )
+
         query = query.contiguous()
         key = key.contiguous()
         n_additional_tokens = check_additional_keys(query, additional_key)
-        if bias is not None:
-            bias = bias.to(key.dtype)
+        if rpb is not None:
+            rpb = rpb.to(key.dtype)
         attn = make_attn_tensor_from_input(query, num_na_weights + n_additional_tokens)
         attn_na, attn_add = attn.split(
             [num_na_weights, attn.shape[-1] - num_na_weights], dim=-1
@@ -705,14 +847,19 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             qk_cross_forward(query, additional_key, attn_add)
 
         libnatten.na3d_qk_forward(
-            attn_na, query, key, bias, kernel_size, dilation, kernel_size_d, dilation_d
+            attn_na,
+            query,
+            key,
+            rpb,
+            kernel_size,
+            dilation,
+            is_causal,
         )
 
-        ctx.save_for_backward(query, key, bias, additional_key)
-        ctx.kernel_size_d = kernel_size_d
+        ctx.save_for_backward(query, key, rpb, additional_key)
         ctx.kernel_size = kernel_size
-        ctx.dilation_d = dilation_d
         ctx.dilation = dilation
+        ctx.is_causal = is_causal
 
         return attn
 
@@ -723,15 +870,21 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         The Jacobian vector product of the QK operation is:
         qk(query.tangent, key.primal) + qk(query.primal, key.tangent)
         """
-        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
-        assert len(grad_inputs) == 8
+        if any(ctx.is_causal):
+            raise ValueError(
+                "Causal neighborhood attention doesn't support forward mode "
+                "auto-diff yet."
+            )
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        assert len(grad_inputs) == 7
         query_t: Tensor = grad_inputs[0]
         key_t: Tensor = grad_inputs[1]
-        bias: Optional[Tensor] = grad_inputs[2]
+        rpb: Optional[Tensor] = grad_inputs[2]
         additional_key_t: Optional[Tensor] = grad_inputs[3]
         n_additional_tokens = check_additional_keys(query_t, additional_key_t)
 
-        if bias is not None:
+        if rpb is not None:
             raise ValueError(
                 "Positional biases are currently not supported "
                 "in forward mode autodiff."
@@ -771,8 +924,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             None,
             ctx.kernel_size,
             ctx.dilation,
-            ctx.kernel_size_d,
-            ctx.dilation_d,
+            ctx.is_causal,
         )
         libnatten.na3d_qk_forward(
             attn_na_1,
@@ -781,8 +933,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             None,
             ctx.kernel_size,
             ctx.dilation,
-            ctx.kernel_size_d,
-            ctx.dilation_d,
+            ctx.is_causal,
         )
         return attn_0 + attn_1
 
@@ -796,14 +947,14 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         NoneType,
         NoneType,
         NoneType,
-        NoneType,
     ]:
-        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
-        query, key, bias, additional_key = ctx.saved_tensors
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        query, key, rpb, additional_key = ctx.saved_tensors
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
         # d_bias has to be zero filled
-        d_bias = None if bias is None else torch.zeros_like(bias)
+        d_bias = None if rpb is None else torch.zeros_like(rpb)
         d_additional_key = None
         n_additional_tokens = check_additional_keys(query, additional_key)
         d_query_add_key = None
@@ -829,14 +980,13 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
             key,
             ctx.kernel_size,
             ctx.dilation,
-            ctx.kernel_size_d,
-            ctx.dilation_d,
+            ctx.is_causal,
         )
 
         if d_query_add_key is not None:
             d_query += d_query_add_key
 
-        return d_query, d_key, d_bias, d_additional_key, None, None, None, None
+        return d_query, d_key, d_bias, d_additional_key, None, None, None
 
 
 class NeighborhoodAttention3DAVAutogradFunction(Function):
@@ -847,13 +997,16 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         attn: Tensor,
         value: Tensor,
         additional_value: Optional[Tensor],
-        kernel_size_d: int,
-        kernel_size: int,
-        dilation_d: int,
-        dilation: int,
+        kernel_size: int | Tuple[int, int, int],
+        dilation: int | Tuple[int, int, int],
+        is_causal: bool | Tuple[bool, bool, bool],
     ) -> Tensor:
-        num_na_weights = kernel_size_d * kernel_size * kernel_size
+        kernel_size, dilation, is_causal = check_all_args(
+            3, kernel_size, dilation, is_causal
+        )
+        num_na_weights = get_num_na_weights(kernel_size)
         attn = attn.to(value.dtype)
+
         value = value.contiguous()
         out = torch.empty_like(value)
         out_add = None
@@ -870,14 +1023,18 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
             av_cross_forward(attn_add, additional_value, out_add)
 
         libnatten.na3d_av_forward(
-            out, attn_na, value, kernel_size, dilation, kernel_size_d, dilation_d
+            out,
+            attn_na,
+            value,
+            kernel_size,
+            dilation,
+            is_causal,
         )
 
         ctx.save_for_backward(attn, value, additional_value)
-        ctx.kernel_size_d = kernel_size_d
         ctx.kernel_size = kernel_size
-        ctx.dilation_d = dilation_d
         ctx.dilation = dilation
+        ctx.is_causal = is_causal
 
         if out_add is not None:
             out += out_add
@@ -891,8 +1048,14 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         The Jacobian vector product of the AV operation is:
         av(attn.tangent, value.primal) + av(attn.primal, value.tangent)
         """
-        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
-        assert len(grad_inputs) == 7
+        if any(ctx.is_causal):
+            raise ValueError(
+                "Causal neighborhood attention doesn't support forward mode "
+                "auto-diff yet."
+            )
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
+
+        assert len(grad_inputs) == 6
         attn_t: Tensor = grad_inputs[0]
         value_t: Tensor = grad_inputs[1]
         additional_value_t: Optional[Tensor] = grad_inputs[2]
@@ -924,12 +1087,8 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         )
         if n_additional_tokens:
             assert additional_value_p is not None and additional_value_t is not None
-            attn_add_t = attn_t[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
-            attn_add_p = attn_p[
-                :, :, :, :, :, ctx.kernel_size * ctx.kernel_size * ctx.kernel_size_d :
-            ]
+            attn_add_t = attn_t[:, :, :, :, :, num_na_weights:]
+            attn_add_p = attn_p[:, :, :, :, :, num_na_weights:]
             out_0_add, out_1_add = torch.empty_like(out_0), torch.empty_like(out_1)
             av_cross_forward(attn_add_t, additional_value_p, out_0_add)
             av_cross_forward(attn_add_p, additional_value_t, out_1_add)
@@ -940,8 +1099,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
             value_p,
             ctx.kernel_size,
             ctx.dilation,
-            ctx.kernel_size_d,
-            ctx.dilation_d,
+            ctx.is_causal,
         )
         libnatten.na3d_av_forward(
             out_1,
@@ -949,8 +1107,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
             value_t,
             ctx.kernel_size,
             ctx.dilation,
-            ctx.kernel_size_d,
-            ctx.dilation_d,
+            ctx.is_causal,
         )
 
         if out_0_add is not None and out_1_add is not None:
@@ -965,11 +1122,10 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
     @custom_bwd
     def backward(
         ctx, grad_out: Tensor
-    ) -> Tuple[
-        Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType, NoneType
-    ]:
-        num_na_weights = ctx.kernel_size_d * ctx.kernel_size * ctx.kernel_size
+    ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType]:
+        num_na_weights = get_num_na_weights(ctx.kernel_size)
         attn, value, additional_value = ctx.saved_tensors
+
         d_out = grad_out.contiguous()
         d_attn = torch.empty_like(attn)
         d_value = torch.empty_like(value)
@@ -1000,197 +1156,467 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
             value,
             ctx.kernel_size,
             ctx.dilation,
-            ctx.kernel_size_d,
-            ctx.dilation_d,
+            ctx.is_causal,
         )
 
-        return d_attn, d_value, d_additional_value, None, None, None, None
+        return d_attn, d_value, d_additional_value, None, None, None
+
+
+class FusedNeighborhoodAttention1D(Function):
+    @staticmethod
+    @custom_fwd
+    def forward(
+        ctx,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        rpb: Optional[Tensor],
+        kernel_size: int | Tuple[int],
+        dilation: int | Tuple[int],
+        is_causal: bool | Tuple[bool],
+        scale: float,
+        tiling_config: Tuple[Tuple[int], Tuple[int]],
+    ) -> Tensor:
+        kernel_size, dilation, is_causal = check_all_args(
+            1, kernel_size, dilation, is_causal
+        )
+        assert isinstance(
+            scale, float
+        ), f"Expected float attention scale, got {type(scale)}."
+        tiling_config = check_tiling_config(1, tiling_config)
+
+        if any(is_causal) and rpb is not None:
+            raise NotImplementedError(
+                "Positional biases for causal neighborhood attention is not yet implemented."
+            )
+
+        query = query.contiguous()
+        key = key.contiguous()
+        value = value.contiguous()
+        if rpb is not None:
+            rpb = rpb.to(query.dtype).contiguous()
+        output = torch.empty_like(value)
+
+        libnatten.na1d_forward(
+            output,
+            query,
+            key,
+            value,
+            rpb,
+            kernel_size,
+            dilation,
+            is_causal,
+            scale,
+            *tiling_config,
+        )
+
+        return output
+
+    @staticmethod
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support forward-mode AD yet."
+        )
+
+    @staticmethod
+    @custom_bwd
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[
+        Tensor, Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType, NoneType
+    ]:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not backpropagation yet."
+        )
+
+
+class FusedNeighborhoodAttention2D(Function):
+    @staticmethod
+    @custom_fwd
+    def forward(
+        ctx,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        rpb: Optional[Tensor],
+        kernel_size: int | Tuple[int, int],
+        dilation: int | Tuple[int, int],
+        is_causal: bool | Tuple[bool, bool],
+        scale: float,
+        tiling_config: Tuple[Tuple[int, int], Tuple[int, int]],
+    ) -> Tensor:
+        kernel_size, dilation, is_causal = check_all_args(
+            2, kernel_size, dilation, is_causal
+        )
+        assert isinstance(
+            scale, float
+        ), f"Expected float attention scale, got {type(scale)}."
+        tiling_config = check_tiling_config(2, tiling_config)
+
+        if any(is_causal) and rpb is not None:
+            raise NotImplementedError(
+                "Positional biases for causal neighborhood attention is not yet implemented."
+            )
+
+        query = query.contiguous()
+        key = key.contiguous()
+        value = value.contiguous()
+        if rpb is not None:
+            rpb = rpb.to(query.dtype).contiguous()
+        output = torch.empty_like(value)
+
+        libnatten.na2d_forward(
+            output,
+            query,
+            key,
+            value,
+            rpb,
+            kernel_size,
+            dilation,
+            is_causal,
+            scale,
+            *tiling_config,
+        )
+
+        return output
+
+    @staticmethod
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support forward-mode AD yet."
+        )
+
+    @staticmethod
+    @custom_bwd
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[
+        Tensor, Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType, NoneType
+    ]:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not backpropagation yet."
+        )
+
+
+class FusedNeighborhoodAttention3D(Function):
+    @staticmethod
+    @custom_fwd
+    def forward(
+        ctx,
+        query: Tensor,
+        key: Tensor,
+        value: Tensor,
+        rpb: Optional[Tensor],
+        kernel_size: int | Tuple[int, int, int],
+        dilation: int | Tuple[int, int, int],
+        is_causal: bool | Tuple[bool, bool, bool],
+        scale: float,
+        tiling_config: Tuple[Tuple[int, int, int], Tuple[int, int, int]],
+    ) -> Tensor:
+        kernel_size, dilation, is_causal = check_all_args(
+            3, kernel_size, dilation, is_causal
+        )
+        assert isinstance(
+            scale, float
+        ), f"Expected float attention scale, got {type(scale)}."
+        tiling_config = check_tiling_config(3, tiling_config)
+
+        if any(is_causal) and rpb is not None:
+            raise NotImplementedError(
+                "Positional biases for causal neighborhood attention is not yet implemented."
+            )
+
+        query = query.contiguous()
+        key = key.contiguous()
+        value = value.contiguous()
+        if rpb is not None:
+            rpb = rpb.to(query.dtype).contiguous()
+        output = torch.empty_like(value)
+
+        libnatten.na3d_forward(
+            output,
+            query,
+            key,
+            value,
+            rpb,
+            kernel_size,
+            dilation,
+            is_causal,
+            scale,
+            *tiling_config,
+        )
+
+        return output
+
+    @staticmethod
+    def jvp(ctx, *grad_inputs: Any) -> Tensor:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support forward-mode AD yet."
+        )
+
+    @staticmethod
+    @custom_bwd
+    def backward(
+        ctx, grad_out: Tensor
+    ) -> Tuple[
+        Tensor, Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType, NoneType
+    ]:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not backpropagation yet."
+        )
 
 
 def na1d_qk(
     query: Tensor,
     key: Tensor,
-    kernel_size: int,
-    dilation: int,
+    kernel_size: int | Tuple[int],
+    dilation: int | Tuple[int] = 1,
     additional_keys: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool]] = False,
+    rpb: Optional[Tensor] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested:
         return na1d_qk_nested(
-            query, key, None, kernel_size, dilation, additional_keys=additional_keys
+            query,
+            key,
+            rpb,
+            kernel_size,
+            dilation,
+            additional_keys=additional_keys,
+            is_causal=is_causal,
         )
     return NeighborhoodAttention1DQKAutogradFunction.apply(
-        query, key, None, additional_keys, kernel_size, dilation
-    )
-
-
-def na1d_qk_with_bias(
-    query: Tensor,
-    key: Tensor,
-    bias: Optional[Tensor],
-    kernel_size: int,
-    dilation: int,
-    additional_keys: Optional[Tensor] = None,
-) -> Tensor:
-    if query.is_nested or key.is_nested:
-        return na1d_qk_nested(
-            query, key, bias, kernel_size, dilation, additional_keys=additional_keys
-        )
-    return NeighborhoodAttention1DQKAutogradFunction.apply(
-        query, key, bias, additional_keys, kernel_size, dilation
+        query, key, rpb, additional_keys, kernel_size, dilation, is_causal
     )
 
 
 def na1d_av(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int,
-    dilation: int,
+    kernel_size: int | Tuple[int],
+    dilation: int | Tuple[int] = 1,
     additional_values: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool]] = False,
 ) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na1d_av_nested(
-            attn, value, kernel_size, dilation, additional_values=additional_values
+            attn,
+            value,
+            kernel_size,
+            dilation,
+            additional_values=additional_values,
+            is_causal=is_causal,
         )
     return NeighborhoodAttention1DAVAutogradFunction.apply(
-        attn, value, additional_values, kernel_size, dilation
+        attn, value, additional_values, kernel_size, dilation, is_causal
     )
 
 
 def na2d_qk(
     query: Tensor,
     key: Tensor,
-    kernel_size: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int],
+    dilation: int | Tuple[int, int] = 1,
     additional_keys: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool]] = False,
+    rpb: Optional[Tensor] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested:
         return na2d_qk_nested(
-            query, key, None, kernel_size, dilation, additional_keys=additional_keys
+            query,
+            key,
+            rpb,
+            kernel_size,
+            dilation,
+            additional_keys=additional_keys,
+            is_causal=is_causal,
         )
     return NeighborhoodAttention2DQKAutogradFunction.apply(
-        query, key, None, additional_keys, kernel_size, dilation
-    )
-
-
-def na2d_qk_with_bias(
-    query: Tensor,
-    key: Tensor,
-    bias: Optional[Tensor],
-    kernel_size: int,
-    dilation: int,
-    additional_keys: Optional[Tensor] = None,
-) -> Tensor:
-    if query.is_nested or key.is_nested:
-        return na2d_qk_nested(
-            query, key, bias, kernel_size, dilation, additional_keys=additional_keys
-        )
-    return NeighborhoodAttention2DQKAutogradFunction.apply(
-        query, key, bias, additional_keys, kernel_size, dilation
+        query, key, rpb, additional_keys, kernel_size, dilation, is_causal
     )
 
 
 def na2d_av(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int],
+    dilation: int | Tuple[int, int] = 1,
     additional_values: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool]] = False,
 ) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na2d_av_nested(
-            attn, value, kernel_size, dilation, additional_values=additional_values
+            attn,
+            value,
+            kernel_size,
+            dilation,
+            additional_values=additional_values,
+            is_causal=is_causal,
         )
     return NeighborhoodAttention2DAVAutogradFunction.apply(
-        attn, value, additional_values, kernel_size, dilation
-    )
-
-
-def na3d_qk_with_bias(
-    query: Tensor,
-    key: Tensor,
-    bias: Optional[Tensor],
-    kernel_size_d: int,
-    kernel_size: int,
-    dilation_d: int,
-    dilation: int,
-    additional_keys: Optional[Tensor] = None,
-) -> Tensor:
-    if query.is_nested or key.is_nested:
-        return na3d_qk_nested(
-            query,
-            key,
-            bias,
-            kernel_size_d,
-            kernel_size,
-            dilation_d,
-            dilation,
-            additional_keys=additional_keys,
-        )
-    return NeighborhoodAttention3DQKAutogradFunction.apply(
-        query,
-        key,
-        bias,
-        additional_keys,
-        kernel_size_d,
-        kernel_size,
-        dilation_d,
-        dilation,
+        attn, value, additional_values, kernel_size, dilation, is_causal
     )
 
 
 def na3d_qk(
     query: Tensor,
     key: Tensor,
-    kernel_size_d: int,
-    kernel_size: int,
-    dilation_d: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int, int],
+    dilation: int | Tuple[int, int, int] = 1,
     additional_keys: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
+    rpb: Optional[Tensor] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested:
         return na3d_qk_nested(
             query,
             key,
-            None,
-            kernel_size_d,
+            rpb,
             kernel_size,
-            dilation_d,
             dilation,
             additional_keys=additional_keys,
+            is_causal=is_causal,
         )
     return NeighborhoodAttention3DQKAutogradFunction.apply(
         query,
         key,
-        None,
+        rpb,
         additional_keys,
-        kernel_size_d,
         kernel_size,
-        dilation_d,
         dilation,
+        is_causal,
     )
 
 
 def na3d_av(
     attn: Tensor,
     value: Tensor,
-    kernel_size_d: int,
-    kernel_size: int,
-    dilation_d: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int, int],
+    dilation: int | Tuple[int, int, int],
     additional_values: Optional[Tensor] = None,
+    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
 ) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na3d_av_nested(
             attn,
             value,
-            kernel_size_d,
             kernel_size,
-            dilation_d,
             dilation,
             additional_values=additional_values,
+            is_causal=is_causal,
         )
     return NeighborhoodAttention3DAVAutogradFunction.apply(
-        attn, value, additional_values, kernel_size_d, kernel_size, dilation_d, dilation
+        attn,
+        value,
+        additional_values,
+        kernel_size,
+        dilation,
+        is_causal,
+    )
+
+
+def na1d(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    kernel_size: int | Tuple[int],
+    dilation: int | Tuple[int] = 1,
+    is_causal: Optional[bool | Tuple[bool]] = False,
+    rpb: Optional[Tensor] = None,
+    scale: Optional[float] = None,
+) -> Tensor:
+    if query.is_nested or key.is_nested or value.is_nested:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support nested tensors yet."
+        )
+    if query.requires_grad or key.requires_grad or value.requires_grad:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support backpropagation yet."
+        )
+
+    tiling_config = autotune_fna(1, query, kernel_size, dilation, is_causal)
+    scale = scale or query.shape[-1] ** -0.5
+
+    return FusedNeighborhoodAttention1D.apply(
+        query,
+        key,
+        value,
+        rpb,
+        kernel_size,
+        dilation,
+        is_causal,
+        scale,
+        tiling_config,
+    )
+
+
+def na2d(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    kernel_size: int | Tuple[int, int],
+    dilation: int | Tuple[int, int] = 1,
+    is_causal: Optional[bool | Tuple[bool, bool]] = False,
+    rpb: Optional[Tensor] = None,
+    scale: Optional[float] = None,
+) -> Tensor:
+    if query.is_nested or key.is_nested or value.is_nested:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support nested tensors yet."
+        )
+    if query.requires_grad or key.requires_grad or value.requires_grad:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support backpropagation yet."
+        )
+
+    tiling_config = autotune_fna(2, query, kernel_size, dilation, is_causal)
+    scale = scale or query.shape[-1] ** -0.5
+
+    return FusedNeighborhoodAttention2D.apply(
+        query,
+        key,
+        value,
+        rpb,
+        kernel_size,
+        dilation,
+        is_causal,
+        scale,
+        tiling_config,
+    )
+
+
+def na3d(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    kernel_size: int | Tuple[int, int, int],
+    dilation: int | Tuple[int, int, int] = 1,
+    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
+    rpb: Optional[Tensor] = None,
+    scale: Optional[float] = None,
+) -> Tensor:
+    if query.is_nested or key.is_nested or value.is_nested:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support nested tensors yet."
+        )
+    if query.requires_grad or key.requires_grad or value.requires_grad:
+        raise NotImplementedError(
+            "Fused neighborhood attention does not support backpropagation yet."
+        )
+
+    tiling_config = autotune_fna(3, query, kernel_size, dilation, is_causal)
+    scale = scale or query.shape[-1] ** -0.5
+
+    return FusedNeighborhoodAttention3D.apply(
+        query,
+        key,
+        value,
+        rpb,
+        kernel_size,
+        dilation,
+        is_causal,
+        scale,
+        tiling_config,
     )
 
 
@@ -1200,29 +1626,33 @@ def na3d_av(
 
 
 def natten1dqkrpb(
-    query: Tensor, key: Tensor, rpb: Optional[Tensor], kernel_size: int, dilation: int
+    query: Tensor,
+    key: Tensor,
+    rpb: Optional[Tensor],
+    kernel_size: int | Tuple[int],
+    dilation: int | Tuple[int],
 ) -> Tensor:
-    return na1d_qk_with_bias(query, key, rpb, kernel_size, dilation)
+    return na1d_qk(query, key, kernel_size=kernel_size, dilation=dilation, rpb=rpb)
 
 
 def natten2dqkrpb(
-    query: Tensor, key: Tensor, rpb: Optional[Tensor], kernel_size: int, dilation: int
+    query: Tensor,
+    key: Tensor,
+    rpb: Optional[Tensor],
+    kernel_size: int | Tuple[int, int],
+    dilation: int | Tuple[int, int],
 ) -> Tensor:
-    return na2d_qk_with_bias(query, key, rpb, kernel_size, dilation)
+    return na2d_qk(query, key, kernel_size=kernel_size, dilation=dilation, rpb=rpb)
 
 
 def natten3dqkrpb(
     query: Tensor,
     key: Tensor,
     rpb: Optional[Tensor],
-    kernel_size_d: int,
-    kernel_size: int,
-    dilation_d: int,
-    dilation: int,
+    kernel_size: int | Tuple[int, int, int],
+    dilation: int | Tuple[int, int, int],
 ) -> Tensor:
-    return na3d_qk_with_bias(
-        query, key, rpb, kernel_size_d, kernel_size, dilation_d, dilation
-    )
+    return na3d_qk(query, key, kernel_size=kernel_size, dilation=dilation, rpb=rpb)
 
 
 natten1dqk = na1d_qk

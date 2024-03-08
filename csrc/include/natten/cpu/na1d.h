@@ -25,6 +25,7 @@
 */
 
 #pragma once
+#include <natten/natten.h>
 #include <natten_autogen/cpu/naive/interface.h>
 
 namespace natten {
@@ -36,18 +37,20 @@ void na1d_qk_forward(
     void* key_ptr,
     void* bias_ptr,
     void* attn_ptr,
-    int batch_size,
-    int heads,
-    int length,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   if (bias_ptr == nullptr) {
     DISPATCH_DTYPE_na1d_pn_cpu_naive(
         T,
+        /* is_grad = */ false,
         query_ptr,
         key_ptr,
         attn_ptr,
@@ -59,8 +62,12 @@ void na1d_qk_forward(
         attn_stride_1,
         attn_stride_2,
         kernel_size,
-        dilation);
+        dilation,
+        is_causal);
   } else {
+    NATTEN_CHECK(
+        !any_true(is_causal),
+        "Neighborhood attention with causal masking does not support positional biases yet.");
     DISPATCH_DTYPE_na1d_pn_bias_cpu_naive(
         T,
         query_ptr,
@@ -75,7 +82,8 @@ void na1d_qk_forward(
         attn_stride_1,
         attn_stride_2,
         kernel_size,
-        dilation);
+        dilation,
+        is_causal);
   }
 }
 
@@ -87,15 +95,16 @@ void na1d_qk_backward(
     void* d_query_ptr,
     void* d_key_ptr,
     void* d_bias_ptr,
-    int batch_size,
-    int heads,
-    int length,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE_na1d_nn_cpu_naive(
       T,
       d_attn_ptr,
@@ -109,7 +118,8 @@ void na1d_qk_backward(
       attn_stride_1,
       attn_stride_2,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
   DISPATCH_DTYPE_na1d_in_cpu_naive(
       T,
       d_attn_ptr,
@@ -123,8 +133,12 @@ void na1d_qk_backward(
       attn_stride_1,
       attn_stride_2,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
   if (d_bias_ptr != nullptr) {
+    NATTEN_CHECK(
+        !any_true(is_causal),
+        "Neighborhood attention with causal masking does not support positional biases yet.");
     DISPATCH_DTYPE_na1d_rpbgrad_cpu_naive(
         T,
         d_bias_ptr,
@@ -137,7 +151,8 @@ void na1d_qk_backward(
         attn_stride_1,
         attn_stride_2,
         kernel_size,
-        dilation);
+        dilation,
+        is_causal);
   }
 }
 
@@ -146,15 +161,16 @@ void na1d_av_forward(
     void* attn_ptr,
     void* value_ptr,
     void* output_ptr,
-    int batch_size,
-    int heads,
-    int length,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE_na1d_nn_cpu_naive(
       T,
       attn_ptr,
@@ -168,7 +184,8 @@ void na1d_av_forward(
       attn_stride_1,
       attn_stride_2,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 template <typename T>
@@ -178,17 +195,19 @@ void na1d_av_backward(
     void* d_output_ptr,
     void* d_attn_ptr,
     void* d_value_ptr,
-    int batch_size,
-    int heads,
-    int length,
-    int dim,
+    int32_t batch_size,
+    int32_t heads,
+    int32_t length,
+    int32_t dim,
     int64_t attn_stride_0,
     int64_t attn_stride_1,
     int64_t attn_stride_2,
-    int kernel_size,
-    int dilation) {
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal) {
   DISPATCH_DTYPE_na1d_pn_cpu_naive(
       T,
+      /* is_grad = */ true,
       d_output_ptr,
       value_ptr,
       d_attn_ptr,
@@ -200,7 +219,8 @@ void na1d_av_backward(
       attn_stride_1,
       attn_stride_2,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
   DISPATCH_DTYPE_na1d_in_cpu_naive(
       T,
       attn_ptr,
@@ -214,7 +234,8 @@ void na1d_av_backward(
       attn_stride_1,
       attn_stride_2,
       kernel_size,
-      dilation);
+      dilation,
+      is_causal);
 }
 
 } // namespace cpu

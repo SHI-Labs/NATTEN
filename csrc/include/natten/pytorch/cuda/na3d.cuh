@@ -27,25 +27,45 @@
 #pragma once
 #include <ATen/ATen.h>
 
+#include <natten/natten.h>
+
 namespace natten {
 namespace pytorch {
 namespace cuda {
+
+void na3d_forward(
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    at::Tensor& out,
+    const at::optional<at::Tensor>& rpb,
+    int32_t batch_size,
+    int32_t depth,
+    int32_t height,
+    int32_t width,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size);
 
 void na3d_qk_forward(
     const at::Tensor& query,
     const at::Tensor& key,
     const at::optional<at::Tensor>& bias,
     at::Tensor& attn,
-    const int batch_size,
-    const int heads,
-    const int depth,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation,
-    const int depth_kernel_size,
-    const int depth_dilation);
+    int32_t batch_size,
+    int32_t heads,
+    int32_t depth,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal);
 
 void na3d_qk_backward(
     const at::Tensor& d_attn,
@@ -54,31 +74,29 @@ void na3d_qk_backward(
     at::Tensor& d_query,
     at::Tensor& d_key,
     at::optional<at::Tensor>& d_bias,
-    const int batch_size,
-    const int heads,
-    const int depth,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation,
-    const int depth_kernel_size,
-    const int depth_dilation);
+    int32_t batch_size,
+    int32_t heads,
+    int32_t depth,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal);
 
 void na3d_av_forward(
     const at::Tensor& attn,
     const at::Tensor& value,
     at::Tensor& output,
-    const int batch_size,
-    const int heads,
-    const int depth,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation,
-    const int depth_kernel_size,
-    const int depth_dilation);
+    int32_t batch_size,
+    int32_t heads,
+    int32_t depth,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal);
 
 void na3d_av_backward(
     const at::Tensor& d_out,
@@ -86,16 +104,15 @@ void na3d_av_backward(
     const at::Tensor& value,
     at::Tensor& d_attn,
     at::Tensor& d_value,
-    const int batch_size,
-    const int heads,
-    const int depth,
-    const int height,
-    const int width,
-    const int dim,
-    const int kernel_size,
-    const int dilation,
-    const int depth_kernel_size,
-    const int depth_dilation);
+    int32_t batch_size,
+    int32_t heads,
+    int32_t depth,
+    int32_t height,
+    int32_t width,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal);
 
 } // namespace cuda
 } // namespace pytorch
