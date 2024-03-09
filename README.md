@@ -1,7 +1,8 @@
 ![NATTENLogo](assets/natten_dark.png#gh-dark-mode-only) ![NATTENLogo](assets/natten_light.png#gh-light-mode-only)
 
 <a href="https://www.shi-labs.com/natten/"><img src="https://img.shields.io/badge/pip%20install%20natten-read%20more-%23C209C1" /></a>
-| [Documentation](docs/)
+| <a href="docs/"><img src="https://img.shields.io/badge/Documentation-B31942" /></a>
+| <a href="https://arxiv.org/abs/2403.04690"><img src="https://img.shields.io/badge/arXiv-2403.04690-orange" /></a>
 
 *Neighborhood Attention Extension*
 
@@ -25,6 +26,9 @@ a sliding window self-attention mechanism.
 If you're not familiar with neighborhood attention, please refer to 
 [our papers](https://github.com/SHI-Labs/Neighborhood-Attention-Transformer), or watch our 
 [YouTube video](https://www.youtube.com/watch?v=Ya4BfioxIHA) from CVPR 2023.
+
+To read more about our GEMM-based and fused neighborhood attention kernels, please refer to
+our new preprint, [Faster Neighborhood Attention](https://arxiv.org/abs/2403.04690).
 
 ## Getting started
  
