@@ -179,7 +179,7 @@ class BuildExtension(build_ext):
         if HAS_CUDA:
             assert max_sm >= 30
             cmake_args.append("-DNATTEN_WITH_CUDA=1")
-            if max_sm >= 70:
+            if max_sm >= 50:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
 
         if not os.path.exists(self.build_lib):
