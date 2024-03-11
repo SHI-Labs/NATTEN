@@ -31,15 +31,13 @@
 */
 
 #pragma once
-// TODO: remaining dependency to torch: getCurrentCUDAStream
-#include <torch/extension.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "natten/cuda/naive/natten_commons.cuh"
-#include "natten/cuda/naive/natten_tiled_macros.cuh"
-#include "natten/cuda/naive/tiled/base.cuh"
+#include <natten/cuda/naive/natten_commons.cuh>
+#include <natten/cuda/naive/natten_tiled_macros.cuh>
+#include <natten/cuda/naive/tiled/base.cuh>
 
 namespace natten {
 namespace cuda {

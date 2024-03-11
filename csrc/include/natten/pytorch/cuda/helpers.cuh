@@ -35,7 +35,7 @@
       fn_name<natten::float32>(cc, max_smem, stream, __VA_ARGS__);           \
     } else if (c10_dtype == torch::kDouble) {                                \
       fn_name<natten::float64>(cc, max_smem, stream, __VA_ARGS__);           \
-    } else if (c10_dtype == torch::kFloat16 && cc >= 60) {                   \
+    } else if (c10_dtype == torch::kFloat16 && cc >= 50) {                   \
       fn_name<natten::float16>(cc, max_smem, stream, __VA_ARGS__);           \
     } else if (c10_dtype == torch::kBFloat16 && cc >= 80) {                  \
       fn_name<natten::bfloat16>(cc, max_smem, stream, __VA_ARGS__);          \

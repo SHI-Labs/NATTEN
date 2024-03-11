@@ -128,6 +128,22 @@ void na2d_qk_backward(
     const std::tuple<int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t>& dilation,
     const std::tuple<bool, bool>& is_causal) {
+  // dRPB is always computed in FP32; there is no FP16/BF16 kernel for it.
+  auto should_cast_bias = false;
+  void* d_bias_ptr = nullptr;
+  at::optional<at::Tensor> d_bias_fp32;
+  if (d_bias.has_value()) {
+    auto d_bias_tensor = d_bias.value();
+    if (d_bias_tensor.scalar_type() == torch::kFloat16 ||
+        d_bias_tensor.scalar_type() == torch::kBFloat16) {
+      should_cast_bias = true;
+      d_bias_fp32 = at::zeros(
+          d_bias_tensor.sizes(), d_bias_tensor.options().dtype(torch::kFloat));
+      d_bias_ptr = static_cast<void*>(d_bias_fp32.value().data_ptr());
+    } else {
+      d_bias_ptr = static_cast<void*>(d_bias_tensor.data_ptr());
+    }
+  }
   DISPATCH_DTYPE(
       d_attn.device().index(),
       at::cuda::getCurrentCUDAStream(query.device().index()),
@@ -138,8 +154,7 @@ void na2d_qk_backward(
       static_cast<void*>(d_attn.data_ptr()),
       static_cast<void*>(d_query.data_ptr()),
       static_cast<void*>(d_key.data_ptr()),
-      d_bias.has_value() ? static_cast<void*>(d_bias.value().data_ptr())
-                         : nullptr,
+      d_bias_ptr,
       batch_size,
       heads,
       height,
@@ -152,6 +167,15 @@ void na2d_qk_backward(
       kernel_size,
       dilation,
       is_causal);
+  if (should_cast_bias) {
+    NATTEN_CHECK(
+        d_bias.has_value() && d_bias_fp32.has_value(),
+        "Something went wrong when casting biases. Please open an issue.");
+    auto d_bias_tensor = d_bias.value();
+    auto d_bias_fp32_tensor = d_bias_fp32.value();
+    auto d_bias_half = d_bias_fp32_tensor.toType(d_bias_tensor.scalar_type());
+    d_bias_tensor.copy_(d_bias_half);
+  }
 }
 
 void na2d_av_forward(
