@@ -31,12 +31,6 @@
 #include <natten/natten.h>
 #include <natten/cuda/naive/natten_commons.cuh>
 
-// TODO: We're still using ATen's atomic add!
-#include <ATen/ATen.h>
-#include <ATen/cuda/CUDAContext.h>
-#include <torch/extension.h>
-#include <ATen/native/cuda/KernelUtils.cuh>
-
 namespace natten {
 namespace cuda {
 namespace naive {
@@ -123,8 +117,7 @@ struct RelPosBiasGradient1DFull : RelPosBiasGradient1DBase<scalar_t, acc_t> {
         attnOffset += p.attn_stride_0;
       }
       int64_t index = h * p.bias_stride_0 + (pi + ki);
-      at::native::fastAtomicAdd(
-          p.d_bias, index, p.problem_size, d_rpb_update, true);
+      atomicAdd(p.d_bias + index, d_rpb_update);
     }
   }
 };
@@ -159,8 +152,7 @@ struct RelPosBiasGradient1DHalf : RelPosBiasGradient1DBase<scalar_t, acc_t> {
         attnOffset += p.attn_stride_0;
       }
       int64_t index = h * p.bias_stride_0 + (pi + ki);
-      at::native::fastAtomicAdd(
-          p.d_bias, index, p.problem_size, d_rpb_update, true);
+      atomicAdd(p.d_bias + index, d_rpb_update);
     }
   }
 };

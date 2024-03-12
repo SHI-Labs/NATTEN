@@ -18,6 +18,9 @@
 * Major bug fix in Volta GEMM kernels
   * The epilogue was different for Volta, and it slipped through unit tests,
   * Tests are now more aggressive, and the issue has been fixed.
+* Memory alignment bug in half RPB gradient kernels fixed
+  * See [#97](https://github.com/SHI-Labs/NATTEN/issues/97).
+* Naive FP16 enabled for SM50-SM60.
 
 ## [0.15.1] - 2024-01-24
 * Attention tensors can now be views, which allows combining neighborhood and any other attention pattern (i.e. registers,

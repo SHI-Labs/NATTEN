@@ -375,7 +375,7 @@ class NaiveNAKernel:
         source_str += self.method_decl()
         source_str += " {\n"
         if self.dtype.name == "half":
-            source_str += "\nif(cc >= 60) {\n"
+            source_str += "\nif(cc >= 50) {\n"
         elif self.dtype.name == "bfloat16":
             source_str += "\nif(cc >= 80) {\n"
         source_str += self.method_def()

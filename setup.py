@@ -66,6 +66,7 @@ if HAS_CUDA:
 
     # TODO: raise an error or at least a warning when torch cuda doesn't match
     # system.
+    assert torch.version.cuda is not None
     TORCH_CUDA_VERSION = [x for x in torch.version.cuda.split(".")[:2]]
     CUDA_TAG = "".join([x for x in TORCH_CUDA_VERSION])
     CUDA_VERSION = [int(x) for x in TORCH_CUDA_VERSION]
@@ -178,7 +179,7 @@ class BuildExtension(build_ext):
         if HAS_CUDA:
             assert max_sm >= 30
             cmake_args.append("-DNATTEN_WITH_CUDA=1")
-            if max_sm >= 70:
+            if max_sm >= 50:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
 
         if not os.path.exists(self.build_lib):

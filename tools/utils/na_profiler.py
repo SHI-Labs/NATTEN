@@ -266,7 +266,7 @@ def profile_na_with_torch(
 
     captured_num_ops = len(out)
     i = 0
-    while captured_num_ops != exp_num_ops and i < 50:
+    while captured_num_ops < exp_num_ops and i < 50:
         _ll = [f"{x.op_str}: {x.time_str}" for x in out]
         print(
             f"Not captured; trying again... {i=} {captured_num_ops=}, {exp_num_ops=}, {_ll}"

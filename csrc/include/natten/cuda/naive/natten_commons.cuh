@@ -59,11 +59,9 @@ struct LaunchParams {
 template <typename KernelTemplate>
 __global__ void launch_cuda_kernel(typename KernelTemplate::Params params) {
 #if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ > 300)
-#if (__CUDA_ARCH__ < 600)
-  // Half kernels are not supported in CC < 60,
-  // Partial FP16 support was added in SM54, but
-  // we use atomics, which were only introduced in
-  // SM60, so disabling half kernels for CC < 60.
+#if (__CUDA_ARCH__ < 500)
+  // Half kernels are not supported in CC < 50,
+  // Partial FP16 support was added in SM54.
   // Also disabling tiled kernels, because older
   // architectures might not have enough shared memory
   // and the tiled kernels heavily rely on the assumed
@@ -103,7 +101,7 @@ struct HalfArray;
 template <typename ElementScalar_, typename ElementVector_>
 struct HalfArrayBase;
 
-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 500)
 
 template <>
 struct HalfArrayBase<natten::float16, __half2> {
@@ -123,6 +121,10 @@ struct HalfArrayBase<natten::float16, __half2> {
 
   __device__ __inline__ static float to_float(ElementScalar s) {
     return __half2float(s);
+  }
+
+  __device__ __inline__ static ElementScalar from_float(float s) {
+    return __float2half(s);
   }
 
   __device__ __inline__ static ElementScalar zero() {
@@ -191,6 +193,10 @@ struct HalfArrayBase<natten::bfloat16, __nv_bfloat162> {
 
   __device__ __inline__ static float to_float(ElementScalar s) {
     return __bfloat162float(s);
+  }
+
+  __device__ __inline__ static ElementScalar from_float(float s) {
+    return __float2bfloat16(s);
   }
 
   __device__ __inline__ static ElementScalar zero() {
@@ -394,7 +400,7 @@ struct AttnMask<float> {
   }
 };
 
-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 500)
 template <>
 struct AttnMask<natten::float16> {
   static __device__ auto value(bool is_grad) {

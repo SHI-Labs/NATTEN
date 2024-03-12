@@ -82,7 +82,7 @@ def has_cuda() -> bool:
 
 
 def has_half(device_index: Optional[_device_t] = None) -> bool:
-    return has_cuda() and get_device_cc(device_index) >= 60
+    return has_cuda() and get_device_cc(device_index) >= 50
 
 
 def has_bfloat(device_index: Optional[_device_t] = None) -> bool:
