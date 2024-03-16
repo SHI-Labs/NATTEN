@@ -46,11 +46,15 @@ from natten.utils.testing import (
 )
 from torch.autograd import gradcheck
 
-# NOTE: It is important to disable CUDNN benchmarking and TF32
-# because some tests are written with the assumption of relatively
-# good determinism. This affects certain torch builds, in particular
-# those in NGC images (mostly just built from source with different flags
-# compared to PyPI.)
+# NOTE: It is important to ensure determinism in torch GEMMs since
+# we don't write our own. Therefore we have to force determinism in
+# CUBLAS, and turn off CUDNN benchmarking (in case that backend
+# is built).
+# PT's caching allocator should also be turned off in unit tests for
+# when we run memcheck.
+os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+torch.use_deterministic_algorithms(True)
 torch.backends.cudnn.benchmark = False
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
@@ -858,7 +862,7 @@ class NA1DTests(unittest.TestCase):
         has_bias,
         dtype,
         device="cuda",
-        eps=1e-4,
+        eps=1e-6,
         L_extra=9,
         broadcast_extra_kv_batch=False,
     ):

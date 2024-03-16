@@ -56,7 +56,7 @@ install:
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" NATTEN_N_WORKERS="${WORKERS}" NATTEN_VERBOSE="${VERBOSE}" pip install -v -e . 2>&1 | tee install.out
 
 test:
-	PYTORCH_NO_CUDA_MEMORY_CACHING=1 pytest -v -x ./tests
+	pytest -v -x ./tests
 
 style:
 	ufmt format $(check_dirs)
