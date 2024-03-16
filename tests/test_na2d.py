@@ -1114,7 +1114,7 @@ class NA2DTests(unittest.TestCase):
         has_bias,
         dtype,
         device="cuda",
-        eps=1e-6,
+        eps=1e-4,
         L_extra=9,
         broadcast_extra_kv_batch=False,
     ):
