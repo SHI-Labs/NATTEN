@@ -38,7 +38,7 @@ except ImportError:
         " correct torch build: shi-labs.com/natten ."
     )
 
-from .autotuner import autotune_fna, disable_autotuner, enable_autotuner
+from .autotuner import autotune_fna, disable_autotuner, enable_autotuner, get_device_cc
 from .fna import disable_fna, enable_fna, is_fna_enabled
 from .nested import (
     na1d_av_nested,
@@ -71,10 +71,7 @@ is_fna_enabled = is_fna_enabled
 disable_fused_na = disable_fna
 enable_fused_na = enable_fna
 
-
-def get_device_cc(device_index: Optional[_device_t] = None) -> int:
-    major, minor = torch.cuda.get_device_capability(device_index)
-    return major * 10 + minor
+get_device_cc = get_device_cc
 
 
 def has_cuda() -> bool:

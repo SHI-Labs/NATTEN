@@ -21,10 +21,11 @@
 #
 #################################################################################################
 import warnings
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import torch
 from torch import Tensor
+from torch.cuda import _device_t
 
 try:
     from natten import libnatten  # type: ignore
@@ -38,6 +39,11 @@ except ImportError:
 from .utils import check_all_args
 
 
+def get_device_cc(device_index: Optional[_device_t] = None) -> int:
+    major, minor = torch.cuda.get_device_capability(device_index)
+    return major * 10 + minor
+
+
 class Autotuner:
     enabled: bool = False
     warmup_steps: int = 5
@@ -48,6 +54,9 @@ class Autotuner:
 _TILE_SIZES_1D = [
     ((64,), (64,)),
     ((32,), (128,)),
+]
+
+_TILE_SIZES_1D_64x128 = [
     ((64,), (128,)),
 ]
 
@@ -79,7 +88,9 @@ _TILE_SIZES_2D = [
     ((1, 32), (4, 32)),
     ((1, 32), (2, 64)),
     ((1, 32), (1, 128)),
-    # 64x128
+]
+
+_TILE_SIZES_2D_64x128 = [
     ((64, 1), (128, 1)),
     ((64, 1), (64, 2)),
     ((32, 2), (64, 2)),
@@ -253,7 +264,9 @@ _TILE_SIZES_3D = [
     ((1, 1, 32), (1, 4, 32)),
     ((1, 1, 32), (1, 2, 64)),
     ((1, 1, 32), (1, 1, 128)),
-    # 64x128
+]
+
+_TILE_SIZES_3D_64x128 = [
     ((64, 1, 1), (128, 1, 1)),
     ((64, 1, 1), (64, 2, 1)),
     ((64, 1, 1), (64, 1, 2)),
@@ -370,18 +383,32 @@ def get_default_tiling_config(
 
 
 def _get_all_tiling_configs(
-    na_dim: int,
+    na_dim: int, torch_device: Any
 ) -> (
     List[Tuple[Tuple[int], Tuple[int]]]
     | List[Tuple[Tuple[int, int], Tuple[int, int]]]
     | List[Tuple[Tuple[int, int, int], Tuple[int, int, int]]]
 ):
     assert na_dim > 0 and na_dim < 4
+    # SM80 and SM90 have more shared memory than SM86 and SM89
+    # and their tensor core GEMMs can therefore target larger
+    # tile shapes.
+    # SM80 and 86 have been tested, but I don't have an SM89.
+    # However, I suspect SM89 is to SM90 what SM86 was to SM80
+    # in terms of shared memory (and only that).
+    # Better to disable the larger tile configs for SM89 as well
+    # as 86 until we can test it.
+    if get_device_cc(torch_device) in [86, 89]:
+        if na_dim == 2:
+            return _TILE_SIZES_2D
+        if na_dim == 3:
+            return _TILE_SIZES_3D
+        return _TILE_SIZES_1D
     if na_dim == 2:
-        return _TILE_SIZES_2D
+        return _TILE_SIZES_2D + _TILE_SIZES_2D_64x128
     if na_dim == 3:
-        return _TILE_SIZES_3D
-    return _TILE_SIZES_1D
+        return _TILE_SIZES_3D + _TILE_SIZES_3D_64x128
+    return _TILE_SIZES_1D + _TILE_SIZES_1D_64x128
 
 
 def _problem_to_hash(
@@ -464,7 +491,7 @@ def autotune_fna(
         )
         best_time = 1e9
         best_config = None
-        for tile_config in _get_all_tiling_configs(na_dim):
+        for tile_config in _get_all_tiling_configs(na_dim, input_tensor.device):
             for _ in range(Autotuner.warmup_steps):
                 fna_func(
                     out,
