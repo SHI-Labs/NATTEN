@@ -33,7 +33,7 @@ na3d_with_bias = NeighborhoodAttention3D(
   kernel_size=(7, 9, 9),
   dilation=(1, 1, 1),
   is_causal=False,
-  bias=True,
+  rel_pos_bias=True,
   num_heads=4)
 ```
 
