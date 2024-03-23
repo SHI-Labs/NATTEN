@@ -149,9 +149,9 @@ struct CustomPredicatedTileAccessIteratorParams {
       //                               extent_row) * stride_).sum() *
       //                               desc.element_size_bits / 8;
       //// inc_next_ = inc_advance_ -
-      ///LongIndex(desc.threadmap_iterations.strided() - 1) * /
-      ///desc.threadmap_delta.strided() * LongIndex(stride_) * /
-      ///desc.element_size_bits / 8;
+      /// LongIndex(desc.threadmap_iterations.strided() - 1) * /
+      /// desc.threadmap_delta.strided() * LongIndex(stride_) * /
+      /// desc.element_size_bits / 8;
     } else {
       // inc_strided_ = LongIndex(desc.threadmap_delta.strided());
 

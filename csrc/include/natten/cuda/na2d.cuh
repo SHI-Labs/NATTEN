@@ -30,22 +30,25 @@
 #include <natten_autogen/cuda/naive/interface.h>
 #ifdef NATTEN_WITH_CUTLASS
 #include <natten_autogen/cuda/gemm/2d/interface.h>
+#include <natten/cuda/fna/fna_backward.cuh>
 #include <natten/cuda/fna/fna_forward.cuh>
 #endif
 
 namespace natten {
 namespace cuda {
 
-template <typename T>
+template <typename T, typename MemoryAllocator>
 void na2d_forward(
     int32_t cc,
     size_t max_smem,
     cudaStream_t stream,
+    MemoryAllocator alloc_bytes,
     void* query_ptr,
     void* key_ptr,
     void* value_ptr,
     void* out_ptr,
     void* rpb_ptr,
+    void* logsumexp_ptr,
     int32_t batch_size,
     int32_t height,
     int32_t width,
@@ -63,6 +66,7 @@ void na2d_forward(
         cc,
         max_smem,
         stream,
+        alloc_bytes,
         query_ptr,
         key_ptr,
         value_ptr,
@@ -77,9 +81,79 @@ void na2d_forward(
         dilation,
         is_causal,
         attn_scale,
-        nullptr, // TODO: pass logsumexp_ptr when backward kernel is implemented
+        logsumexp_ptr,
         query_tile_size,
         key_tile_size);
+  } else {
+#endif
+    NATTEN_FAILURE(
+        "Fused kernels are only available on devices with "
+        "compute capability >= 50 for FP16/FP32 inputs, and devices with "
+        "compute capability >= 80 for FP32, BF16, and FP16 inputs.");
+#ifdef NATTEN_WITH_CUTLASS
+  }
+#endif
+}
+
+template <typename T, typename MemoryAllocator>
+void na2d_backward(
+    int32_t cc,
+    size_t max_smem,
+    cudaStream_t stream,
+    MemoryAllocator alloc_bytes,
+    void* grad_out_ptr,
+    void* query_ptr,
+    void* key_ptr,
+    void* value_ptr,
+    // bias is not supported!
+    void* logsumexp_ptr,
+    void* delta_ptr,
+    void* out_ptr,
+    // Outputs:
+    void* grad_query_ptr,
+    void* grad_key_ptr,
+    void* grad_value_ptr,
+    int32_t batch_size,
+    int32_t height,
+    int32_t width,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t>& num_splits_key) {
+#ifdef NATTEN_WITH_CUTLASS
+  if (cc >= 80 || (cc >= 50 && !std::is_same<T, natten::bfloat16>::value)) {
+    natten::cuda::fna::fna_backward_generic<T>(
+        cc,
+        max_smem,
+        stream,
+        alloc_bytes,
+        grad_out_ptr,
+        query_ptr,
+        key_ptr,
+        value_ptr,
+        logsumexp_ptr,
+        delta_ptr,
+        out_ptr,
+        grad_query_ptr,
+        grad_key_ptr,
+        grad_value_ptr,
+        batch_size,
+        {height, width},
+        heads,
+        dim,
+        dim, // dim_value
+        kernel_size,
+        dilation,
+        is_causal,
+        attn_scale,
+        query_tile_size,
+        key_tile_size,
+        num_splits_key);
   } else {
 #endif
     NATTEN_FAILURE(

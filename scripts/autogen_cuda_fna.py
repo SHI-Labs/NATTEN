@@ -41,8 +41,9 @@ class KernelConfig:
         self.sm = sm
         self.gemm_shape = gemm_shape
 
-    def get_name(self) -> str:
-        return f"fna{self.na_dim}_{self.gemm_shape[0]}x{self.gemm_shape[1]}x{self.gemm_shape[2]}_sm{self.sm}"
+    def get_name(self, is_backward: bool) -> str:
+        backward_str = "" if not is_backward else "_backward"
+        return f"fna{self.na_dim}d{backward_str}_{self.gemm_shape[0]}x{self.gemm_shape[1]}x{self.gemm_shape[2]}_sm{self.sm}"
 
 
 class KernelConfigList:
@@ -60,8 +61,9 @@ class KernelConfigList:
             for gemm_shape in self.gemm_shapes
         ]
 
-    def get_name(self) -> str:
-        return f"fna{self.na_dim}_sm{self.sm}"
+    def get_name(self, is_backward: bool) -> str:
+        backward_str = "" if not is_backward else "_backward"
+        return f"fna{self.na_dim}d{backward_str}_sm{self.sm}"
 
 
 class DataType:
@@ -117,23 +119,37 @@ SM_TO_SM_MAX = {
 class FusedNAKernel:
     def __init__(
         self,
+        is_backward: bool,
         dtype: DataType,
         config: KernelConfig,
         causal_mask: List,
         has_rpb: Optional[bool] = False,
+        computes_lse: Optional[bool] = False,
     ):
         self.dtype = dtype
         self.config = config
         self.causal_mask = causal_mask
-        self.name_cc = f"{self.config.get_name()}_{dtype.short_name}"
+        self.name_cc = f"{self.config.get_name(is_backward)}_{dtype.short_name}"
         assert len(self.causal_mask) == self.config.na_dim
         cm_str = "_".join([str(int(x)) for x in self.causal_mask])
         self.name_cc += f"_cm_{cm_str}"
-        self.path_to_header = "natten/cuda/fna/kernel_forward.h"
+        self.path_to_header = (
+            "natten/cuda/fna/kernel_forward.h"
+            if not is_backward
+            else "natten/cuda/fna/kernel_backward.h"
+        )
+        assert not is_backward or not has_rpb, "Backward does not support RPB."
+        assert (
+            not is_backward or not computes_lse
+        ), "`compute_lse` is only an option for forward pass."
         self.aligned = True
+        self.is_backward = is_backward
         self.has_rpb = has_rpb
         if self.has_rpb:
             self.name_cc += "_rpb"
+        self.computes_lse = computes_lse
+        if self.computes_lse:
+            self.name_cc += "_lse"
 
     @property
     def causal_mask_inst(self) -> str:
@@ -145,20 +161,36 @@ class FusedNAKernel:
 
     @property
     def cpp_class(self) -> str:
-        template_args = ", ".join(
-            [
-                str(self.config.na_dim),
-                self.causal_mask_inst,
-                self.dtype.name,
-                f"cutlass::arch::Sm{self.config.sm}",
-                "true" if self.aligned else "false",
-                str(self.config.gemm_shape[0]),
-                str(self.config.gemm_shape[1]),
-                str(self.config.gemm_shape[2]),
-                "true" if self.has_rpb else "false",
-            ]
-        )
-        return f"FusedNeighborhoodAttentionKernel<{template_args}>"
+        if self.is_backward:
+            template_args = ", ".join(
+                [
+                    str(self.config.na_dim),
+                    self.causal_mask_inst,
+                    self.dtype.name,
+                    f"cutlass::arch::Sm{self.config.sm}",
+                    "true" if self.aligned else "false",
+                    str(self.config.gemm_shape[0]),
+                    str(self.config.gemm_shape[1]),
+                    str(self.config.gemm_shape[2]),
+                ]
+            )
+            return f"FusedNeighborhoodAttentionBackwardKernel<{template_args}>"
+        else:
+            template_args = ", ".join(
+                [
+                    str(self.config.na_dim),
+                    self.causal_mask_inst,
+                    self.dtype.name,
+                    f"cutlass::arch::Sm{self.config.sm}",
+                    "true" if self.aligned else "false",
+                    str(self.config.gemm_shape[0]),
+                    str(self.config.gemm_shape[1]),
+                    str(self.config.gemm_shape[2]),
+                    "true" if self.has_rpb else "false",
+                    "true" if self.computes_lse else "false",
+                ]
+            )
+            return f"FusedNeighborhoodAttentionKernel<{template_args}>"
 
     def header(self):
         return KERNEL_DECL_TEMPLATE.format(
@@ -178,36 +210,48 @@ class FusedNAKernel:
 class FusedNAKernelBundle:
     def __init__(
         self,
+        is_backward: bool,
         na_dim: int,
         sm: int,
         dtype: DataType,
         config_list: KernelConfigList,
         causal_mask: List,
         has_rpb: Optional[bool] = False,
+        computes_lse: Optional[bool] = False,
     ):
         self.na_dim = na_dim
         self.sm = sm
         self.dtype = dtype
         self.config_list = config_list
         self.causal_mask = causal_mask
-        self.name_cc = f"{self.config_list.get_name()}_{dtype.short_name}"
+        self.name_cc = f"{self.config_list.get_name(is_backward)}_{dtype.short_name}"
         assert len(self.causal_mask) == self.config_list.na_dim
         cm_str = "_".join([str(int(x)) for x in self.causal_mask])
         self.name_cc += f"_cm_{cm_str}"
-        self.path_to_header = "natten/cuda/fna/kernel_forward.h"
+        self.path_to_header = (
+            "natten/cuda/fna/kernel_forward.h"
+            if not is_backward
+            else "natten/cuda/fna/kernel_backward.h"
+        )
         self.aligned = True
+        self.is_backward = is_backward
         self.has_rpb = has_rpb
         if self.has_rpb:
             self.name_cc += "_rpb"
+        self.computes_lse = computes_lse
+        if self.computes_lse:
+            self.name_cc += "_lse"
 
     @property
     def kernels(self):
         return [
             FusedNAKernel(
+                is_backward=self.is_backward,
                 dtype=self.dtype,
                 causal_mask=self.causal_mask,
                 config=config,
                 has_rpb=self.has_rpb,
+                computes_lse=self.computes_lse,
             )
             for config in self.config_list.configs
         ]
@@ -215,7 +259,11 @@ class FusedNAKernelBundle:
     def header(self):
         decl = "\n\n"
         decl += "///////////////////////////////////////////////////////////////////\n"
-        decl += f"// FNA-{self.na_dim}D / {self.dtype.short_name} / SM{self.sm}\n"
+        decl += f"// FNA-{self.na_dim}D / {self.dtype.short_name} / SM{self.sm}"
+        decl += "Backward Kernel" if self.is_backward else ""
+        decl += "SupportsRPB" if self.has_rpb else ""
+        decl += "StoresLSE" if self.computes_lse else ""
+        decl += "\n"
         decl += "///////////////////////////////////////////////////////////////////"
 
         for kernel in self.kernels:
@@ -277,19 +325,29 @@ def write_combined_source_file(path, filename, headers, sources):
 
 
 class RankDispatcher:
-    def __init__(self):
-        self.name_cc = "DISPATCH_FNA_FORWARD_KERNEL"
-        self.name_target = "DISPATCH_FNA_FORWARD_"
-        self.dims = []
+    def __init__(self, is_backward: bool):
+        self.name_cc = (
+            "DISPATCH_FNA_FORWARD_KERNEL"
+            if not is_backward
+            else "DISPATCH_FNA_BACKWARD_KERNEL"
+        )
+        self.name_target = (
+            "DISPATCH_FNA_FORWARD_" if not is_backward else "DISPATCH_FNA_BACKWARD_"
+        )
+        self.dims: List[int] = []
+        self.is_backward = is_backward
 
     def append(self, na_dim: int):
         self.dims.append(na_dim)
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += (
-            f"#define {self.name_cc}(rank, cc, dtype, is_causal, has_rpb, cb) \\\n"
-        )
+        if self.is_backward:
+            dispatcher_str += (
+                f"#define {self.name_cc}(rank, cc, dtype, is_causal, cb) \\\n"
+            )
+        else:
+            dispatcher_str += f"#define {self.name_cc}(rank, cc, dtype, is_causal, has_rpb, computes_lse, cb) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, na_dim in enumerate(self.dims):
             dispatcher_str += "    "
@@ -298,7 +356,12 @@ class RankDispatcher:
             dispatcher_str += f"if constexpr (rank == {na_dim})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name_target}{na_dim}D(cc, dtype, is_causal, has_rpb, cb); \\\n"
+            if self.is_backward:
+                dispatcher_str += (
+                    f"  {self.name_target}{na_dim}D(cc, dtype, is_causal, cb); \\\n"
+                )
+            else:
+                dispatcher_str += f"  {self.name_target}{na_dim}D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "NATTEN FNA kernel launch failed!" \\\n'
@@ -316,20 +379,26 @@ class RankDispatcher:
 
 
 class DeviceDispatcher:
-    def __init__(self, na_dim: int):
+    def __init__(self, is_backward: bool, na_dim: int):
         self.na_dim = na_dim
-        self.name_cc = f"DISPATCH_FNA_FORWARD_{self.na_dim}D"
+        self.name_cc = (
+            f"DISPATCH_FNA_FORWARD_{self.na_dim}D"
+            if not is_backward
+            else f"DISPATCH_FNA_BACKWARD_{self.na_dim}D"
+        )
         self.name_target = self.name_cc + "_SM"
         self.devices: List[int] = []
+        self.is_backward = is_backward
 
     def append(self, sm: int):
         self.devices.append(sm)
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += (
-            f"#define {self.name_cc}(cc, dtype, is_causal, has_rpb, cb) \\\n"
-        )
+        if self.is_backward:
+            dispatcher_str += f"#define {self.name_cc}(cc, dtype, is_causal, cb) \\\n"
+        else:
+            dispatcher_str += f"#define {self.name_cc}(cc, dtype, is_causal, has_rpb, computes_lse, cb) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, sm in enumerate(self.devices):
             dispatcher_str += "    "
@@ -340,9 +409,12 @@ class DeviceDispatcher:
             )
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += (
-                f"  {self.name_target}{sm}(dtype, is_causal, has_rpb, cb); \\\n"
-            )
+            if self.is_backward:
+                dispatcher_str += (
+                    f"  {self.name_target}{sm}(dtype, is_causal, cb); \\\n"
+                )
+            else:
+                dispatcher_str += f"  {self.name_target}{sm}(dtype, is_causal, has_rpb, computes_lse, cb); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "NATTEN FNA kernel launch failed!" \\\n'
@@ -360,19 +432,27 @@ class DeviceDispatcher:
 
 
 class DataTypeDispatcher:
-    def __init__(self, na_dim: int, sm: int):
+    def __init__(self, is_backward: bool, na_dim: int, sm: int):
         self.dtypes: List[DataType] = []
         self.na_dim = na_dim
         self.sm = sm
-        self.name_cc = f"DISPATCH_FNA_FORWARD_{self.na_dim}D_SM{self.sm}"
+        self.name_cc = (
+            f"DISPATCH_FNA_FORWARD_{self.na_dim}D_SM{self.sm}"
+            if not is_backward
+            else f"DISPATCH_FNA_BACKWARD_{self.na_dim}D_SM{self.sm}"
+        )
         self.name_target = self.name_cc
+        self.is_backward = is_backward
 
     def append(self, dtype: DataType):
         self.dtypes.append(dtype)
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name_cc}(dtype, is_causal, has_rpb, cb) \\\n"
+        if self.is_backward:
+            dispatcher_str += f"#define {self.name_cc}(dtype, is_causal, cb) \\\n"
+        else:
+            dispatcher_str += f"#define {self.name_cc}(dtype, is_causal, has_rpb, computes_lse, cb) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, dtype in enumerate(self.dtypes):
             dispatcher_str += "    "
@@ -383,9 +463,12 @@ class DataTypeDispatcher:
             )
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += (
-                f"  {self.name_target}_{dtype.short_name}(is_causal, has_rpb, cb); \\\n"
-            )
+            if self.is_backward:
+                dispatcher_str += (
+                    f"  {self.name_target}_{dtype.short_name}(is_causal, cb); \\\n"
+                )
+            else:
+                dispatcher_str += f"  {self.name_target}_{dtype.short_name}(is_causal, has_rpb, computes_lse, cb); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "NATTEN kernel launch failed!" \\\n'
@@ -405,6 +488,7 @@ class DataTypeDispatcher:
 class CausalMaskDispatcher:
     def __init__(
         self,
+        is_backward: bool,
         na_dim: int,
         sm: int,
         dtype: DataType,
@@ -413,9 +497,17 @@ class CausalMaskDispatcher:
         self.sm = sm
         self.dtype = dtype
         self.name_cc = (
-            f"DISPATCH_FNA_FORWARD_{self.na_dim}D_SM{self.sm}_{self.dtype.short_name}"
+            (f"DISPATCH_FNA_FORWARD_{self.na_dim}D_SM{self.sm}_{self.dtype.short_name}")
+            if not is_backward
+            else (
+                f"DISPATCH_FNA_BACKWARD_{self.na_dim}D_SM{self.sm}_{self.dtype.short_name}"
+            )
         )
-        self.name_target = f"fna{self.na_dim}_sm{self.sm}_{self.dtype.short_name}"
+        backward_str = "" if not is_backward else "_backward"
+        self.is_backward = is_backward
+        self.name_target = (
+            f"fna{self.na_dim}d{backward_str}_sm{self.sm}_{self.dtype.short_name}"
+        )
         self.cms: List = []
 
     def append(self, cm):
@@ -424,7 +516,12 @@ class CausalMaskDispatcher:
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name_cc}(is_causal, has_rpb, cb) \\\n"
+        if self.is_backward:
+            dispatcher_str += f"#define {self.name_cc}(is_causal, cb) \\\n"
+        else:
+            dispatcher_str += (
+                f"#define {self.name_cc}(is_causal, has_rpb, computes_lse, cb) \\\n"
+            )
         dispatcher_str += "  [&] { \\\n"
         i = 0
         for cm in self.cms:
@@ -444,21 +541,33 @@ class CausalMaskDispatcher:
                     dispatcher_str += " && "
             dispatcher_str += ")"
             dispatcher_str += " { \\\n"
-            if not any(cm):
-                dispatcher_str += " if (has_rpb) {\\\n"
-                dispatcher_str += f"  {self.name_target}_cm_{cm_str}_rpb(cb); \\\n"
-                dispatcher_str += " } else {\\\n"
+            if not self.is_backward:
+                if not any(cm):
+                    dispatcher_str += " if (has_rpb && computes_lse) {\\\n"
+                    dispatcher_str += (
+                        f"  {self.name_target}_cm_{cm_str}_rpb_lse(cb); \\\n"
+                    )
+                    dispatcher_str += " } else if (has_rpb) {\\\n"
+                    dispatcher_str += f"  {self.name_target}_cm_{cm_str}_rpb(cb); \\\n"
+                    dispatcher_str += " } else if (computes_lse) {\\\n"
+                    dispatcher_str += f"  {self.name_target}_cm_{cm_str}_lse(cb); \\\n"
+                    dispatcher_str += " } else {\\\n"
+                else:
+                    dispatcher_str += " if (computes_lse) {\\\n"
+                    dispatcher_str += f"  {self.name_target}_cm_{cm_str}_lse(cb); \\\n"
+                    dispatcher_str += " } else {\\\n"
             dispatcher_str += "    "
             dispatcher_str += f"  {self.name_target}_cm_{cm_str}(cb); \\\n"
-            if not any(cm):
+            if not self.is_backward:
                 dispatcher_str += " } \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += "    "
         dispatcher_str += '      std::cerr << "NATTEN FNA kernel launch failed!" \\\n'
+        maybe_backward_str = "-backward" if self.is_backward else ""
         dispatcher_str += (
             '                << "'
-            + f"Causal mask dispatcher (FNA-{self.na_dim}D, SM{self.sm}, {self.dtype.short_name}) got invalid causal mask!"
+            + f"Causal mask dispatcher (FNA-{self.na_dim}D{maybe_backward_str}, SM{self.sm}, {self.dtype.short_name}) got invalid causal mask!"
             + '" \\\n'
         )
         dispatcher_str += "                << std::endl; \\\n"
@@ -498,11 +607,14 @@ def write_header_file(content, path, namespaces, extra_includes=[]):
 
 def generate_cuda_kernels(path, num_splits=2):
 
+    SUPPORTED_ARCHS = [50, 70, 75, 80]
+
     CUDA_DTYPES = [
         NATTEN_Float,
         NATTEN_Half,
         NATTEN_BFloat,
     ]
+    NA_RANKS = [1, 2, 3]
 
     CAUSAL_MASKS = {
         1: [[0], [1]],
@@ -518,8 +630,6 @@ def generate_cuda_kernels(path, num_splits=2):
             [1, 1, 1],
         ],
     }
-
-    SUPPORTED_ARCHS = [50, 70, 75, 80]
 
     GEMM_SHAPES = [
         # K = 32
@@ -544,34 +654,27 @@ def generate_cuda_kernels(path, num_splits=2):
     cm_dispatchers = []
     kernels = []
 
-    rank_dispatcher = RankDispatcher()
-    for na_dim in [1, 2, 3]:
+    rank_dispatcher = RankDispatcher(is_backward=False)
+    for na_dim in NA_RANKS:
         rank_dispatcher.append(na_dim)
-        device_dispatcher = DeviceDispatcher(na_dim=na_dim)
+        device_dispatcher = DeviceDispatcher(is_backward=False, na_dim=na_dim)
         for sm in SUPPORTED_ARCHS:
             device_dispatcher.append(sm)
-            dtype_dispatcher = DataTypeDispatcher(na_dim=na_dim, sm=sm)
+            dtype_dispatcher = DataTypeDispatcher(
+                is_backward=False, na_dim=na_dim, sm=sm
+            )
             for dtype in CUDA_DTYPES:
                 if dtype.min_sm > sm:
                     continue
                 dtype_dispatcher.append(dtype)
-                cm_dispatcher = CausalMaskDispatcher(na_dim=na_dim, sm=sm, dtype=dtype)
+                cm_dispatcher = CausalMaskDispatcher(
+                    is_backward=False, na_dim=na_dim, sm=sm, dtype=dtype
+                )
                 for cm in CAUSAL_MASKS[na_dim]:
                     cm_dispatcher.append(cm)
-                    new_kernel = FusedNAKernelBundle(
-                        na_dim=na_dim,
-                        sm=sm,
-                        dtype=dtype,
-                        config_list=KernelConfigList(
-                            na_dim=na_dim,
-                            sm=sm,
-                            gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
-                        ),
-                        causal_mask=cm,
-                    )
-                    kernels.append(new_kernel)
-                    if not any(cm):
-                        new_kernel_with_rpb_support = FusedNAKernelBundle(
+                    kernels.append(
+                        FusedNAKernelBundle(
+                            is_backward=False,
                             na_dim=na_dim,
                             sm=sm,
                             dtype=dtype,
@@ -581,9 +684,206 @@ def generate_cuda_kernels(path, num_splits=2):
                                 gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
                             ),
                             causal_mask=cm,
-                            has_rpb=True,
                         )
-                        kernels.append(new_kernel_with_rpb_support)
+                    )
+                    kernels.append(
+                        FusedNAKernelBundle(
+                            is_backward=False,
+                            na_dim=na_dim,
+                            sm=sm,
+                            dtype=dtype,
+                            config_list=KernelConfigList(
+                                na_dim=na_dim,
+                                sm=sm,
+                                gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
+                            ),
+                            causal_mask=cm,
+                            computes_lse=True,
+                        )
+                    )
+                    if not any(cm):
+                        kernels.append(
+                            FusedNAKernelBundle(
+                                is_backward=False,
+                                na_dim=na_dim,
+                                sm=sm,
+                                dtype=dtype,
+                                config_list=KernelConfigList(
+                                    na_dim=na_dim,
+                                    sm=sm,
+                                    gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
+                                ),
+                                causal_mask=cm,
+                                has_rpb=True,
+                            )
+                        )
+                        kernels.append(
+                            FusedNAKernelBundle(
+                                is_backward=False,
+                                na_dim=na_dim,
+                                sm=sm,
+                                dtype=dtype,
+                                config_list=KernelConfigList(
+                                    na_dim=na_dim,
+                                    sm=sm,
+                                    gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
+                                ),
+                                causal_mask=cm,
+                                has_rpb=True,
+                                computes_lse=True,
+                            )
+                        )
+                cm_dispatchers.append(cm_dispatcher)
+            dtype_dispatchers.append(dtype_dispatcher)
+        device_dispatchers.append(device_dispatcher)
+
+    #
+
+    BACKWARD_GEMM_SHAPES = {
+        80: {
+            NATTEN_Half: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                (128, 128, 128),  # SM80/SM90 only
+                # K = 65536
+                (64, 64, 2**16),
+                (128, 64, 2**16),  # SM80/SM90 only
+            ],
+            NATTEN_BFloat: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                (128, 128, 128),  # SM80/SM90 only
+                # K = 65536
+                (64, 64, 2**16),
+                (128, 64, 2**16),  # SM80/SM90 only
+            ],
+            NATTEN_Float: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                (128, 64, 128),  # SM80/SM90 only
+                # K = 65536
+                (64, 64, 2**16),
+                (128, 64, 2**16),  # SM80/SM90 only
+            ],
+        },
+        75: {
+            NATTEN_Half: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                # K = 65536
+                (64, 64, 2**16),
+            ],
+            NATTEN_Float: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                # K = 65536
+                (64, 64, 2**16),
+            ],
+        },
+        70: {
+            NATTEN_Half: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                (128, 64, 128),  # SM70 only?
+                # K = 65536
+                (64, 64, 2**16),
+                (128, 64, 2**16),  # SM70 only?
+            ],
+            NATTEN_Float: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                # K = 65536
+                (64, 64, 2**16),
+            ],
+        },
+        50: {
+            NATTEN_Half: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                # K = 65536
+                (64, 64, 2**16),
+            ],
+            NATTEN_Float: [
+                # K = 32
+                (64, 64, 32),
+                # K = 64
+                (64, 64, 64),
+                # K = 128
+                (64, 64, 128),
+                # K = 65536
+                (64, 64, 2**16),
+            ],
+        },
+    }
+
+    # Backward kernels
+    rank_dispatcher_backward = RankDispatcher(is_backward=True)
+    # for na_dim in [1, 2, 3]:
+    for na_dim in NA_RANKS:
+        rank_dispatcher_backward.append(na_dim)
+        device_dispatcher = DeviceDispatcher(is_backward=True, na_dim=na_dim)
+        for sm in SUPPORTED_ARCHS:
+            device_dispatcher.append(sm)
+            dtype_dispatcher = DataTypeDispatcher(
+                is_backward=True, na_dim=na_dim, sm=sm
+            )
+            for dtype in CUDA_DTYPES:
+                if dtype.min_sm > sm:
+                    continue
+                dtype_dispatcher.append(dtype)
+                cm_dispatcher = CausalMaskDispatcher(
+                    is_backward=True, na_dim=na_dim, sm=sm, dtype=dtype
+                )
+                for cm in CAUSAL_MASKS[na_dim]:
+                    cm_dispatcher.append(cm)
+                    kernels.append(
+                        FusedNAKernelBundle(
+                            is_backward=True,
+                            na_dim=na_dim,
+                            sm=sm,
+                            dtype=dtype,
+                            config_list=KernelConfigList(
+                                na_dim=na_dim,
+                                sm=sm,
+                                gemm_shapes=BACKWARD_GEMM_SHAPES[sm][
+                                    dtype
+                                ],  # GEMM_SHAPES[na_dim][sm]
+                            ),
+                            causal_mask=cm,
+                        )
+                    )
                 cm_dispatchers.append(cm_dispatcher)
             dtype_dispatchers.append(dtype_dispatcher)
         device_dispatchers.append(device_dispatcher)
@@ -609,6 +909,7 @@ def generate_cuda_kernels(path, num_splits=2):
     rel_path_cm = f"{rel_header}dispatch_cm.h"
 
     rank_disp = rank_dispatcher.get_dispatcher()
+    rank_disp += rank_dispatcher_backward.get_dispatcher()
 
     device_disp = ""
     for dispatcher in device_dispatchers:
@@ -653,6 +954,7 @@ def generate_cuda_kernels(path, num_splits=2):
         "natten/dtypes.cuh",
         "natten/cuda/fna/na_utils.cuh",
         "natten/cuda/fna/kernel_forward.h",
+        "natten/cuda/fna/kernel_backward.h",
     ]
     write_header_file(
         rank_disp, path_rank, namespaces, cuda_headers + [rel_path_device]

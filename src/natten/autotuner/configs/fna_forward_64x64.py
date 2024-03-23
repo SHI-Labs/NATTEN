@@ -20,28 +20,44 @@
 # SOFTWARE.
 #
 #################################################################################################
-import warnings
 
 
-class FusedNAState:
-    enabled: bool = False
+from typing import Dict, List
 
+from ...types import FnaTileShapeType
 
-def enable_fna():
-    FusedNAState.enabled = True
-    warnings.warn(
-        "You're enabling the use of Fused Neighborhood Attention kernels. "
-        "This is an experimental feature, and only implements forward pass "
-        "at the moment. Proceed with caution.\n\n"
-        "For improved runtime performance, consider enabling auto-tuning:\n"
-        "from natten.functional import enable_autotuner\n"
-        "enable_autotuner()"
-    )
+# TODO: More combinations are possible for
+# 2D and 3D (query tile does not have to be smaller
+# than KV tile); but that behavior is untested,
+# and IIRC was unstable.
 
+# NOTE: we're excluding tile shapes that include 1 just to
+# reduce the giant number of configs down to a reasonable
+# amount; otherwise autotuning would take more than a few
+# seconds per call which is unacceptable. Tile shapes with
+# 1s are rarely selected.
 
-def disable_fna():
-    FusedNAState.enabled = False
-
-
-def is_fna_enabled() -> bool:
-    return FusedNAState.enabled
+_FNA_FORWARD_64x64_TILE_SIZES: Dict[int, List[FnaTileShapeType]] = {
+    1: [
+        ((64,), (64,)),
+    ],
+    2: [
+        ((32, 2), (32, 2)),
+        ((16, 4), (16, 4)),
+        ((8, 8), (8, 8)),
+        ((4, 16), (4, 16)),
+        ((2, 32), (2, 32)),
+    ],
+    3: [
+        ((16, 2, 2), (16, 2, 2)),
+        ((8, 4, 2), (8, 4, 2)),
+        ((8, 2, 4), (8, 2, 4)),
+        ((4, 8, 2), (4, 8, 2)),
+        ((4, 4, 4), (4, 4, 4)),
+        ((4, 2, 8), (4, 2, 8)),
+        ((2, 16, 2), (2, 16, 2)),
+        ((2, 8, 4), (2, 8, 4)),
+        ((2, 4, 8), (2, 4, 8)),
+        ((2, 2, 16), (2, 2, 16)),
+    ],
+}

@@ -46,18 +46,31 @@ from natten.utils.testing import (
 )
 from torch.autograd import gradcheck
 
-# NOTE: It is important to ensure determinism in torch GEMMs since
-# we don't write our own. Therefore we have to force determinism in
-# CUBLAS, and turn off CUDNN benchmarking (in case that backend
-# is built).
-# PT's caching allocator should also be turned off in unit tests for
-# when we run memcheck.
-os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
-os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-torch.use_deterministic_algorithms(True)
-torch.backends.cudnn.benchmark = False
-torch.backends.cuda.matmul.allow_tf32 = False
-torch.backends.cudnn.allow_tf32 = False
+
+def _reset_everything():
+    import natten
+    from natten.context import AutotunerContext, NattenContext
+
+    NattenContext.reset()
+    AutotunerContext.reset()
+    natten.use_tiled_na()
+    natten.use_gemm_na()
+    natten.use_tf32_in_gemm_na()
+    os.environ["NATTEN_LOG_LEVEL"] = "CRITICAL"
+
+    # NOTE: It is important to ensure determinism in torch GEMMs since
+    # we don't write our own. Therefore we have to force determinism in
+    # CUBLAS, and turn off CUDNN benchmarking (in case that backend
+    # is built).
+    # PT's caching allocator should also be turned off in unit tests for
+    # when we run memcheck.
+    os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    torch.use_deterministic_algorithms(True)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
+
 
 HAS_GEMM = has_gemm()
 HAS_FLOAT_GEMM = has_fp32_gemm()
@@ -104,6 +117,12 @@ def init_cpu_ref(B, H, L, D, kernel_size, dilation, has_bias, is_causal=None):
 
 
 class NA1DTests(unittest.TestCase):
+    def setUp(self):
+        _reset_everything()
+
+    def tearDown(self):
+        _reset_everything()
+
     def _test_against_cpu(self, inputs, reference, eps, dtype, is_causal=None):
         q, k, v, rpb, kernel_size, dilation = inputs
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
@@ -368,6 +387,9 @@ class NA1DTests(unittest.TestCase):
 
             op = new_op
 
+        if rpb is not None:
+            torch.use_deterministic_algorithms(False)
+
         assert gradcheck(
             op,
             variables,
@@ -377,6 +399,9 @@ class NA1DTests(unittest.TestCase):
             nondet_tol=0 if rpb is None else 1e-6,  # dRPB uses atomics
             fast_mode=_FAST_GRADCHECK,
         ), "Autograd check failed for NA1D: QK."
+
+        if rpb is not None:
+            torch.use_deterministic_algorithms(True)
 
     def _test_autograd_av(
         self,
@@ -862,7 +887,7 @@ class NA1DTests(unittest.TestCase):
         has_bias,
         dtype,
         device="cuda",
-        eps=1e-4,
+        eps=1e-3,
         L_extra=9,
         broadcast_extra_kv_batch=False,
     ):

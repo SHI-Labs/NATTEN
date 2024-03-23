@@ -53,31 +53,32 @@
 #include <assert.h>
 #endif
 
-#include "cutlass/aligned_buffer.h"
-#include "cutlass/array.h"
-#include "cutlass/cutlass.h"
-#include "cutlass/functional.h"
-#include "cutlass/layout/tensor.h"
-#include "cutlass/layout/vector.h"
-#include "cutlass/numeric_types.h"
-#include "cutlass/tensor_coord.h"
+#include <cutlass/aligned_buffer.h>
+#include <cutlass/array.h>
+#include <cutlass/cutlass.h>
+#include <cutlass/functional.h>
+#include <cutlass/layout/tensor.h>
+#include <cutlass/layout/vector.h>
+#include <cutlass/numeric_types.h>
+#include <cutlass/tensor_coord.h>
 
-#include "cutlass/gemm/gemm.h"
+#include <cutlass/gemm/gemm.h>
 
-#include "cutlass/transform/pitch_linear_thread_map.h"
-#include "cutlass/transform/threadblock/regular_tile_iterator.h"
+#include <cutlass/transform/pitch_linear_thread_map.h>
+#include <cutlass/transform/threadblock/regular_tile_iterator.h>
 
-#include "cutlass/epilogue/threadblock/epilogue_base.h"
-#include "cutlass/epilogue/threadblock/predicated_tile_iterator.h"
-#include "cutlass/numeric_types.h"
+#include <cutlass/epilogue/threadblock/epilogue_base.h>
+#include <cutlass/epilogue/threadblock/predicated_tile_iterator.h>
+#include <cutlass/numeric_types.h>
 
-#include "cutlass/array.h"
-#include "cutlass/cutlass.h"
-#include "cutlass/epilogue/thread/scale_type.h"
-#include "cutlass/functional.h"
-#include "cutlass/numeric_conversion.h"
-#include "cutlass/numeric_types.h"
-#include "epilogue_pipelined.h"
+#include <cutlass/array.h>
+#include <cutlass/cutlass.h>
+#include <cutlass/epilogue/thread/scale_type.h>
+#include <cutlass/functional.h>
+#include <cutlass/numeric_conversion.h>
+#include <cutlass/numeric_types.h>
+
+#include <natten/cuda/fna/epilogue/epilogue_pipelined.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 

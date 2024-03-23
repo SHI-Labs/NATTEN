@@ -67,5 +67,22 @@ style:
 	ufmt format $(check_dirs)
 	flake8 $(check_dirs)
 	mypy $(check_dirs)
-	clang-format -i csrc/include/**/*.*
-	clang-format -i csrc/src/**/*.*
+	find csrc/include/ \
+		-iname \*.h -o \
+		-iname \*.cpp -o \
+		-iname \*.cuh -o \
+		-iname \*.cu -o \
+		-iname \*.hpp -o \
+		-iname \*.c -o \
+		-iname \*.cxx | xargs \
+		clang-format -i
+	find csrc/src/ \
+		-iname \*.h -o \
+		-iname \*.cpp -o \
+		-iname \*.cuh -o \
+		-iname \*.cu -o \
+		-iname \*.hpp -o \
+		-iname \*.c -o \
+		-iname \*.cxx | xargs \
+		clang-format -i
+

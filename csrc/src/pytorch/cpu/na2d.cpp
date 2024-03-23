@@ -42,6 +42,7 @@ void na2d_forward(
     const at::Tensor& value,
     at::Tensor& out,
     const at::optional<at::Tensor>& rpb,
+    const at::optional<at::Tensor>& logsumexp,
     int32_t batch_size,
     int32_t height,
     int32_t width,
@@ -54,7 +55,34 @@ void na2d_forward(
     const std::tuple<int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t>& key_tile_size) {
   // TODO: implement CPU reference
-  NATTEN_FAILURE("Fused kernels are not available on CPU yet.");
+  TORCH_CHECK(false, "Fused kernels are not available on CPU yet.");
+}
+
+void na2d_backward(
+    const at::Tensor& grad_out,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& logsumexp,
+    const at::Tensor& out,
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    int32_t batch_size,
+    int32_t height,
+    int32_t width,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t>& num_splits_key,
+    bool compute_delta_with_torch) {
+  // TODO: implement CPU reference
+  TORCH_CHECK(false, "Fused kernels are not available on CPU yet.");
 }
 
 void na2d_qk_forward(

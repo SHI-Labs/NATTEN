@@ -23,6 +23,9 @@
 
 #pragma once
 
+#include <natten/cuda/fna/iterators/predicated_tile_access_iterator.h>
+#include <natten/cuda/fna/iterators/predicated_tile_iterator.h>
+
 #include <cutlass/gemm/threadblock/mma_multistage.h>
 #include <cutlass/gemm/threadblock/mma_pipelined.h>
 
@@ -107,6 +110,123 @@ struct ReplaceMmaIterators<
         Policy>,
     NewIteratorA,
     NewIteratorB> {
+  using Mma = cutlass::gemm::threadblock::MmaPipelined<
+      Shape,
+      NewIteratorA,
+      SmemIteratorA,
+      NewIteratorB,
+      SmemIteratorB,
+      ElementC,
+      LayoutC,
+      Policy>;
+};
+
+template <int NADim, typename Mma>
+struct ConvertIterators;
+
+template <
+    int NADim,
+    typename Shape,
+    typename IteratorA,
+    typename SmemIteratorA,
+    cutlass::arch::CacheOperation::Kind CacheOpA,
+    typename IteratorB,
+    typename SmemIteratorB,
+    cutlass::arch::CacheOperation::Kind CacheOpB,
+    typename ElementC,
+    typename LayoutC,
+    typename Policy,
+    int kStages,
+    cutlass::gemm::SharedMemoryClearOption SharedMemoryClear>
+struct ConvertIterators<
+    NADim,
+    cutlass::gemm::threadblock::MmaMultistage<
+        Shape,
+        IteratorA,
+        SmemIteratorA,
+        CacheOpA,
+        IteratorB,
+        SmemIteratorB,
+        CacheOpB,
+        ElementC,
+        LayoutC,
+        Policy,
+        kStages,
+        SharedMemoryClear>> {
+  using NewIteratorA =
+      cutlass::transform::threadblock::CustomPredicatedTileAccessIterator<
+          NADim,
+          typename IteratorA::Shape,
+          typename IteratorA::Element,
+          typename IteratorA::Layout,
+          IteratorA::kAdvanceRank,
+          typename IteratorA::ThreadMap,
+          typename IteratorA::AccessType>;
+
+  using NewIteratorB =
+      cutlass::transform::threadblock::CustomPredicatedTileAccessIterator<
+          NADim,
+          typename IteratorB::Shape,
+          typename IteratorB::Element,
+          typename IteratorB::Layout,
+          IteratorB::kAdvanceRank,
+          typename IteratorB::ThreadMap,
+          typename IteratorB::AccessType>;
+  using Mma = cutlass::gemm::threadblock::MmaMultistage<
+      Shape,
+      NewIteratorA,
+      SmemIteratorA,
+      CacheOpA,
+      NewIteratorB,
+      SmemIteratorB,
+      CacheOpB,
+      ElementC,
+      LayoutC,
+      Policy,
+      kStages,
+      SharedMemoryClear>;
+};
+
+template <
+    int NADim,
+    typename Shape,
+    typename IteratorA,
+    typename SmemIteratorA,
+    typename IteratorB,
+    typename SmemIteratorB,
+    typename ElementC,
+    typename LayoutC,
+    typename Policy>
+struct ConvertIterators<
+    NADim,
+    cutlass::gemm::threadblock::MmaPipelined<
+        Shape,
+        IteratorA,
+        SmemIteratorA,
+        IteratorB,
+        SmemIteratorB,
+        ElementC,
+        LayoutC,
+        Policy>> {
+  using NewIteratorA =
+      cutlass::transform::threadblock::CustomPredicatedTileIterator<
+          NADim,
+          typename IteratorA::Shape,
+          typename IteratorA::Element,
+          typename IteratorA::Layout,
+          IteratorA::kAdvanceRank,
+          typename IteratorA::ThreadMap,
+          IteratorA::AccessType::kElements>;
+
+  using NewIteratorB =
+      cutlass::transform::threadblock::CustomPredicatedTileIterator<
+          NADim,
+          typename IteratorB::Shape,
+          typename IteratorB::Element,
+          typename IteratorB::Layout,
+          IteratorB::kAdvanceRank,
+          typename IteratorB::ThreadMap,
+          IteratorB::AccessType::kElements>;
   using Mma = cutlass::gemm::threadblock::MmaPipelined<
       Shape,
       NewIteratorA,

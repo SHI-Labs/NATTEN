@@ -30,6 +30,30 @@ If you're not familiar with neighborhood attention, please refer to
 To read more about our GEMM-based and fused neighborhood attention kernels, please refer to
 our new preprint, [Faster Neighborhood Attention](https://arxiv.org/abs/2403.04690).
 
+## New: Fused Neighborhood Attention now supports backpropagation!
+
+We've released the Fused Neighborhood Attention (FNA) backward kernel and interface, which means you can now
+train models based on neighborhood attention faster and more efficiently.
+
+FNA can be seen as a generalization of methods such as [Flash Attention](https://github.com/Dao-AILab/flash-attention/) and
+[FMHA](https://github.com/facebookresearch/xformers/) from back-to-back matrix multiplication to
+back-to-back tensor-tensor contraction, and comes with neighborhood attention masking built in.
+This accelerates accelerates neighborhood attention, a multi-dimensional sliding window attention pattern,
+by never storing the attention tensor to global memory, which aside from reducing global memory footprint also reduces
+the memory bandwidth bottleneck.
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/fna-chart-dark.png">
+  <img alt="Op-level average speedup." src="assets/fna-chart-light.png" height="384" />
+</picture>
+</div>
+
+We highly recommend referring to [FNA quick start](docs/fna/fna-quickstart.md) or 
+the [Fused vs unfused NA](docs/fna/fused-vs-unfused.md) guide before
+starting to use FNA, since the interface, memory layout, and feature set can differ from
+all unfused ops in NATTEN.
+
 ## Getting started
  
 NATTEN supports PyTorch version 2.0 and later, and Python versions 3.8 and above. 
@@ -67,11 +91,11 @@ Notes:
 | 1D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
 | 2D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
 | 3D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 1D            | gemm         |                    |                    | :white_check_mark:       | Forward and reverse mode | SM70      |
-| 2D            | gemm         |                    |                    | :white_check_mark:       | Forward and reverse mode | SM70      |
-| 1D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Coming soon              | SM50      |
-| 2D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Coming soon              | SM50      |
-| 3D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Coming soon              | SM50      |
+| 1D            | gemm         | -                  | -                  | :white_check_mark:       | Forward and reverse mode | SM70      |
+| 2D            | gemm         | -                  | -                  | :white_check_mark:       | Forward and reverse mode | SM70      |
+| 1D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
+| 2D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
+| 3D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
 
 Notes: 
 * FP16 kernels are only available on SM50 and above*, and BF16 requires SM80 and above.
@@ -81,6 +105,16 @@ Notes:
 * Tiled only implements 1/3 of the ops, is only implemented for 2D problems, and requires head dim = 32.
 * Forward mode autograd does not support relative positional biases and causal masking yet.
 * Relative positional biases are not yet supported when any axis has causal masking enabled.
+* Relative positional biases are not supported in FNA during backward pass.
+
+Features that will likely no longer be worked on or improved:
+* Relative positional biases
+  * There's just better alternatives that don't involve explicitly biasing the attention weight matrix, and they will be more
+  performant on top of providing similar or better accuracy levels.
+* GEMM-based kernels
+  * Since FNA covers more features than our unfused GEMM-based kernels, and we know it to be a better solution
+    (please refer to Faster Neighborhood Attention for details), we do not plan to extend or improve these kernels.
+  * This includes support for varying parameters, causal masking, and 3-D problems.
 
 ## License
 NATTEN is released under the [MIT License](LICENSE).

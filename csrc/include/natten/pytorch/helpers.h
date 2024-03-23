@@ -100,7 +100,7 @@ inline void CheckArgsAgainstDim(
     int32_t dilation) {
   TORCH_CHECK(
       kernel_size * dilation <= dim,
-      "Input axes must be less than or equal to the product of kernel size and dilation. "
+      "Input axes must be greater than or equal to the product of kernel size and dilation. "
       "Got kernel size ",
       kernel_size,
       ", dilation ",
@@ -231,6 +231,94 @@ void CheckBias(
         expected_bias_dim,
         ", got ",
         bias.size(i + 1),
+        ".");
+  }
+}
+
+template <size_t NaDim>
+void CheckLogSumExp(const at::Tensor& output, const at::Tensor& logsumexp) {
+  // Output: [batch, *, heads, dim]
+  // Logsumexp: [batch, *, heads]
+  static_assert(NaDim >= 1 && NaDim < 4);
+  TORCH_CHECK(
+      logsumexp.scalar_type() == torch::kFloat,
+      "`logsumexp` must be stored in float32 data type, got ",
+      logsumexp.scalar_type());
+  TORCH_CHECK(
+      logsumexp.device().is_cuda() == output.device().is_cuda(),
+      "Expected logsumexp to be on the same device as the operands.");
+  CHECK_CONTIGUOUS(logsumexp);
+  TORCH_CHECK(
+      output.dim() == NaDim + 3,
+      NaDim,
+      "-D NA expects operands to be ",
+      NaDim + 3,
+      " rank tensors, got ",
+      output.dim());
+  TORCH_CHECK(
+      logsumexp.dim() == output.dim() - 1,
+      NaDim,
+      "-D NA expects logsumexp to be a ",
+      NaDim + 2,
+      " rank tensor, got ",
+      logsumexp.dim());
+  for (size_t i = 0; i < NaDim + 2; ++i) {
+    TORCH_CHECK(
+        logsumexp.size(i) == output.size(i),
+        "Invalid logsumexp shape at dim ",
+        i,
+        "; "
+        "expected ",
+        output.size(i),
+        ", got ",
+        logsumexp.size(i),
+        ".");
+  }
+}
+
+inline void AssertDimsAre128BitAligned(
+    const at::Tensor& query,
+    const at::Tensor& value) {
+  auto head_dim = query.size(-1);
+  auto head_dim_value = value.size(-1);
+  TORCH_CHECK(
+      query.scalar_type() == value.scalar_type(),
+      "QKV must match in data type, got query.dtype=",
+      query.scalar_type(),
+      ", but value.dtype=",
+      value.scalar_type(),
+      ".");
+  TORCH_CHECK(
+      query.scalar_type() == torch::kFloat ||
+          query.scalar_type() == torch::kFloat16 ||
+          query.scalar_type() == torch::kBFloat16,
+      "This NATTEN operation only supports FP32, FP16, and BF16 data types, got ",
+      query.scalar_type(),
+      ".");
+
+  if (query.scalar_type() == torch::kFloat) {
+    TORCH_CHECK(
+        head_dim % 4 == 0,
+        "Query dimension must be a multiple of 4 for FP32 operands, got ",
+        head_dim,
+        ".");
+    TORCH_CHECK(
+        head_dim_value % 4 == 0,
+        "Value dimension must be a multiple of 4 for FP32 operands, got ",
+        head_dim_value,
+        ".");
+  } else if (
+      query.scalar_type() == torch::kFloat16 ||
+      query.scalar_type() == torch::kBFloat16) {
+    TORCH_CHECK(
+        head_dim % 8 == 0,
+        "Query dimension must be a multiple of 8 for FP16/BF16 operands, got ",
+        head_dim,
+        ".");
+    TORCH_CHECK(
+        head_dim_value % 8 == 0,
+        "Value dimension must be a multiple of 8 for FP16/BF16 operands, got ",
+        head_dim_value,
         ".");
   }
 }

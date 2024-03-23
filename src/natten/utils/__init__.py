@@ -23,18 +23,19 @@
 
 from .checks import (
     check_all_args,
+    check_backward_tiling_config,
     check_causal_arg,
     check_dilation_arg,
     check_kernel_size_arg,
     check_tiling_config,
     get_num_na_weights,
 )
+from .misc import get_device_cc
 from .tensor import (
     check_additional_keys,
     check_additional_values,
     make_attn_tensor_from_input,
 )
-from .typing import NoneType
 
 __all__ = [
     "check_additional_keys",
@@ -44,7 +45,8 @@ __all__ = [
     "check_dilation_arg",
     "check_kernel_size_arg",
     "check_tiling_config",
+    "check_backward_tiling_config",
     "get_num_na_weights",
+    "get_device_cc",
     "make_attn_tensor_from_input",
-    "NoneType",
 ]

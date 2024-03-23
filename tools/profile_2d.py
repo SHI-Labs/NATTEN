@@ -27,7 +27,6 @@ import click
 
 import natten
 import torch
-from natten import autotuner
 
 from utils import (
     generate_2d_problem,
@@ -93,10 +92,16 @@ def profile_2d(
         natten.libnatten.set_gemm_na(False)
     if disable_tf32:
         natten.libnatten.set_gemm_tf32(False)
-    if disable_autotuner:
-        autotuner.disable_autotuner()
-    else:
-        autotuner.enable_autotuner()
+
+    if fuse:
+        natten.use_fused_na()
+        natten.use_kv_parallelism_in_fused_na()
+        natten.set_memory_usage_preference("unrestricted")
+
+        if disable_autotuner:
+            natten.use_autotuner(False, False, False, False)
+        else:
+            natten.use_autotuner(True, True)
 
     func = partial(profile_na_with_torch, fuse=fuse)
     if fmha:

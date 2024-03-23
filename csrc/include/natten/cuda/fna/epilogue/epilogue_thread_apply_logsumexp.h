@@ -102,14 +102,15 @@ struct ArrayExponential<half_t, ElementsPerAccess> {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 /// Applies:
-/// output <- (input - lse).exp()
+/// output <- (input).exp()
 template <
     typename ElementOutput_, // output
     typename ElementLSE_, // accumulator from LSE
     typename ElementAccumulator_, // accumulator from matmul
     typename ElementCompute_, // intermediate compute (and exp calculation)
     int ElementsPerAccess>
-class ApplyLogSumExp {
+// class ApplyLogSumExp {
+class ApplyExp {
  public:
   using ElementOutput = ElementOutput_;
   using ElementAccumulator = ElementAccumulator_;
@@ -133,7 +134,7 @@ class ApplyLogSumExp {
   //
 
   CUTLASS_HOST_DEVICE
-  ApplyLogSumExp() {}
+  ApplyExp() {}
 
   /// Returns true if source is needed
   CUTLASS_HOST_DEVICE
@@ -147,23 +148,25 @@ class ApplyLogSumExp {
 
   CUTLASS_HOST_DEVICE
   FragmentOutput operator()(
-      FragmentAccumulator const& AB,
+      FragmentAccumulator const& AB/*,
       FragmentLSE const& scale_unused,
       // bias used as LSE
-      FragmentLSE const& bias) const {
+      FragmentLSE const& bias*/) const {
     FragmentCompute frag_AB = NumericArrayConverter<
         ElementCompute,
         ElementAccumulator,
         kElementsPerAccess>()(AB);
-    FragmentCompute frag_lse_compute =
-        NumericArrayConverter<ElementCompute, ElementLSE, kElementsPerAccess>()(
-            bias);
+    // FragmentCompute frag_lse_compute =
+    //     NumericArrayConverter<ElementCompute, ElementLSE,
+    //     kElementsPerAccess>()(
+    //         bias);
     FragmentCompute frag_compute;
 
-    minus<FragmentCompute> minus_lse;
+    // minus<FragmentCompute> minus_lse;
     detail::ArrayExponential<ElementCompute, kElementsPerAccess> apply_exp;
-    frag_compute = minus_lse(frag_AB, frag_lse_compute);
-    frag_compute = apply_exp(frag_compute);
+    // frag_compute = minus_lse(frag_AB, frag_lse_compute);
+    // frag_compute = apply_exp(frag_compute);
+    frag_compute = apply_exp(frag_AB);
 
     return NumericArrayConverter<
         ElementOutput,

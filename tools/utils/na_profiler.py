@@ -21,11 +21,11 @@
 #
 #################################################################################################
 
+import math
 from typing import Optional, Tuple
 
 import torch
 
-from natten.autotuner import autotune_fna
 from natten.utils import check_all_args
 from torch import Tensor
 from torch.profiler import profile as torch_profile, ProfilerActivity, record_function
@@ -36,37 +36,21 @@ from .mappings import fav2, fmha, get_ops
 from .problem import Problem
 
 
-def init_qkv_tensors(problem: Problem) -> Tuple[Tensor, Tensor, Tensor]:
-    q = torch.randn(
-        problem.get_flattened_tensor_shape(True),
-        device="cuda",
-        dtype=problem.dtype,
-        requires_grad=False,
-    )
-    k, v = torch.randn_like(q), torch.randn_like(q)
-    return q, k, v
-
-
 def init_tensors(
-    problem: Problem, fuse: bool
-) -> Tuple[Tensor, Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tensor]]:
+    problem: Problem, flatten_sequence: bool, heads_last: bool
+) -> Tuple[Tensor, Tensor, Tensor, Tensor, Optional[Tensor]]:
     q = torch.randn(
-        problem.get_tensor_shape(fuse),
+        (
+            problem.get_flattened_tensor_shape(True)
+            if flatten_sequence
+            else problem.get_tensor_shape(heads_last)
+        ),
         device="cuda",
         dtype=problem.dtype,
         requires_grad=False,
     )
-    attn = None
+    k, v, d_out = torch.randn_like(q), torch.randn_like(q), torch.randn_like(q)
     bias = None
-    if not fuse:
-        # TODO: pass true when layout is changed
-        attn = torch.randn(
-            problem.get_attn_tensor_shape(False),
-            device="cuda",
-            dtype=problem.dtype,
-            requires_grad=False,
-        )
-    k, v, o = torch.randn_like(q), torch.randn_like(q), torch.randn_like(q)
     if problem.has_bias:
         bias = torch.randn(
             problem.get_bias_shape(),
@@ -74,37 +58,7 @@ def init_tensors(
             dtype=problem.dtype,
             requires_grad=False,
         )
-    return q, k, v, o, attn, bias
-
-
-def init_grad_tensors(
-    problem: Problem, fuse: bool
-) -> Tuple[Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tensor]]:
-    d_q = torch.randn(
-        problem.get_tensor_shape(fuse),
-        device="cuda",
-        dtype=problem.dtype,
-        requires_grad=False,
-    )
-    d_attn = None
-    d_bias = None
-    if not fuse:
-        # TODO: pass true when layout is changed
-        d_attn = torch.randn(
-            problem.get_attn_tensor_shape(False),
-            device="cuda",
-            dtype=problem.dtype,
-            requires_grad=False,
-        )
-    d_k, d_v = torch.randn_like(d_q), torch.randn_like(d_q)
-    if problem.has_bias:
-        d_bias = torch.randn(
-            problem.get_bias_shape(),
-            device="cuda",
-            dtype=problem.dtype,
-            requires_grad=False,
-        )
-    return d_q, d_k, d_v, d_attn, d_bias
+    return q, k, v, d_out, bias
 
 
 def _profile_na_with_torch(
@@ -113,53 +67,45 @@ def _profile_na_with_torch(
     fuse: bool = False,
     disable_backward: bool = False,
 ) -> torch_profile:
-    qk_op, qk_backward_op, av_op, av_backward_op, fused_op, fused_backward_op = get_ops(
-        problem.na_dim
-    )
+    qk_op, av_op, fused_op = get_ops(problem.na_dim)
     kernel_size, dilation, is_causal = check_all_args(
         problem.na_dim, problem.kernel_size, problem.dilation, problem.is_causal
     )
 
-    query, key, value, out, attn, bias = init_tensors(problem, fuse)
-    d_query, d_key, d_value, d_attn, d_bias = init_grad_tensors(problem, fuse)
+    query, key, value, d_out, bias = init_tensors(
+        problem, flatten_sequence=False, heads_last=fuse
+    )
+
+    if bias is not None and fuse and not disable_backward:
+        raise NotImplementedError("FNA does not support bias in backward pass.")
 
     if fuse:
-        tiling_config = autotune_fna(
-            problem.na_dim, query, kernel_size, dilation, is_causal
-        )
-        assert fused_op is not None and callable(fused_op)
 
         def run_ops(
             query,
             key,
             value,
-            attn,
-            out,
             bias,
-            d_query,
-            d_key,
-            d_value,
-            d_attn,
-            d_bias,
+            d_out,
             kernel_size,
             dilation,
             is_causal,
             disable_backward,
         ):
-            fused_op(
-                out,
+            query.requires_grad = not disable_backward
+            key.requires_grad = not disable_backward
+            value.requires_grad = not disable_backward
+            out = fused_op(
                 query,
                 key,
                 value,
-                bias,
-                kernel_size,
-                dilation,
-                is_causal,
-                1.0,
-                *tiling_config,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+                rpb=bias,
             )
             if not disable_backward:
-                raise NotImplementedError()
+                out.backward(d_out)
 
     else:
 
@@ -167,79 +113,82 @@ def _profile_na_with_torch(
             query,
             key,
             value,
-            attn,
-            out,
             bias,
-            d_query,
-            d_key,
-            d_value,
-            d_attn,
-            d_bias,
+            d_out,
             kernel_size,
             dilation,
             is_causal,
             disable_backward,
         ):
-            qk_op(attn, query, key, bias, kernel_size, dilation, is_causal)
-            attn = attn.softmax(dim=-1)
-            av_op(out, attn, value, kernel_size, dilation, is_causal)
-            if not disable_backward:
-                av_backward_op(
-                    d_attn, d_value, out, attn, value, kernel_size, dilation, is_causal
-                )
-                qk_backward_op(
-                    d_query,
-                    d_key,
-                    d_bias,
-                    d_attn,
-                    query,
-                    key,
-                    kernel_size,
-                    dilation,
-                    is_causal,
-                )
-
-    with torch.no_grad():
-        for _ in range(warmup_steps):
-            run_ops(
+            query.requires_grad = not disable_backward
+            key.requires_grad = not disable_backward
+            value.requires_grad = not disable_backward
+            if bias is not None:
+                bias.requires_grad = not disable_backward
+            attn = qk_op(
                 query,
                 key,
-                value,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+                rpb=bias,
+            )
+            # NOTE: not multiplying by attention scale, since can be trivially fused
+            # into any kernel or op.
+            attn = attn.softmax(dim=-1)
+            out = av_op(
                 attn,
-                out,
-                bias,
-                d_query,
-                d_key,
-                d_value,
-                d_attn,
-                d_bias,
+                value,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+            )
+            if not disable_backward:
+                out.backward(d_out)
+
+    for _ in range(warmup_steps):
+        with torch.no_grad():
+            q, k, v, do, rpb = (
+                query.clone(),
+                key.clone(),
+                value.clone(),
+                d_out.clone(),
+                None if bias is None else bias.clone(),
+            )
+        run_ops(
+            q,
+            k,
+            v,
+            rpb,
+            do,
+            kernel_size,
+            dilation,
+            is_causal,
+            disable_backward,
+        )
+
+    with torch.no_grad():
+        q, k, v, do, rpb = (
+            query.clone(),
+            key.clone(),
+            value.clone(),
+            d_out.clone(),
+            None if bias is None else bias.clone(),
+        )
+
+    with torch_profile(activities=[ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with record_function("model_inference"):
+            run_ops(
+                q,
+                k,
+                v,
+                rpb,
+                do,
                 kernel_size,
                 dilation,
                 is_causal,
                 disable_backward,
             )
-
-        with torch_profile(
-            activities=[ProfilerActivity.CUDA], record_shapes=True
-        ) as prof:
-            with record_function("model_inference"):
-                run_ops(
-                    query,
-                    key,
-                    value,
-                    attn,
-                    out,
-                    bias,
-                    d_query,
-                    d_key,
-                    d_value,
-                    d_attn,
-                    d_bias,
-                    kernel_size,
-                    dilation,
-                    is_causal,
-                    disable_backward,
-                )
 
     return prof
 
@@ -291,23 +240,43 @@ def _profile_fmha_with_torch(
     xformers: Optional[bool] = False,
     disable_backward: Optional[bool] = False,
 ) -> torch_profile:
-    if not disable_backward:
-        raise NotImplementedError()
     op = fmha if xformers else fav2
-    query, key, value = init_qkv_tensors(problem)
+    query, key, value, d_out, bias = init_tensors(
+        problem, flatten_sequence=True, heads_last=True
+    )
 
-    def run_ops(query, key, value):
-        return op(query, key, value)
+    if bias is not None:
+        raise NotImplementedError("Profiling FMHA/FAv2 with bias is not supported.")
 
-    with torch.no_grad():
-        for _ in range(warmup_steps):
-            run_ops(query, key, value)
+    def run_ops(query, key, value, d_out, window_size=None):
+        query.requires_grad = not disable_backward
+        key.requires_grad = not disable_backward
+        value.requires_grad = not disable_backward
+        out = op(query, key, value, window_size=window_size)
+        if not disable_backward:
+            out.backward(d_out)
 
-        with torch_profile(
-            activities=[ProfilerActivity.CUDA], record_shapes=True
-        ) as prof:
-            with record_function("model_inference"):
-                run_ops(query, key, value)
+    window_size_ = math.prod(problem.kernel_size)
+    window_size = None if window_size_ < 1 else window_size_
+    print(f"Running fused attention baseline with {window_size=}")
+    for _ in range(warmup_steps):
+        run_ops(
+            query.clone(),
+            key.clone(),
+            value.clone(),
+            d_out.clone(),
+            window_size=window_size,
+        )
+
+    with torch_profile(activities=[ProfilerActivity.CUDA], record_shapes=True) as prof:
+        with record_function("model_inference"):
+            run_ops(
+                query.clone(),
+                key.clone(),
+                value.clone(),
+                d_out.clone(),
+                window_size=window_size,
+            )
 
     return prof
 

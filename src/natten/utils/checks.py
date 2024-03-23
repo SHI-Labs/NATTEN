@@ -24,10 +24,17 @@
 import math
 from typing import Any, Tuple
 
+from ..types import (
+    CausalArgType,
+    create_causal_arg_from_bool,
+    create_dim_from_int,
+    DimensionType,
+    FnaBackwardConfigType,
+    FnaForwardConfigType,
+)
 
-def get_num_na_weights(
-    kernel_size: Tuple[int] | Tuple[int, int] | Tuple[int, int, int]
-) -> int:
+
+def get_num_na_weights(kernel_size: DimensionType) -> int:
     if not isinstance(kernel_size, tuple):
         raise ValueError(
             f"Expected `kernel_size` to be a tuple; got {type(kernel_size)}"
@@ -35,7 +42,7 @@ def get_num_na_weights(
     return math.prod(kernel_size)
 
 
-def check_kernel_size_arg(na_dim: int, kernel_size: Any) -> Tuple:
+def check_kernel_size_arg(na_dim: int, kernel_size: Any) -> DimensionType:
     assert na_dim > 0 and na_dim < 4
     if (
         isinstance(kernel_size, tuple)
@@ -50,17 +57,17 @@ def check_kernel_size_arg(na_dim: int, kernel_size: Any) -> Tuple:
     ):
         return tuple(kernel_size)
     if isinstance(kernel_size, int):
-        return tuple(kernel_size for _ in range(na_dim))
+        return create_dim_from_int(na_dim, value=kernel_size)
     raise ValueError(
         "Invalid value for `kernel_size`; expected an integer or tuple of integers, "
         f"got {type(kernel_size)}"
     )
 
 
-def check_dilation_arg(na_dim: int, dilation: Any) -> Tuple:
+def check_dilation_arg(na_dim: int, dilation: Any) -> DimensionType:
     assert na_dim > 0 and na_dim < 4
     if dilation is None:
-        return tuple(1 for _ in range(na_dim))
+        return create_dim_from_int(na_dim, value=1)
     if (
         isinstance(dilation, tuple)
         and len(dilation) == na_dim
@@ -74,17 +81,17 @@ def check_dilation_arg(na_dim: int, dilation: Any) -> Tuple:
     ):
         return tuple(dilation)
     if isinstance(dilation, int):
-        return tuple(dilation for _ in range(na_dim))
+        return create_dim_from_int(na_dim, value=dilation)
     raise ValueError(
         "Invalid value for `dilation`; expected an integer or tuple of integers, "
         f"got {type(dilation)}"
     )
 
 
-def check_causal_arg(na_dim: int, is_causal: Any) -> Tuple:
+def check_causal_arg(na_dim: int, is_causal: Any) -> CausalArgType:
     assert na_dim > 0 and na_dim < 4
     if is_causal is None:
-        return tuple(False for _ in range(na_dim))
+        return create_causal_arg_from_bool(na_dim, value=False)
     if (
         isinstance(is_causal, tuple)
         and len(is_causal) == na_dim
@@ -98,7 +105,7 @@ def check_causal_arg(na_dim: int, is_causal: Any) -> Tuple:
     ):
         return tuple(is_causal)
     if isinstance(is_causal, bool):
-        return tuple(is_causal for _ in range(na_dim))
+        return create_causal_arg_from_bool(na_dim, value=is_causal)
     raise ValueError(
         "Invalid value for `is_causal`; expected a boolean or tuple of booleans, "
         f"got {type(is_causal)}"
@@ -107,7 +114,7 @@ def check_causal_arg(na_dim: int, is_causal: Any) -> Tuple:
 
 def check_all_args(
     na_dim: int, kernel_size: Any, dilation: Any, is_causal: Any
-) -> Tuple[Tuple, Tuple, Tuple]:
+) -> Tuple[DimensionType, DimensionType, CausalArgType]:
     return (
         check_kernel_size_arg(na_dim, kernel_size),
         check_dilation_arg(na_dim, dilation),
@@ -115,7 +122,7 @@ def check_all_args(
     )
 
 
-def check_tiling_config(na_dim: int, tiling_config: Any) -> Tuple[Tuple, Tuple]:
+def check_tiling_config(na_dim: int, tiling_config: Any) -> FnaForwardConfigType:
     assert na_dim > 0 and na_dim < 4
     if (
         isinstance(tiling_config, tuple)
@@ -124,6 +131,23 @@ def check_tiling_config(na_dim: int, tiling_config: Any) -> Tuple[Tuple, Tuple]:
     ):
         return tiling_config
     raise ValueError(
-        "Invalid tiling config; expected a pair of integer tuples, "
+        f"Invalid tiling config for {na_dim}-D NA; expected a pair of integer tuples, "
         f"got {type(tiling_config)}: {tiling_config}"
+    )
+
+
+def check_backward_tiling_config(
+    na_dim: int, tiling_config: Any
+) -> FnaBackwardConfigType:
+    assert na_dim > 0 and na_dim < 4
+    if (
+        isinstance(tiling_config, tuple)
+        and len(tiling_config) == 4
+        and all(isinstance(x, tuple) and len(x) == na_dim for x in tiling_config[:3])
+        and isinstance(tiling_config[-1], bool)
+    ):
+        return tiling_config
+    raise ValueError(
+        f"Invalid tiling config for {na_dim}-D NA (backwards); expected a tuple of "
+        f"three integer tuples, and a boolean, got {type(tiling_config)}: {tiling_config}"
     )

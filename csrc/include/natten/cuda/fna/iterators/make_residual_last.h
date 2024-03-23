@@ -39,8 +39,8 @@
 
 #pragma once
 
-#include "predicated_tile_access_iterator_residual_last.h"
-#include "predicated_tile_iterator_residual_last.h"
+#include <natten/cuda/fna/iterators/predicated_tile_access_iterator_residual_last.h>
+#include <natten/cuda/fna/iterators/predicated_tile_iterator_residual_last.h>
 
 namespace cutlass {
 namespace transform {

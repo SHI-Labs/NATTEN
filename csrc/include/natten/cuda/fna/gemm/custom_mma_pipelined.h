@@ -41,16 +41,16 @@
 
 #pragma once
 
-#include "cutlass/aligned_buffer.h"
-#include "cutlass/array.h"
-#include "cutlass/cutlass.h"
-#include "cutlass/numeric_conversion.h"
+#include <cutlass/aligned_buffer.h>
+#include <cutlass/array.h>
+#include <cutlass/cutlass.h>
+#include <cutlass/numeric_conversion.h>
 
-#include "cutlass/matrix_shape.h"
-#include "cutlass/numeric_types.h"
+#include <cutlass/matrix_shape.h>
+#include <cutlass/numeric_types.h>
 
-#include "custom_mma_base.h"
-#include "cutlass/gemm/gemm.h"
+#include <cutlass/gemm/gemm.h>
+#include <natten/cuda/fna/gemm/custom_mma_base.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
