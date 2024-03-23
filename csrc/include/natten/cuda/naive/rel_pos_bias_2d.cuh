@@ -139,7 +139,7 @@ struct RelPosBiasGradient2DFull : RelPosBiasGradient2DBase<scalar_t, acc_t> {
       }
       int64_t index =
           h * p.bias_stride_0 + (pi + ki) * p.bias_stride_1 + (pj + kj);
-      atomicAdd(p.d_bias + index, d_rpb_update);
+      floatOrDoubleAtomicAdd(p.d_bias + index, d_rpb_update);
     }
   }
 };

@@ -59,9 +59,10 @@ struct LaunchParams {
 template <typename KernelTemplate>
 __global__ void launch_cuda_kernel(typename KernelTemplate::Params params) {
 #if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ > 300)
-#if (__CUDA_ARCH__ < 500)
-  // Half kernels are not supported in CC < 50,
-  // Partial FP16 support was added in SM54.
+#if (__CUDA_ARCH__ < 600)
+  // Half kernels are not supported in CC < 60,
+  // Partial FP16 support was added in SM50, but ours need the half2 type
+  // and ops, which aren't defined for SM50.
   // Also disabling tiled kernels, because older
   // architectures might not have enough shared memory
   // and the tiled kernels heavily rely on the assumed
@@ -101,7 +102,7 @@ struct HalfArray;
 template <typename ElementScalar_, typename ElementVector_>
 struct HalfArrayBase;
 
-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 500)
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
 
 template <>
 struct HalfArrayBase<natten::float16, __half2> {
@@ -400,7 +401,7 @@ struct AttnMask<float> {
   }
 };
 
-#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 500)
+#if (__CUDACC_VER_MAJOR__ >= 11) && (__CUDA_ARCH__ >= 600)
 template <>
 struct AttnMask<natten::float16> {
   static __device__ auto value(bool is_grad) {
@@ -419,6 +420,38 @@ struct AttnMask<natten::bfloat16> {
   }
 };
 #endif
+
+#endif
+
+//////////////////////////////////////////////////
+/// Atomics for older architectures
+//////////////////////////////////////////////////
+
+#if defined(__CUDA_ARCH__)
+
+static inline __device__ float floatOrDoubleAtomicAdd(float *address, float val) {
+  return atomicAdd(address, val);
+}
+
+static inline __device__ double floatOrDoubleAtomicAdd(double* address, double val) {
+#if (__CUDA_ARCH__ >= 600)
+  return atomicAdd(address, val);
+#else
+  // Taken from pytorch;
+  // ATen/cuda/Atomic.cuh
+  unsigned long long int* address_as_ull = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
+
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed, __double_as_longlong(val + __longlong_as_double(assumed)));
+    // Note: uses integer comparison to avoid hang in case of NaN (since NaN != NaN)
+  } while (assumed != old);
+
+  return __longlong_as_double(old);
+#endif
+}
 
 #endif
 

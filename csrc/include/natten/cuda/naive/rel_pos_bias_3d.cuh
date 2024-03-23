@@ -163,7 +163,7 @@ struct RelPosBiasGradient3DFull : RelPosBiasGradient3DBase<scalar_t, acc_t> {
       }
       int64_t index = h * p.bias_stride_0 + (pk + kk) * p.bias_stride_1 +
           (pi + ki) * p.bias_stride_2 + (pj + kj);
-      atomicAdd(p.d_bias + index, d_rpb_update);
+      floatOrDoubleAtomicAdd(p.d_bias + index, d_rpb_update);
     }
   }
 };

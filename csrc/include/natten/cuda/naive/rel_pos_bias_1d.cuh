@@ -117,7 +117,7 @@ struct RelPosBiasGradient1DFull : RelPosBiasGradient1DBase<scalar_t, acc_t> {
         attnOffset += p.attn_stride_0;
       }
       int64_t index = h * p.bias_stride_0 + (pi + ki);
-      atomicAdd(p.d_bias + index, d_rpb_update);
+      floatOrDoubleAtomicAdd(p.d_bias + index, d_rpb_update);
     }
   }
 };
