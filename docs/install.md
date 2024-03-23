@@ -27,12 +27,8 @@ This leaves Windows users with only one option: WSL.
 
 Since [switching to cmake](https://github.com/SHI-Labs/NATTEN/tree/3036259bdc5c30b7b49fe8ba17d60a0ab0d780dd) for building
 libnatten, we have not been able to support MSVC builds.
-We just don't have a Windows machine to try and figure out the issue, especially one with CUDA.
-
-The first successful Windows build was thanks to users that were willing to share their logs and try out
-our commits, until the build issues were resolved.
-However, we haven't had much luck since the switch, so if you're willing,
-please reach out to us or refer to the [open issue](https://github.com/SHI-Labs/NATTEN/issues/18).)
+While we welcome contributions, we are not going to be able to fix MSVC builds any time in the near future,
+so we recommend building and running NATTEN with either WSL or MinGW.
 
 ### Building from source
 In order to build from source, please make sure that you have your preferred PyTorch build installed,
