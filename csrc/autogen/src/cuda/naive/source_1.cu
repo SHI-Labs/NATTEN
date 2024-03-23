@@ -345,7 +345,7 @@ void na3d_nn_cuda_naive_half_cm_0_0_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 0, 0>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -379,7 +379,7 @@ void na3d_nn_cuda_naive_half_cm_0_0_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 0, 1>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -413,7 +413,7 @@ void na3d_nn_cuda_naive_half_cm_0_1_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 1, 0>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -447,7 +447,7 @@ void na3d_nn_cuda_naive_half_cm_0_1_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 1, 1>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -481,7 +481,7 @@ void na3d_nn_cuda_naive_half_cm_1_0_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 0, 0>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -515,7 +515,7 @@ void na3d_nn_cuda_naive_half_cm_1_0_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 0, 1>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -549,7 +549,7 @@ void na3d_nn_cuda_naive_half_cm_1_1_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 1, 0>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -583,7 +583,7 @@ void na3d_nn_cuda_naive_half_cm_1_1_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 1, 1>;
   using Kernel = NeighborhoodNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -973,7 +973,7 @@ void na1d_in_cuda_naive_half_cm_0(
   const std::tuple<int32_t>& kernel_size,
   const std::tuple<int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack1D<natten::float16, 0>;
   using Kernel = InverseNeighborhood1D<Arguments>;
   Kernel kernel;
@@ -1003,7 +1003,7 @@ void na1d_in_cuda_naive_half_cm_1(
   const std::tuple<int32_t>& kernel_size,
   const std::tuple<int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack1D<natten::float16, 1>;
   using Kernel = InverseNeighborhood1D<Arguments>;
   Kernel kernel;
@@ -1287,7 +1287,7 @@ void na2d_in_cuda_naive_half_cm_0_0(
   const std::tuple<int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack2D<natten::float16, 0, 0>;
   using Kernel = InverseNeighborhood2D<Arguments>;
   Kernel kernel;
@@ -1319,7 +1319,7 @@ void na2d_in_cuda_naive_half_cm_0_1(
   const std::tuple<int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack2D<natten::float16, 0, 1>;
   using Kernel = InverseNeighborhood2D<Arguments>;
   Kernel kernel;
@@ -1351,7 +1351,7 @@ void na2d_in_cuda_naive_half_cm_1_0(
   const std::tuple<int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack2D<natten::float16, 1, 0>;
   using Kernel = InverseNeighborhood2D<Arguments>;
   Kernel kernel;
@@ -1383,7 +1383,7 @@ void na2d_in_cuda_naive_half_cm_1_1(
   const std::tuple<int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack2D<natten::float16, 1, 1>;
   using Kernel = InverseNeighborhood2D<Arguments>;
   Kernel kernel;
@@ -1961,7 +1961,7 @@ void na3d_in_cuda_naive_half_cm_0_0_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 0, 0>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -1995,7 +1995,7 @@ void na3d_in_cuda_naive_half_cm_0_0_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 0, 1>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2029,7 +2029,7 @@ void na3d_in_cuda_naive_half_cm_0_1_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 1, 0>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2063,7 +2063,7 @@ void na3d_in_cuda_naive_half_cm_0_1_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 1, 1>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2097,7 +2097,7 @@ void na3d_in_cuda_naive_half_cm_1_0_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 0, 0>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2131,7 +2131,7 @@ void na3d_in_cuda_naive_half_cm_1_0_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 0, 1>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2165,7 +2165,7 @@ void na3d_in_cuda_naive_half_cm_1_1_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 1, 0>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2199,7 +2199,7 @@ void na3d_in_cuda_naive_half_cm_1_1_1(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 1, 1, 1>;
   using Kernel = InverseNeighborhood3D<Arguments>;
   Kernel kernel;
@@ -2542,7 +2542,7 @@ void na1d_rpbgrad_cuda_naive_half_cm_0(
   const std::tuple<int32_t>& kernel_size,
   const std::tuple<int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack1D<natten::float16, 0>;
   using Kernel = RelPosBiasGradient1D<Arguments>;
   Kernel kernel;
@@ -2648,7 +2648,7 @@ void na2d_rpbgrad_cuda_naive_half_cm_0_0(
   const std::tuple<int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack2D<natten::float16, 0, 0>;
   using Kernel = RelPosBiasGradient2D<Arguments>;
   Kernel kernel;
@@ -2762,7 +2762,7 @@ void na3d_rpbgrad_cuda_naive_half_cm_0_0_0(
   const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
   const std::tuple<int32_t, int32_t, int32_t>& dilation) {
 
-if(cc >= 50) {
+if(cc >= 60) {
   using Arguments = natten::naive::ArgumentPack3D<natten::float16, 0, 0, 0>;
   using Kernel = RelPosBiasGradient3D<Arguments>;
   Kernel kernel;

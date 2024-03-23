@@ -74,12 +74,13 @@ Notes:
 | 3D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Coming soon              | SM50      |
 
 Notes: 
-* FP16 kernels are only available on SM50 and above, and BF16 requires SM80 and above.
+* FP16 kernels are only available on SM50 and above*, and BF16 requires SM80 and above.
+  * Naive FP16 kernels are only available on **SM60** and above.
+  * FNA FP16 kernels are only available on SM50 and above.
 * GEMM backend on SM70 and SM75 can only do FP16.
 * Tiled only implements 1/3 of the ops, is only implemented for 2D problems, and requires head dim = 32.
 * Forward mode autograd does not support relative positional biases and causal masking yet.
 * Relative positional biases are not yet supported when any axis has causal masking enabled.
-* Naive backend allows FP16 for SM50 and above only. FP32/FP64 are available for SM35 and above.
 
 ## License
 NATTEN is released under the [MIT License](LICENSE).
