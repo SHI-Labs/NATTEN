@@ -110,6 +110,8 @@ $PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\public\cuda.
 
 find all mentions of nvtoolsext (or nvToolsExt), and comment them out, to get past it.
 
+More information on the issue: [pytorch/pytorch#116926](https://github.com/pytorch/pytorch/pull/116926)
+
 ### NGC docker images
 NATTEN supports PyTorch builds that are built from source, an example of which is the builds that ship with
 NVIDIA's [NGC container images](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch).
