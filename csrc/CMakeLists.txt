@@ -179,6 +179,10 @@ include_directories(${COMMON_HEADER_DIRS})
 # Find torch lib dir so we can link with libtorch
 link_directories("${TORCH_DIR}/lib/")
 
+if(NATTEN_IS_WINDOWS)
+  link_directories("${PY_LIBS_DIR}")
+endif()
+
 add_library(natten SHARED ${ALL_SOURCES})
 
 set_target_properties(natten PROPERTIES PREFIX "" OUTPUT_NAME ${OUTPUT_FILE_NAME})
@@ -193,7 +197,7 @@ if(${NATTEN_IS_MAC})
 endif()
 
 if(${NATTEN_WITH_CUDA})
-  target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda")
+  target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python cudart c10_cuda torch_cuda)
 else()
-  target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python")
+  target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python)
 endif()

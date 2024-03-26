@@ -22,13 +22,11 @@ We plan to port our naive kernels to metal soon, but we certainly welcome contri
 
 ### Windows
 
-NATTEN does not support Windows builds yet.
-This leaves Windows users with only one option: WSL.
+NATTEN need visual studio to build from source
 
-Since [switching to cmake](https://github.com/SHI-Labs/NATTEN/tree/3036259bdc5c30b7b49fe8ba17d60a0ab0d780dd) for building
-libnatten, we have not been able to support MSVC builds.
-While we welcome contributions, we are not going to be able to fix MSVC builds any time in the near future,
-so we recommend building and running NATTEN with either WSL or MinGW.
+1. Open visual studio native tools command (like x64 Native Tools Command Prompt for VS 2022)
+2. use this 'CMD' load your python env (like Anaconda)
+3. python setup.py install
 
 ### Building from source
 In order to build from source, please make sure that you have your preferred PyTorch build installed,

@@ -181,6 +181,13 @@ class BuildExtension(build_ext):
             cmake_args.append("-DNATTEN_WITH_CUDA=1")
             if max_sm >= 50:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
+        if IS_WINDOWS:
+            python_path = sys.executable
+            libs_path = python_path.replace('python.exe', 'libs').strip()
+            cmake_args.append(f"-DPY_LIBS_DIR={libs_path}")
+            cmake_args.append("-G Ninja")
+            cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
+
 
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)
@@ -193,9 +200,14 @@ class BuildExtension(build_ext):
         subprocess.check_call(
             ["cmake", cmake_lists_dir] + cmake_args, cwd=self.build_lib
         )
-        subprocess.check_call(
-            ["make", f"-j{n_workers}", f"VERBOSE={verbose}"], cwd=self.build_lib
-        )
+        if IS_WINDOWS:
+            subprocess.check_call(
+                ["ninja", "-C", self.build_lib]
+            )
+        else:
+            subprocess.check_call(
+                ["make", f"-j{n_workers}", f"VERBOSE={verbose}"], cwd=self.build_lib
+            )
 
         # Clean up cmake files when building dist package;
         # otherwise they will get packed into the wheel.
@@ -207,6 +219,15 @@ class BuildExtension(build_ext):
                 elif file != "natten":
                     shutil.rmtree(fn)
 
+install_requires = [
+    "packaging",
+    "cmake==3.20.3",
+    "torch>=2.0.0",
+]
+
+#use visual studio cmake and ninja to build
+if IS_WINDOWS:
+    install_requires.remove("cmake==3.20.3")
 
 setup(
     name="natten",
@@ -222,11 +243,7 @@ setup(
         "": ["csrc/**/*"],
     },
     python_requires=">=3.8",
-    install_requires=[
-        "packaging",
-        "cmake==3.20.3",
-        "torch>=2.0.0",
-    ],
+    install_requires=install_requires,
     extras_require={
         # optional dependencies, required by some features
         "all": [
