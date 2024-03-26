@@ -97,6 +97,17 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler -O3")
 set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} --use_fast_math")
 
+
+if(${NATTEN_IS_WINDOWS})
+  # Copied from xformers
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /MP /Zc:lambda /Zc:preprocessor")
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
+  set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG} /MP /Zc:lambda /Zc:preprocessor")
+  set(CMAKE_CUDA_FLAGS_DEBUG "-Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MP /Zc:lambda /Zc:preprocessor")
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
+endif()
+
 message("CMAKE_CUDA_FLAGS_RELEASE: ${CMAKE_CUDA_FLAGS_RELEASE}")
 if(${NATTEN_WITH_CUDA})
   message("CUDA compiler: " ${CMAKE_CUDA_COMPILER})
@@ -179,6 +190,11 @@ include_directories(${COMMON_HEADER_DIRS})
 # Find torch lib dir so we can link with libtorch
 link_directories("${TORCH_DIR}/lib/")
 
+# Windows builds require linking with python*.lib
+if(NATTEN_IS_WINDOWS)
+  link_directories("${PY_LIB_DIR}")
+endif()
+
 add_library(natten SHARED ${ALL_SOURCES})
 
 set_target_properties(natten PROPERTIES PREFIX "" OUTPUT_NAME ${OUTPUT_FILE_NAME})
@@ -193,7 +209,7 @@ if(${NATTEN_IS_MAC})
 endif()
 
 if(${NATTEN_WITH_CUDA})
-  target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python -lcudart -lc10_cuda -ltorch_cuda")
+  target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python cudart c10_cuda torch_cuda)
 else()
-  target_link_libraries(natten PUBLIC "-lc10 -ltorch -ltorch_cpu -ltorch_python")
+  target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python)
 endif()

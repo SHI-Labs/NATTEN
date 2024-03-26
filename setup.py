@@ -72,12 +72,18 @@ if HAS_CUDA:
     CUDA_VERSION = [int(x) for x in TORCH_CUDA_VERSION]
 
     assert CUDA_VERSION >= [11, 0], "NATTEN only supports CUDA 11.0 and above."
+    if CUDA_VERSION >= [12, 0] and IS_WINDOWS:
+        print(
+            "WARNING: Torch cmake will likely fail on Windows with CUDA 12.X. "
+            "Please refer to NATTEN documentation to read more about the issue "
+            "and how to get around it until the issue is fixed in torch."
+        )
 
 
-n_workers = os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)
+n_workers = str(os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)).strip()
 # In case the env variable is set, but to an empty string
 if n_workers == "":
-    n_workers = DEFAULT_N_WORKERS
+    n_workers = str(DEFAULT_N_WORKERS)
 
 if HAS_CUDA:
     print(f"Building NATTEN with CUDA {CUDA_TAG}")
@@ -182,6 +188,16 @@ class BuildExtension(build_ext):
             if max_sm >= 50:
                 cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
 
+        if IS_WINDOWS:
+            python_path = sys.executable
+            assert (
+                "python.exe" in python_path
+            ), f"Expected the python executable path to end with python.exe, got {python_path}"
+            python_lib_dir = python_path.replace("python.exe", "libs").strip()
+            cmake_args.append(f"-DPY_LIB_DIR={python_lib_dir}")
+            cmake_args.append("-G Ninja")
+            cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
+
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)
 
@@ -193,9 +209,15 @@ class BuildExtension(build_ext):
         subprocess.check_call(
             ["cmake", cmake_lists_dir] + cmake_args, cwd=self.build_lib
         )
-        subprocess.check_call(
-            ["make", f"-j{n_workers}", f"VERBOSE={verbose}"], cwd=self.build_lib
-        )
+        cmake_build_args = [
+            "--build",
+            self.build_lib,
+            "-j",
+            n_workers,
+        ]
+        if verbose:
+            cmake_build_args.append("--verbose")
+        subprocess.check_call(["cmake", *cmake_build_args])
 
         # Clean up cmake files when building dist package;
         # otherwise they will get packed into the wheel.
@@ -224,7 +246,6 @@ setup(
     python_requires=">=3.8",
     install_requires=[
         "packaging",
-        "cmake==3.20.3",
         "torch>=2.0.0",
     ],
     extras_require={
