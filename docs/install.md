@@ -22,11 +22,10 @@ We plan to port our naive kernels to metal soon, but we certainly welcome contri
 
 ### Windows
 
-NATTEN need visual studio to build from source
+NATTEN does not come with Windows releases yet, but you can build it from source.
+If you're using WSL, please follow the same steps as building for Linux below.
 
-1. Open visual studio native tools command (like x64 Native Tools Command Prompt for VS 2022)
-2. use this 'CMD' load your python env (like Anaconda)
-3. python setup.py install
+If you're building with MSVC, please refer to [Build with MSVC](#Build-with-MSVC).
 
 ### Building from source
 In order to build from source, please make sure that you have your preferred PyTorch build installed,
@@ -59,6 +58,57 @@ You can do so by passing in the following arguments:
 # Build with 64 workers
 make WORKERS=64
 ```
+
+It is highly recommended to run all unit tests when you build from source:
+```bash
+make test
+```
+
+#### Build with MSVC
+**NOTE: Windows builds are experimental and not regularly tested.**
+
+
+To build with MSVC, please open the "Native Tools Command Prompt for Visual Studio".
+The exact name may depend on your version of Windows, Visual Studio, and cpu architecture (in our case it was x64 Native Tools
+Command Prompt for VS".)
+
+Once in the command prompt, make sure your correct Python environment is in the system path. If you're using anaconda, you
+should be able to do `conda activate $YOUR_ENV_NAME`.
+
+Then simply confirm you have PyTorch installed, and use our Windows batch script to build:
+
+```
+WindowsBuilder.bat install 
+
+# Build with 8 parallel workers
+WindowsBuilder.bat install WORKERS=8
+
+# Build targeting SM89 (Ada Lovelace)
+WindowsBuilder.bat install CUDA_ARCH=8.9
+```
+
+Note that depending on how many workers you end up using, build time may vary, and the MSVC compiler tends to throw plenty of
+warnings at you, but as long as it does not fail and give you back the command prompt, just let it keep building.
+
+Once it's done building, it is highly recommended to run the unit tests to make sure everything went as expected:
+```
+WindowsBuilder.bat test
+```
+
+##### PyTorch issue: nvToolsExt not found
+Windows users may come across this issue when building NATTEN from source with CUDA 12.0 and newer.
+The build process fails with an error indicating "nvtoolsext" cannot be found on your system.
+This is because nvtoolsext binaries are no longer part of the CUDA toolkit for Windows starting CUDA 12.0, but the PyTorch
+cmake still looks for it (as of torch==2.2.1).
+
+The only workaround is to modify the following files:
+```
+$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Torch\TorchConfig.cmake
+$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Torch\Caffe2Targets.cmake
+$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\public\cuda.cmake
+```
+
+find all mentions of nvtoolsext (or nvToolsExt), and comment them out, to get past it.
 
 ### NGC docker images
 NATTEN supports PyTorch builds that are built from source, an example of which is the builds that ship with

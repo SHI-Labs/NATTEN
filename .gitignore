@@ -133,3 +133,6 @@ dmypy.json
 
 # Output files
 *.out
+
+# MSVC
+.vs/
