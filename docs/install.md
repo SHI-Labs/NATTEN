@@ -22,7 +22,7 @@ We plan to port our naive kernels to metal soon, but we certainly welcome contri
 
 ### Windows
 
-NATTEN does not come with Windows releases yet, but you can build it from source.
+NATTEN does not come with Windows wheels yet, but you can build it from source.
 If you're using WSL, please follow the same steps as building for Linux below.
 
 If you're building with MSVC, please refer to [Build with MSVC](#Build-with-MSVC).
@@ -33,7 +33,7 @@ since the NATTEN setup script depends heavily on PyTorch.
 Once set up, simply clone and build:
 
 ```bash
-git clone https://github.com/SHI-Labs/NATTEN
+git clone --recursive https://github.com/SHI-Labs/NATTEN
 cd NATTEN
 
 pip install -r requirements.txt
@@ -68,9 +68,23 @@ make test
 **NOTE: Windows builds are experimental and not regularly tested.**
 
 
+First clone NATTEN, and make sure to fetch all submodules. If you're cloning with Visual Studio,
+it might clone submodules by default. If you're using a command line tool like git bash (MinGW) or WSL,
+it should be the same as linux:
+
+```bash
+git clone --recursive https://github.com/SHI-Labs/NATTEN
+```
+
+If you've already cloned, you can manually fetch submodules:
+
+```bash
+git submodule update --init --recursive
+```
+
 To build with MSVC, please open the "Native Tools Command Prompt for Visual Studio".
-The exact name may depend on your version of Windows, Visual Studio, and cpu architecture (in our case it was x64 Native Tools
-Command Prompt for VS".)
+The exact name may depend on your version of Windows, Visual Studio, and cpu architecture (in our case it was 
+"x64 Native Tools Command Prompt for VS".)
 
 Once in the command prompt, make sure your correct Python environment is in the system path. If you're using anaconda, you
 should be able to do `conda activate $YOUR_ENV_NAME`.
@@ -163,9 +177,11 @@ from source if you built PyTorch from source (assuming you're on linux.)
   kernels with full precision (where they're the strongest). If you're on Volta (SM70) or Turing (SM75), you can only run those
   kernels in FP16, since their Tensor Cores can only do FP16 math.
 
-6. When will Windows be supported?
-  * As noted, we don't have a Windows machine with CUDA at our disposal, therefore we would greatly appreciate user feedback.
-  Please refer to the [open issue](https://github.com/SHI-Labs/NATTEN/issues/18) if you're interested.
+6. Is Windows supported?
+  * You can build NATTEN on Windows, but note Windows support is limited, and we don't have the ability to release wheels for
+  Windows yet. This is in part because we just don't happen to have the time to figure out setting up automated and detailed 
+  tests on Windows. Building on Windows itself is only possible thanks to users contributing fixes for our build system. 
+  If you've had experience with setting up automated testing and CI/CD on Windows, we welcome your feedback.
  
 7. When will there be an MPS/ROCm backend?
   * Our top priority is feature completeness in our CUDA backend, and full compatibility with more recent PyTorch features such
