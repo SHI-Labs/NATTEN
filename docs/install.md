@@ -130,7 +130,16 @@ More information on the issue: [pytorch/pytorch#116926](https://github.com/pytor
 NATTEN supports PyTorch builds that are built from source, an example of which is the builds that ship with
 NVIDIA's [NGC container images](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch).
 
-However, note that our PyPI wheels are only compatible with PyPI releases of PyTorch, which means you will have to build NATTEN
+If you're building NATTEN within a `Dockerfile`, be sure to specify the `CUDA_ARCH` and
+`WITH_CUDA` flags to make:
+
+```dockerfile
+RUN make \
+  WITH_CUDA=1 \
+  CUDA_ARCH="8.0;8.6"
+```
+
+Note that our PyPI wheels are only compatible with PyPI releases of PyTorch, which means you will have to build NATTEN
 from source if you built PyTorch from source (assuming you're on linux.)
 
 ### FAQ

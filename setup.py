@@ -50,14 +50,24 @@ except:
 torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 assert torch_ver >= [2, 0], "NATTEN requires PyTorch >= 2.0"
 AVX_INT = torch_ver >= [1, 10]
-HAS_CUDA = (
-    torch.cuda.is_available()
-    and (CUDA_HOME is not None)
-    or os.getenv("FORCE_CUDA", "0") == "1"
+FORCE_CUDA = (
+    os.getenv("FORCE_CUDA", "0") == "1" or os.getenv("NATTEN_WITH_CUDA", "0") == "1"
 )
+HAS_CUDA = FORCE_CUDA or (torch.cuda.is_available() and (CUDA_HOME is not None))
 NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", 0))
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
+
 cuda_arch = os.getenv("NATTEN_CUDA_ARCH", "")
+if FORCE_CUDA and not cuda_arch:
+    raise RuntimeError(
+        "Target architecture tags must be specified when "
+        "forcing CUDA builds; but environment variable "
+        f"NATTEN_CUDA_ARCH={cuda_arch} . "
+        "If you're using NATTEN's Makefile, you can "
+        "pass archtags with the `CUDA_ARCH` flag; i.e. "
+        'make WITH_CUDA=1 CUDA_ARCH="8.0;8.6"'
+    )
+
 if HAS_CUDA:
     if not cuda_arch:
         cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
