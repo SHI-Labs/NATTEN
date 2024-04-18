@@ -139,6 +139,8 @@ RUN make \
   CUDA_ARCH="8.0;8.6"
 ```
 
+For a minimal example you can refer to [dev/docker](../dev/docker).
+
 Note that our PyPI wheels are only compatible with PyPI releases of PyTorch, which means you will have to build NATTEN
 from source if you built PyTorch from source (assuming you're on linux.)
 
