@@ -111,9 +111,14 @@ if(${NATTEN_IS_WINDOWS})
   set(CMAKE_CUDA_FLAGS_DEBUG "-Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MP /Zc:lambda /Zc:preprocessor")
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
+
+  # TODO: MSVC can't build without /bigobj since FNA-backward
+  # This could be because of the way we're reserving workspace
+  # for FNA, because the failure was on one of the interface sources
+  # and not kernel sources.
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /bigobj")
 endif()
 
-message("CMAKE_CUDA_FLAGS_RELEASE: ${CMAKE_CUDA_FLAGS_RELEASE}")
 if(${NATTEN_WITH_CUDA})
   message("CUDA compiler: " ${CMAKE_CUDA_COMPILER})
   message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
@@ -195,8 +200,8 @@ include_directories(${COMMON_HEADER_DIRS})
 # Find torch lib dir so we can link with libtorch
 link_directories("${TORCH_DIR}/lib/")
 
-# Windows builds require linking with python*.lib
 if(NATTEN_IS_WINDOWS)
+  # Windows builds require linking with python*.lib
   link_directories("${PY_LIB_DIR}")
 endif()
 
