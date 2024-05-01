@@ -113,9 +113,10 @@ if(${NATTEN_IS_WINDOWS})
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
 
   # TODO: MSVC can't build without /bigobj since FNA-backward
-  # This could be because of the way we're reserving workspace
-  # for FNA, because the failure was on one of the interface sources
-  # and not kernel sources.
+  # Those lambda expressions we use for handling memory planning
+  # through torch appear to push the object size past its limit
+  # on Windows. See csrc/src/pytorch/cuda/na1d.cu for more
+  # (under na1d_forward/na1d_backward).
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /bigobj")
 endif()
 

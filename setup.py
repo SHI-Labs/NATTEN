@@ -249,7 +249,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_dir={"": "src"},
-    packages=["natten", "natten/utils"],
+    packages=["natten", "natten/utils", "natten/autotuner", "natten/autotuner/configs"],
     package_data={
         "": ["csrc/**/*"],
     },

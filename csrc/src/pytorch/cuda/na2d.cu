@@ -57,7 +57,11 @@ void na2d_forward(
     const std::tuple<int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t>& key_tile_size) {
   at::Tensor workspace;
-  // TODO: memory allocator and delta are repeated multiple times!
+  // TODO: figure out a better solution than this that doesn't
+  // involve calling the FNA dispatcher for the sole purpose of
+  // getting workspace size, and doesn't force us to use torch API
+  // in the backend. This works just okay, but I hate the idea of
+  // passing down a lambda function like this.
   auto alloc_bytes = [&workspace, &query](
                          void** ptr, int64_t bytes, bool zfill) {
     workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
@@ -116,7 +120,11 @@ void na2d_backward(
     const std::tuple<int32_t, int32_t>& num_splits_key,
     bool compute_delta_with_torch) {
   at::Tensor workspace;
-  // TODO: memory allocator and delta are repeated multiple times!
+  // TODO: figure out a better solution than this that doesn't
+  // involve calling the FNA dispatcher for the sole purpose of
+  // getting workspace size, and doesn't force us to use torch API
+  // in the backend. This works just okay, but I hate the idea of
+  // passing down a lambda function like this.
   auto alloc_bytes = [&workspace, &query](
                          void** ptr, int64_t bytes, bool zfill) {
     workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
