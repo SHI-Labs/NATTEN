@@ -39,6 +39,7 @@ void na1d_forward(
     const at::Tensor& value,
     at::Tensor& out,
     const at::optional<at::Tensor>& rpb,
+    const at::optional<at::Tensor>& logsumexp,
     int32_t batch_size,
     int32_t length,
     int32_t heads,
@@ -49,6 +50,29 @@ void na1d_forward(
     float attn_scale,
     const std::tuple<int32_t>& query_tile_size,
     const std::tuple<int32_t>& key_tile_size);
+
+void na1d_backward(
+    const at::Tensor& grad_out,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& logsumexp,
+    const at::Tensor& out,
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    int32_t batch_size,
+    int32_t length,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t>& query_tile_size,
+    const std::tuple<int32_t>& key_tile_size,
+    const std::tuple<int32_t>& num_splits_key,
+    bool compute_delta_with_torch);
 
 void na1d_qk_forward(
     const at::Tensor& query,

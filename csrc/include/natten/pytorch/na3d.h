@@ -38,12 +38,32 @@ void na3d_forward(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::optional<at::Tensor>& rpb,
+    const at::optional<at::Tensor>& logsumexp,
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size);
+
+void na3d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& num_splits_key,
+    bool compute_delta_with_torch);
 
 void na3d_qk_forward(
     at::Tensor& attn,

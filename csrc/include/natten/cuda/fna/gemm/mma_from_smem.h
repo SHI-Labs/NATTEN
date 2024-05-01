@@ -43,35 +43,36 @@
 
 #pragma once
 
-#include "cutlass/aligned_buffer.h"
-#include "cutlass/arch/memory.h"
-#include "cutlass/array.h"
-#include "cutlass/cutlass.h"
-#include "cutlass/epilogue/thread/linear_combination.h"
-#include "cutlass/epilogue/threadblock/default_epilogue_simt.h"
-#include "cutlass/epilogue/threadblock/default_epilogue_tensor_op.h"
-#include "cutlass/epilogue/threadblock/default_epilogue_volta_tensor_op.h"
-#include "cutlass/functional.h"
-#include "cutlass/gemm/gemm.h"
-#include "cutlass/gemm/warp/mma_tensor_op_fragment_iterator.h"
-#include "cutlass/matrix_shape.h"
-#include "cutlass/numeric_conversion.h"
-#include "cutlass/numeric_types.h"
-#include "cutlass/platform/platform.h"
-#include "cutlass/transform/threadblock/vector_iterator.h"
+#include <cutlass/aligned_buffer.h>
+#include <cutlass/arch/memory.h>
+#include <cutlass/array.h>
+#include <cutlass/cutlass.h>
+#include <cutlass/epilogue/thread/linear_combination.h>
+#include <cutlass/epilogue/threadblock/default_epilogue_simt.h>
+#include <cutlass/epilogue/threadblock/default_epilogue_tensor_op.h>
+#include <cutlass/epilogue/threadblock/default_epilogue_volta_tensor_op.h>
+#include <cutlass/functional.h>
+#include <cutlass/gemm/gemm.h>
+#include <cutlass/gemm/warp/mma_tensor_op_fragment_iterator.h>
+#include <cutlass/matrix_shape.h>
+#include <cutlass/numeric_conversion.h>
+#include <cutlass/numeric_types.h>
+#include <cutlass/platform/platform.h>
 
-#include "../epilogue/epilogue_thread_apply_logsumexp.h"
-#include "../gemm/mma_accum_lambda_iterator.h"
-#include "../gemm_kernel_utils.h"
-#include "../iterators/default_warp_iterator_from_smem.h"
-#include "../iterators/make_residual_last.h"
-#include "../iterators/transpose_warp_iterator.h"
-#include "../iterators/warp_iterator_from_smem.h"
-#include "cutlass/epilogue/threadblock/epilogue_smem_accumulator.h"
-#include "cutlass/gemm/threadblock/mma_base.h"
-#include "cutlass/gemm/threadblock/mma_multistage.h"
-#include "cutlass/gemm/threadblock/mma_pipelined.h"
-#include "cutlass/gemm/warp/mma_tensor_op_tile_access_iterator.h"
+#include <natten/cuda/fna/epilogue/epilogue_thread_apply_logsumexp.h>
+#include <natten/cuda/fna/gemm/mma_accum_lambda_iterator.h>
+#include <natten/cuda/fna/gemm_kernel_utils.h>
+#include <natten/cuda/fna/iterators/default_warp_iterator_from_smem.h>
+#include <natten/cuda/fna/iterators/make_residual_last.h>
+#include <natten/cuda/fna/iterators/transpose_warp_iterator.h>
+#include <natten/cuda/fna/iterators/warp_iterator_from_smem.h>
+#include <natten/cuda/fna/na_utils.cuh>
+
+#include <cutlass/epilogue/threadblock/epilogue_smem_accumulator.h>
+#include <cutlass/gemm/threadblock/mma_base.h>
+#include <cutlass/gemm/threadblock/mma_multistage.h>
+#include <cutlass/gemm/threadblock/mma_pipelined.h>
+#include <cutlass/gemm/warp/mma_tensor_op_tile_access_iterator.h>
 
 namespace cutlass {
 namespace gemm {
@@ -1478,6 +1479,7 @@ struct DefaultMmaFromSharedMemory<
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <
+    int NADim,
     typename IteratorC,
     typename Operator,
     typename scalar_t,
@@ -1487,6 +1489,7 @@ struct B2bGemm;
 
 // Tensor Cores >= Sm75 specialization (Ampere ...)
 template < /// Size of the matrix to load (concept: MatrixShape)
+    int NADim,
     typename Shape_,
     /// Element type
     typename Element_,
@@ -1502,6 +1505,7 @@ template < /// Size of the matrix to load (concept: MatrixShape)
     typename WarpShape_,
     typename ThreadblockShape_>
 struct B2bGemm<
+    NADim,
     cutlass::gemm::warp::MmaTensorOpAccumulatorTileIterator<
         Shape_,
         Element_,
@@ -1512,6 +1516,9 @@ struct B2bGemm<
     scalar_t,
     WarpShape_,
     ThreadblockShape_> {
+  static_assert(NADim >= 1 && NADim < 4);
+  using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+
   using IteratorC =
       typename cutlass::gemm::warp::MmaTensorOpAccumulatorTileIterator<
           Shape_,
@@ -1565,32 +1572,18 @@ struct B2bGemm<
       OutputOpNoOp>;
 
   // Epilogue 2: with LSE (for backwards pass)
-  static int const kElementsPerAccess = 2; // TODO: Why 2?
-  using IteratorAccumulatorLSE =
-      cutlass::transform::threadblock::VectorIterator<
-          cutlass::transform::threadblock::PredicatedVectorAccessIterator<
-              // Shape
-              cutlass::MatrixShape<ThreadblockShape::kM, ThreadblockShape::kN>,
-              // WarpShape
-              cutlass::MatrixShape<WarpShape::kM, WarpShape::kN>,
-              lse_scalar_t,
-              cutlass::layout::RowMajor,
-              kElementsPerAccess>>;
-  using EpilogueOpApplyLSE = cutlass::epilogue::thread::ApplyLogSumExp<
+  using EpilogueOpApplyExp = cutlass::epilogue::thread::ApplyExp<
       scalar_t, // ElementOutput_
       lse_scalar_t, // ElementLSE_
       accum_t, // ElementAccumulator_
       accum_t, // ElementCompute_
-      128 / cutlass::sizeof_bits<scalar_t>::value
-      // FragmentIteratorAccumulator::Fragment::kElements
-      // InstructionShape::kM * InstructionShape::kN / 32
-      >;
-  using EpilogueWithLSE =
+      128 / cutlass::sizeof_bits<scalar_t>::value>;
+  using EpilogueWithExp =
       cutlass::epilogue::threadblock::EpilogueSmemAccumulator<
-          SmemIteratorD0,
+          SmemIteratorD0, // ScaleBiasIterator - not used
           FragmentIteratorAccumulator,
-          IteratorAccumulatorLSE,
-          EpilogueOpApplyLSE>;
+          SmemIteratorD0, // ScaleBiasIterator - not used
+          EpilogueOpApplyExp>;
 
   static void CUTLASS_DEVICE accumToSmem(
       AccumulatorSharedStorage& shared_storage,
@@ -1607,47 +1600,39 @@ struct B2bGemm<
     epilogue(OutputOpNoOp({}), smem_iterator_attn, accum);
   }
 
-  static void CUTLASS_DEVICE accumApplyLSEToSmem(
+  // NOTE(alih): we only apply the exp operator here;
+  // LSE is pre-fetched into shared memory, and
+  // subtracted when we check the NA mask and set
+  // invalid weights to -info.
+  // Refer to kernel_backward.h for more details.
+  static void CUTLASS_DEVICE accumApplyExpToSmem(
       AccumulatorSharedStorage& shared_storage,
       FragmentC& accum,
-      lse_scalar_t const* lse,
-      int32_t lse_extents,
       int thread_id,
       int warp_id,
       int lane_id,
       cutlass::MatrixCoord const& tile_coords) {
-    constexpr int32_t kAlignLSE = 32;
-    IteratorAccumulatorLSE iterator_lse(
-        lse,
-        {(int32_t)0, (int32_t)ceil_div(lse_extents, kAlignLSE) * kAlignLSE},
-        thread_id,
-        warp_id,
-        cutlass::MatrixCoord{0, 0} // offset
-    );
-
     SmemIteratorD0 smem_iterator_attn(shared_storage.accum_ref(), lane_id);
     smem_iterator_attn.add_tile_offset(
         tile_coords *
         cutlass::MatrixCoord{
             SmemIteratorD0::TileIterations::kRow,
             SmemIteratorD0::TileIterations::kColumn});
-    EpilogueWithLSE epilogue;
-    EpilogueOpApplyLSE minus_lse_exp({});
-    epilogue(
-        minus_lse_exp,
-        smem_iterator_attn,
-        accum,
-        // scale - unused
-        iterator_lse,
-        // bias
-        iterator_lse);
+    EpilogueWithExp epilogue;
+    EpilogueOpApplyExp exp({});
+    epilogue(exp, smem_iterator_attn, accum);
   }
 };
 
 // Volta Specialization
 // only supported for f16
-template <typename Operator, typename WarpShape_, typename ThreadblockShape_>
+template <
+    int NADim,
+    typename Operator,
+    typename WarpShape_,
+    typename ThreadblockShape_>
 struct B2bGemm<
+    NADim,
     cutlass::gemm::warp::MmaVoltaTensorOpAccumulatorTileIterator<
         cutlass::MatrixShape<32, 32>,
         float,
@@ -1658,6 +1643,9 @@ struct B2bGemm<
     cutlass::half_t,
     WarpShape_,
     ThreadblockShape_> {
+  static_assert(NADim >= 1 && NADim < 4);
+  using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+
   using IteratorC =
       cutlass::gemm::warp::MmaVoltaTensorOpAccumulatorTileIterator<
           cutlass::MatrixShape<32, 32>,
@@ -1777,16 +1765,19 @@ struct B2bGemm<
     }
   }
 
-  static void CUTLASS_DEVICE accumApplyLSEToSmem(
+  // NOTE(alih): we only apply the exp operator here;
+  // LSE is pre-fetched into shared memory, and
+  // subtracted when we check the NA mask and set
+  // invalid weights to -info.
+  // Refer to kernel_backward.h for more details.
+  static void CUTLASS_DEVICE accumApplyExpToSmem(
       AccumulatorSharedStorage& shared_storage,
       typename IteratorC::Fragment& accum,
-      lse_scalar_t const* lse,
-      int lse_extent,
       int thread_id,
       int warp_id,
       int lane_id,
       cutlass::MatrixCoord const& tile_coords) {
-    // Non-optimized way to apply LSE to registers
+    // Non-optimized way to apply exp to registers
     // NOTE: accum is attn.T
     // TODO: Optimize for each architecture
     static constexpr int WarpSize = 32;
@@ -1796,24 +1787,11 @@ struct B2bGemm<
     auto lane_offset =
         AccumLambdaIterator::get_lane_offset(lane_id, warp_id, tile_coords);
 
-    cutlass::Array<lse_scalar_t, IteratorC::Fragment::kElements> lse_prefetched;
-    lse_prefetched.clear();
-    int rowIdx = 0;
-    int colIdx = 0;
     AccumLambdaIterator::iterateRows(
         lane_offset,
-        [&](int accum_m) {
-          ++rowIdx;
-          colIdx = 0;
-        },
+        [&](int accum_m) {},
         [&](int accum_m, int accum_n, int idx) {
-          if (rowIdx == 1) {
-            lse_prefetched[colIdx] = accum_n < lse_extent
-                ? lse[accum_n]
-                : platform::numeric_limits<accum_t>::infinity();
-          }
-          accum[idx] = expf(accum[idx] - lse_prefetched[colIdx]);
-          ++colIdx;
+          accum[idx] = expf(accum[idx]);
         },
         [&](int accum_m) {});
     accumToSmem(shared_storage, accum, lane_id, tile_coords);
@@ -1824,12 +1802,14 @@ struct B2bGemm<
 // for f32 on Sm70-Sm75 and f16/f32 below
 
 template <
+    int NADim,
     typename Operator,
     typename OperatorPolicy,
     typename scalar_t,
     typename WarpShape_,
     typename ThreadblockShape_>
 struct B2bGemm<
+    NADim,
     cutlass::gemm::warp::MmaSimtTileIterator<
         cutlass::MatrixShape<32, 32>,
         cutlass::gemm::Operand::kC,
@@ -1842,6 +1822,9 @@ struct B2bGemm<
     scalar_t,
     WarpShape_,
     ThreadblockShape_> {
+  static_assert(NADim >= 1 && NADim < 4);
+  using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+
   using IteratorC = cutlass::gemm::warp::MmaSimtTileIterator<
       cutlass::MatrixShape<32, 32>,
       cutlass::gemm::Operand::kC,
@@ -1916,16 +1899,19 @@ struct B2bGemm<
     }
   }
 
-  static void CUTLASS_DEVICE accumApplyLSEToSmem(
+  // NOTE(alih): we only apply the exp operator here;
+  // LSE is pre-fetched into shared memory, and
+  // subtracted when we check the NA mask and set
+  // invalid weights to -info.
+  // Refer to kernel_backward.h for more details.
+  static void CUTLASS_DEVICE accumApplyExpToSmem(
       AccumulatorSharedStorage& shared_storage,
       typename IteratorC::Fragment& accum,
-      lse_scalar_t const* lse,
-      int lse_extent,
       int thread_id,
       int warp_id,
       int lane_id,
       cutlass::MatrixCoord const& tile_coords) {
-    // Non-optimized way to apply LSE to registers
+    // Non-optimized way to apply exp to registers
     // NOTE: accum is attn.T
     // TODO: Optimize for each architecture
     static constexpr int WarpSize = 32;
@@ -1935,24 +1921,11 @@ struct B2bGemm<
     auto lane_offset =
         AccumLambdaIterator::get_lane_offset(lane_id, warp_id, tile_coords);
 
-    cutlass::Array<lse_scalar_t, IteratorC::Fragment::kElements> lse_prefetched;
-    lse_prefetched.clear();
-    int rowIdx = 0;
-    int colIdx = 0;
     AccumLambdaIterator::iterateRows(
         lane_offset,
-        [&](int accum_m) {
-          ++rowIdx;
-          colIdx = 0;
-        },
+        [&](int accum_m) {},
         [&](int accum_m, int accum_n, int idx) {
-          if (rowIdx == 1) {
-            lse_prefetched[colIdx] = accum_n < lse_extent
-                ? lse[accum_n]
-                : platform::numeric_limits<accum_t>::infinity();
-          }
-          accum[idx] = expf(accum[idx] - lse_prefetched[colIdx]);
-          ++colIdx;
+          accum[idx] = expf(accum[idx]);
         },
         [&](int accum_m) {});
     accumToSmem(shared_storage, accum, lane_id, tile_coords);

@@ -572,24 +572,25 @@ inline NA3dDim tuple_to_na_dim(std::tuple<int32_t, int32_t, int32_t> v) {
 //};
 
 template <typename Dim>
-CUTLASS_DEVICE Dim map_index_to_coord(int32_t block_index, Dim block_shape);
+CUTLASS_HOST_DEVICE Dim
+map_index_to_coord(int32_t block_index, Dim block_shape);
 
 template <>
-CUTLASS_DEVICE NA1dDim
+CUTLASS_HOST_DEVICE NA1dDim
 map_index_to_coord(int32_t block_index, NA1dDim block_shape) {
   // 1d is just linear indexing.
   return NA1dDim(block_index);
 };
 
 template <>
-CUTLASS_DEVICE NA2dDim
+CUTLASS_HOST_DEVICE NA2dDim
 map_index_to_coord(int32_t block_index, NA2dDim block_shape) {
   auto index_x = block_index / block_shape.y;
   return NA2dDim(index_x, block_index - index_x * block_shape.y);
 }
 
 template <>
-CUTLASS_DEVICE NA3dDim
+CUTLASS_HOST_DEVICE NA3dDim
 map_index_to_coord(int32_t block_index, NA3dDim block_shape) {
   auto index_z = block_index % block_shape.z;
   auto index_xy = block_index / block_shape.z;
@@ -599,41 +600,44 @@ map_index_to_coord(int32_t block_index, NA3dDim block_shape) {
 }
 
 template <typename Dim>
-CUTLASS_DEVICE int32_t map_coord_to_index(Dim coord, Dim block_shape);
+CUTLASS_HOST_DEVICE int32_t map_coord_to_index(Dim coord, Dim block_shape);
 
 template <>
-CUTLASS_DEVICE int32_t map_coord_to_index(NA1dDim coord, NA1dDim block_shape) {
+CUTLASS_HOST_DEVICE int32_t
+map_coord_to_index(NA1dDim coord, NA1dDim block_shape) {
   // 1d is just linear indexing.
   return coord.x;
 }
 
 template <>
-CUTLASS_DEVICE int32_t map_coord_to_index(NA2dDim coord, NA2dDim block_shape) {
+CUTLASS_HOST_DEVICE int32_t
+map_coord_to_index(NA2dDim coord, NA2dDim block_shape) {
   return coord.x * block_shape.y + coord.y;
 }
 
 template <>
-CUTLASS_DEVICE int32_t map_coord_to_index(NA3dDim coord, NA3dDim block_shape) {
+CUTLASS_HOST_DEVICE int32_t
+map_coord_to_index(NA3dDim coord, NA3dDim block_shape) {
   return coord.x * block_shape.y * block_shape.z + coord.y * block_shape.z +
       coord.z;
 }
 
 template <typename Dim>
-CUTLASS_DEVICE Dim fast_min(Dim lhs, Dim rhs);
+CUTLASS_HOST_DEVICE Dim fast_min(Dim lhs, Dim rhs);
 
 template <>
-CUTLASS_DEVICE NA1dDim fast_min(NA1dDim lhs, NA1dDim rhs) {
+CUTLASS_HOST_DEVICE NA1dDim fast_min(NA1dDim lhs, NA1dDim rhs) {
   return NA1dDim(cutlass::fast_min(lhs.x, rhs.x));
 }
 
 template <>
-CUTLASS_DEVICE NA2dDim fast_min(NA2dDim lhs, NA2dDim rhs) {
+CUTLASS_HOST_DEVICE NA2dDim fast_min(NA2dDim lhs, NA2dDim rhs) {
   return NA2dDim(
       cutlass::fast_min(lhs.x, rhs.x), cutlass::fast_min(lhs.y, rhs.y));
 }
 
 template <>
-CUTLASS_DEVICE NA3dDim fast_min(NA3dDim lhs, NA3dDim rhs) {
+CUTLASS_HOST_DEVICE NA3dDim fast_min(NA3dDim lhs, NA3dDim rhs) {
   return NA3dDim(
       cutlass::fast_min(lhs.x, rhs.x),
       cutlass::fast_min(lhs.y, rhs.y),
@@ -641,21 +645,21 @@ CUTLASS_DEVICE NA3dDim fast_min(NA3dDim lhs, NA3dDim rhs) {
 }
 
 template <typename Dim>
-CUTLASS_DEVICE Dim fast_max(Dim lhs, Dim rhs);
+CUTLASS_HOST_DEVICE Dim fast_max(Dim lhs, Dim rhs);
 
 template <>
-CUTLASS_DEVICE NA1dDim fast_max(NA1dDim lhs, NA1dDim rhs) {
+CUTLASS_HOST_DEVICE NA1dDim fast_max(NA1dDim lhs, NA1dDim rhs) {
   return NA1dDim(cutlass::fast_max(lhs.x, rhs.x));
 }
 
 template <>
-CUTLASS_DEVICE NA2dDim fast_max(NA2dDim lhs, NA2dDim rhs) {
+CUTLASS_HOST_DEVICE NA2dDim fast_max(NA2dDim lhs, NA2dDim rhs) {
   return NA2dDim(
       cutlass::fast_max(lhs.x, rhs.x), cutlass::fast_max(lhs.y, rhs.y));
 }
 
 template <>
-CUTLASS_DEVICE NA3dDim fast_max(NA3dDim lhs, NA3dDim rhs) {
+CUTLASS_HOST_DEVICE NA3dDim fast_max(NA3dDim lhs, NA3dDim rhs) {
   return NA3dDim(
       cutlass::fast_max(lhs.x, rhs.x),
       cutlass::fast_max(lhs.y, rhs.y),
@@ -684,6 +688,234 @@ CUTLASS_HOST_DEVICE NA3dDim ceil_div_dim(NA3dDim lhs, NA3dDim rhs) {
       gemm_kernel_utils::ceil_div(lhs.y, rhs.y),
       gemm_kernel_utils::ceil_div(lhs.z, rhs.z));
 }
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE Dim div_dim(Dim lhs, Dim rhs) {}
+
+template <>
+CUTLASS_HOST_DEVICE NA1dDim div_dim(NA1dDim lhs, NA1dDim rhs) {
+  return NA1dDim(lhs.x / rhs.x);
+}
+
+template <>
+CUTLASS_HOST_DEVICE NA2dDim div_dim(NA2dDim lhs, NA2dDim rhs) {
+  return NA2dDim(lhs.x / rhs.x, lhs.y / rhs.y);
+}
+
+template <>
+CUTLASS_HOST_DEVICE NA3dDim div_dim(NA3dDim lhs, NA3dDim rhs) {
+  return NA3dDim(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE Dim compute_stride(Dim input_shape, int64_t last_stride);
+
+template <>
+CUTLASS_HOST_DEVICE NA1dDim
+compute_stride(NA1dDim input_shape, int64_t last_stride) {
+  return NA1dDim(last_stride);
+}
+
+template <>
+CUTLASS_HOST_DEVICE NA2dDim
+compute_stride(NA2dDim input_shape, int64_t last_stride) {
+  return NA2dDim(input_shape.y * last_stride, last_stride);
+}
+
+template <>
+CUTLASS_HOST_DEVICE NA3dDim
+compute_stride(NA3dDim input_shape, int64_t last_stride) {
+  return NA3dDim(
+      input_shape.y * input_shape.z * last_stride,
+      input_shape.z * last_stride,
+      last_stride);
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE bool is_coord_within_upper_bound(
+    Dim coord,
+    Dim upper_bound);
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_upper_bound(
+    NA1dDim coord,
+    NA1dDim upper_bound) {
+  return coord.x < upper_bound.x;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_upper_bound(
+    NA2dDim coord,
+    NA2dDim upper_bound) {
+  return coord.x < upper_bound.x && coord.y < upper_bound.y;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_upper_bound(
+    NA3dDim coord,
+    NA3dDim upper_bound) {
+  return coord.x < upper_bound.x && coord.y < upper_bound.y &&
+      coord.z < upper_bound.z;
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds(
+    Dim coord,
+    Dim lower_bound,
+    Dim upper_bound);
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds(
+    NA1dDim coord,
+    NA1dDim lower_bound,
+    NA1dDim upper_bound) {
+  return coord.x >= lower_bound.x && coord.x < upper_bound.x;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds(
+    NA2dDim coord,
+    NA2dDim lower_bound,
+    NA2dDim upper_bound) {
+  return coord.x >= lower_bound.x && coord.x < upper_bound.x &&
+      coord.y >= lower_bound.y && coord.y < upper_bound.y;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds(
+    NA3dDim coord,
+    NA3dDim lower_bound,
+    NA3dDim upper_bound) {
+  return coord.x >= lower_bound.x && coord.x < upper_bound.x &&
+      coord.y >= lower_bound.y && coord.y < upper_bound.y &&
+      coord.z >= lower_bound.z && coord.z < upper_bound.z;
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds_nn(Dim coord, Dim upper_bound);
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds_nn(
+    NA1dDim coord,
+    NA1dDim upper_bound) {
+  return coord.x >= 0 && coord.x < upper_bound.x;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds_nn(
+    NA2dDim coord,
+    NA2dDim upper_bound) {
+  return coord.x >= 0 && coord.y >= 0 && coord.x < upper_bound.x &&
+      coord.y < upper_bound.y;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_within_bounds_nn(
+    NA3dDim coord,
+    NA3dDim upper_bound) {
+  return coord.x >= 0 && coord.y >= 0 && coord.z >= 0 &&
+      coord.x < upper_bound.x && coord.y < upper_bound.y &&
+      coord.z < upper_bound.z;
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE Dim align_dim_down(Dim tile, Dim upper_bound);
+template <typename Dim>
+CUTLASS_HOST_DEVICE Dim align_dim_up(Dim tile, Dim upper_bound);
+
+template <>
+CUTLASS_HOST_DEVICE NA1dDim align_dim_down(NA1dDim tile, NA1dDim upper_bound) {
+  return NA1dDim((tile.x / upper_bound.x) * upper_bound.x);
+}
+template <>
+CUTLASS_HOST_DEVICE NA1dDim align_dim_up(NA1dDim tile, NA1dDim upper_bound) {
+  return NA1dDim(
+      ((tile.x + upper_bound.x - 1) / upper_bound.x) * upper_bound.x);
+}
+
+template <>
+CUTLASS_HOST_DEVICE NA2dDim align_dim_down(NA2dDim tile, NA2dDim upper_bound) {
+  return NA2dDim(
+      (tile.x / upper_bound.x) * upper_bound.x,
+      (tile.y / upper_bound.y) * upper_bound.y);
+}
+template <>
+CUTLASS_HOST_DEVICE NA2dDim align_dim_up(NA2dDim tile, NA2dDim upper_bound) {
+  return NA2dDim(
+      ((tile.x + upper_bound.x - 1) / upper_bound.x) * upper_bound.x,
+      ((tile.y + upper_bound.y - 1) / upper_bound.y) * upper_bound.y);
+}
+
+template <>
+CUTLASS_HOST_DEVICE NA3dDim align_dim_down(NA3dDim tile, NA3dDim upper_bound) {
+  return NA3dDim(
+      (tile.x / upper_bound.x) * upper_bound.x,
+      (tile.y / upper_bound.y) * upper_bound.y,
+      (tile.z / upper_bound.z) * upper_bound.z);
+}
+template <>
+CUTLASS_HOST_DEVICE NA3dDim align_dim_up(NA3dDim tile, NA3dDim upper_bound) {
+  return NA3dDim(
+      ((tile.x + upper_bound.x - 1) / upper_bound.x) * upper_bound.x,
+      ((tile.y + upper_bound.y - 1) / upper_bound.y) * upper_bound.y,
+      ((tile.z + upper_bound.z - 1) / upper_bound.z) * upper_bound.z);
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE bool is_coord_less_than_or_equal_to(
+    Dim coord,
+    Dim upper_bound);
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_less_than_or_equal_to(
+    NA1dDim coord,
+    NA1dDim upper_bound) {
+  return coord.x <= upper_bound.x;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_less_than_or_equal_to(
+    NA2dDim coord,
+    NA2dDim upper_bound) {
+  return coord.x <= upper_bound.x && coord.y <= upper_bound.y;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_less_than_or_equal_to(
+    NA3dDim coord,
+    NA3dDim upper_bound) {
+  return coord.x <= upper_bound.x && coord.y <= upper_bound.y &&
+      coord.z <= upper_bound.z;
+}
+
+template <typename Dim>
+CUTLASS_HOST_DEVICE bool is_coord_greater_than_or_equal_to(
+    Dim coord,
+    Dim upper_bound);
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_greater_than_or_equal_to(
+    NA1dDim coord,
+    NA1dDim upper_bound) {
+  return coord.x >= upper_bound.x;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_greater_than_or_equal_to(
+    NA2dDim coord,
+    NA2dDim upper_bound) {
+  return coord.x >= upper_bound.x && coord.y >= upper_bound.y;
+}
+
+template <>
+CUTLASS_HOST_DEVICE bool is_coord_greater_than_or_equal_to(
+    NA3dDim coord,
+    NA3dDim upper_bound) {
+  return coord.x >= upper_bound.x && coord.y >= upper_bound.y &&
+      coord.z >= upper_bound.z;
+}
+
+// Device only
 
 template <typename Dim>
 CUTLASS_DEVICE void maybe_mask_qk_tiles(
@@ -738,30 +970,6 @@ CUTLASS_DEVICE void maybe_mask_qk_tiles(
   if (dilation_idx.z >= dilation.z - num_tiles_with_fewer_tokens.z) {
     q_shape.z = q_shape.z - 1;
   }
-}
-
-template <typename Dim>
-CUTLASS_DEVICE Dim compute_stride(Dim input_shape, int64_t last_stride);
-
-template <>
-CUTLASS_DEVICE NA1dDim
-compute_stride(NA1dDim input_shape, int64_t last_stride) {
-  return NA1dDim(last_stride);
-}
-
-template <>
-CUTLASS_DEVICE NA2dDim
-compute_stride(NA2dDim input_shape, int64_t last_stride) {
-  return NA2dDim(input_shape.y * last_stride, last_stride);
-}
-
-template <>
-CUTLASS_DEVICE NA3dDim
-compute_stride(NA3dDim input_shape, int64_t last_stride) {
-  return NA3dDim(
-      input_shape.y * input_shape.z * last_stride,
-      input_shape.z * last_stride,
-      last_stride);
 }
 
 template <bool... IsCausalList>
@@ -828,31 +1036,66 @@ struct NeighborhoodAttentionMaskBase<false> {
   int32_t window_size;
   int32_t window_radius;
   int32_t spatial_extent;
+#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
   int32_t last_start;
+#endif
 
   CUTLASS_DEVICE NeighborhoodAttentionMaskBase(
       int32_t kernel_size,
       int32_t spatial_extent_)
       : window_size(kernel_size),
         window_radius(kernel_size / 2),
+#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
         spatial_extent(spatial_extent_),
-        last_start(spatial_extent_ - window_radius - 1) {}
+        last_start(spatial_extent_ - window_radius - 1) {
+  }
+#else
+        spatial_extent(spatial_extent_) {
+  }
+#endif
 
-  CUTLASS_DEVICE int32_t get_window_start(int32_t index) {
-    // return cutlass::fast_max(index - window_radius, 0) +
-    //    (index + window_radius >= spatial_extent) *
-    //    (spatial_extent - index - window_radius - 1);
+  CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
+#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
     return cutlass::fast_max(index - window_radius, 0) +
         cutlass::fast_min(last_start - index, 0);
+#else
+    return cutlass::fast_max(index - window_radius, 0) +
+        (index + window_radius >= spatial_extent) *
+        (spatial_extent - index - window_radius - 1);
+#endif
   }
 
-  CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) {
+  CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) const {
     return start + window_size;
   }
 
-  CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) {
-    return cutlass::fast_max(window_radius + cutlass::fast_max(window_radius - index, 0) -
-        cutlass::fast_max(index - spatial_extent + window_radius + 1, 0), 0);
+  CUTLASS_DEVICE int32_t get_window_end_(int32_t index) const {
+#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
+    return cutlass::fast_max(index - window_radius, 0) +
+        cutlass::fast_min(last_start - index, 0) + window_size;
+#else
+    return cutlass::fast_max(index - window_radius, 0) +
+        (index + window_radius >= spatial_extent) *
+        (spatial_extent - index - window_radius - 1) +
+        window_size;
+#endif
+  }
+
+  CUTLASS_DEVICE int32_t get_backward_window_start(int32_t index) const {
+    return (index >= window_size) * (index - window_radius);
+  }
+
+  CUTLASS_DEVICE int32_t get_backward_window_end(int32_t index) const {
+    return (index >= spatial_extent - window_size)
+        ? (spatial_extent)
+        : (index + (window_radius + 1));
+  }
+
+  CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) const {
+    return cutlass::fast_max(
+        window_radius + cutlass::fast_max(window_radius - index, 0) -
+            cutlass::fast_max(index - spatial_extent + window_radius + 1, 0),
+        0);
   }
 };
 
@@ -864,28 +1107,39 @@ struct NeighborhoodAttentionMaskBase<true> {
   int32_t window_size;
   int32_t window_radius;
   int32_t spatial_extent;
-  int32_t last_start;
 
   CUTLASS_DEVICE NeighborhoodAttentionMaskBase(
       int32_t kernel_size,
       int32_t spatial_extent_)
       : window_size(kernel_size),
         window_radius(kernel_size / 2),
-        spatial_extent(spatial_extent_),
-        last_start(spatial_extent_ - window_radius - 1) {}
+        spatial_extent(spatial_extent_) {}
 
-  CUTLASS_DEVICE int32_t get_window_start(int32_t index) {
+  CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
     return cutlass::fast_max(index - window_size + 1, 0);
   }
 
-  CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) {
+  CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) const {
     return cutlass::fast_min(index + 1, spatial_extent);
   }
 
-  CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) {
+  CUTLASS_DEVICE int32_t get_window_end_(int32_t index) const {
+    return cutlass::fast_min(index + 1, spatial_extent);
+  }
+
+  CUTLASS_DEVICE int32_t get_backward_window_start(int32_t index) const {
+    return index;
+  }
+
+  CUTLASS_DEVICE int32_t get_backward_window_end(int32_t index) const {
+    return cutlass::fast_min(index + window_size, spatial_extent);
+  }
+
+  CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) const {
     printf(
         "FATAL: RPB kernels do not support causal masking. Please open an issue.");
     asm volatile("brkpt;\n");
+    return 0;
   }
 };
 
@@ -893,6 +1147,10 @@ struct NeighborhoodAttentionMaskBase<true> {
 // literally every dim. I'm pretty sure there's a better way of handling
 // it with less repetition. It might require refactoring this whole
 // header file, particularly how NA.dDim structs are defined.
+
+CUTLASS_DEVICE int32_t align_down(int32_t tile, int32_t upper_bound) {
+  return (tile / upper_bound) * upper_bound;
+}
 
 template <int NADim, typename CausalMask>
 struct NeighborhoodAttentionMask;
@@ -917,15 +1175,36 @@ struct NeighborhoodAttentionMask<1, CausalMask_> {
   CUTLASS_DEVICE NeighborhoodAttentionMask(Dim kernel_size, Dim spatial_extent_)
       : mask_0(kernel_size.x, spatial_extent_.x) {}
 
-  CUTLASS_DEVICE Dim get_window_start(Dim index) {
+  CUTLASS_DEVICE Dim get_window_start(Dim index) const {
     return Dim(mask_0.get_window_start(index.x));
   }
 
-  CUTLASS_DEVICE Dim get_window_end(Dim index, Dim start) {
+  CUTLASS_DEVICE Dim get_window_end(Dim index, Dim start) const {
     return Dim(mask_0.get_window_end(index.x, start.x));
   }
 
-  CUTLASS_DEVICE Dim get_rpb_start(Dim index) {
+  CUTLASS_DEVICE Dim get_window_end_(Dim index) const {
+    return Dim(mask_0.get_window_end_(index.x));
+  }
+
+  CUTLASS_DEVICE Dim get_last_key_block_for_query_block(
+      Dim index,
+      Dim key_tile_shape,
+      Dim last_possible_key_tile) const {
+    return Dim(cutlass::fast_min(
+        align_down(mask_0.get_window_end_(index.x) - 1, key_tile_shape.x),
+        last_possible_key_tile.x));
+  }
+
+  CUTLASS_DEVICE Dim get_backward_window_start(Dim index) const {
+    return Dim(mask_0.get_backward_window_start(index.x));
+  }
+
+  CUTLASS_DEVICE Dim get_backward_window_end(Dim index) const {
+    return Dim(mask_0.get_backward_window_end(index.x));
+  }
+
+  CUTLASS_DEVICE Dim get_rpb_start(Dim index) const {
     return Dim(mask_0.get_rpb_start(index.x));
   }
 };
@@ -945,18 +1224,48 @@ struct NeighborhoodAttentionMask<2, CausalMask_> {
       : mask_0(kernel_size.x, spatial_extent_.x),
         mask_1(kernel_size.y, spatial_extent_.y) {}
 
-  CUTLASS_DEVICE Dim get_window_start(Dim index) {
+  CUTLASS_DEVICE Dim get_window_start(Dim index) const {
     return Dim(
         mask_0.get_window_start(index.x), mask_1.get_window_start(index.y));
   }
 
-  CUTLASS_DEVICE Dim get_window_end(Dim index, Dim start) {
+  CUTLASS_DEVICE Dim get_window_end(Dim index, Dim start) const {
     return Dim(
         mask_0.get_window_end(index.x, start.x),
         mask_1.get_window_end(index.y, start.y));
   }
 
-  CUTLASS_DEVICE Dim get_rpb_start(Dim index) {
+  CUTLASS_DEVICE Dim get_window_end_(Dim index) const {
+    return Dim(
+        mask_0.get_window_end_(index.x), mask_1.get_window_end_(index.y));
+  }
+
+  CUTLASS_DEVICE Dim get_last_key_block_for_query_block(
+      Dim index,
+      Dim key_tile_shape,
+      Dim last_possible_key_tile) const {
+    return Dim(
+        cutlass::fast_min(
+            align_down(mask_0.get_window_end_(index.x) - 1, key_tile_shape.x),
+            last_possible_key_tile.x),
+        cutlass::fast_min(
+            align_down(mask_1.get_window_end_(index.y) - 1, key_tile_shape.y),
+            last_possible_key_tile.y));
+  }
+
+  CUTLASS_DEVICE Dim get_backward_window_start(Dim index) const {
+    return Dim(
+        mask_0.get_backward_window_start(index.x),
+        mask_1.get_backward_window_start(index.y));
+  }
+
+  CUTLASS_DEVICE Dim get_backward_window_end(Dim index) const {
+    return Dim(
+        mask_0.get_backward_window_end(index.x),
+        mask_1.get_backward_window_end(index.y));
+  }
+
+  CUTLASS_DEVICE Dim get_rpb_start(Dim index) const {
     return Dim(mask_0.get_rpb_start(index.x), mask_1.get_rpb_start(index.y));
   }
 };
@@ -979,21 +1288,58 @@ struct NeighborhoodAttentionMask<3, CausalMask_> {
         mask_1(kernel_size.y, spatial_extent_.y),
         mask_2(kernel_size.z, spatial_extent_.z) {}
 
-  CUTLASS_DEVICE Dim get_window_start(Dim index) {
+  CUTLASS_DEVICE Dim get_window_start(Dim index) const {
     return Dim(
         mask_0.get_window_start(index.x),
         mask_1.get_window_start(index.y),
         mask_2.get_window_start(index.z));
   }
 
-  CUTLASS_DEVICE Dim get_window_end(Dim index, Dim start) {
+  CUTLASS_DEVICE Dim get_window_end(Dim index, Dim start) const {
     return Dim(
         mask_0.get_window_end(index.x, start.x),
         mask_1.get_window_end(index.y, start.y),
         mask_2.get_window_end(index.z, start.z));
   }
 
-  CUTLASS_DEVICE Dim get_rpb_start(Dim index) {
+  CUTLASS_DEVICE Dim get_window_end_(Dim index) const {
+    return Dim(
+        mask_0.get_window_end_(index.x),
+        mask_1.get_window_end_(index.y),
+        mask_2.get_window_end_(index.z));
+  }
+
+  CUTLASS_DEVICE Dim get_last_key_block_for_query_block(
+      Dim index,
+      Dim key_tile_shape,
+      Dim last_possible_key_tile) const {
+    return Dim(
+        cutlass::fast_min(
+            align_down(mask_0.get_window_end_(index.x) - 1, key_tile_shape.x),
+            last_possible_key_tile.x),
+        cutlass::fast_min(
+            align_down(mask_1.get_window_end_(index.y) - 1, key_tile_shape.y),
+            last_possible_key_tile.y),
+        cutlass::fast_min(
+            align_down(mask_2.get_window_end_(index.z) - 1, key_tile_shape.z),
+            last_possible_key_tile.z));
+  }
+
+  CUTLASS_DEVICE Dim get_backward_window_start(Dim index) const {
+    return Dim(
+        mask_0.get_backward_window_start(index.x),
+        mask_1.get_backward_window_start(index.y),
+        mask_2.get_backward_window_start(index.z));
+  }
+
+  CUTLASS_DEVICE Dim get_backward_window_end(Dim index) const {
+    return Dim(
+        mask_0.get_backward_window_end(index.x),
+        mask_1.get_backward_window_end(index.y),
+        mask_2.get_backward_window_end(index.z));
+  }
+
+  CUTLASS_DEVICE Dim get_rpb_start(Dim index) const {
     return Dim(
         mask_0.get_rpb_start(index.x),
         mask_1.get_rpb_start(index.y),
@@ -1002,106 +1348,24 @@ struct NeighborhoodAttentionMask<3, CausalMask_> {
 };
 
 template <typename Dim>
-CUTLASS_DEVICE bool is_coord_within_upper_bound(Dim coord, Dim upper_bound);
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_upper_bound(
-    NA1dDim coord,
-    NA1dDim upper_bound) {
-  return coord.x < upper_bound.x;
-}
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_upper_bound(
-    NA2dDim coord,
-    NA2dDim upper_bound) {
-  return coord.x < upper_bound.x && coord.y < upper_bound.y;
-}
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_upper_bound(
-    NA3dDim coord,
-    NA3dDim upper_bound) {
-  return coord.x < upper_bound.x && coord.y < upper_bound.y &&
-      coord.z < upper_bound.z;
-}
-
-template <typename Dim>
-CUTLASS_DEVICE bool is_coord_within_bounds(
-    Dim coord,
-    Dim lower_bound,
-    Dim upper_bound);
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_bounds(
-    NA1dDim coord,
-    NA1dDim lower_bound,
-    NA1dDim upper_bound) {
-  return coord.x >= lower_bound.x && coord.x < upper_bound.x;
-}
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_bounds(
-    NA2dDim coord,
-    NA2dDim lower_bound,
-    NA2dDim upper_bound) {
-  return coord.x >= lower_bound.x && coord.x < upper_bound.x &&
-      coord.y >= lower_bound.y && coord.y < upper_bound.y;
-}
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_bounds(
-    NA3dDim coord,
-    NA3dDim lower_bound,
-    NA3dDim upper_bound) {
-  return coord.x >= lower_bound.x && coord.x < upper_bound.x &&
-      coord.y >= lower_bound.y && coord.y < upper_bound.y &&
-      coord.z >= lower_bound.z && coord.z < upper_bound.z;
-}
-
-template <typename Dim>
-CUTLASS_DEVICE bool is_coord_within_bounds_nn(Dim coord, Dim upper_bound);
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_bounds_nn(
-    NA1dDim coord,
-    NA1dDim upper_bound) {
-  return coord.x >= 0 && coord.x < upper_bound.x;
-}
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_bounds_nn(
-    NA2dDim coord,
-    NA2dDim upper_bound) {
-  return coord.x >= 0 && coord.y >= 0 && coord.x < upper_bound.x &&
-      coord.y < upper_bound.y;
-}
-
-template <>
-CUTLASS_DEVICE bool is_coord_within_bounds_nn(
-    NA3dDim coord,
-    NA3dDim upper_bound) {
-  return coord.x >= 0 && coord.y >= 0 && coord.z >= 0 &&
-      coord.x < upper_bound.x && coord.y < upper_bound.y &&
-      coord.z < upper_bound.z;
-}
-
-template <typename Dim>
-CUTLASS_DEVICE void increment_tile(Dim& tile, Dim inc_value, Dim upper_bound);
+CUTLASS_DEVICE void increment_tile(
+    Dim& tile,
+    const Dim& inc_value,
+    const Dim& upper_bound);
 
 template <>
 CUTLASS_DEVICE void increment_tile(
     NA1dDim& tile,
-    NA1dDim inc_value,
-    NA1dDim upper_bound) {
+    const NA1dDim& inc_value,
+    const NA1dDim& upper_bound) {
   tile.x += inc_value.x;
 }
 
 template <>
 CUTLASS_DEVICE void increment_tile(
     NA2dDim& tile,
-    NA2dDim inc_value,
-    NA2dDim upper_bound) {
+    const NA2dDim& inc_value,
+    const NA2dDim& upper_bound) {
   tile.y = tile.y + inc_value.y;
   tile.x = tile.x + (tile.y >= upper_bound.y) * inc_value.x;
   tile.y = (tile.y < upper_bound.y) * tile.y;
@@ -1110,8 +1374,8 @@ CUTLASS_DEVICE void increment_tile(
 template <>
 CUTLASS_DEVICE void increment_tile(
     NA3dDim& tile,
-    NA3dDim inc_value,
-    NA3dDim upper_bound) {
+    const NA3dDim& inc_value,
+    const NA3dDim& upper_bound) {
   tile.z = tile.z + inc_value.z;
   if (tile.z >= upper_bound.z) {
     tile.z = 0;
@@ -1124,11 +1388,154 @@ CUTLASS_DEVICE void increment_tile(
 }
 
 template <typename Dim>
-CUTLASS_DEVICE bool is_tile_last(Dim& tile, Dim inc_value, Dim upper_bound);
+CUTLASS_DEVICE void increment_tile(
+    Dim& tile,
+    const Dim& inc_value,
+    const Dim& lower_bound,
+    const Dim& upper_bound);
+
+template <>
+CUTLASS_DEVICE void increment_tile(
+    NA1dDim& tile,
+    const NA1dDim& inc_value,
+    const NA1dDim& lower_bound,
+    const NA1dDim& upper_bound) {
+  tile.x += inc_value.x;
+}
+
+template <>
+CUTLASS_DEVICE void increment_tile(
+    NA2dDim& tile,
+    const NA2dDim& inc_value,
+    const NA2dDim& lower_bound,
+    const NA2dDim& upper_bound) {
+  tile.y = tile.y + inc_value.y;
+  if (tile.y >= upper_bound.y) {
+    tile.y = lower_bound.y;
+    tile.x += inc_value.x;
+  }
+}
+
+template <>
+CUTLASS_DEVICE void increment_tile(
+    NA3dDim& tile,
+    const NA3dDim& inc_value,
+    const NA3dDim& lower_bound,
+    const NA3dDim& upper_bound) {
+  tile.z = tile.z + inc_value.z;
+  if (tile.z >= upper_bound.z) {
+    tile.z = lower_bound.z;
+    tile.y += inc_value.y;
+  }
+  if (tile.y >= upper_bound.y) {
+    tile.y = lower_bound.y;
+    tile.x += inc_value.x;
+  }
+}
+
+template <typename Dim>
+CUTLASS_DEVICE Dim increment_tile_return(
+    const Dim& tile,
+    const Dim& inc_value,
+    const Dim& lower_bound,
+    const Dim& upper_bound);
+template <typename Dim>
+CUTLASS_DEVICE Dim increment_tile_return(
+    const Dim& tile,
+    const Dim& inc_value,
+    const Dim& upper_bound);
+
+template <>
+CUTLASS_DEVICE NA1dDim increment_tile_return(
+    const NA1dDim& tile,
+    const NA1dDim& inc_value,
+    const NA1dDim& lower_bound,
+    const NA1dDim& upper_bound) {
+  return NA1dDim(tile.x + inc_value.x);
+}
+
+template <>
+CUTLASS_DEVICE NA1dDim increment_tile_return(
+    const NA1dDim& tile,
+    const NA1dDim& inc_value,
+    const NA1dDim& upper_bound) {
+  return NA1dDim(tile.x + inc_value.x);
+}
+
+template <>
+CUTLASS_DEVICE NA2dDim increment_tile_return(
+    const NA2dDim& tile,
+    const NA2dDim& inc_value,
+    const NA2dDim& lower_bound,
+    const NA2dDim& upper_bound) {
+  auto x = tile.x;
+  auto y = tile.y + inc_value.y;
+  if (y >= upper_bound.y) {
+    y = lower_bound.y;
+    x += inc_value.x;
+  }
+  return NA2dDim(x, y);
+}
+
+template <>
+CUTLASS_DEVICE NA2dDim increment_tile_return(
+    const NA2dDim& tile,
+    const NA2dDim& inc_value,
+    const NA2dDim& upper_bound) {
+  auto x = tile.x;
+  auto y = tile.y + inc_value.y;
+  if (y >= upper_bound.y) {
+    y = 0;
+    x += inc_value.x;
+  }
+  return NA2dDim(x, y);
+}
+
+template <>
+CUTLASS_DEVICE NA3dDim increment_tile_return(
+    const NA3dDim& tile,
+    const NA3dDim& inc_value,
+    const NA3dDim& lower_bound,
+    const NA3dDim& upper_bound) {
+  auto x = tile.x;
+  auto y = tile.y;
+  auto z = tile.z + inc_value.z;
+  if (z >= upper_bound.z) {
+    z = lower_bound.z;
+    y += inc_value.y;
+  }
+  if (y >= upper_bound.y) {
+    y = lower_bound.y;
+    x += inc_value.x;
+  }
+  return NA3dDim(x, y, z);
+}
+
+template <>
+CUTLASS_DEVICE NA3dDim increment_tile_return(
+    const NA3dDim& tile,
+    const NA3dDim& inc_value,
+    const NA3dDim& upper_bound) {
+  auto x = tile.x;
+  auto y = tile.y;
+  auto z = tile.z + inc_value.z;
+  if (z >= upper_bound.z) {
+    z = 0;
+    y += inc_value.y;
+  }
+  if (y >= upper_bound.y) {
+    y = 0;
+    x += inc_value.x;
+  }
+  return NA3dDim(x, y, z);
+}
+
+template <typename Dim>
+CUTLASS_DEVICE bool is_tile_last(Dim tile, Dim inc_value, Dim upper_bound);
 
 template <>
 CUTLASS_DEVICE bool is_tile_last(
-    NA1dDim& tile,
+    NA1dDim tile,
     NA1dDim inc_value,
     NA1dDim upper_bound) {
   return tile.x + inc_value.x >= upper_bound.x;
@@ -1136,7 +1543,7 @@ CUTLASS_DEVICE bool is_tile_last(
 
 template <>
 CUTLASS_DEVICE bool is_tile_last(
-    NA2dDim& tile,
+    NA2dDim tile,
     NA2dDim inc_value,
     NA2dDim upper_bound) {
   return tile.y + inc_value.y >= upper_bound.y &&
@@ -1145,12 +1552,38 @@ CUTLASS_DEVICE bool is_tile_last(
 
 template <>
 CUTLASS_DEVICE bool is_tile_last(
-    NA3dDim& tile,
+    NA3dDim tile,
     NA3dDim inc_value,
     NA3dDim upper_bound) {
   return tile.z + inc_value.z >= upper_bound.z &&
       tile.y + inc_value.y >= upper_bound.y &&
       tile.x + inc_value.x >= upper_bound.x;
+}
+
+template <typename Dim>
+CUTLASS_DEVICE Dim count_tiles(Dim first, Dim last, Dim tile_shape);
+
+template <>
+CUTLASS_DEVICE NA1dDim
+count_tiles(NA1dDim first, NA1dDim last, NA1dDim tile_shape) {
+  return NA1dDim((last.x / tile_shape.x) - (first.x / tile_shape.x) + 1);
+}
+
+template <>
+CUTLASS_DEVICE NA2dDim
+count_tiles(NA2dDim first, NA2dDim last, NA2dDim tile_shape) {
+  return NA2dDim(
+      ((last.x / tile_shape.x) - (first.x / tile_shape.x) + 1),
+      ((last.y / tile_shape.y) - (first.y / tile_shape.y) + 1));
+}
+
+template <>
+CUTLASS_DEVICE NA3dDim
+count_tiles(NA3dDim first, NA3dDim last, NA3dDim tile_shape) {
+  return NA3dDim(
+      ((last.x / tile_shape.x) - (first.x / tile_shape.x) + 1),
+      ((last.y / tile_shape.y) - (first.y / tile_shape.y) + 1),
+      ((last.z / tile_shape.z) - (first.z / tile_shape.z) + 1));
 }
 
 } // namespace fna

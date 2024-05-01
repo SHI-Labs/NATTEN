@@ -25,8 +25,8 @@ from functools import partial
 
 import click
 
+import natten
 import torch
-from natten import autotuner
 
 from utils import (
     generate_3d_problem,
@@ -80,10 +80,15 @@ def profile_3d(
     if bf16:
         dtype = torch.bfloat16
 
-    if disable_autotuner:
-        autotuner.disable_autotuner()
-    else:
-        autotuner.enable_autotuner()
+    if fuse:
+        natten.use_fused_na()
+        natten.use_kv_parallelism_in_fused_na()
+        natten.set_memory_usage_preference("unrestricted")
+
+        if disable_autotuner:
+            natten.use_autotuner(False, False, False, False)
+        else:
+            natten.use_autotuner(True, True)
 
     func = partial(profile_na_with_torch, fuse=fuse)
     if fmha:

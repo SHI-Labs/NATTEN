@@ -9,6 +9,11 @@ Welcome to NATTEN docs!
   * Describes how to check NATTEN's compatibility with your system, and its available features.
   * Describes how to use torch modules `NeighborhoodAttention1D`, `NeighborhoodAttention2D`, and `NeighborhoodAttention3D`.
   * Describes when and how to use ops directly instead of modules.
+* [Fused Neighborhood Attention](fna/) (new)
+  * [Quick start guide](fna/fna-quickstart.md)
+  * [Fused vs unfused](fna/fused-vs-unfused.md): differences in supported features, layouts, etc.
+  * [KV parallelism](fna/kv-parallelism.md) (training only)
+  * [Auto-tuner](fna/autotuner.md) (experimental)
 * [API](api.md)
   * Describes the current C++ API structure.
 * [Backend](backend.md)

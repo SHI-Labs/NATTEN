@@ -20,7 +20,7 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import torch
 from torch import Tensor
@@ -36,6 +36,14 @@ except ImportError:
     )
 
 from .ops import av_cross_forward, qk_cross_forward
+from .types import (
+    CausalArg1DType,
+    CausalArg2DType,
+    CausalArg3DType,
+    Dimension1DType,
+    Dimension2DType,
+    Dimension3DType,
+)
 from .utils import (
     check_additional_keys,
     check_additional_values,
@@ -49,17 +57,17 @@ def na1d_qk_nested(
     query: Tensor,
     key: Tensor,
     bias: Optional[Tensor],
-    kernel_size: int | Tuple[int],
-    dilation: int | Tuple[int],
+    kernel_size: int | Dimension1DType,
+    dilation: int | Dimension1DType,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | Tuple[bool]] = False,
+    is_causal: Optional[bool | CausalArg1DType] = False,
 ) -> Tensor:
-    kernel_size, dilation, is_causal = check_all_args(
+    kernel_size_, dilation_, is_causal_ = check_all_args(
         1, kernel_size, dilation, is_causal
     )
-    num_na_weights = get_num_na_weights(kernel_size)
+    num_na_weights = get_num_na_weights(kernel_size_)
 
-    if any(is_causal) and bias is not None:
+    if any(is_causal_) and bias is not None:
         raise NotImplementedError(
             "Positional biases for causal neighborhood attention is not yet implemented."
         )
@@ -113,7 +121,9 @@ def na1d_qk_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na1d_qk_forward(attn_na, q, k, bias, kernel_size, dilation, is_causal)
+        libnatten.na1d_qk_forward(
+            attn_na, q, k, bias, kernel_size_, dilation_, is_causal_
+        )
 
         if len(n_add_tokens_list):
             assert k_add is not None and attn_add.numel() > 0
@@ -125,15 +135,15 @@ def na1d_qk_nested(
 def na1d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Tuple[int],
-    dilation: int | Tuple[int],
+    kernel_size: int | Dimension1DType,
+    dilation: int | Dimension1DType,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | Tuple[bool]] = False,
+    is_causal: Optional[bool | CausalArg1DType] = False,
 ):
-    kernel_size, dilation, is_causal = check_all_args(
+    kernel_size_, dilation_, is_causal_ = check_all_args(
         1, kernel_size, dilation, is_causal
     )
-    num_na_weights = get_num_na_weights(kernel_size)
+    num_na_weights = get_num_na_weights(kernel_size_)
 
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
@@ -180,7 +190,7 @@ def na1d_av_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na1d_av_forward(o, attn_na, v, kernel_size, dilation, is_causal)
+        libnatten.na1d_av_forward(o, attn_na, v, kernel_size_, dilation_, is_causal_)
 
         if v_add is not None and o_add is not None:
             assert attn_add.numel() > 0
@@ -194,17 +204,17 @@ def na2d_qk_nested(
     query: Tensor,
     key: Tensor,
     bias: Optional[Tensor],
-    kernel_size: int | Tuple[int, int],
-    dilation: int | Tuple[int, int],
+    kernel_size: int | Dimension2DType,
+    dilation: int | Dimension2DType,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | Tuple[bool, bool]] = False,
+    is_causal: Optional[bool | CausalArg2DType] = False,
 ) -> Tensor:
-    kernel_size, dilation, is_causal = check_all_args(
+    kernel_size_, dilation_, is_causal_ = check_all_args(
         2, kernel_size, dilation, is_causal
     )
-    num_na_weights = get_num_na_weights(kernel_size)
+    num_na_weights = get_num_na_weights(kernel_size_)
 
-    if any(is_causal) and bias is not None:
+    if any(is_causal_) and bias is not None:
         raise NotImplementedError(
             "Positional biases for causal neighborhood attention is not yet implemented."
         )
@@ -258,7 +268,9 @@ def na2d_qk_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na2d_qk_forward(attn_na, q, k, bias, kernel_size, dilation, is_causal)
+        libnatten.na2d_qk_forward(
+            attn_na, q, k, bias, kernel_size_, dilation_, is_causal_
+        )
 
         if len(n_add_tokens_list):
             assert k_add is not None and attn_add.numel() > 0
@@ -270,15 +282,15 @@ def na2d_qk_nested(
 def na2d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Tuple[int, int],
-    dilation: int | Tuple[int, int],
+    kernel_size: int | Dimension2DType,
+    dilation: int | Dimension2DType,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | Tuple[bool, bool]] = False,
+    is_causal: Optional[bool | CausalArg2DType] = False,
 ):
-    kernel_size, dilation, is_causal = check_all_args(
+    kernel_size_, dilation_, is_causal_ = check_all_args(
         2, kernel_size, dilation, is_causal
     )
-    num_na_weights = get_num_na_weights(kernel_size)
+    num_na_weights = get_num_na_weights(kernel_size_)
 
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
@@ -325,7 +337,7 @@ def na2d_av_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na2d_av_forward(o, attn_na, v, kernel_size, dilation, is_causal)
+        libnatten.na2d_av_forward(o, attn_na, v, kernel_size_, dilation_, is_causal_)
 
         if v_add is not None and o_add is not None:
             assert attn_add.numel() > 0
@@ -339,17 +351,17 @@ def na3d_qk_nested(
     query: Tensor,
     key: Tensor,
     bias: Optional[Tensor],
-    kernel_size: int | Tuple[int, int, int],
-    dilation: int | Tuple[int, int, int],
+    kernel_size: int | Dimension3DType,
+    dilation: int | Dimension3DType,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
+    is_causal: Optional[bool | CausalArg3DType] = False,
 ) -> Tensor:
-    kernel_size, dilation, is_causal = check_all_args(
+    kernel_size_, dilation_, is_causal_ = check_all_args(
         3, kernel_size, dilation, is_causal
     )
-    num_na_weights = get_num_na_weights(kernel_size)
+    num_na_weights = get_num_na_weights(kernel_size_)
 
-    if any(is_causal) and bias is not None:
+    if any(is_causal_) and bias is not None:
         raise NotImplementedError(
             "Positional biases for causal neighborhood attention is not yet implemented."
         )
@@ -403,7 +415,9 @@ def na3d_qk_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na3d_qk_forward(attn_na, q, k, bias, kernel_size, dilation, is_causal)
+        libnatten.na3d_qk_forward(
+            attn_na, q, k, bias, kernel_size_, dilation_, is_causal_
+        )
 
         if len(n_add_tokens_list):
             assert k_add is not None and attn_add.numel() > 0
@@ -415,15 +429,15 @@ def na3d_qk_nested(
 def na3d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Tuple[int, int, int],
-    dilation: int | Tuple[int, int, int],
+    kernel_size: int | Dimension3DType,
+    dilation: int | Dimension3DType,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | Tuple[bool, bool, bool]] = False,
+    is_causal: Optional[bool | CausalArg3DType] = False,
 ):
-    kernel_size, dilation, is_causal = check_all_args(
+    kernel_size_, dilation_, is_causal_ = check_all_args(
         3, kernel_size, dilation, is_causal
     )
-    num_na_weights = get_num_na_weights(kernel_size)
+    num_na_weights = get_num_na_weights(kernel_size_)
 
     if not attn.is_nested or not value.is_nested:
         raise ValueError("Expected all inputs to be nested.")
@@ -470,7 +484,7 @@ def na3d_av_nested(
         attn_na, attn_add = a.split(
             [num_na_weights, a.shape[-1] - num_na_weights], dim=-1
         )
-        libnatten.na3d_av_forward(o, attn_na, v, kernel_size, dilation, is_causal)
+        libnatten.na3d_av_forward(o, attn_na, v, kernel_size_, dilation_, is_causal_)
 
         if v_add is not None and o_add is not None:
             assert attn_add.numel() > 0

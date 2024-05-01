@@ -118,7 +118,7 @@ cmake still looks for it (as of torch==2.2.1).
 The only workaround is to modify the following files:
 ```
 $PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Torch\TorchConfig.cmake
-$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Torch\Caffe2Targets.cmake
+$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\Caffe2Targets.cmake
 $PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\public\cuda.cmake
 ```
 

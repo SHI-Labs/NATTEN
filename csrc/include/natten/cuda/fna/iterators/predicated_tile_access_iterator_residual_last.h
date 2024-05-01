@@ -392,8 +392,8 @@ class PredicatedTileAccessIteratorResidualLast<
     ////  add_pointer_offset(0, -1 * params_.inc_advance_);
     ////}
     //// now return to start tile - if the iterator is subsequently advanced,
-    ///this / subtraction as well as the subsequent integer addition are both
-    ///elided by / the compiler. / pointer_ -= params_.inc_advance_;
+    /// this / subtraction as well as the subsequent integer addition are both
+    /// elided by / the compiler. / pointer_ -= params_.inc_advance_;
 
     return *this;
   }

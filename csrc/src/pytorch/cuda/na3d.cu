@@ -31,6 +31,7 @@
 #include <natten/natten.h>
 #include <natten/cuda/na3d.cuh>
 #include <natten/dtypes.cuh>
+#include <natten/pytorch/cuda/compute_delta.cuh>
 #include <natten/pytorch/cuda/helpers.cuh>
 
 namespace natten {
@@ -43,6 +44,7 @@ void na3d_forward(
     const at::Tensor& value,
     at::Tensor& out,
     const at::optional<at::Tensor>& rpb,
+    const at::optional<at::Tensor>& logsumexp,
     int32_t batch_size,
     int32_t depth,
     int32_t height,
@@ -55,16 +57,33 @@ void na3d_forward(
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size) {
+  at::Tensor workspace;
+  // TODO: figure out a better solution than this that doesn't
+  // involve calling the FNA dispatcher for the sole purpose of
+  // getting workspace size, and doesn't force us to use torch API
+  // in the backend. This works just okay, but I hate the idea of
+  // passing down a lambda function like this.
+  auto alloc_bytes = [&workspace, &query](
+                         void** ptr, int64_t bytes, bool zfill) {
+    workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
+    if (zfill) {
+      workspace.zero_();
+    }
+    *ptr = static_cast<void*>(workspace.data_ptr());
+  };
   DISPATCH_DTYPE(
       query.device().index(),
       at::cuda::getCurrentCUDAStream(query.device().index()),
       query.scalar_type(),
       natten::cuda::na3d_forward,
+      alloc_bytes,
       static_cast<void*>(query.data_ptr()),
       static_cast<void*>(key.data_ptr()),
       static_cast<void*>(value.data_ptr()),
       static_cast<void*>(out.data_ptr()),
       rpb.has_value() ? static_cast<void*>(rpb.value().data_ptr()) : nullptr,
+      logsumexp.has_value() ? static_cast<void*>(logsumexp.value().data_ptr())
+                            : nullptr,
       batch_size,
       depth,
       height,
@@ -77,6 +96,97 @@ void na3d_forward(
       attn_scale,
       query_tile_size,
       key_tile_size);
+}
+
+void na3d_backward(
+    const at::Tensor& grad_out,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& logsumexp,
+    const at::Tensor& out,
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    int32_t batch_size,
+    int32_t depth,
+    int32_t height,
+    int32_t width,
+    int32_t heads,
+    int32_t dim,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& num_splits_key,
+    bool compute_delta_with_torch) {
+  at::Tensor workspace;
+  // TODO: figure out a better solution than this that doesn't
+  // involve calling the FNA dispatcher for the sole purpose of
+  // getting workspace size, and doesn't force us to use torch API
+  // in the backend. This works just okay, but I hate the idea of
+  // passing down a lambda function like this.
+  auto alloc_bytes = [&workspace, &query](
+                         void** ptr, int64_t bytes, bool zfill) {
+    workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
+    if (zfill) {
+      workspace.zero_();
+    }
+    *ptr = static_cast<void*>(workspace.data_ptr());
+  };
+  at::Tensor delta;
+  if (compute_delta_with_torch) {
+    delta =
+        (grad_out.to(at::kFloat) * out.to(at::kFloat)).flatten(1, 3).sum(-1);
+  } else {
+    delta = torch::empty(
+        {batch_size, depth * height * width, heads},
+        query.options().dtype(at::kFloat));
+    compute_delta(out, grad_out, delta, (int32_t)delta.numel(), dim);
+  }
+  TORCH_CHECK(delta.size(0) == batch_size);
+  TORCH_CHECK(delta.size(1) == depth * height * width);
+  TORCH_CHECK(delta.size(2) == heads);
+  if (at::globalContext().deterministicAlgorithms()) {
+    TORCH_CHECK(
+        natten::flatten(num_splits_key) <= 1,
+        "FNA-backward was called with KV parallelism, "
+        "which makes it algorithm non-deterministic, "
+        "but PyTorch's deterministic mode is enabled. "
+        "NATTEN Python API should have avoided this; which means "
+        "you're probably calling the C function directly.");
+  }
+  DISPATCH_DTYPE(
+      query.device().index(),
+      at::cuda::getCurrentCUDAStream(query.device().index()),
+      query.scalar_type(),
+      natten::cuda::na3d_backward,
+      alloc_bytes,
+      static_cast<void*>(grad_out.data_ptr()),
+      static_cast<void*>(query.data_ptr()),
+      static_cast<void*>(key.data_ptr()),
+      static_cast<void*>(value.data_ptr()),
+      static_cast<void*>(logsumexp.data_ptr()),
+      static_cast<void*>(delta.data_ptr()),
+      static_cast<void*>(out.data_ptr()),
+      static_cast<void*>(grad_query.data_ptr()),
+      static_cast<void*>(grad_key.data_ptr()),
+      static_cast<void*>(grad_value.data_ptr()),
+      batch_size,
+      depth,
+      height,
+      width,
+      heads,
+      dim,
+      kernel_size,
+      dilation,
+      is_causal,
+      attn_scale,
+      query_tile_size,
+      key_tile_size,
+      num_splits_key);
 }
 
 void na3d_qk_forward(
@@ -149,6 +259,13 @@ void na3d_qk_backward(
     } else {
       d_bias_ptr = static_cast<void*>(d_bias_tensor.data_ptr());
     }
+    if (at::globalContext().deterministicAlgorithms()) {
+      TORCH_CHECK(
+          false,
+          "Training NATTEN with relative positional "
+          "is non-deterministic, "
+          "but PyTorch's deterministic mode is enabled. ");
+    }
   }
   DISPATCH_DTYPE(
       d_attn.device().index(),
@@ -176,7 +293,7 @@ void na3d_qk_backward(
       dilation,
       is_causal);
   if (should_cast_bias) {
-    NATTEN_CHECK(
+    TORCH_CHECK(
         d_bias.has_value() && d_bias_fp32.has_value(),
         "Something went wrong when casting biases. Please open an issue.");
     auto d_bias_tensor = d_bias.value();

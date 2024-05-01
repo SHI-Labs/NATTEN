@@ -43,11 +43,11 @@
 
 #pragma once
 
-#include "cutlass/cutlass.h"
-#include "cutlass/gemm/warp/mma_tensor_op_tile_access_iterator.h"
-#include "cutlass/platform/platform.h"
+#include <cutlass/cutlass.h>
+#include <cutlass/gemm/warp/mma_tensor_op_tile_access_iterator.h>
+#include <cutlass/platform/platform.h>
 
-#include "warp_iterator_from_smem.h"
+#include <natten/cuda/fna/iterators/warp_iterator_from_smem.h>
 
 namespace cutlass {
 namespace gemm {

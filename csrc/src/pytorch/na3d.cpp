@@ -43,12 +43,14 @@ void na3d_forward(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::optional<at::Tensor>& rpb,
+    const at::optional<at::Tensor>& logsumexp,
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size) {
+  AssertDimsAre128BitAligned(query, value);
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
   CHECK_CONTIGUOUS(value);
@@ -67,6 +69,9 @@ void na3d_forward(
   if (rpb.has_value()) {
     CheckBias<3>(query, rpb.value(), heads, kernel_size);
   }
+  if (logsumexp.has_value()) {
+    CheckLogSumExp<3>(out, logsumexp.value());
+  }
   DISPATCH_DEVICE(
       query.device(),
       na3d_forward,
@@ -75,6 +80,7 @@ void na3d_forward(
       value,
       out,
       rpb,
+      logsumexp,
       batch_size,
       depth,
       height,
@@ -89,6 +95,83 @@ void na3d_forward(
       key_tile_size);
 }
 
+void na3d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& num_splits_key,
+    bool compute_delta_with_torch) {
+  AssertDimsAre128BitAligned(query, value);
+  // TODO: please please simplify these checks!!!
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
+  CHECK_CONTIGUOUS(value);
+  CHECK_CONTIGUOUS(grad_query);
+  CHECK_CONTIGUOUS(grad_key);
+  CHECK_CONTIGUOUS(grad_value);
+  CHECK_CONTIGUOUS(out);
+  CHECK_CONTIGUOUS(grad_out);
+  CHECK_CONTIGUOUS(logsumexp);
+  CheckArgs(kernel_size, dilation);
+  CheckIfPropertiesMatch(query, key, value);
+  CheckIfPropertiesMatch(grad_value, grad_out, out);
+  CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
+  CheckIfPropertiesMatch(grad_query, query, value);
+  CheckIfTensorShapesMatch<3>(query, key);
+  CheckIfTensorShapesMatch<3>(query, value);
+  CheckIfTensorShapesMatch<3>(out, value);
+  CheckIfTensorShapesMatch<3>(grad_query, grad_key);
+  CheckIfTensorShapesMatch<3>(grad_query, grad_value);
+  CheckIfTensorShapesMatch<3>(grad_out, grad_value);
+  CheckIfTensorShapesMatch<3>(grad_out, out);
+  CheckLogSumExp<3>(out, logsumexp);
+  int32_t batch_size = query.size(0);
+  int32_t depth = query.size(1);
+  int32_t height = query.size(2);
+  int32_t width = query.size(3);
+  int32_t heads = query.size(4);
+  int32_t dim = query.size(5);
+  CheckArgsAgainstDim({depth, height, width}, kernel_size, dilation);
+  DISPATCH_DEVICE(
+      query.device(),
+      na3d_backward,
+      grad_out,
+      query,
+      key,
+      value,
+      logsumexp,
+      out,
+      grad_query,
+      grad_key,
+      grad_value,
+      batch_size,
+      depth,
+      height,
+      width,
+      heads,
+      dim,
+      kernel_size,
+      dilation,
+      is_causal,
+      attn_scale,
+      query_tile_size,
+      key_tile_size,
+      num_splits_key,
+      compute_delta_with_torch);
+}
+
 void na3d_qk_forward(
     at::Tensor& attn,
     const at::Tensor& query,
@@ -97,7 +180,7 @@ void na3d_qk_forward(
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal) {
-  NATTEN_CHECK(
+  TORCH_CHECK(
       !any_true(is_causal) || !bias.has_value(),
       "Neighborhood attention with causal masking does not support positional biases yet.");
   CHECK_CONTIGUOUS(query);
@@ -144,7 +227,7 @@ void na3d_qk_backward(
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal) {
-  NATTEN_CHECK(
+  TORCH_CHECK(
       !any_true(is_causal) || !d_bias.has_value(),
       "Neighborhood attention with causal masking does not support positional biases yet.");
   CHECK_CONTIGUOUS(d_query);

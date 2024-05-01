@@ -37,6 +37,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #include <natten/cuda/utils/cuda.h>
 #include <natten/cuda/utils/cutlass.h>
 #include <natten/natten.h>
@@ -49,11 +51,18 @@ namespace natten {
 namespace cuda {
 namespace fna {
 
-template <typename T, typename IntTuple, typename BooleanTuple>
+template <
+    typename T,
+    typename IntTuple,
+    typename BooleanTuple,
+    typename MemoryAllocator // In lieu of a caching allocator, and while we
+                             // only bind with torch
+    >
 void fna_forward_generic(
     const int cc,
     const size_t max_smem,
     cudaStream_t stream,
+    MemoryAllocator alloc_bytes,
     void* query_ptr,
     void* key_ptr,
     void* value_ptr,
@@ -117,7 +126,8 @@ void fna_forward_generic(
     p.logsumexp_ptr = compute_logsumexp
         ? (typename Kernel::lse_scalar_t*)logsumexp_ptr
         : nullptr;
-    void* accum_ptr = nullptr;
+
+    // void* accum_ptr = nullptr;
     if (Kernel::kNeedsOutputAccumulatorBuffer) {
       using AccumType = typename Kernel::output_accum_t;
       // TODO: let PT reserve space for accum_ptr and LSE.
@@ -128,11 +138,16 @@ void fna_forward_generic(
       // issues.
       // cudaMalloc(&accum_ptr, batch_size * natten::flatten(spatial_extent) *
       // heads * dim_value * sizeof(AccumType));
-      cudaMallocAsync(
-          &accum_ptr,
-          batch_size * natten::flatten(spatial_extent) * heads * dim_value *
-              sizeof(AccumType),
-          stream);
+      int64_t workspace_size_bytes = batch_size *
+          natten::flatten(spatial_extent) * heads * dim_value *
+          sizeof(AccumType);
+      void* accum_ptr = nullptr;
+      alloc_bytes(&accum_ptr, workspace_size_bytes, /* zero_fill = */ false);
+      // NATTEN_CUDA_CHECK(cudaMallocAsync(
+      //     &accum_ptr,
+      //     batch_size * natten::flatten(spatial_extent) * heads * dim_value *
+      //         sizeof(AccumType),
+      //     stream));
       p.output_accum_ptr = (AccumType*)accum_ptr;
     } else {
       p.output_accum_ptr = nullptr;
@@ -164,14 +179,16 @@ void fna_forward_generic(
     auto blocks = p.getBlocksGrid();
     Kernel::check_supported(p);
     kernel_fn<<<blocks, p.getThreadsGrid(), smem_bytes, stream>>>(p);
-    if (Kernel::kNeedsOutputAccumulatorBuffer) {
-      //NATTEN_CHECK(
-      //    accum_ptr != nullptr, "Expected accum_ptr to be set, got nullptr.");
-      cudaFreeAsync(accum_ptr, stream);
-    }
+    // if (Kernel::kNeedsOutputAccumulatorBuffer) {
+    //   // NATTEN_CHECK(
+    //   //     accum_ptr != nullptr, "Expected accum_ptr to be set, got
+    //   //     nullptr.");
+    //   NATTEN_CUDA_CHECK(cudaFreeAsync(accum_ptr, stream));
+    // }
   };
 
-  DISPATCH_FNA_FORWARD_KERNEL(kRank, cc, T, is_causal, has_rpb, launchKernel);
+  DISPATCH_FNA_FORWARD_KERNEL(
+      kRank, cc, T, is_causal, has_rpb, compute_logsumexp, launchKernel);
   NATTEN_CHECK(
       kernel_launched,
       "Could not find a compatible fused neighborhood attention kernel.");

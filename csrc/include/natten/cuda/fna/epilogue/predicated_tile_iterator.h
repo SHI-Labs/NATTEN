@@ -77,7 +77,6 @@ namespace threadblock {
 ///
 template <
     int NADim,
-    int kTileSizeRow,
     typename ThreadMap_, ///< Thread map (conept: OutputTileThreadMap)
     typename Element_ ///< Element data type
     >
@@ -276,7 +275,7 @@ class CustomPredicatedTileIterator {
     // Initialize byte_pointer_
     byte_pointer_ = reinterpret_cast<uint8_t*>(pointer) +
         //(natten::cuda::fna::map_index_to_coord(thread_offset.row(),
-        //extent_row_) * params_.stride).sum() +
+        // extent_row_) * params_.stride).sum() +
         LongIndex(thread_offset.column()) * sizeof(AccessType) /
             kElementsPerAccess;
 

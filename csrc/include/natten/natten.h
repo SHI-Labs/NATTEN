@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <iostream>
+
 namespace natten {
 
 #define NATTEN_FAILURE(msg)       \

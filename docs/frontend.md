@@ -39,36 +39,45 @@ na3d_with_bias = NeighborhoodAttention3D(
 
 Modules expect inputs of shape `[batch_size, *, dim]`:
 
-* NA1D: `[batch_size, sequence_length, dim]`
-* NA2D: `[batch_size, height, width, dim]`
-* NA3D: `[batch_size, depth, height, width, dim]`
+* NeighborhoodAttention1D: `[batch_size, sequence_length, dim]`
+* NeighborhoodAttention2D: `[batch_size, height, width, dim]`
+* NeighborhoodAttention3D: `[batch_size, depth, height, width, dim]`
 
-#### Enabling inference using Fused Neighborhood Attention
-NATTEN can switch from the standard BMM-style backend implementation to our more recent Fused Neighborhood Attention, which
-operates similarly to Flash Attention in that attention weights are not stored to global memory.
+#### Using Fused Neighborhood Attention
+NATTEN can switch from the standard BMM-style backend implementation to our more recent Fused Neighborhood Attention (FNA), 
+which operates similarly to Flash Attention in that attention weights are not stored to global memory.
 You can expect improved performance, especially in half precision, and a potentially reduced memory footprint, especially if
 you're dealing with large problem sizes.
 
-Note that this feature is experimental, and presently support forward pass ONLY, and may not work with
-features such as torch.compile, or other such graph-based runtimes and optimizations.
+Note that this feature is very new, and unlike the previous BMM-style implementations, offers a number
+of different settings, which you may want to adjust to your use case.
+
+To force NATTEN torch modules (`NeighborhoodAttention1D`, `NeighborhoodAttention2D`, and `NeighborhoodAttention3D`) to use FNA:
 
 ```python
 from natten import enable_fused_na, disable_fused_na
 
 enable_fused_na()
-# Modules will start using fused neighborhood attention in their forward pass
+# Modules will start using fused neighborhood attention
 
 disable_fused_na()
 # Go back to BMM-style (default)
 ```
 
+We highly recommend referring to [FNA quick start](fna/fna-quickstart.md) or 
+the [fused vs unfused NA](fna/fused-vs-unfused.md) guide before
+starting to use FNA, since the interface, memory layout, and feature set can differ from
+all unfused ops in NATTEN.
+
 #### Optimizing FNA 
 Fused neighborhood attention can automatically tune its performance and provide additional gains in performance when
 NATTEN's new autotuner is enabled.
+
 Auto-tuner benchmarks every new problem (identified by problem size, data type, and NA parameters) once and caches
 its optimal kernel configuration, which is reused throughout the lifetime of your program.
-This means that when activated, your first forward pass is expected to take longer than typical, but iterations that follow
-will like be more performant than without auto-tuning.
+
+This means that when auto-tuner is activated, your first forward pass is expected to take longer than typical, 
+but iterations that follow will likely be more performant than without auto-tuning.
 
 Note that this feature only makes sense in static or mostly static runtimes (you don't expect your tensor shapes to change
 very frequently after a certain point.)
@@ -76,25 +85,85 @@ very frequently after a certain point.)
 This feature is still in early stages and relatively untested, and is not part of libnatten, and is therefore experimental and 
 subject to change. Bug reports related to it and FNA in general are strongly appreciated.
 
+NOTE: using auto-tuner during training, especially distributed training jobs, is not recommended at this time, as each
+individual subprocess will have its own auto-tuner cache, and this can easily result in different processes using very
+different kernel configurations, which can affect your reproducibility.
+
+NOTE: auto-tuner cannot be used when
+[PyTorch's deterministic mode](https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html)
+is enabled.
+
 ```python
 from natten import (
-  enable_fused_na,
-  disable_fused_na,
-  enable_autotuner,
-  disable_autotuner
+  use_fused_na,
+  use_autotuner,
+  disable_autotuner,
 )
 
-enable_fused_na()
+use_fused_na(True)
 # FNA runs according to the default configuration for
 # every problem size.
 
-enable_autotuner()
+use_autotuner(forward_pass=True, backward_pass=False)
 # FNA optimizes the configuration according
-# to problem size.
+# to problem size. Enable for forward pass,
+# disable for backward pass.
+
+use_fused_na(False)
+# Disable Fused NA (default)
 
 disable_autotuner()
-disable_fused_na()
+# Disable auto-tuner
+# Or alternatively:
+# use_autotuner(False, False)
 ```
+
+For more information, refer to [autotuner guide](fna/autotuner.md).
+
+#### Memory usage in FNA
+Training with Fused Neighborhood Attention can be accelerated at the expense of using more global memory by using
+KV parallelization. Depending on your use case (how big your memory footprint already is and what your memory cap is),
+you can consider this option.
+
+KV parallelism is disabled by default, and makes the backward pass non-deterministic, which means that it can't be used with
+[PyTorch's deterministic mode](https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html).
+
+To enable this feature:
+
+```python
+from natten import (
+  use_kv_parallelism_in_fused_na,
+  is_kv_parallelism_in_fused_na_enabled
+)
+
+use_kv_parallelism_in_fused_na(True)
+# Enables using KV parallelism
+
+use_kv_parallelism_in_fused_na(False)
+# Go back to no KV parallelism (default)
+```
+
+If you're limited by memory capacity, but would still like to use KV parallelism, you can try adjusting
+NATTEN's memory preference settings:
+
+```python
+from natten import set_memory_usage_preference
+
+set_memory_usage_preference("strict")
+# Strict: limits KV parallelism more than default.
+
+set_memory_usage_preference("unrestricted")
+# Unrestricted: no limit on KV parallelism other than
+# maximum grid size.
+
+set_memory_usage_preference("default")
+# Default: limits KV parallelism, but not as aggressively
+# as strict.
+```
+
+Future versions may offer more fine-grained control over this.
+
+For more information, refer to [KV parallelism](fna/kv-parallelism.md).
 
 ### Operations
 Operations are one level below our modules, and are intended to give you full control over the module-level
@@ -164,7 +233,6 @@ output_3d = na3d_av(
 
 #### Fused neighborhood attention
 These ops are a very recent addition, and their behavior and signatures may change in the future.
-They also do not support backward passes yet.
 
 ```python
 from natten.functional import na1d, na2d, na3d
@@ -195,6 +263,39 @@ output_3d = na3d(
 )
 ```
 
+:bangbang: **NOTE**: Fused ops **will** apply the default attention scale (square root of head dim in Q/K).
+Unfused ops **won't** apply the default attention scale (square root of head dim in Q/K).
+Some implementations scale the query, some scale both query and key, and this can result
+in different outcomes when training.
+
+```python
+# Default option:
+# Don't specify scale, default to qk_dim ** -0.5
+o = na2d(
+  q_1, k, v,
+  kernel_size=(7, 3),
+)
+
+# Option 1:
+# apply out of op, and to Q only
+q_1 = q * attn_scale
+o_1 = na2d(
+  q_1, k, v,
+  kernel_size=(7, 3),
+  scale=1.0,
+)
+
+# Option 2:
+# apply out of op, and to both Q and K
+q_2 = q * attn_scale_sqrt
+k_2 = k * attn_scale_sqrt
+o_2 = na2d(
+  q_2, k_2, v,
+  kernel_size=(7, 3),
+  scale=1.0,
+)
+```
+
 ### Static functions
 
 #### Environment checks
@@ -202,7 +303,7 @@ output_3d = na3d(
 *Check compute capability on CUDA device:*
 
 ```python
-from natten.functional import get_device_cc
+from natten.utils import get_device_cc
 print(get_device_cc())  # Default torch cuda device
 print(get_device_cc(0)) # cuda:0
 ```
@@ -213,14 +314,14 @@ Indicates whether your local NATTEN and PyTorch were compiled with CUDA, and
 a compatible CUDA device is detected:
 
 ```python
-from natten.functional import has_cuda
+from natten import has_cuda
 print(has_cuda())
 ```
 
 *Check whether your NATTEN installation supports FP16:*
 
 ```python
-from natten.functional import has_half
+from natten import has_half
 print(has_half())  # Default torch cuda device
 print(has_half(0)) # cuda:0
 ```
@@ -228,7 +329,7 @@ print(has_half(0)) # cuda:0
 *Check whether your NATTEN installation supports BFP16:*
 
 ```python
-from natten.functional import has_bfloat
+from natten import has_bfloat
 print(has_bfloat())  # Default torch cuda device
 print(has_bfloat(0)) # cuda:0
 ```
@@ -239,7 +340,7 @@ Indicates whether your local NATTEN was compiled with our FNA kernels,
 and whether your CUDA device is compatible with it.
 
 ```python
-from natten.functional import has_fna
+from natten import has_fna
 print(has_fna())  # Default torch cuda device
 print(has_fna(0)) # cuda:0
 ```

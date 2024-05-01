@@ -36,7 +36,7 @@
 
 #pragma once
 
-#include "warp_iterator_from_smem.h"
+#include <natten/cuda/fna/iterators/warp_iterator_from_smem.h>
 
 template <typename WarpIterator>
 struct TransposeWarpIterator {

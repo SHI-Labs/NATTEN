@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "natten/config.h"
+#include "natten/pytorch/compute_delta.h"
 #include "natten/pytorch/na1d.h"
 #include "natten/pytorch/na2d.h"
 #include "natten/pytorch/na3d.h"
@@ -40,6 +41,15 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
   m.def(
       "na3d_forward", &natten::pytorch::na3d_forward, "NA3D forward (fused)");
+
+  m.def(
+      "na1d_backward", &natten::pytorch::na1d_backward, "NA1D backward (fused)");
+
+  m.def(
+      "na2d_backward", &natten::pytorch::na2d_backward, "NA2D backward (fused)");
+
+  m.def(
+      "na3d_backward", &natten::pytorch::na3d_backward, "NA3D backward (fused)");
 
   m.def(
       "na1d_qk_forward", &natten::pytorch::na1d_qk_forward, "NA1D QK forward");
@@ -116,6 +126,10 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "set_gemm_tf32",
       &natten::set_gemm_tf32,
       "Use tiled NA implementations when available.");
+
+  // Bindings to test misc kernels
+  m.def(
+      "compute_delta", &natten::pytorch::compute_delta, "Compute delta");
 }
 
 } // namespace natten

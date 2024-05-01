@@ -1,5 +1,6 @@
 /*
- * Copied from xFormers (https://github.com/facebookresearch/xformers/)
+ * Copied from xFormers (https://github.com/facebookresearch/xformers/) and
+ * edited.
  *
  * NOTE: this is only used in the backward pass kernel.
  *
@@ -45,18 +46,20 @@
 
 #pragma once
 
-#include "cutlass/arch/arch.h"
-#include "cutlass/arch/memory.h"
-#include "cutlass/array.h"
-#include "cutlass/cutlass.h"
-#include "cutlass/epilogue/threadblock/output_tile_thread_map.h"
-#include "cutlass/epilogue/threadblock/predicated_tile_iterator_params.h"
-#include "cutlass/layout/matrix.h"
-#include "cutlass/layout/tensor.h"
-#include "cutlass/matrix_shape.h"
-#include "cutlass/numeric_types.h"
-#include "cutlass/tensor_ref.h"
-#include "cutlass/transform/pitch_linear_thread_map.h"
+#include <cutlass/arch/arch.h>
+#include <cutlass/arch/memory.h>
+#include <cutlass/array.h>
+#include <cutlass/cutlass.h>
+#include <cutlass/epilogue/threadblock/output_tile_thread_map.h>
+#include <cutlass/layout/matrix.h>
+#include <cutlass/layout/tensor.h>
+#include <cutlass/matrix_shape.h>
+#include <cutlass/numeric_types.h>
+#include <cutlass/tensor_ref.h>
+#include <cutlass/transform/pitch_linear_thread_map.h>
+
+#include <natten/cuda/fna/epilogue/predicated_tile_iterator_params.h>
+#include <natten/cuda/fna/na_utils.cuh>
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -76,12 +79,15 @@ namespace threadblock {
 /// ForwardTileIterator
 ///
 template <
+    int NADim,
     typename ThreadMap_, ///< Thread map (conept: OutputTileThreadMap)
-    typename Element_, ///< Element data type
-    bool ScatterD = false, ///< Scatter D operand or not
-    bool UseCUDAStore = false>
+    typename Element_ ///< Element data type
+    >
 class PredicatedTileIteratorPrefetch {
  public:
+  static_assert(NADim >= 1 && NADim < 4);
+  using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+
   using ThreadMap = ThreadMap_;
   using Shape = typename ThreadMap::Shape;
 
@@ -125,18 +131,21 @@ class PredicatedTileIteratorPrefetch {
   //
   // Parameters struct
   //
+  using ParamsBase = CustomPredicatedTileIteratorParams<NADim>;
 
   /// Uses a non-template class
-  struct Params : PredicatedTileIteratorParams {
-    using Base = PredicatedTileIteratorParams;
+  struct Params : ParamsBase {
+    using Base = ParamsBase;
 
     CUTLASS_HOST_DEVICE
     Params() {}
 
     CUTLASS_HOST_DEVICE
-    Params(Layout const& layout)
-        : PredicatedTileIteratorParams(
-              layout.stride(0) * int(sizeof(AccessType)) / kElementsPerAccess,
+    Params(Dim stride, Dim extent_row)
+        : ParamsBase(
+              stride,
+              int32_t(sizeof(AccessType)) / kElementsPerAccess,
+              extent_row,
               make_OutputTileThreadMapDesc<ThreadMap>()) {}
 
     CUTLASS_HOST_DEVICE
@@ -181,7 +190,7 @@ class PredicatedTileIteratorPrefetch {
   //
 
   /// Parameters structure containing reference and precomputed state.
-  PredicatedTileIteratorParams params_;
+  ParamsBase params_;
 
   /// Byte-level pointer
   uint8_t* byte_pointer_;
@@ -190,7 +199,8 @@ class PredicatedTileIteratorPrefetch {
   Mask mask_;
 
   /// Extent of the matrix tile in rows
-  Index extent_row_;
+  Dim extent_row_;
+  int32_t extent_row_int;
 
   /// Extent of the matrix tile in rows
   Index extent_column_;
@@ -205,18 +215,12 @@ class PredicatedTileIteratorPrefetch {
   /// Internal state counter
   int state_[3];
 
-  /// Scatter indices
-  int const* indices_;
-
   //
   // Static asserts about internal strides
   //
 
-  static_assert(sizeof(extent_row_) == 4, "Expected 32b extents");
+  static_assert(sizeof(extent_column_) == 4, "Expected 32b extents");
   static_assert(sizeof(thread_start_row_) == 4, "Expected 32b extents");
-  static_assert(
-      sizeof(PredicatedTileIteratorParams::stride) == 8,
-      "Expected 64b strides");
 
  private:
   //
@@ -231,18 +235,19 @@ class PredicatedTileIteratorPrefetch {
   /// Constructor
   CUTLASS_DEVICE
   PredicatedTileIteratorPrefetch(
-      PredicatedTileIteratorParams const& params,
+      ParamsBase const& params,
       Element* pointer,
-      TensorCoord extent,
+      Dim extent_row,
+      int32_t extent_col,
       int thread_idx,
-      TensorCoord threadblock_offset = TensorCoord(),
-      int const* indices = nullptr)
-      : params_(params), indices_(indices) {
+      TensorCoord threadblock_offset = TensorCoord())
+      : params_(params) {
     TensorCoord thread_offset =
         ThreadMap::initial_offset(thread_idx) + threadblock_offset;
 
-    extent_row_ = extent.row();
-    extent_column_ = extent.column();
+    extent_row_ = extent_row;
+    extent_column_ = extent_col;
+    extent_row_int = extent_row.prod32();
 
     thread_start_row_ = thread_offset.row();
     thread_start_column_ = thread_offset.column();
@@ -252,7 +257,7 @@ class PredicatedTileIteratorPrefetch {
     for (int c = 0; c < ThreadMap::Iterations::kColumn; ++c) {
       mask_.predicates[c] =
           ((thread_offset.column() + ThreadMap::Delta::kColumn * c) <
-           extent.column());
+           extent_col);
     }
 
     // Null pointer performs no accesses
@@ -260,21 +265,22 @@ class PredicatedTileIteratorPrefetch {
       mask_.clear();
     }
 
-    if (ScatterD && !indices) {
-      mask_.clear();
-    }
+    // if (ScatterD && !indices) {
+    //   mask_.clear();
+    // }
 
     // Initialize pointer
     byte_pointer_ = reinterpret_cast<uint8_t*>(pointer) +
-        LongIndex(thread_offset.row()) * LongIndex(params_.stride) +
+        //(natten::cuda::fna::map_index_to_coord(thread_offset.row(),
+        // extent_row_) * params_.stride).sum() +
         LongIndex(thread_offset.column()) * sizeof(AccessType) /
             kElementsPerAccess;
 
-    if (ScatterD) {
-      byte_pointer_ = reinterpret_cast<uint8_t*>(pointer) +
-          LongIndex(thread_offset.column()) * sizeof(AccessType) /
-              kElementsPerAccess;
-    }
+    // if (ScatterD) {
+    //  byte_pointer_ = reinterpret_cast<uint8_t*>(pointer) +
+    //    LongIndex(thread_offset.column()) * sizeof(AccessType) /
+    //    kElementsPerAccess;
+    //}
 
     // Initialize internal state counter
     state_[0] = state_[1] = state_[2] = 0;
@@ -284,63 +290,6 @@ class PredicatedTileIteratorPrefetch {
   CUTLASS_HOST_DEVICE
   void add_pointer_offset(LongIndex pointer_offset) {
     byte_pointer_ += pointer_offset * sizeof_bits<Element>::value / 8;
-  }
-
-  CUTLASS_DEVICE
-  void prefetch_all() {
-    CUTLASS_PRAGMA_UNROLL
-    for (int iter = 0; iter < kIterations; ++iter) {
-      prefetch();
-      ++(*this);
-    }
-  }
-
-  CUTLASS_DEVICE
-  void prefetch() {
-    uint8_t* byte_pointer = byte_pointer_;
-
-    CUTLASS_PRAGMA_UNROLL
-    for (int cluster = 0; cluster < ThreadMap::Iterations::kCluster;
-         ++cluster) {
-      CUTLASS_PRAGMA_UNROLL
-      for (int group = 0; group < ThreadMap::Iterations::kGroup; ++group) {
-        CUTLASS_PRAGMA_UNROLL
-        for (int row = 0; row < ThreadMap::Iterations::kRow; ++row) {
-          int row_offset = row * ThreadMap::Delta::kRow +
-              group * ThreadMap::Delta::kGroup +
-              cluster * ThreadMap::Delta::kCluster;
-
-          AccessType* memory_pointer =
-              reinterpret_cast<AccessType*>(byte_pointer);
-
-          CUTLASS_PRAGMA_UNROLL
-          for (int column = 0; column < ThreadMap::Iterations::kColumn;
-               ++column) {
-            // on windows using unsigned long here gives the error
-            // error: asm operand type size(4) does not match
-            // type/size implied by constraint 'l'
-            uint64_t addr = (uint64_t)(
-                (void*)&memory_pointer
-                    [column * ThreadMap::Delta::kColumn / kElementsPerAccess]);
-            asm volatile("prefetch.global.L1 [ %1 ];" : "=l"(addr) : "l"(addr));
-          }
-
-          if (row + 1 < ThreadMap::Iterations::kRow) {
-            if (!ScatterD) {
-              byte_pointer += params_.increment_row;
-            }
-          }
-        }
-
-        if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
-        }
-      }
-
-      if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
-      }
-    }
   }
 
   /// Loads a fragment from memory
@@ -361,23 +310,29 @@ class PredicatedTileIteratorPrefetch {
                ThreadMap::Iterations::kRow *
                    (group + ThreadMap::Iterations::kGroup * cluster));
 
-          int row_offset = row * ThreadMap::Delta::kRow +
+          int32_t row_offset = row * ThreadMap::Delta::kRow +
               group * ThreadMap::Delta::kGroup +
               cluster * ThreadMap::Delta::kCluster;
 
-          bool row_guard = ((row_offset + thread_start_row_) < extent_row_);
+          auto row_offset_full_ = natten::cuda::fna::map_index_to_coord(
+              row_offset + thread_start_row_, extent_row_);
+          // bool row_guard =
+          // natten::cuda::fna::is_coord_within_upper_bound(row_offset_full_,
+          // extent_row_);
+          bool row_guard = row_offset + thread_start_row_ < extent_row_int;
 
-          AccessType* memory_pointer =
-              reinterpret_cast<AccessType*>(byte_pointer + byte_offset);
+          AccessType* memory_pointer = reinterpret_cast<AccessType*>(
+              byte_pointer + byte_offset +
+              (row_offset_full_ * params_.stride).sum());
 
-          if (ScatterD && row_guard) {
-            assert(indices_);
+          // if (ScatterD && row_guard) {
+          //  assert(indices_);
 
-            memory_pointer = reinterpret_cast<AccessType*>(
-                byte_pointer + byte_offset +
-                LongIndex(indices_[row_offset + thread_start_row_]) *
-                    LongIndex(params_.stride));
-          }
+          //  memory_pointer = reinterpret_cast<AccessType *>(byte_pointer +
+          //  byte_offset +
+          //    LongIndex(indices_[row_offset + thread_start_row_]) *
+          //    LongIndex(params_.stride));
+          //}
 
           CUTLASS_PRAGMA_UNROLL
           for (int column = 0; column < ThreadMap::Iterations::kColumn;
@@ -393,19 +348,19 @@ class PredicatedTileIteratorPrefetch {
           }
 
           if (row + 1 < ThreadMap::Iterations::kRow) {
-            if (!ScatterD) {
-              byte_pointer += params_.increment_row;
-            }
+            // if (!ScatterD) {
+            // byte_pointer += params_.increment_row;
+            //}
           }
         }
 
         if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
+          // byte_pointer += params_.increment_group;
         }
       }
 
       if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
+        // byte_pointer += params_.increment_cluster;
       }
     }
   }
@@ -434,61 +389,70 @@ class PredicatedTileIteratorPrefetch {
                ThreadMap::Iterations::kRow *
                    (group + ThreadMap::Iterations::kGroup * cluster));
 
-          int row_offset = row * ThreadMap::Delta::kRow +
+          int32_t row_offset = row * ThreadMap::Delta::kRow +
               group * ThreadMap::Delta::kGroup +
               cluster * ThreadMap::Delta::kCluster;
 
-          bool row_guard = ((row_offset + thread_start_row_) < extent_row_);
+          auto row_offset_full_ = natten::cuda::fna::map_index_to_coord(
+              row_offset + thread_start_row_, extent_row_);
+          // bool row_guard =
+          // natten::cuda::fna::is_coord_within_upper_bound(row_offset_full_,
+          // extent_row_);
+          bool row_guard = row_offset + thread_start_row_ < extent_row_int;
 
-          AccessType* memory_pointer =
-              reinterpret_cast<AccessType*>(byte_pointer + byte_offset);
+          AccessType* memory_pointer = reinterpret_cast<AccessType*>(
+              byte_pointer + byte_offset +
+              (row_offset_full_ * params_.stride).sum());
 
-          if (ScatterD && row_guard) {
-            assert(indices_);
+          // if (ScatterD && row_guard) {
+          //  assert(indices_);
 
-            memory_pointer = reinterpret_cast<AccessType*>(
-                byte_pointer + byte_offset +
-                LongIndex(indices_[row_offset + thread_start_row_]) *
-                    LongIndex(params_.stride));
-          }
+          //  memory_pointer = reinterpret_cast<AccessType *>(byte_pointer +
+          //  byte_offset +
+          //    LongIndex(indices_[row_offset + thread_start_row_]) *
+          //    LongIndex(params_.stride));
+          //}
 
           CUTLASS_PRAGMA_UNROLL
           for (int column = 0; column < ThreadMap::Iterations::kColumn;
                ++column) {
             bool guard = row_guard && mask_.predicates[column];
 
-            if (UseCUDAStore) {
-              if (guard) {
-                memory_pointer
-                    [column * ThreadMap::Delta::kColumn / kElementsPerAccess] =
-                        frag_ptr
-                            [frag_row_idx * ThreadMap::Iterations::kColumn +
-                             column];
-              }
-            } else {
-              cutlass::arch::global_store<AccessType, sizeof(AccessType)>(
-                  frag_ptr
-                      [frag_row_idx * ThreadMap::Iterations::kColumn + column],
-                  (void*)&memory_pointer
-                      [column * ThreadMap::Delta::kColumn / kElementsPerAccess],
-                  guard);
-            }
+            // if (UseCUDAStore) {
+            //   if (guard) {
+            //     memory_pointer
+            //         [column * ThreadMap::Delta::kColumn / kElementsPerAccess]
+            //         =
+            //             frag_ptr
+            //                 [frag_row_idx * ThreadMap::Iterations::kColumn +
+            //                  column];
+            //   }
+            // } else {
+            cutlass::arch::global_store<AccessType, sizeof(AccessType)>(
+                frag_ptr
+                    [frag_row_idx * ThreadMap::Iterations::kColumn + column],
+                (void*)&memory_pointer[0],
+                //(void*)&memory_pointer
+                //    [column * ThreadMap::Delta::kColumn / kElementsPerAccess],
+                guard);
+            //}
+            memory_pointer += (ThreadMap::Delta::kColumn / kElementsPerAccess);
           }
 
           if (row + 1 < ThreadMap::Iterations::kRow) {
-            if (!ScatterD) {
-              byte_pointer += params_.increment_row;
-            }
+            // if (!ScatterD) {
+            // byte_pointer += params_.increment_row;
+            //}
           }
         }
 
         if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
+          // byte_pointer += params_.increment_group;
         }
       }
 
       if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
+        // byte_pointer += params_.increment_cluster;
       }
     }
   }
@@ -497,163 +461,6 @@ class PredicatedTileIteratorPrefetch {
   CUTLASS_DEVICE
   void store(Fragment const& frag) const {
     store_with_byte_offset(frag, 0);
-  }
-
-  /// Loads a fragment from memory
-  CUTLASS_DEVICE
-  void downsample_load_with_byte_offset(
-      Fragment& frag,
-      int64_t byte_offset,
-      int convolution_P,
-      int convolution_Q,
-      int add_P,
-      int add_Q,
-      int problem_N) const {
-    uint8_t* byte_pointer = byte_pointer_;
-    AccessType* frag_ptr = reinterpret_cast<AccessType*>(&frag);
-
-    CUTLASS_PRAGMA_UNROLL
-    for (int cluster = 0; cluster < ThreadMap::Iterations::kCluster;
-         ++cluster) {
-      CUTLASS_PRAGMA_UNROLL
-      for (int group = 0; group < ThreadMap::Iterations::kGroup; ++group) {
-        CUTLASS_PRAGMA_UNROLL
-        for (int row = 0; row < ThreadMap::Iterations::kRow; ++row) {
-          int frag_row_idx =
-              (row +
-               ThreadMap::Iterations::kRow *
-                   (group + ThreadMap::Iterations::kGroup * cluster));
-
-          int row_offset = row * ThreadMap::Delta::kRow +
-              group * ThreadMap::Delta::kGroup +
-              cluster * ThreadMap::Delta::kCluster;
-
-          bool row_guard = ((row_offset + thread_start_row_) < extent_row_);
-
-          int output_row = row_offset + thread_start_row_;
-          int output_N = output_row / (convolution_P * convolution_Q);
-          int output_PQ = output_row % (convolution_P * convolution_Q);
-          int output_P = output_PQ / convolution_Q;
-          int output_Q = output_PQ % convolution_Q;
-
-          int input_row = output_N * 2 * convolution_P * 2 * convolution_Q +
-              (2 * output_P + add_P) * 2 * convolution_Q + 2 * output_Q + add_Q;
-
-          int64_t byte_offset =
-              (input_row - output_row) * problem_N * sizeof(float);
-
-          AccessType* memory_pointer =
-              reinterpret_cast<AccessType*>(byte_pointer + byte_offset);
-
-          CUTLASS_PRAGMA_UNROLL
-          for (int column = 0; column < ThreadMap::Iterations::kColumn;
-               ++column) {
-            bool guard = row_guard && mask_.predicates[column];
-
-            cutlass::arch::global_load<AccessType, sizeof(AccessType)>(
-                frag_ptr
-                    [frag_row_idx * ThreadMap::Iterations::kColumn + column],
-                (void*)&memory_pointer
-                    [column * ThreadMap::Delta::kColumn / kElementsPerAccess],
-                guard);
-          }
-
-          if (row + 1 < ThreadMap::Iterations::kRow) {
-            byte_pointer += params_.increment_row;
-          }
-        }
-
-        if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
-        }
-      }
-
-      if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
-      }
-    }
-  }
-
-  /// Loads a fragment from memory
-  CUTLASS_DEVICE
-  void upsample_load_with_byte_offset(
-      Fragment& frag,
-      int64_t byte_offset,
-      int convolution_P,
-      int convolution_Q,
-      int add_P,
-      int add_Q,
-      int problem_N) const {
-    uint8_t* byte_pointer = byte_pointer_;
-    AccessType* frag_ptr = reinterpret_cast<AccessType*>(&frag);
-
-    CUTLASS_PRAGMA_UNROLL
-    for (int cluster = 0; cluster < ThreadMap::Iterations::kCluster;
-         ++cluster) {
-      CUTLASS_PRAGMA_UNROLL
-      for (int group = 0; group < ThreadMap::Iterations::kGroup; ++group) {
-        CUTLASS_PRAGMA_UNROLL
-        for (int row = 0; row < ThreadMap::Iterations::kRow; ++row) {
-          int frag_row_idx =
-              (row +
-               ThreadMap::Iterations::kRow *
-                   (group + ThreadMap::Iterations::kGroup * cluster));
-
-          int row_offset = row * ThreadMap::Delta::kRow +
-              group * ThreadMap::Delta::kGroup +
-              cluster * ThreadMap::Delta::kCluster;
-
-          bool row_guard = ((row_offset + thread_start_row_) < extent_row_);
-
-          int output_row = row_offset + thread_start_row_;
-          int output_N = output_row / (convolution_P * convolution_Q);
-          int output_PQ = output_row % (convolution_P * convolution_Q);
-          int output_P = output_PQ / convolution_Q;
-          int output_Q = output_PQ % convolution_Q;
-          int row_add_P = add_P;
-          int row_add_Q = add_Q;
-          if (output_P > convolution_P - 2)
-            row_add_P = 0;
-          if (output_Q > convolution_Q - 2)
-            row_add_Q = 0;
-
-          int input_row = output_N * (convolution_P / 2) * (convolution_Q / 2) +
-              ((output_P + row_add_P) / 2) * (convolution_Q / 2) +
-              (output_Q + row_add_Q) / 2;
-
-          int64_t byte_offset =
-              (input_row - output_row) * problem_N * sizeof(float);
-
-          AccessType* memory_pointer =
-              reinterpret_cast<AccessType*>(byte_pointer + byte_offset);
-
-          CUTLASS_PRAGMA_UNROLL
-          for (int column = 0; column < ThreadMap::Iterations::kColumn;
-               ++column) {
-            bool guard = row_guard && mask_.predicates[column];
-
-            cutlass::arch::global_load<AccessType, sizeof(AccessType)>(
-                frag_ptr
-                    [frag_row_idx * ThreadMap::Iterations::kColumn + column],
-                (void*)&memory_pointer
-                    [column * ThreadMap::Delta::kColumn / kElementsPerAccess],
-                guard);
-          }
-
-          if (row + 1 < ThreadMap::Iterations::kRow) {
-            byte_pointer += params_.increment_row;
-          }
-        }
-
-        if (group + 1 < ThreadMap::Iterations::kGroup) {
-          byte_pointer += params_.increment_group;
-        }
-      }
-
-      if (cluster + 1 < ThreadMap::Iterations::kCluster) {
-        byte_pointer += params_.increment_cluster;
-      }
-    }
   }
 
   CUTLASS_DEVICE
@@ -673,12 +480,6 @@ class PredicatedTileIteratorPrefetch {
     return thread_start_column_;
   }
 
-  /// Extent of the matrix in rows
-  CUTLASS_DEVICE
-  Index extent_row() const {
-    return extent_row_;
-  }
-
   /// Extent of the matrix in columns
   CUTLASS_DEVICE
   Index extent_column() const {
@@ -690,16 +491,16 @@ class PredicatedTileIteratorPrefetch {
   PredicatedTileIteratorPrefetch& operator++() {
     ++state_[0];
 
-    if (!ScatterD) {
-      byte_pointer_ += params_.advance_row;
-    }
+    // if (!ScatterD) {
+    //  byte_pointer_ += params_.advance_row;
+    //}
 
     thread_start_row_ += ThreadMap::Shape::kRow;
 
     if (state_[0] == ThreadMap::Count::kRow) {
       state_[0] = 0;
       ++state_[1];
-      byte_pointer_ += params_.advance_group;
+      // byte_pointer_ += params_.advance_group;
 
       thread_start_row_ += (ThreadMap::Shape::kGroup - 1) *
           ThreadMap::Shape::kRow * ThreadMap::Count::kRow;
@@ -707,7 +508,7 @@ class PredicatedTileIteratorPrefetch {
       if (state_[1] == ThreadMap::Count::kGroup) {
         state_[1] = 0;
         ++state_[2];
-        byte_pointer_ += params_.advance_cluster;
+        // byte_pointer_ += params_.advance_cluster;
 
         thread_start_row_ += ThreadMap::Count::kGroup *
             ThreadMap::Shape::kGroup * ThreadMap::Count::kRow *
@@ -715,7 +516,7 @@ class PredicatedTileIteratorPrefetch {
 
         if (state_[2] == ThreadMap::Count::kCluster) {
           state_[2] = 0;
-          byte_pointer_ += params_.advance_tile;
+          // byte_pointer_ += params_.advance_tile;
         }
       }
     }
@@ -744,9 +545,10 @@ class PredicatedTileIteratorPrefetch {
   }
 };
 
-template <typename IT>
+template <int NADim, typename IT>
 struct MakePrefetchableIterator {
   using Iterator = PredicatedTileIteratorPrefetch<
+      NADim,
       typename IT::ThreadMap,
       typename IT::Element>;
 };

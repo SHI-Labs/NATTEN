@@ -24,22 +24,36 @@
 
 from typing import Any, Callable, Dict, Optional, Tuple
 
-from natten.libnatten import (  # type: ignore
-    na1d_av_backward as na1d_av_backward,
-    na1d_av_forward as na1d_av,
-    na1d_forward as na1d_fused,
-    na1d_qk_backward as na1d_qk_backward,
-    na1d_qk_forward as na1d_qk,
-    na2d_av_backward as na2d_av_backward,
-    na2d_av_forward as na2d_av,
-    na2d_forward as na2d_fused,
-    na2d_qk_backward as na2d_qk_backward,
-    na2d_qk_forward as na2d_qk,
-    na3d_av_backward as na3d_av_backward,
-    na3d_av_forward as na3d_av,
-    na3d_forward as na3d_fused,
-    na3d_qk_backward as na3d_qk_backward,
-    na3d_qk_forward as na3d_qk,
+# from natten.libnatten import (  # type: ignore
+#    na1d_av_backward as na1d_av_backward,
+#    na1d_av_forward as na1d_av,
+#    na1d_backward as na1d_fused_backward,
+#    na1d_forward as na1d_fused,
+#    na1d_qk_backward as na1d_qk_backward,
+#    na1d_qk_forward as na1d_qk,
+#    na2d_av_backward as na2d_av_backward,
+#    na2d_av_forward as na2d_av,
+#    na2d_backward as na2d_fused_backward,
+#    na2d_forward as na2d_fused,
+#    na2d_qk_backward as na2d_qk_backward,
+#    na2d_qk_forward as na2d_qk,
+#    na3d_av_backward as na3d_av_backward,
+#    na3d_av_forward as na3d_av,
+#    na3d_backward as na3d_fused_backward,
+#    na3d_forward as na3d_fused,
+#    na3d_qk_backward as na3d_qk_backward,
+#    na3d_qk_forward as na3d_qk,
+# )
+from natten.functional import (
+    na1d,
+    na1d_av,
+    na1d_qk,
+    na2d,
+    na2d_av,
+    na2d_qk,
+    na3d,
+    na3d_av,
+    na3d_qk,
 )
 
 from torch import Tensor
@@ -48,31 +62,54 @@ from .ops import NAOp
 
 try:
     from xformers.ops.fmha import (  # type: ignore
+        attn_bias,
         memory_efficient_attention,
         MemoryEfficientAttentionCutlassOp,
         MemoryEfficientAttentionFlashAttentionOp,
     )
 
-    def fmha(q: Tensor, k: Tensor, v: Tensor) -> Tensor:
-        return memory_efficient_attention(q, k, v, op=MemoryEfficientAttentionCutlassOp)
-
-    def fav2(q: Tensor, k: Tensor, v: Tensor) -> Tensor:
+    def fmha(
+        q: Tensor, k: Tensor, v: Tensor, window_size: Optional[int] = None
+    ) -> Tensor:
+        bias = (
+            None
+            if window_size is None or window_size < 1
+            else attn_bias.LowerTriangularFromBottomRightLocalAttentionMask(window_size)
+        )
         return memory_efficient_attention(
-            q, k, v, op=MemoryEfficientAttentionFlashAttentionOp
+            q, k, v, op=MemoryEfficientAttentionCutlassOp, attn_bias=bias
+        )
+
+    def fav2(
+        q: Tensor, k: Tensor, v: Tensor, window_size: Optional[int] = None
+    ) -> Tensor:
+        bias = (
+            None
+            if window_size is None or window_size < 1
+            else attn_bias.LowerTriangularFromBottomRightLocalAttentionMask(window_size)
+        )
+        return memory_efficient_attention(
+            q, k, v, op=MemoryEfficientAttentionFlashAttentionOp, attn_bias=bias
         )
 
 except:
 
-    def fmha(q: Tensor, k: Tensor, v: Tensor) -> Tensor:
+    def fmha(
+        q: Tensor, k: Tensor, v: Tensor, window_size: Optional[int] = None
+    ) -> Tensor:
         raise RuntimeError("Benchmarking FMHA and FAv2 requires xFormers.")
 
-    def fav2(q: Tensor, k: Tensor, v: Tensor) -> Tensor:
+    def fav2(
+        q: Tensor, k: Tensor, v: Tensor, window_size: Optional[int] = None
+    ) -> Tensor:
         raise RuntimeError("Benchmarking FMHA and FAv2 requires xFormers.")
 
 
 _NA_1D_C_KEYWORDS = {
-    NAOp.FusedForward: ["natten::cuda::fna"],  # TODO: this is too generic
-    NAOp.FusedBackward: [],
+    NAOp.FusedForward: ["natten::cuda::fna::FusedNeighborhoodAttentionKernel<1,"],
+    NAOp.FusedBackward: [
+        "natten::cuda::fna::FusedNeighborhoodAttentionBackwardKernel<1,"
+    ],
     NAOp.PN: ["NA1dPN", "OperatorE0", "gemm::PointwiseNeighborhood1D"],
     NAOp.NN: ["NA1dNN", "OperatorE1", "gemm::NeighborhoodNeighborhood1D"],
     NAOp.IN: ["NA1dIN", "OperatorE2", "gemm::InverseNeighborhood1D"],
@@ -103,8 +140,10 @@ _NA_1D_C_KEYWORDS = {
 }
 
 _NA_2D_C_KEYWORDS = {
-    NAOp.FusedForward: ["natten::cuda::fna"],  # TODO: this is too generic
-    NAOp.FusedBackward: [],
+    NAOp.FusedForward: ["natten::cuda::fna::FusedNeighborhoodAttentionKernel<2,"],
+    NAOp.FusedBackward: [
+        "natten::cuda::fna::FusedNeighborhoodAttentionBackwardKernel<2,"
+    ],
     NAOp.PN: ["NA2dPN", "OperatorE0", "gemm::PointwiseNeighborhood2D"],
     NAOp.NN: ["NA2dNN", "OperatorE1", "gemm::NeighborhoodNeighborhood2D"],
     NAOp.IN: ["NA2dIN", "OperatorE2", "gemm::InverseNeighborhood2D"],
@@ -136,8 +175,10 @@ _NA_2D_C_KEYWORDS = {
 
 
 _NA_3D_C_KEYWORDS = {
-    NAOp.FusedForward: ["natten::cuda::fna"],  # TODO: this is too generic
-    NAOp.FusedBackward: [],
+    NAOp.FusedForward: ["natten::cuda::fna::FusedNeighborhoodAttentionKernel<3,"],
+    NAOp.FusedBackward: [
+        "natten::cuda::fna::FusedNeighborhoodAttentionBackwardKernel<3,"
+    ],
     NAOp.RPB: ["rpb_forward"],
     NAOp.RPBGRAD: [
         "rpb_backward",
@@ -178,11 +219,42 @@ def get_kernel_map(na_dim: int) -> Dict[NAOp, Any]:
 # TODO add fused backward kernel
 def get_ops(
     na_dim: int,
-) -> Tuple[Callable, Callable, Callable, Callable, Callable, Optional[Callable]]:
+) -> Tuple[Callable, Callable, Callable]:
+    # ) -> Tuple[Callable, Callable, Callable, Callable, Callable, Optional[Callable]]:
     if na_dim == 1:
-        return (na1d_qk, na1d_qk_backward, na1d_av, na1d_av_backward, na1d_fused, None)
+        return (
+            na1d_qk,
+            na1d_av,
+            na1d,
+            # na1d_qk,
+            # na1d_qk_backward,
+            # na1d_av,
+            # na1d_av_backward,
+            # na1d_fused,
+            # na1d_fused_backward,
+        )
     if na_dim == 2:
-        return (na2d_qk, na2d_qk_backward, na2d_av, na2d_av_backward, na2d_fused, None)
+        return (
+            na2d_qk,
+            na2d_av,
+            na2d,
+            # na2d_qk,
+            # na2d_qk_backward,
+            # na2d_av,
+            # na2d_av_backward,
+            # na2d_fused,
+            # na2d_fused_backward,
+        )
     if na_dim == 3:
-        return (na3d_qk, na3d_qk_backward, na3d_av, na3d_av_backward, na3d_fused, None)
+        return (
+            na3d_qk,
+            na3d_av,
+            na3d,
+            # na3d_qk,
+            # na3d_qk_backward,
+            # na3d_av,
+            # na3d_av_backward,
+            # na3d_fused,
+            # na3d_fused_backward,
+        )
     raise ValueError(f"Expected NA1d, 2d, or 3d, got {na_dim=}.")

@@ -77,6 +77,7 @@ elseif(${NATTEN_IS_WINDOWS})
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".pyd")
   set(CMAKE_SHARED_LIBRARY_SUFFIX_C ".pyd")
   set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX ".pyd")
+  add_definitions("-DNATTEN_WINDOWS")
 endif()
 
 set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}")
@@ -89,8 +90,12 @@ set(CMAKE_CUDA_FLAGS_DEBUG "-O0 -G -Xcompiler -Wall")
 
 set(CMAKE_CXX_STANDARD "${CXX_STD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
+#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --ptxas-options=-O2")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --ptxas-options=-allow-expensive-optimizations=true")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std=c++${CXX_STD}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
@@ -106,9 +111,15 @@ if(${NATTEN_IS_WINDOWS})
   set(CMAKE_CUDA_FLAGS_DEBUG "-Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MP /Zc:lambda /Zc:preprocessor")
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /Zc:lambda -Xcompiler /Zc:preprocessor")
+
+  # TODO: MSVC can't build without /bigobj since FNA-backward
+  # Those lambda expressions we use for handling memory planning
+  # through torch appear to push the object size past its limit
+  # on Windows. See csrc/src/pytorch/cuda/na1d.cu for more
+  # (under na1d_forward/na1d_backward).
+  set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /bigobj")
 endif()
 
-message("CMAKE_CUDA_FLAGS_RELEASE: ${CMAKE_CUDA_FLAGS_RELEASE}")
 if(${NATTEN_WITH_CUDA})
   message("CUDA compiler: " ${CMAKE_CUDA_COMPILER})
   message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
@@ -165,7 +176,7 @@ if(${NATTEN_WITH_CUDA})
     file(GLOB AUTOGEN_CUDA_GEMM_SM70 ./autogen/src/cuda/gemm/1d/sm70/*.cu ./autogen/src/cuda/gemm/2d/sm70/*.cu)
     file(GLOB AUTOGEN_CUDA_GEMM_SM75 ./autogen/src/cuda/gemm/1d/sm75/*.cu ./autogen/src/cuda/gemm/2d/sm75/*.cu)
     file(GLOB AUTOGEN_CUDA_GEMM_SM80 ./autogen/src/cuda/gemm/1d/sm80/*.cu ./autogen/src/cuda/gemm/2d/sm80/*.cu)
-    file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu)
+    file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu ./src/cuda/fna/*.cu)
   endif()
 endif()
 
@@ -190,8 +201,8 @@ include_directories(${COMMON_HEADER_DIRS})
 # Find torch lib dir so we can link with libtorch
 link_directories("${TORCH_DIR}/lib/")
 
-# Windows builds require linking with python*.lib
 if(NATTEN_IS_WINDOWS)
+  # Windows builds require linking with python*.lib
   link_directories("${PY_LIB_DIR}")
 endif()
 
