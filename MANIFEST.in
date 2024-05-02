@@ -5,3 +5,4 @@ prune tools/
 prune scripts/
 prune tests/
 graft assets/
+graft docs/

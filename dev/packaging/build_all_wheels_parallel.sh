@@ -2,6 +2,10 @@
 # Based on detectron2's builder:
 # github.com/facebookresearch/detectron2
 
+# Always ensure cutlass/other submods are cloned
+# before attempting to build.
+git submodule update --init --recursive
+
 [[ -d "dev/packaging" ]] || {
   echo "Please run this script at natten root!"
   exit 1
@@ -68,11 +72,13 @@ else
   # We don't need to build for every minor torch release; they're usually
   # compatible in their python API and ABIs.
 
-  build_one cu121 2.2.0 & build_one cu118 2.2.0 & build_one cpu 2.2.0
+  build_one cu121 2.3.0 & build_one cu118 2.3.0
+
+  build_one cu121 2.2.0 & build_one cu118 2.2.0
 
   build_one cu121 2.1.0 & build_one cu118 2.1.0
 
-  build_one cu118 2.0.0 & build_one cu117 2.0.0 
+  build_one cu118 2.0.0 & build_one cu117 2.0.0
 
-  build_one cpu 2.1.0 & build_one cpu 2.0.0
+  build_one cpu 2.3.0 & build_one cpu 2.2.0 & build_one cpu 2.1.0 & build_one cpu 2.0.0
 fi
