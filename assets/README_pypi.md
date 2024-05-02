@@ -8,8 +8,8 @@
 Bringing attention to a neighborhood near you!
 
 <div align="center">
-  <img alt="Visualization of neighborhood attention in 2D." src="https://shi-labs.com/natten/docs/assets/neighborhood_attn_2d_vis_light.png" width="384" />
-  <img alt="Visualization of dilated neighborhood attention in 2D." src="https://shi-labs.com/natten/docs/assets/dilated_neighborhood_attn_2d_vis_light.png" width="384" />
+  <img alt="Visualization of neighborhood attention in 2D." src="https://shi-labs.com/natten/pypi-assets/docs/assets/neighborhood_attn_2d_vis_light.png" width="384" />
+  <img alt="Visualization of dilated neighborhood attention in 2D." src="https://shi-labs.com/natten/pypi-assets/docs/assets/dilated_neighborhood_attn_2d_vis_light.png" width="384" />
 </div>
 
 NATTEN is an open-source project dedicated to providing fast implementations for
@@ -36,11 +36,11 @@ by never storing the attention tensor to global memory, which aside from reducin
 the memory bandwidth bottleneck.
 
 <div align="center">
-  <img alt="Op-level average speedup." src="https://shi-labs.com/natten/assets/fna-chart-light.png" height="384" />
+  <img alt="Op-level average speedup." src="https://shi-labs.com/natten/pypi-assets/assets/fna-chart-light.png" height="384" />
 </div>
 
-We highly recommend referring to [FNA quick start](docs/fna/fna-quickstart.md) or 
-the [Fused vs unfused NA](docs/fna/fused-vs-unfused.md) guide before
+We highly recommend referring to [FNA quick start](https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna/fna-quickstart.md) or 
+the [Fused vs unfused NA](https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna/fused-vs-unfused.md) guide before
 starting to use FNA, since the interface, memory layout, and feature set can differ from
 all unfused ops in NATTEN.
 
@@ -51,7 +51,7 @@ Python 3.12 is only supported with torch >= 2.2.0.
 
 Older NATTEN releases supported python >= 3.7 and torch >= 1.8.
 
-Please refer to [install instructions](docs/install.md) to find out whether your operating system and hardware accelerator is
+Please refer to [install instructions](https://github.com/SHI-Labs/NATTEN/tree/main/docs/install.md) to find out whether your operating system and hardware accelerator is
 compatible with NATTEN.
 
 ## Feature availability
