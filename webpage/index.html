@@ -28,7 +28,11 @@
                NATTEN is an extension to PyTorch, which provides the first fast sliding window attention with efficient CPU and CUDA kernels. 
                It provides <a href="https://arxiv.org/abs/2204.07143">Neighborhood Attention</a> (local attention)
                and <a href="https://arxiv.org/abs/2209.15001">Dilated Neighborhood Attention</a> 
-               (sparse global attention, a.k.a. dilated local attention) as PyTorch modules for both 1D and 2D data.
+               (sparse global attention, a.k.a. dilated local attention) as PyTorch modules for 1D, 2D, and 3D data.
+            </p>
+            <p class="abstract">
+              Start using our new <a href="https://arxiv.org/abs/2403.04690">Fused Neighborhood Attention</a> implementation
+              today!
             </p>
             <p class="text-center">
                 <a href="https://github.com/SHI-Labs/NATTEN">GitHub</a> /
@@ -44,7 +48,7 @@
     <div class="title row">
         <div class="col-lg-12">
             <p class="h2">Install with pip</p>
-            <p>Latest release: <code>0.15.1</code></p>
+            <p>Latest release: <code>0.17.0</code></p>
         </div>
     </div>
     <div class="row">
@@ -56,7 +60,10 @@
                 <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">PyTorch:</a>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-C" data-bs-toggle="tab" data-bs-target="#v220" type="button" role="tab" aria-controls="v220" aria-selected="true">2.2.X</button>
+                <button class="nav-link active" id="tab-D" data-bs-toggle="tab" data-bs-target="#v230" type="button" role="tab" aria-controls="v230" aria-selected="true">2.3.X</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-C" data-bs-toggle="tab" data-bs-target="#v220" type="button" role="tab" aria-controls="v220" aria-selected="true">2.2.X</button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-B" data-bs-toggle="tab" data-bs-target="#v210" type="button" role="tab" aria-controls="v210" aria-selected="true">2.1.X</button>
@@ -66,7 +73,30 @@
               </li>
           </ul>
           <div class="tab-content" id="torchTabContent">
-              <div class="tab-pane fade show active" id="v220" role="tabpanel" aria-labelledby="tab-C">
+              <div class="tab-pane fade show active" id="v230" role="tabpanel" aria-labelledby="tab-D">
+                <div class="d-flex align-items-start">
+                  <div class="nav flex-column nav-pills me-3" id="v230-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v230-cu121-tab" data-bs-toggle="pill" data-bs-target="#v230-121" type="button" role="tab" aria-controls="v230-121" aria-selected="true">CUDA 12.1</button>
+                    <button class="nav-link" id="v230-cu118-tab" data-bs-toggle="pill" data-bs-target="#v230-118" type="button" role="tab" aria-controls="v230-118" aria-selected="false">CUDA 11.8</button>
+                    <button class="nav-link" id="v230-cpu-tab" data-bs-toggle="pill" data-bs-target="#v230-cpu" type="button" role="tab" aria-controls="v230-cpu" aria-selected="false">CPU</button>
+                  </div>
+                  <div class="tab-content" id="v230-tabContent">
+                    <div class="tab-pane fade show active" id="v230-121" role="tabpanel" aria-labelledby="v230-cu121-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.15.1+torch230cu121 -f https://shi-labs.com/natten/wheels/</pre>
+                    </div>
+                    <div class="tab-pane fade" id="v230-118" role="tabpanel" aria-labelledby="v230-cu118-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.15.1+torch230cu118 -f https://shi-labs.com/natten/wheels</pre>
+                    </div>
+                    <div class="tab-pane fade" id="v230-cpu" role="tabpanel" aria-labelledby="v230-cpu-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.15.1+torch230cpu -f https://shi-labs.com/natten/wheels</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade show" id="v220" role="tabpanel" aria-labelledby="tab-C">
                 <div class="d-flex align-items-start">
                   <div class="nav flex-column nav-pills me-3" id="v220-tab" role="tablist" aria-orientation="vertical">
                     <button class="nav-link active" id="v220-cu121-tab" data-bs-toggle="pill" data-bs-target="#v220-121" type="button" role="tab" aria-controls="v220-121" aria-selected="true">CUDA 12.1</button>
@@ -158,7 +188,7 @@
     </div>
     <div class="row">
         <div class="col-lg-12">
-          <p>We're only able to support the two most recent major torch releases starting 2024.
+          <p>We're only able to support the most recent major torch releases starting 2024.
             If you're using an older torch / CUDA build, you can still installer previous NATTEN releases.</p>
           <p></p>
           <ul class="nav nav-tabs" id="torchTab" role="tablist">
@@ -439,65 +469,12 @@
 <div class="container news mt-4">
     <div class="title row">
         <div class="col-lg-12">
-            <p class="h2">Build from source</p>
+            <p class="h2">Quick links</p>
         </div>
         <div class="col-lg-12">
-            <p>Once you've set up your Python environment and installed PyTorch with CUDA, simply clone and build:</p>
-            <p></p>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-lg-12">
-          <p>Run this command:</p>
-          <pre>git clone https://github.com/SHI-Labs/NATTEN
-cd NATTEN
-pip install -r requirements.txt
-make
-</pre>
-
-          <p>NOTE: NATTEN will use the PyTorch API to detect your GPU architecture, and will by default attempt to use 
-            1/4th of the number of processes your system allows to build. 
-            You can override them by passing in the following arguments:</p>
-          <pre># Build with 2 workers/processes
-make WORKERS=2
-
-# Build targeting SM89 (Ada Lovelace)
-make CUDA_ARCH="8.9"
-</pre>
-          <p></p>
-        </div>
-    </div>
-</div>
-<div class="container requirements mt-4">
-    <div class="title row">
-        <div class="col-lg-12">
-            <p class="h2">Requirements</p>
-        </div>
-        <div class="col-lg-12">
-            <p>The latest NATTEN release only supports PyTorch, and the CUDA builds only support Kepler (SM35) and
-            above. Make sure your GPU is supported by referring to <a
-            href="https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/">this link</a>.</p>
-            <p>Our GEMM-based kernels are only available for Volta (SM70) and above, and they're limited to FP16 math only on
-              Volta and Turing (SM70 and SM75).</p>
-        </div>
-    </div>
-</div>
-<div class="container usage mt-4">
-    <div class="title row">
-        <div class="col-lg-12">
-            <p class="h2">Usage</p>
-        </div>
-        <div class="col-lg-12">
-          <p>Easy to use, just import and go:</p>
-          <pre>from natten import (
-  NeighborhoodAttention1D,
-  NeighborhoodAttention2D,
-  NeighborhoodAttention3D,
-)
-na1d = NeighborhoodAttention1D(dim=128, kernel_size=7, dilation=3, num_heads=4)
-na2d = NeighborhoodAttention2D(dim=128, kernel_size=7, dilation=3, num_heads=4)
-na3d = NeighborhoodAttention3D(dim=128, kernel_size=7, dilation=3, num_heads=4)
-</pre>
+          <p><a href="https://github.com/SHI-Labs/NATTEN/blob/main/docs/install.md">Install / build from source guide</a></p>
+          <p><a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna">Fused neighborhood attention quickstart</a></p>
+          <p><a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/">NATTEN docs</a></p>
         </div>
     </div>
 </div>
@@ -510,20 +487,29 @@ na3d = NeighborhoodAttention3D(dim=128, kernel_size=7, dilation=3, num_heads=4)
             <p>Please consider citing our papers if you use NATTEN in your work:</p>
             <p></p>
             <p>
-<pre><code>@inproceedings{hassani2023neighborhood,
-	title        = {Neighborhood Attention Transformer},
-	author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
-	year         = 2023,
+<pre><code>@misc{hassani2024faster,
+  title        = {Faster Neighborhood Attention: Reducing the O(n^2) Cost of Self Attention at the Threadblock Level},
+  author       = {Ali Hassani and Wen-Mei Hwu and Humphrey Shi},
+  year         = 2024,
+  url          = {https://arxiv.org/abs/2403.04690},
+  eprint       = {2403.04690},
+  archiveprefix = {arXiv},
+  primaryclass = {cs.CV}
+}
+@inproceedings{hassani2023neighborhood,
+  title        = {Neighborhood Attention Transformer},
+  author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
+  year         = 2023,
         booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
 }
-@article{hassani2022dilated,
-	title        = {Dilated Neighborhood Attention Transformer},
-	author       = {Ali Hassani and Humphrey Shi},
-	year         = 2022,
-	url          = {https://arxiv.org/abs/2209.15001},
-	eprint       = {2209.15001},
-	archiveprefix = {arXiv},
-	primaryclass = {cs.CV}
+@misc{hassani2022dilated,
+  title        = {Dilated Neighborhood Attention Transformer},
+  author       = {Ali Hassani and Humphrey Shi},
+  year         = 2022,
+  url          = {https://arxiv.org/abs/2209.15001},
+  eprint       = {2209.15001},
+  archiveprefix = {arXiv},
+  primaryclass = {cs.CV}
 }</code></pre></p>
         </div>
     </div>
