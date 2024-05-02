@@ -66,9 +66,9 @@ compatible with NATTEN.
 
 | Problem space | CPU Backend | Causal masking     | Varying parameters | Relative positional bias | Autograd support         |
 | -----------   | ----------- | ------------------ | ------------------ | ------------------------ | ------------------------ |
-| 1D            | naive       | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode |
-| 2D            | naive       | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode |
-| 3D            | naive       | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode |
+| 1D            | naive       | &#10003;           | &#10003;           | &#10003;                 | Forward and reverse mode |
+| 2D            | naive       | &#10003;           | &#10003;           | &#10003;                 | Forward and reverse mode |
+| 3D            | naive       | &#10003;           | &#10003;           | &#10003;                 | Forward and reverse mode |
 
 Notes:
 * Forward mode autograd does not support relative positional biases and causal masking yet.
@@ -78,14 +78,14 @@ Notes:
 
 | Problem space | CUDA Backend | Causal masking     | Varying parameters | Relative positional bias | Autograd support         | Min. Arch |
 | -----------   | -----------  | ------------------ | ------------------ | ------------------------ | ------------------------ | --------- |
-| 1D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 2D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 3D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 1D            | gemm         | -                  | -                  | :white_check_mark:       | Forward and reverse mode | SM70      |
-| 2D            | gemm         | -                  | -                  | :white_check_mark:       | Forward and reverse mode | SM70      |
-| 1D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
-| 2D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
-| 3D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
+| 1D            | naive        | &#10003;           | &#10003;           | &#10003;                 | Forward and reverse mode | SM35      |
+| 2D            | naive        | &#10003;           | &#10003;           | &#10003;                 | Forward and reverse mode | SM35      |
+| 3D            | naive        | &#10003;           | &#10003;           | &#10003;                 | Forward and reverse mode | SM35      |
+| 1D            | gemm         | -                  | -                  | &#10003;                 | Forward and reverse mode | SM70      |
+| 2D            | gemm         | -                  | -                  | &#10003;                 | Forward and reverse mode | SM70      |
+| 1D            | fna          | &#10003;           | &#10003;           | &#10003;                 | Reverse mode             | SM50      |
+| 2D            | fna          | &#10003;           | &#10003;           | &#10003;                 | Reverse mode             | SM50      |
+| 3D            | fna          | &#10003;           | &#10003;           | &#10003;                 | Reverse mode             | SM50      |
 
 Notes: 
 * FP16 kernels are only available on SM50 and above*, and BF16 requires SM80 and above.

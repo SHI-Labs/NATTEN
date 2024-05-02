@@ -1,7 +1,9 @@
 # Changelog
 
 ## [Main branch]
-* Fused neighborhood attention (FNA) kernels (forward pass only for now)
+
+## [0.17.0] - 2024-05-02
+* [Fused neighborhood attention](https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna) (FNA) kernels
   * 1D, 2D and 3D Neighborhood Attention are supported,
   * Causal neighborhood attention is implemented,
   * Window (kernel) size, dilation, and causality can be defined *per-axis*,
@@ -9,10 +11,13 @@
     * SM50 up to SM70 are SIMT-only, but support both FP16 and FP32,
     * SM70 and SM75 target Tensor Cores in FP16, and SIMT-style in FP32,
     * SM80 and above target Tensor Cores in FP16, BF16, and FP32.
-  * Relative positional biases are implemented (not defined for causal masking yet),
+  * NATTEN [Auto-tuner](https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna/autotuner.md),
+  * Memory preferences and [KV parallelism](https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna/kv-parallelism.md) modes,
+  * Relative positional biases are only supported in forward pass (inference).
   * Memory layout in FNA is different from existing kernels (`[B, *, heads, dim]` instead of `[B, heads, *, dim]`.)
     * Eventually this layout can skip over the permute/explicit reshape step in the attention module following
     the QKV projection.
+    * For more refer to [Fused vs unfused NA](docs/fna/fused-vs-unfused.md). 
 * Naive kernels now implement and allow causal masking,
 * Naive kernels (CPU and CUDA) now allow varying parameters (window size, dilation, causal) across axes,
 * Major bug fix in Volta GEMM kernels
@@ -20,7 +25,6 @@
   * Tests are now more aggressive, and the issue has been fixed.
 * Memory alignment bug in half RPB gradient kernels fixed
   * See [#97](https://github.com/SHI-Labs/NATTEN/issues/97).
-* Naive FP16 enabled for SM50-SM60.
 
 ## [0.15.1] - 2024-01-24
 * Attention tensors can now be views, which allows combining neighborhood and any other attention pattern (i.e. registers,
