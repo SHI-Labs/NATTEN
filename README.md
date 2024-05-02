@@ -45,7 +45,7 @@ the memory bandwidth bottleneck.
 <div align="center">
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/fna-chart-dark.png">
-  <img alt="Op-level average speedup." src="assets/fna-chart-light.png" height="384" />
+  <img alt="Op-level average speedup." src="assets/fna-chart-light.png" />
 </picture>
 </div>
 

@@ -1,11 +1,11 @@
-![NATTENLogo](https://www.shi-labs.com/natten/assets/img/natten_light.png) 
-
-<a href="https://www.shi-labs.com/natten/">Website / Releases</a>
-| <a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/">Documentation</a>
+<img src="https://www.shi-labs.com/natten/assets/img/natten_light.png" width="384" />
 
 *Neighborhood Attention Extension*
 
 Bringing attention to a neighborhood near you!
+
+<a href="https://www.shi-labs.com/natten/">Website / Releases</a>
+| <a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/">Documentation</a>
 
 <div align="center">
   <img alt="Visualization of neighborhood attention in 2D." src="https://shi-labs.com/natten/pypi-assets/docs/assets/neighborhood_attn_2d_vis_light.png" width="384" />
@@ -36,7 +36,7 @@ by never storing the attention tensor to global memory, which aside from reducin
 the memory bandwidth bottleneck.
 
 <div align="center">
-  <img alt="Op-level average speedup." src="https://shi-labs.com/natten/pypi-assets/assets/fna-chart-light.png" height="384" />
+  <img alt="Op-level average speedup." src="https://shi-labs.com/natten/pypi-assets/assets/fna-chart-light.png" />
 </div>
 
 We highly recommend referring to [FNA quick start](https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna/fna-quickstart.md) or 
