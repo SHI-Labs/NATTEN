@@ -23,7 +23,10 @@
 
 import copy
 import math
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
+
+# NOTE: switch to | when < 3.10 support is dropped
+CausalType = Optional[Union[bool, tuple]]
 
 
 class Problem:
@@ -38,7 +41,7 @@ class Problem:
         dilation: List[int],
         dtype: Any,
         has_bias: bool,
-        is_causal: Optional[bool | tuple] = None,
+        is_causal: CausalType = None,
     ):
         self.na_dim = na_dim
         self.batch_size = batch_size
@@ -103,7 +106,7 @@ def generate_1d_problem(
     dilation: int,
     dtype: Any,
     has_bias: bool,
-    is_causal: Optional[bool | tuple] = None,
+    is_causal: CausalType = None,
 ) -> Problem:
     return Problem(
         na_dim=1,
@@ -129,7 +132,7 @@ def generate_2d_problem(
     dilation: int,
     dtype: Any,
     has_bias: bool,
-    is_causal: Optional[bool | tuple] = None,
+    is_causal: CausalType = None,
 ) -> Problem:
     return Problem(
         na_dim=2,
@@ -156,7 +159,7 @@ def generate_3d_problem(
     dilation: int,
     dtype: Any,
     has_bias: bool,
-    is_causal: Optional[bool | tuple] = None,
+    is_causal: CausalType = None,
 ) -> Problem:
     return Problem(
         na_dim=3,

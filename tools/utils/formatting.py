@@ -21,13 +21,16 @@
 #
 #################################################################################################
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from torch.profiler import profile as torch_profile
 
 from .mappings import get_kernel_map
 
 from .ops import CustomOp, NAOp
+
+# NOTE: switch to | when < 3.10 support is dropped
+OpType = Union[NAOp, CustomOp]
 
 
 def _format_time(time_us: float) -> str:
@@ -46,7 +49,7 @@ def _format_time(time_us: float) -> str:
 class Result:
     def __init__(
         self,
-        op: NAOp | CustomOp,
+        op: OpType,
         op_str: str,
         time: float,
         index: int = -1,
@@ -164,9 +167,7 @@ def custom_op_to_name(name: str) -> Tuple[str, str]:
     return ".".join(namespace_split[:-1]), namespace_split[-1]
 
 
-def convert_ops(
-    ops: Dict[NAOp | CustomOp, List[float]], tags: Dict
-) -> Optional[List[Result]]:
+def convert_ops(ops: Dict[OpType, List[float]], tags: Dict) -> Optional[List[Result]]:
     output = []
     for op, values in ops.items():
         if len(values) and isinstance(op, NAOp):
@@ -292,7 +293,7 @@ def extract_na_ops(
     na_dim: int,
 ) -> Optional[List[Result]]:
     events = profiler.events()
-    logged_ops: Dict[NAOp | CustomOp, List[float]] = {na_op: [] for na_op in NAOp}
+    logged_ops: Dict[OpType, List[float]] = {na_op: [] for na_op in NAOp}
     tags: Dict[NAOp, Optional[str]] = {na_op: None for na_op in NAOp}
     for evt in events:
         op, valid, tag = str_to_na_op(sym=evt.key, na_dim=na_dim)

@@ -21,7 +21,9 @@
 #
 #################################################################################################
 
-from typing import Tuple
+from typing import List, Tuple, Union
+
+from torch import Tensor
 
 NoneType = type(None)
 
@@ -33,25 +35,36 @@ CausalArg1DType = Tuple[bool]
 CausalArg2DType = Tuple[bool, bool]
 CausalArg3DType = Tuple[bool, bool, bool]
 
-DimensionType = Dimension1DType | Dimension2DType | Dimension3DType
-CausalArgType = CausalArg1DType | CausalArg2DType | CausalArg3DType
+# NOTE: switch to | when < 3.10 support is dropped
+Dimension1DTypeOrDed = Union[int, Dimension1DType]
+Dimension2DTypeOrDed = Union[int, Dimension2DType]
+Dimension3DTypeOrDed = Union[int, Dimension3DType]
+
+CausalArg1DTypeOrDed = Union[bool, CausalArg1DType]
+CausalArg2DTypeOrDed = Union[bool, CausalArg2DType]
+CausalArg3DTypeOrDed = Union[bool, CausalArg3DType]
+
+DimensionType = Union[Dimension1DType, Dimension2DType, Dimension3DType]
+CausalArgType = Union[CausalArg1DType, CausalArg2DType, CausalArg3DType]
 
 # (query_tile_shape, kv_tile_shape)
-FnaTileShapeType = (
-    Tuple[Dimension1DType, Dimension1DType]
-    | Tuple[Dimension2DType, Dimension2DType]
-    | Tuple[Dimension3DType, Dimension3DType]
-)
+FnaTileShapeType = Union[
+    Tuple[Dimension1DType, Dimension1DType],
+    Tuple[Dimension2DType, Dimension2DType],
+    Tuple[Dimension3DType, Dimension3DType],
+]
 
 # (query_tile_shape, kv_tile_shape)
 FnaForwardConfigType = FnaTileShapeType
 
 # (query_tile_shape, kv_tile_shape, num_kv_splits, use_torch_to_compute_delta)
-FnaBackwardConfigType = (
-    Tuple[Dimension1DType, Dimension1DType, Dimension1DType, bool]
-    | Tuple[Dimension2DType, Dimension2DType, Dimension2DType, bool]
-    | Tuple[Dimension3DType, Dimension3DType, Dimension3DType, bool]
-)
+FnaBackwardConfigType = Union[
+    Tuple[Dimension1DType, Dimension1DType, Dimension1DType, bool],
+    Tuple[Dimension2DType, Dimension2DType, Dimension2DType, bool],
+    Tuple[Dimension3DType, Dimension3DType, Dimension3DType, bool],
+]
+
+ListOrNestedTensor = Union[List, Tensor]
 
 
 # Redundant, but here to accommodate the type checker.

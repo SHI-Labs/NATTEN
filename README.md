@@ -38,7 +38,7 @@ train models based on neighborhood attention faster and more efficiently.
 FNA can be seen as a generalization of methods such as [Flash Attention](https://github.com/Dao-AILab/flash-attention/) and
 [FMHA](https://github.com/facebookresearch/xformers/) from back-to-back matrix multiplication to
 back-to-back tensor-tensor contraction, and comes with neighborhood attention masking built in.
-This accelerates accelerates neighborhood attention, a multi-dimensional sliding window attention pattern,
+This accelerates neighborhood attention, a multi-dimensional sliding window attention pattern,
 by never storing the attention tensor to global memory, which aside from reducing global memory footprint also reduces
 the memory bandwidth bottleneck.
 

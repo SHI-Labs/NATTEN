@@ -53,12 +53,12 @@ from .ops import (
     qk_cross_forward,
 )
 from .types import (
-    CausalArg1DType,
-    CausalArg2DType,
-    CausalArg3DType,
-    Dimension1DType,
-    Dimension2DType,
-    Dimension3DType,
+    CausalArg1DTypeOrDed,
+    CausalArg2DTypeOrDed,
+    CausalArg3DTypeOrDed,
+    Dimension1DTypeOrDed,
+    Dimension2DTypeOrDed,
+    Dimension3DTypeOrDed,
     FnaBackwardConfigType,
     FnaForwardConfigType,
     NoneType,
@@ -86,9 +86,9 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         key: Tensor,
         bias: Optional[Tensor],
         additional_key: Optional[Tensor],
-        kernel_size_: int | Dimension1DType,
-        dilation_: int | Dimension1DType,
-        is_causal_: bool | CausalArg1DType,
+        kernel_size_: Dimension1DTypeOrDed,
+        dilation_: Dimension1DTypeOrDed,
+        is_causal_: CausalArg1DTypeOrDed,
     ) -> Tensor:
         kernel_size, dilation, is_causal = check_all_args(
             1, kernel_size_, dilation_, is_causal_
@@ -263,9 +263,9 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         attn: Tensor,
         value: Tensor,
         additional_value: Optional[Tensor],
-        kernel_size_: int | Dimension1DType,
-        dilation_: int | Dimension1DType,
-        is_causal_: bool | CausalArg1DType,
+        kernel_size_: Dimension1DTypeOrDed,
+        dilation_: Dimension1DTypeOrDed,
+        is_causal_: CausalArg1DTypeOrDed,
     ):
         kernel_size, dilation, is_causal = check_all_args(
             1, kernel_size_, dilation_, is_causal_
@@ -429,9 +429,9 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         key: Tensor,
         bias: Optional[Tensor],
         additional_key: Optional[Tensor],
-        kernel_size_: int | Dimension2DType,
-        dilation_: int | Dimension2DType,
-        is_causal_: bool | CausalArg2DType,
+        kernel_size_: Dimension2DTypeOrDed,
+        dilation_: Dimension2DTypeOrDed,
+        is_causal_: CausalArg2DTypeOrDed,
     ):
         kernel_size, dilation, is_causal = check_all_args(
             2, kernel_size_, dilation_, is_causal_
@@ -605,9 +605,9 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         attn: Tensor,
         value: Tensor,
         additional_value: Optional[Tensor],
-        kernel_size_: int | Dimension2DType,
-        dilation_: int | Dimension2DType,
-        is_causal_: bool | CausalArg2DType,
+        kernel_size_: Dimension2DTypeOrDed,
+        dilation_: Dimension2DTypeOrDed,
+        is_causal_: CausalArg2DTypeOrDed,
     ) -> Tensor:
         kernel_size, dilation, is_causal = check_all_args(
             2, kernel_size_, dilation_, is_causal_
@@ -771,9 +771,9 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         key: Tensor,
         bias: Optional[Tensor],
         additional_key: Optional[Tensor],
-        kernel_size_: int | Dimension3DType,
-        dilation_: int | Dimension3DType,
-        is_causal_: bool | CausalArg3DType,
+        kernel_size_: Dimension3DTypeOrDed,
+        dilation_: Dimension3DTypeOrDed,
+        is_causal_: CausalArg3DTypeOrDed,
     ) -> Tensor:
         kernel_size, dilation, is_causal = check_all_args(
             3, kernel_size_, dilation_, is_causal_
@@ -957,9 +957,9 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         attn: Tensor,
         value: Tensor,
         additional_value: Optional[Tensor],
-        kernel_size_: int | Dimension3DType,
-        dilation_: int | Dimension3DType,
-        is_causal_: bool | CausalArg3DType,
+        kernel_size_: Dimension3DTypeOrDed,
+        dilation_: Dimension3DTypeOrDed,
+        is_causal_: CausalArg3DTypeOrDed,
     ) -> Tensor:
         kernel_size, dilation, is_causal = check_all_args(
             3, kernel_size_, dilation_, is_causal_
@@ -1131,9 +1131,9 @@ class FusedNeighborhoodAttention1D(Function):
         key: Tensor,
         value: Tensor,
         bias: Optional[Tensor],
-        kernel_size_: int | Dimension1DType,
-        dilation_: int | Dimension1DType,
-        is_causal_: bool | CausalArg1DType,
+        kernel_size_: Dimension1DTypeOrDed,
+        dilation_: Dimension1DTypeOrDed,
+        is_causal_: CausalArg1DTypeOrDed,
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
@@ -1268,9 +1268,9 @@ class FusedNeighborhoodAttention2D(Function):
         key: Tensor,
         value: Tensor,
         bias: Optional[Tensor],
-        kernel_size_: int | Dimension2DType,
-        dilation_: int | Dimension2DType,
-        is_causal_: bool | CausalArg2DType,
+        kernel_size_: Dimension2DTypeOrDed,
+        dilation_: Dimension2DTypeOrDed,
+        is_causal_: CausalArg2DTypeOrDed,
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
@@ -1405,9 +1405,9 @@ class FusedNeighborhoodAttention3D(Function):
         key: Tensor,
         value: Tensor,
         bias: Optional[Tensor],
-        kernel_size_: int | Dimension3DType,
-        dilation_: int | Dimension3DType,
-        is_causal_: bool | CausalArg3DType,
+        kernel_size_: Dimension3DTypeOrDed,
+        dilation_: Dimension3DTypeOrDed,
+        is_causal_: CausalArg3DTypeOrDed,
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
@@ -1536,10 +1536,10 @@ class FusedNeighborhoodAttention3D(Function):
 def na1d_qk(
     query: Tensor,
     key: Tensor,
-    kernel_size: int | Dimension1DType,
-    dilation: int | Dimension1DType = 1,
+    kernel_size: Dimension1DTypeOrDed,
+    dilation: Dimension1DTypeOrDed = 1,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg1DType] = False,
+    is_causal: Optional[CausalArg1DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested:
@@ -1560,10 +1560,10 @@ def na1d_qk(
 def na1d_av(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension1DType,
-    dilation: int | Dimension1DType = 1,
+    kernel_size: Dimension1DTypeOrDed,
+    dilation: Dimension1DTypeOrDed = 1,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg1DType] = False,
+    is_causal: Optional[CausalArg1DTypeOrDed] = False,
 ) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na1d_av_nested(
@@ -1582,10 +1582,10 @@ def na1d_av(
 def na2d_qk(
     query: Tensor,
     key: Tensor,
-    kernel_size: int | Dimension2DType,
-    dilation: int | Dimension2DType = 1,
+    kernel_size: Dimension2DTypeOrDed,
+    dilation: Dimension2DTypeOrDed = 1,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg2DType] = False,
+    is_causal: Optional[CausalArg2DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested:
@@ -1606,10 +1606,10 @@ def na2d_qk(
 def na2d_av(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension2DType,
-    dilation: int | Dimension2DType = 1,
+    kernel_size: Dimension2DTypeOrDed,
+    dilation: Dimension2DTypeOrDed = 1,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg2DType] = False,
+    is_causal: Optional[CausalArg2DTypeOrDed] = False,
 ) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na2d_av_nested(
@@ -1628,10 +1628,10 @@ def na2d_av(
 def na3d_qk(
     query: Tensor,
     key: Tensor,
-    kernel_size: int | Dimension3DType,
-    dilation: int | Dimension3DType = 1,
+    kernel_size: Dimension3DTypeOrDed,
+    dilation: Dimension3DTypeOrDed = 1,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg3DType] = False,
+    is_causal: Optional[CausalArg3DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested:
@@ -1658,10 +1658,10 @@ def na3d_qk(
 def na3d_av(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension3DType,
-    dilation: int | Dimension3DType,
+    kernel_size: Dimension3DTypeOrDed,
+    dilation: Dimension3DTypeOrDed,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg3DType] = False,
+    is_causal: Optional[CausalArg3DTypeOrDed] = False,
 ) -> Tensor:
     if attn.is_nested or value.is_nested:
         return na3d_av_nested(
@@ -1686,9 +1686,9 @@ def na1d(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension1DType,
-    dilation: int | Dimension1DType = 1,
-    is_causal: Optional[bool | CausalArg1DType] = False,
+    kernel_size: Dimension1DTypeOrDed,
+    dilation: Dimension1DTypeOrDed = 1,
+    is_causal: Optional[CausalArg1DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
 ) -> Tensor:
@@ -1720,9 +1720,9 @@ def na2d(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension2DType,
-    dilation: int | Dimension2DType = 1,
-    is_causal: Optional[bool | CausalArg2DType] = False,
+    kernel_size: Dimension2DTypeOrDed,
+    dilation: Dimension2DTypeOrDed = 1,
+    is_causal: Optional[CausalArg2DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
 ) -> Tensor:
@@ -1754,9 +1754,9 @@ def na3d(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension3DType,
-    dilation: int | Dimension3DType = 1,
-    is_causal: Optional[bool | CausalArg3DType] = False,
+    kernel_size: Dimension3DTypeOrDed,
+    dilation: Dimension3DTypeOrDed = 1,
+    is_causal: Optional[CausalArg3DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
 ) -> Tensor:

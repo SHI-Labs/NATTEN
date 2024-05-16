@@ -28,7 +28,7 @@ from torch.nn.init import trunc_normal_
 
 from .context import is_fna_enabled
 from .functional import na1d, na1d_av, na1d_qk
-from .types import CausalArg1DType, Dimension1DType
+from .types import CausalArg1DTypeOrDed, Dimension1DTypeOrDed
 from .utils import check_all_args, log
 
 logger = log.get_logger(__name__)
@@ -43,9 +43,9 @@ class NeighborhoodAttention1D(nn.Module):
         self,
         dim: int,
         num_heads: int,
-        kernel_size: int | Dimension1DType,
-        dilation: int | Dimension1DType = 1,
-        is_causal: bool | CausalArg1DType = False,
+        kernel_size: Dimension1DTypeOrDed,
+        dilation: Dimension1DTypeOrDed = 1,
+        is_causal: CausalArg1DTypeOrDed = False,
         rel_pos_bias: bool = False,
         qkv_bias: bool = True,
         qk_scale: Optional[float] = None,

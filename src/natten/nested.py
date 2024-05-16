@@ -20,7 +20,7 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import List, Optional
+from typing import Optional
 
 import torch
 from torch import Tensor
@@ -37,12 +37,13 @@ except ImportError:
 
 from .ops import av_cross_forward, qk_cross_forward
 from .types import (
-    CausalArg1DType,
-    CausalArg2DType,
-    CausalArg3DType,
-    Dimension1DType,
-    Dimension2DType,
-    Dimension3DType,
+    CausalArg1DTypeOrDed,
+    CausalArg2DTypeOrDed,
+    CausalArg3DTypeOrDed,
+    Dimension1DTypeOrDed,
+    Dimension2DTypeOrDed,
+    Dimension3DTypeOrDed,
+    ListOrNestedTensor,
 )
 from .utils import (
     check_additional_keys,
@@ -57,10 +58,10 @@ def na1d_qk_nested(
     query: Tensor,
     key: Tensor,
     bias: Optional[Tensor],
-    kernel_size: int | Dimension1DType,
-    dilation: int | Dimension1DType,
+    kernel_size: Dimension1DTypeOrDed,
+    dilation: Dimension1DTypeOrDed,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg1DType] = False,
+    is_causal: Optional[CausalArg1DTypeOrDed] = False,
 ) -> Tensor:
     kernel_size_, dilation_, is_causal_ = check_all_args(
         1, kernel_size, dilation, is_causal
@@ -105,7 +106,7 @@ def na1d_qk_nested(
             "nested."
         )
 
-    additional_keys_list: List | Tensor = (
+    additional_keys_list: ListOrNestedTensor = (
         [None for _ in range(query.size(0))]
         if additional_keys is None
         else additional_keys
@@ -135,10 +136,10 @@ def na1d_qk_nested(
 def na1d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension1DType,
-    dilation: int | Dimension1DType,
+    kernel_size: Dimension1DTypeOrDed,
+    dilation: Dimension1DTypeOrDed,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg1DType] = False,
+    is_causal: Optional[CausalArg1DTypeOrDed] = False,
 ):
     kernel_size_, dilation_, is_causal_ = check_all_args(
         1, kernel_size, dilation, is_causal
@@ -173,12 +174,12 @@ def na1d_av_nested(
 
     attn = attn.to(value.dtype)
     out = torch.empty_like(value)
-    additional_values_list: List | Tensor = (
+    additional_values_list: ListOrNestedTensor = (
         [None for _ in range(attn.size(0))]
         if additional_values is None
         else additional_values
     )
-    additional_outputs_list: List | Tensor = (
+    additional_outputs_list: ListOrNestedTensor = (
         [None for _ in range(attn.size(0))]
         if additional_values is None
         else torch.empty_like(out)
@@ -204,10 +205,10 @@ def na2d_qk_nested(
     query: Tensor,
     key: Tensor,
     bias: Optional[Tensor],
-    kernel_size: int | Dimension2DType,
-    dilation: int | Dimension2DType,
+    kernel_size: Dimension2DTypeOrDed,
+    dilation: Dimension2DTypeOrDed,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg2DType] = False,
+    is_causal: Optional[CausalArg2DTypeOrDed] = False,
 ) -> Tensor:
     kernel_size_, dilation_, is_causal_ = check_all_args(
         2, kernel_size, dilation, is_causal
@@ -252,7 +253,7 @@ def na2d_qk_nested(
             "nested."
         )
 
-    additional_keys_list: List | Tensor = (
+    additional_keys_list: ListOrNestedTensor = (
         [None for _ in range(query.size(0))]
         if additional_keys is None
         else additional_keys
@@ -282,10 +283,10 @@ def na2d_qk_nested(
 def na2d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension2DType,
-    dilation: int | Dimension2DType,
+    kernel_size: Dimension2DTypeOrDed,
+    dilation: Dimension2DTypeOrDed,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg2DType] = False,
+    is_causal: Optional[CausalArg2DTypeOrDed] = False,
 ):
     kernel_size_, dilation_, is_causal_ = check_all_args(
         2, kernel_size, dilation, is_causal
@@ -320,12 +321,12 @@ def na2d_av_nested(
 
     attn = attn.to(value.dtype)
     out = torch.empty_like(value)
-    additional_values_list: List | Tensor = (
+    additional_values_list: ListOrNestedTensor = (
         [None for _ in range(attn.size(0))]
         if additional_values is None
         else additional_values
     )
-    additional_outputs_list: List | Tensor = (
+    additional_outputs_list: ListOrNestedTensor = (
         [None for _ in range(attn.size(0))]
         if additional_values is None
         else torch.empty_like(out)
@@ -351,10 +352,10 @@ def na3d_qk_nested(
     query: Tensor,
     key: Tensor,
     bias: Optional[Tensor],
-    kernel_size: int | Dimension3DType,
-    dilation: int | Dimension3DType,
+    kernel_size: Dimension3DTypeOrDed,
+    dilation: Dimension3DTypeOrDed,
     additional_keys: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg3DType] = False,
+    is_causal: Optional[CausalArg3DTypeOrDed] = False,
 ) -> Tensor:
     kernel_size_, dilation_, is_causal_ = check_all_args(
         3, kernel_size, dilation, is_causal
@@ -399,7 +400,7 @@ def na3d_qk_nested(
             "nested."
         )
 
-    additional_keys_list: List | Tensor = (
+    additional_keys_list: ListOrNestedTensor = (
         [None for _ in range(query.size(0))]
         if additional_keys is None
         else additional_keys
@@ -429,10 +430,10 @@ def na3d_qk_nested(
 def na3d_av_nested(
     attn: Tensor,
     value: Tensor,
-    kernel_size: int | Dimension3DType,
-    dilation: int | Dimension3DType,
+    kernel_size: Dimension3DTypeOrDed,
+    dilation: Dimension3DTypeOrDed,
     additional_values: Optional[Tensor] = None,
-    is_causal: Optional[bool | CausalArg3DType] = False,
+    is_causal: Optional[CausalArg3DTypeOrDed] = False,
 ):
     kernel_size_, dilation_, is_causal_ = check_all_args(
         3, kernel_size, dilation, is_causal
@@ -467,12 +468,12 @@ def na3d_av_nested(
 
     attn = attn.to(value.dtype)
     out = torch.empty_like(value)
-    additional_values_list: List | Tensor = (
+    additional_values_list: ListOrNestedTensor = (
         [None for _ in range(attn.size(0))]
         if additional_values is None
         else additional_values
     )
-    additional_outputs_list: List | Tensor = (
+    additional_outputs_list: ListOrNestedTensor = (
         [None for _ in range(attn.size(0))]
         if additional_values is None
         else torch.empty_like(out)
