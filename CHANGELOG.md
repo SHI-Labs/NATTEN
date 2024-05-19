@@ -2,6 +2,9 @@
 
 ## [Main branch]
 
+## [0.17.1] - 2024-05-19
+* Fixed interface for python 3.8 and 3.9
+
 ## [0.17.0] - 2024-05-02
 * [Fused neighborhood attention](https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna) (FNA) kernels
   * 1D, 2D and 3D Neighborhood Attention are supported,
