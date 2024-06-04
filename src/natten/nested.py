@@ -29,10 +29,10 @@ try:
     from natten import libnatten  # type: ignore
 except ImportError:
     raise ImportError(
-        "Failed to import NATTEN's CPP backend. "
+        "Failed to import libnatten. "
         "This could be due to an invalid/incomplete install. "
-        "Please uninstall NATTEN (pip uninstall natten) and re-install with the"
-        " correct torch build: shi-labs.com/natten ."
+        "Please make sure you built NATTEN correctly, or refer to "
+        "https://shi-labs.com/natten for more information."
     )
 
 from .ops import av_cross_forward, qk_cross_forward

@@ -89,10 +89,12 @@ def is_memory_usage_unrestricted() -> bool:
 
 def use_deterministic_algorithms(mode: bool = True):
     NattenContext.is_deterministic_mode_enabled = mode
-    logger.warning(
-        "You're enabling NATTEN's deterministic mode. This mode does not "
-        "support auto-tuning, or training with positional biases."
-    )
+    if mode:
+        logger.warning(
+            "You're enabling NATTEN's deterministic mode. This mode does not "
+            "support auto-tuning, or training with positional biases. "
+            "For more information please refer to https://github.com/SHI-Labs/NATTEN/tree/main/docs"
+        )
 
 
 def are_deterministic_algorithms_enabled() -> bool:
@@ -123,7 +125,9 @@ def use_kv_parallelism_in_fused_na(mode: bool = True):
         "This feature may improve backpropagation latency, but will use some "
         "additional memory, and is non-deterministic. It is not recommended "
         "for memory-limited experiments, or those likely to suffer from "
-        "exploding gradients due to non-determinism."
+        "exploding gradients due to non-determinism. "
+        "For more information please refer to "
+        "https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna/kv-parallelism.md"
     )
 
 
@@ -140,7 +144,8 @@ def use_fused_na(mode: bool = True, kv_parallel: bool = False):
     logger.info(
         "You're enabling the use of Fused Neighborhood Attention kernels. "
         "You can also consider enabling auto-tuning for potentially improved performance. "
-        "Refer to the docs for more information."
+        "Refer to the docs for more information: "
+        "https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna"
     )
     use_kv_parallelism_in_fused_na(kv_parallel)
     NattenContext.is_fused_na_enabled = True
@@ -205,11 +210,13 @@ class AutotunerContext:
             )
 
         AutotunerContext.enabled_for_forward = mode
-        logger.warning(
-            "You're enabling NATTEN auto-tuner. This is an experimental "
-            "feature intended only for fused neighborhood attention. "
-            "Proceed with caution."
-        )
+        if mode:
+            logger.warning(
+                "You're enabling NATTEN auto-tuner. This is an experimental "
+                "feature intended only for fused neighborhood attention. "
+                "Proceed with caution. For more information please refer to "
+                "https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna/autotuner.md"
+            )
 
     @staticmethod
     def set_enabled_for_backward(mode: Optional[bool]):
@@ -224,11 +231,13 @@ class AutotunerContext:
             )
 
         AutotunerContext.enabled_for_backward = mode
-        logger.warning(
-            "You're enabling NATTEN auto-tuner for BACKWARD pass. "
-            "This is highly experimental and not recommended for distributed "
-            "training settings."
-        )
+        if mode:
+            logger.warning(
+                "You're enabling NATTEN auto-tuner for BACKWARD pass. "
+                "This is highly experimental and not recommended for distributed "
+                "training settings. For more information please refer to "
+                "https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna/autotuner.md"
+            )
 
     @staticmethod
     def set_thorough_mode_forward(mode: Optional[bool]):
@@ -351,10 +360,10 @@ try:
     from natten import libnatten  # type: ignore
 except ImportError:
     raise ImportError(
-        "Failed to import NATTEN's CPP backend. "
+        "Failed to import libnatten. "
         "This could be due to an invalid/incomplete install. "
-        "Please uninstall NATTEN (pip uninstall natten) and re-install with the"
-        " correct torch build: shi-labs.com/natten ."
+        "Please make sure you built NATTEN correctly, or refer to "
+        "https://shi-labs.com/natten for more information."
     )
 
 
