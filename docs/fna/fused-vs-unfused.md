@@ -95,7 +95,7 @@ def forward(self, x: Tensor) -> Tensor:
         # [B, H, W, 3C] -> [B, H, W, 3, heads, head_dim]
         qkv = qkv.reshape(B, H, W, 3, self.heads, self.head_dim)
         # [B, H, W, 3, heads, head_dim] -> [3, B, heads, H, W, head_dim]
-        qkv = qkv.permute(3, 0, 1, 2, 4, 5)
+        qkv = qkv.permute(3, 0, 4, 1, 2, 5)
         # 3 x [B, heads, H, W, head_dim] - > Q, K, V
         q, k, v = qkv[0], qkv[1], qkv[2]
         # Call unfused QK operation
