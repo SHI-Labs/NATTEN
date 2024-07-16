@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/batched_gemm_na_dark.png">
-  <img alt="Simplified visualization of GEMM-based neighborhood attention." src="../asserts/batched_gemm_na_light.png" />
+  <img alt="Simplified visualization of GEMM-based neighborhood attention." src="../assets/batched_gemm_na_light.png" />
 </picture>
 
 
