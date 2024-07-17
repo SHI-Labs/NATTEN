@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/fna_dark.png">
-  <img alt="Simplified visualization of fused neighborhood attention." src="../asserts/fna_light.png" />
+  <img alt="Simplified visualization of fused neighborhood attention." src="../assets/fna_light.png" />
 </picture>
 
 
