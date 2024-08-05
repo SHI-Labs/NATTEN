@@ -221,6 +221,7 @@ endif()
 
 if(${NATTEN_WITH_CUDA})
   target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python cudart c10_cuda torch_cuda)
+  target_link_directories(natten PUBLIC "${CUDA_TOOLKIT_ROOT_DIR}/lib64")
 else()
   target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python)
 endif()
