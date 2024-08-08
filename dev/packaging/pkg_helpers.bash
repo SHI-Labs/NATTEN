@@ -18,6 +18,12 @@ setup_cuda() {
   # and https://github.com/pytorch/vision/blob/main/packaging/pkg_helpers.bash for reference.
   export FORCE_CUDA=1
   case "$CU_VERSION" in
+    cu124)
+      cuda_path=/usr/local/cuda-12.4/
+      export PATH=${cuda_path}/bin${PATH:+:${PATH}}
+      export LD_LIBRARY_PATH=${cuda_path}/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+      export TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0"
+      ;;
     cu121)
       cuda_path=/usr/local/cuda-12.1/
       export PATH=${cuda_path}/bin${PATH:+:${PATH}}

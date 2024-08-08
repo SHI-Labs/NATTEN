@@ -72,6 +72,10 @@ else
   # We don't need to build for every minor torch release; they're usually
   # compatible in their python API and ABIs.
 
+  build_one cu124 2.4.0 & build_one cu121 2.4.0
+
+  build_one cu118 2.4.0 & build_one cpu 2.4.0
+
   build_one cu121 2.3.0 & build_one cu118 2.3.0
 
   build_one cu121 2.2.0 & build_one cu118 2.2.0
