@@ -52,10 +52,17 @@ print(os.path.dirname(torch.__file__),end='');"
 if (NOT _PYTHON_SUCCESS MATCHES 0)
     message(FATAL_ERROR "Torch config Error.")
 endif()
-list(APPEND CMAKE_PREFIX_PATH ${TORCH_DIR})
-find_package(Torch REQUIRED)
 
-## Torch includes
+# I'm going to stop finding torch through cmake because of caffe.
+# Sorry -- but I'm done wasting time on a dependency that shouldn't be shipped
+# with CPU binaries!! Even on CUDA it breaks everything so frequently, and all
+# I really need to find is the include paths, and let the linker take it from there.
+#list(APPEND CMAKE_PREFIX_PATH ${TORCH_DIR})
+#find_package(Torch REQUIRED)
+set(TORCH_INCLUDE_DIRS "${TORCH_DIR}/include" "${TORCH_DIR}/include/torch/csrc/api/include")
+message("Torch dir: " ${TORCH_DIR})
+message("Torch include dir: " ${TORCH_INCLUDE_DIRS})
+
 list(APPEND COMMON_HEADER_DIRS ${TORCH_INCLUDE_DIRS})
 
 # CUTLASS

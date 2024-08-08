@@ -23,8 +23,7 @@ export NATTEN_VERBOSE=0
 
 pip_install pip numpy -U
 if [ $CU_VERSION = "cpu" ]; then
-  pip_install -U "torch==$PYTORCH_VERSION" \
-    -f https://download.pytorch.org/whl/${CU_VERSION}
+  pip_install -U "torch==$PYTORCH_VERSION"
 else
   pip_install -U "torch==${PYTORCH_VERSION}+${CU_VERSION}" \
     -f https://download.pytorch.org/whl/torch/
