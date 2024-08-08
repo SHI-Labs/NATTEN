@@ -22,8 +22,13 @@ export NATTEN_N_WORKERS=64
 export NATTEN_VERBOSE=0
 
 pip_install pip numpy -U
-pip_install -U "torch==$PYTORCH_VERSION" \
-  -f https://download.pytorch.org/whl/"$CU_VERSION"/torch_stable.html
+if [ $CU_VERSION = "cpu" ]; then
+  pip_install -U "torch==$PYTORCH_VERSION" \
+    -f https://download.pytorch.org/whl/${CU_VERSION}
+else
+  pip_install -U "torch==${PYTORCH_VERSION}+${CU_VERSION}" \
+    -f https://download.pytorch.org/whl/torch/
+fi
 pip install cmake==3.20.3
 
 python setup.py \
