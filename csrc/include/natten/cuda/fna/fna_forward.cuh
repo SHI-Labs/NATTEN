@@ -154,6 +154,9 @@ void fna_forward_generic(
     }
     p.output_ptr = (typename Kernel::output_t*)out_ptr;
 
+    p.compute_logsumexp = compute_logsumexp;
+    p.has_rpb = has_rpb;
+
     p.num_heads = heads;
     p.head_dim = dim;
     p.head_dim_value = dim_value;
@@ -188,7 +191,7 @@ void fna_forward_generic(
   };
 
   DISPATCH_FNA_FORWARD_KERNEL(
-      kRank, cc, T, is_causal, has_rpb, compute_logsumexp, launchKernel);
+      kRank, cc, T, is_causal, launchKernel);
   NATTEN_CHECK(
       kernel_launched,
       "Could not find a compatible fused neighborhood attention kernel.");

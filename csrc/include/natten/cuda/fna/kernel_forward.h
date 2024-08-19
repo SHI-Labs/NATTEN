@@ -39,6 +39,8 @@
 
 #pragma once
 
+#include <cassert>
+
 #include <cutlass/bfloat16.h>
 #include <cutlass/cutlass.h>
 #include <cutlass/fast_math.h>
@@ -111,9 +113,11 @@ template <
     int kQueriesPerBlock_,
     int kKeysPerBlock_,
     // upperbound on `max(value.shape[-1], query.shape[-1])`
-    int kMaxK_ = (int)cutlass::platform::numeric_limits<uint32_t>::max(),
-    bool kSupportsRPB_ = false,
-    bool kStoresLSE_ = false>
+    int kMaxK_ = (int)cutlass::platform::numeric_limits<uint32_t>::max()
+    // removed in favor of runtime args
+    // bool kSupportsRPB_ = false,
+    // bool kStoresLSE_ = false
+>
 struct FusedNeighborhoodAttentionKernel {
   static constexpr int NADim = NADim_;
   static_assert(NADim >= 1 && NADim < 4, "Only 1D-3D NA are implemented.");
@@ -128,11 +132,11 @@ struct FusedNeighborhoodAttentionKernel {
   // NADim>::value; static constexpr Dim KeyTileShape =
   // MapTileSizeToNd<kKeysPerBlock, NADim>::value;
   static constexpr bool kHasCausalDims = CausalMask::AnyCausalDims;
-  static constexpr bool kSupportsRPB = kSupportsRPB_;
-  static constexpr bool kStoresLSE = kStoresLSE_;
-  static_assert(
-      !kSupportsRPB || !kHasCausalDims,
-      "Causal NA does not support RPB yet.");
+
+  // replaced in favor of runtime args
+  // static constexpr bool kSupportsRPB = kSupportsRPB_;  
+  // static constexpr bool kStoresLSE = kStoresLSE_;
+     
 
   using scalar_t = scalar_t_;
   using accum_t = float;
@@ -178,6 +182,10 @@ struct FusedNeighborhoodAttentionKernel {
     output_accum_t* output_accum_ptr = nullptr;
     // [num_heads, num_queries_post_partitioning] - can be null
     lse_scalar_t* logsumexp_ptr = nullptr;
+
+    // StoresLSE/SupportsRPB flags
+    bool compute_logsumexp;
+    bool has_rpb; 
 
     // Sliding window. ignored if == 0
     Dim kernel_size;
@@ -272,7 +280,11 @@ struct FusedNeighborhoodAttentionKernel {
       output_ptr += (first_query * o_strideM).sum() +
           (dilation_idx * o_stride_dilation).sum() + head_id * o_strideH;
 
-      if constexpr (kSupportsRPB) {
+      assert(
+        (!has_rpb || !kHasCausalDims) && "Causal NA does not support RPB yet.");
+      
+
+      if (has_rpb) {
         if (rpb_ptr != nullptr) {
           auto head_rpb_shape = (kernel_size * 2) - 1;
           rpb_ptr += head_id * head_rpb_shape.prod();
@@ -288,7 +300,7 @@ struct FusedNeighborhoodAttentionKernel {
         output_accum_ptr = (accum_t*)output_ptr;
       }
 
-      if constexpr (kStoresLSE) {
+      if (compute_logsumexp) {
         if (logsumexp_ptr != nullptr) {
           auto lse_stride_dilation = compute_stride(num_queries, num_heads);
           lse_strideM = lse_stride_dilation * dilation;
@@ -676,7 +688,7 @@ struct FusedNeighborhoodAttentionKernel {
           key_bounds[accum_m] =
               na_mask.get_window_end(row_idx, first_cols[accum_m]) -
               first_cols[accum_m];
-          if constexpr (kSupportsRPB) {
+          if (p.has_rpb) {
             rpb_starts[accum_m] = na_mask.get_rpb_start(row_idx);
           }
         },
@@ -770,14 +782,14 @@ struct FusedNeighborhoodAttentionKernel {
                 first_query;
             first_col = na_mask.get_window_start(row_idx);
             key_bound = na_mask.get_window_end(row_idx, first_col) - first_col;
-            if constexpr (kSupportsRPB) {
+            if (p.has_rpb) {
               rpb_start = na_mask.get_rpb_start(row_idx);
             }
           },
           [&](int accum_m, int accum_n, int idx) {
             auto col = map_index_to_coord((int32_t)accum_n, problem_size_0_n) +
                 iter_key_start;
-            if constexpr (!kSupportsRPB) {
+            if (!p.has_rpb) {
               if (
 #ifdef _EXTRA_BOUND_CHECKS
                   accum_m >= problem_size_0_m_int ||
@@ -819,7 +831,7 @@ struct FusedNeighborhoodAttentionKernel {
           last_kv_col,
           is_first_kv_iter,
           iteratorC_tile_offset,
-          kSupportsRPB ? 1.0 : p.scale);
+          p.has_rpb ? 1.0 : p.scale);
 
       // Output results to shared-memory
 
@@ -983,7 +995,7 @@ struct FusedNeighborhoodAttentionKernel {
       epilogue(rescale, dest_iter, accum_o);
     }
 
-    if constexpr (kStoresLSE) {
+    if (p.compute_logsumexp) {
       // 7. Calculate logsumexp
       // To make the backward easier, we pad logsumexp with `inf`
       // this avoids a few bound checks, and is not more expensive during fwd
