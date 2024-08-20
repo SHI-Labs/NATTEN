@@ -123,8 +123,6 @@ class FusedNAKernel:
         dtype: DataType,
         config: KernelConfig,
         causal_mask: List,
-        # has_rpb: Optional[bool] = False,
-        # computes_lse: Optional[bool] = False,
     ):
         self.dtype = dtype
         self.config = config
@@ -138,18 +136,8 @@ class FusedNAKernel:
             if not is_backward
             else "natten/cuda/fna/kernel_backward.h"
         )
-        # assert not is_backward or not has_rpb, "Backward does not support RPB."
-        # assert (
-        #    not is_backward or not computes_lse
-        # ), "`compute_lse` is only an option for forward pass."
         self.aligned = True
         self.is_backward = is_backward
-        # self.has_rpb = has_rpb
-        # if self.has_rpb:
-        #     self.name_cc += "_rpb"
-        # self.computes_lse = computes_lse
-        # if self.computes_lse:
-        #     self.name_cc += "_lse"
 
     @property
     def causal_mask_inst(self) -> str:
@@ -214,8 +202,6 @@ class FusedNAKernelBundle:
         dtype: DataType,
         config_list: KernelConfigList,
         causal_mask: List,
-        # has_rpb: Optional[bool] = False,
-        # computes_lse: Optional[bool] = False,
     ):
         self.na_dim = na_dim
         self.sm = sm
@@ -233,12 +219,6 @@ class FusedNAKernelBundle:
         )
         self.aligned = True
         self.is_backward = is_backward
-        # self.has_rpb = has_rpb
-        # if self.has_rpb:
-        #     self.name_cc += "_rpb"
-        # self.computes_lse = computes_lse
-        # if self.computes_lse:
-        #     self.name_cc += "_lse"
 
     @property
     def kernels(self):
@@ -248,8 +228,6 @@ class FusedNAKernelBundle:
                 dtype=self.dtype,
                 causal_mask=self.causal_mask,
                 config=config,
-                # has_rpb=self.has_rpb,
-                # computes_lse=self.computes_lse,
             )
             for config in self.config_list.configs
         ]
@@ -259,8 +237,6 @@ class FusedNAKernelBundle:
         decl += "///////////////////////////////////////////////////////////////////\n"
         decl += f"// FNA-{self.na_dim}D / {self.dtype.short_name} / SM{self.sm}"
         decl += "Backward Kernel" if self.is_backward else ""
-        # decl += "SupportsRPB" if self.has_rpb else ""
-        # decl += "StoresLSE" if self.computes_lse else ""
         decl += "\n"
         decl += "///////////////////////////////////////////////////////////////////"
 
@@ -667,53 +643,6 @@ def generate_cuda_kernels(path, num_splits=2):
                             causal_mask=cm,
                         )
                     )
-                    # kernels.append(
-                    #     FusedNAKernelBundle(
-                    #         is_backward=False,
-                    #         na_dim=na_dim,
-                    #         sm=sm,
-                    #         dtype=dtype,
-                    #         config_list=KernelConfigList(
-                    #             na_dim=na_dim,
-                    #             sm=sm,
-                    #             gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
-                    #         ),
-                    #         causal_mask=cm,
-                    #         # computes_lse=True,
-                    #     )
-                    # )
-                    # if not any(cm):
-                    #     kernels.append(
-                    #         FusedNAKernelBundle(
-                    #             is_backward=False,
-                    #             na_dim=na_dim,
-                    #             sm=sm,
-                    #             dtype=dtype,
-                    #             config_list=KernelConfigList(
-                    #                 na_dim=na_dim,
-                    #                 sm=sm,
-                    #                 gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
-                    #             ),
-                    #             causal_mask=cm,
-                    #             # has_rpb=True,
-                    #         )
-                    #     )
-                    #     kernels.append(
-                    #         FusedNAKernelBundle(
-                    #             is_backward=False,
-                    #             na_dim=na_dim,
-                    #             sm=sm,
-                    #             dtype=dtype,
-                    #             config_list=KernelConfigList(
-                    #                 na_dim=na_dim,
-                    #                 sm=sm,
-                    #                 gemm_shapes=GEMM_SHAPES,  # GEMM_SHAPES[na_dim][sm]
-                    #             ),
-                    #             causal_mask=cm,
-                    #             # has_rpb=True,
-                    #             # computes_lse=True,
-                    #         )
-                    #     )
                 cm_dispatchers.append(cm_dispatcher)
             dtype_dispatchers.append(dtype_dispatcher)
         device_dispatchers.append(device_dispatcher)
@@ -869,8 +798,6 @@ def generate_cuda_kernels(path, num_splits=2):
             dtype_dispatchers.append(dtype_dispatcher)
         device_dispatchers.append(device_dispatcher)
 
-    #
-
     path_to_sources = f"{path}/autogen/src/cuda/fna/"
     rel_header = "natten_autogen/cuda/fna/"
     path_to_header_dir = f"{path}/autogen/include/{rel_header}"
@@ -945,8 +872,6 @@ def generate_cuda_kernels(path, num_splits=2):
     )
     write_header_file(dtype_disp, path_dtype, namespaces, cuda_headers + [rel_path_cm])
     write_header_file(cm_disp, path_cm, namespaces, cuda_headers + [rel_path_headers])
-    # write_header_file(ks_disp, path_ks, namespaces, cuda_headers + [rel_path_di])
-    # write_header_file(di_disp, path_di, namespaces, cuda_headers + [rel_path_headers])
     write_header_file(headers, path_headers, namespaces, cuda_headers)
 
 
