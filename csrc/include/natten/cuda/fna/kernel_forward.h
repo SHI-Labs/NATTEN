@@ -184,7 +184,7 @@ struct FusedNeighborhoodAttentionKernel {
     lse_scalar_t* logsumexp_ptr = nullptr;
 
     // StoresLSE/SupportsRPB flags
-    bool compute_logsumexp;
+    bool should_dump_lse;
     bool has_rpb; 
 
     // Sliding window. ignored if == 0
@@ -280,16 +280,11 @@ struct FusedNeighborhoodAttentionKernel {
       output_ptr += (first_query * o_strideM).sum() +
           (dilation_idx * o_stride_dilation).sum() + head_id * o_strideH;
 
-      assert(
-        (!has_rpb || !kHasCausalDims) && "Causal NA does not support RPB yet.");
-      
 
-      if (has_rpb) {
-        if (rpb_ptr != nullptr) {
+      if (has_rpb && rpb_ptr != nullptr) {
           auto head_rpb_shape = (kernel_size * 2) - 1;
           rpb_ptr += head_id * head_rpb_shape.prod();
           rpb_stride = compute_stride(head_rpb_shape, 1);
-        }
       }
 
       if (output_accum_ptr != nullptr) {
@@ -300,8 +295,7 @@ struct FusedNeighborhoodAttentionKernel {
         output_accum_ptr = (accum_t*)output_ptr;
       }
 
-      if (compute_logsumexp) {
-        if (logsumexp_ptr != nullptr) {
+      if (compute_logsumexp && logsumexp_ptr != nullptr) {
           auto lse_stride_dilation = compute_stride(num_queries, num_heads);
           lse_strideM = lse_stride_dilation * dilation;
 
@@ -315,7 +309,6 @@ struct FusedNeighborhoodAttentionKernel {
               ((first_query * lse_strideM).sum() +
                (dilation_idx * lse_stride_dilation).sum()) +
               head_id;
-        }
       }
 
       num_batches = 0; // no longer used after

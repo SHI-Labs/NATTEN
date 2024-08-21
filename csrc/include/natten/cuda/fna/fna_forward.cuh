@@ -85,7 +85,11 @@ void fna_forward_generic(
   using Dim = typename GetDim<kRank>::type;
 
   bool has_rpb = rpb_ptr != nullptr;
-  bool compute_logsumexp = logsumexp_ptr != nullptr;
+  bool should_dump_lse = logsumexp_ptr != nullptr;
+
+  bool has_causal_dim = bool_tuple_or(is_causal);
+  assert((!has_rpb || !has_causal_dim) && "Causal NA does not support RPB yet.")
+
   bool kernel_launched = false;
   auto launchKernel = [&](auto _k, auto kernel_fn) {
     using Kernel = decltype(_k);
@@ -123,7 +127,7 @@ void fna_forward_generic(
     p.key_ptr = (scalar_t*)key_ptr;
     p.value_ptr = (scalar_t*)value_ptr;
     p.rpb_ptr = (scalar_t*)rpb_ptr;
-    p.logsumexp_ptr = compute_logsumexp
+    p.logsumexp_ptr = should_dump_lse
         ? (typename Kernel::lse_scalar_t*)logsumexp_ptr
         : nullptr;
 
@@ -154,7 +158,7 @@ void fna_forward_generic(
     }
     p.output_ptr = (typename Kernel::output_t*)out_ptr;
 
-    p.compute_logsumexp = compute_logsumexp;
+    p.should_dump_lse = should_dump_lse;
     p.has_rpb = has_rpb;
 
     p.num_heads = heads;

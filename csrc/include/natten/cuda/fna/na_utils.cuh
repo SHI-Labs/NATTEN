@@ -410,6 +410,25 @@ inline NA3dDim tuple_to_na_dim(std::tuple<int32_t, int32_t, int32_t> v) {
   return NA3dDim(std::get<0>(v), std::get<1>(v), std::get<2>(v));
 }
 
+template <typename BoolTupleType>
+bool bool_tuple_or(BoolTupleType tuple);
+
+template <>
+inline bool bool_tuple_or(std::tuple<bool> tuple){
+  return std::get<0>(tuple);
+}
+
+template <>
+inline bool bool_tuple_or(std::tuple<bool, bool> tuple){
+  return std::get<0>(tuple) || std::get<1>(tuple);
+}
+
+template <>
+inline bool bool_tuple_or(std::tuple<bool, bool, bool> tuple){
+  return std::get<0>(tuple) || std::get<1>(tuple) || std::get<2>(tuple);
+}
+
+
 //// Factories
 // template <int Value, int NADim>
 // struct MakeDim;
