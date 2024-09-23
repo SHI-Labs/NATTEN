@@ -122,10 +122,8 @@ def use_kv_parallelism_in_fused_na(mode: bool = True):
     NattenContext.is_kv_parallelism_enabled = True
     logger.warning(
         "You're enabling KV parallelism in Fused Neighborhood Attention. "
-        "This feature may improve backpropagation latency, but will use some "
-        "additional memory, and is non-deterministic. It is not recommended "
-        "for memory-limited experiments, or those likely to suffer from "
-        "exploding gradients due to non-determinism. "
+        "This feature will improve backpropagation latency, but will use some "
+        "additional memory, and is non-deterministic. "
         "For more information please refer to "
         "https://github.com/SHI-Labs/NATTEN/blob/main/docs/fna/kv-parallelism.md"
     )
@@ -135,7 +133,7 @@ def is_kv_parallelism_in_fused_na_enabled() -> bool:
     return NattenContext.is_kv_parallelism_enabled
 
 
-def use_fused_na(mode: bool = True, kv_parallel: bool = False):
+def use_fused_na(mode: bool = True, kv_parallel: bool = True):
     if not mode:
         NattenContext.is_fused_na_enabled = False
         use_kv_parallelism_in_fused_na(False)

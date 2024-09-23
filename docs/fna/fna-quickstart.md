@@ -7,7 +7,11 @@ you really need is to enable FNA by importing and calling `natten.use_fused_na`:
 ```python
 import natten
 
-natten.use_fused_na(True)
+# Use FNA with KV parallelism in backward pass (default)
+natten.use_fused_na()
+
+# Use FNA without KV parallelism in backward pass
+natten.use_fused_na(True, kv_parallel=False)
 ```
 
 
@@ -65,11 +69,8 @@ Here's a list of recommendations if you're just starting to use NATTEN or FNA:
    `natten.is_fused_na_enabled()`; certain GPU architectures may not support fused NA,
    and some applications may require unfused NA. Read more in [fused vs unfused NA](fused-vs-unfused.md).
 
-3. Consider using [KV parallelism](kv-parallelism.md) to potentially gain in performance if you can afford
-   additional global memory usage. This may slightly affect reproducibility, as KV parallelism
-   makes the computation of `dQ` non-deterministic, but this should rarely affect your training
-   stability. Note that KV parallelism is not guaranteed to improve performance in all cases, but
-   it is still a setting worth configuring if you're not bound by memory capacity.
+3. Read more about [KV parallelism](kv-parallelism.md) settings to potentially gain in performance 
+   if you can afford additional global memory usage.
 
 4. Consider using the [Autotuner](autotuner.md) during inference, and possibly during training.
 

@@ -55,12 +55,12 @@ of different settings, which you may want to adjust to your use case.
 To force NATTEN torch modules (`NeighborhoodAttention1D`, `NeighborhoodAttention2D`, and `NeighborhoodAttention3D`) to use FNA:
 
 ```python
-from natten import enable_fused_na, disable_fused_na
+from natten import use_fused_na
 
-enable_fused_na()
+use_fused_na()
 # Modules will start using fused neighborhood attention
 
-disable_fused_na()
+use_fused_na(False)
 # Go back to BMM-style (default)
 ```
 
@@ -121,14 +121,14 @@ disable_autotuner()
 For more information, refer to [autotuner guide](fna/autotuner.md).
 
 #### Memory usage in FNA
-Training with Fused Neighborhood Attention can be accelerated at the expense of using more global memory by using
-KV parallelization. Depending on your use case (how big your memory footprint already is and what your memory cap is),
+Training with Fused Neighborhood Attention can be accelerated at the expense of using more global memory by changing
+KV parallelization settings. Depending on your use case (how big your memory footprint already is and what your memory cap is),
 you can consider this option.
 
-KV parallelism is disabled by default, and makes the backward pass non-deterministic, which means that it can't be used with
+KV parallelism is enabled by default, but it makes the backward pass non-deterministic, which means that it can't be used with
 [PyTorch's deterministic mode](https://pytorch.org/docs/stable/generated/torch.use_deterministic_algorithms.html).
 
-To enable this feature:
+To disable/re-enable this feature:
 
 ```python
 from natten import (
