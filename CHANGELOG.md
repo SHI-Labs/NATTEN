@@ -2,6 +2,16 @@
 
 ## [Main branch]
 
+## [0.17.2] - 2024-09-23
+* Enable KV parallelism by default
+  * No realistic use case will disable KV parallelism, because it virtually kills occupancy in any
+  small-batch/few-head case. Most packages should be using this by default, the same way PyTorch's
+  deterministic mode is disabled by default. Users will still get a warning if PyTorch or NATTEN's
+  deterministic mode is enabled.
+* Bug fixes
+  * Fix rare DDP issue (#166).
+  * Fix inconsistencies in docs.
+
 ## [0.17.1] - 2024-05-19
 * Fixed interface for python 3.8 and 3.9
 
