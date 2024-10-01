@@ -20,12 +20,15 @@
 # SOFTWARE.
 #
 #################################################################################################
+import functools
 from typing import Any, Optional, Tuple
 
 import torch
 from torch import Tensor
 from torch.autograd import Function
-from torch.cuda.amp import custom_bwd, custom_fwd
+from torch.amp import custom_bwd, custom_fwd                                              
+custom_fwd = functools.partial(custom_fwd, device_type="cuda")                            
+custom_bwd = functools.partial(custom_bwd, device_type="cuda")
 
 try:
     from natten import libnatten  # type: ignore
