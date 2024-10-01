@@ -1,6 +1,16 @@
 # Changelog
 
 ## [Main branch]
+* Enable KV parallelism by default
+  * No realistic use case will disable KV parallelism, because it virtually kills occupancy in any
+  small-batch/few-head case. Most packages should be using this by default, the same way PyTorch's
+  deterministic mode is disabled by default. Users will still get a warning if PyTorch or NATTEN's
+  deterministic mode is enabled. (#167)
+* Bug fixes
+  * Fix rare DDP issue (#167).
+  * Fix inconsistencies in docs. (#167)
+* QoL
+  * Switch from `torch.cuda.amp` to `torch.amp` since the former is deprecated (#168)
 
 ## [0.17.1] - 2024-05-19
 * Fixed interface for python 3.8 and 3.9

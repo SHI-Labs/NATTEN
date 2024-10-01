@@ -14,11 +14,11 @@ In this document, we outline how you can specify your preference for using KV pa
 ```python
 import natten
 
-# Enable KV parallelism
-natten.use_kv_parallelism_in_fused_na(True)
-
 # Disable KV parallelism
 natten.use_kv_parallelism_in_fused_na(False)
+
+# Enable KV parallelism
+natten.use_kv_parallelism_in_fused_na(True)
 ```
 
 ### Memory usage preference

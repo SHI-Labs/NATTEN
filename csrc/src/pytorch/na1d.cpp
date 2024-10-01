@@ -26,6 +26,7 @@
 
 #include <ATen/ATen.h>
 #include <torch/extension.h>
+#include <c10/cuda/CUDAGuard.h>
 
 #include <natten/natten.h>
 #include <natten/pytorch/cpu/na1d.h>
@@ -50,6 +51,7 @@ void na1d_forward(
     float attn_scale,
     const std::tuple<int32_t>& query_tile_size,
     const std::tuple<int32_t>& key_tile_size) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   AssertDimsAre128BitAligned(query, value);
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
@@ -109,6 +111,7 @@ void na1d_backward(
     const std::tuple<int32_t>& key_tile_size,
     const std::tuple<int32_t>& num_splits_key,
     bool compute_delta_with_torch) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   AssertDimsAre128BitAligned(query, value);
   // TODO: please please simplify these checks!!!
   CHECK_CONTIGUOUS(query);
@@ -172,6 +175,7 @@ void na1d_qk_forward(
     const std::tuple<int32_t>& kernel_size,
     const std::tuple<int32_t>& dilation,
     const std::tuple<bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   TORCH_CHECK(
       !any_true(is_causal) || !bias.has_value(),
       "Neighborhood attention with causal masking does not support positional biases yet.");
@@ -215,6 +219,7 @@ void na1d_qk_backward(
     const std::tuple<int32_t>& kernel_size,
     const std::tuple<int32_t>& dilation,
     const std::tuple<bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   TORCH_CHECK(
       !any_true(is_causal) || !d_bias.has_value(),
       "Neighborhood attention with causal masking does not support positional biases yet.");
@@ -262,6 +267,7 @@ void na1d_av_forward(
     const std::tuple<int32_t>& kernel_size,
     const std::tuple<int32_t>& dilation,
     const std::tuple<bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(attn.device());
   CHECK_CONTIGUOUS(out);
   CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
@@ -297,6 +303,7 @@ void na1d_av_backward(
     const std::tuple<int32_t>& kernel_size,
     const std::tuple<int32_t>& dilation,
     const std::tuple<bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(attn.device());
   CHECK_CONTIGUOUS(d_out);
   CHECK_CONTIGUOUS(d_value);
   CHECK_CONTIGUOUS(value);
