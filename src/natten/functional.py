@@ -25,10 +25,11 @@ from typing import Any, Optional, Tuple
 
 import torch
 from torch import Tensor
+from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
-from torch.amp import custom_bwd, custom_fwd                                              
-custom_fwd = functools.partial(custom_fwd, device_type="cuda")                            
-custom_bwd = functools.partial(custom_bwd, device_type="cuda")
+
+amp_fwd = functools.partial(custom_fwd, device_type="cuda")
+amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
 try:
     from natten import libnatten  # type: ignore
@@ -82,7 +83,7 @@ logger = log.get_logger(__name__)
 
 class NeighborhoodAttention1DQKAutogradFunction(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         query: Tensor,
@@ -204,7 +205,7 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
         return attn_0 + attn_1
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[
@@ -260,7 +261,7 @@ class NeighborhoodAttention1DQKAutogradFunction(Function):
 
 class NeighborhoodAttention1DAVAutogradFunction(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         attn: Tensor,
@@ -380,7 +381,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
         return out_0 + out_1
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType]:
@@ -425,7 +426,7 @@ class NeighborhoodAttention1DAVAutogradFunction(Function):
 
 class NeighborhoodAttention2DQKAutogradFunction(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         query: Tensor,
@@ -546,7 +547,7 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
         return attn_0 + attn_1
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[
@@ -602,7 +603,7 @@ class NeighborhoodAttention2DQKAutogradFunction(Function):
 
 class NeighborhoodAttention2DAVAutogradFunction(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         attn: Tensor,
@@ -722,7 +723,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
         return out_0 + out_1
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType]:
@@ -767,7 +768,7 @@ class NeighborhoodAttention2DAVAutogradFunction(Function):
 
 class NeighborhoodAttention3DQKAutogradFunction(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         query: Tensor,
@@ -894,7 +895,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
         return attn_0 + attn_1
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(ctx, grad_out: Tensor) -> Tuple[
         Tensor,
         Tensor,
@@ -954,7 +955,7 @@ class NeighborhoodAttention3DQKAutogradFunction(Function):
 
 class NeighborhoodAttention3DAVAutogradFunction(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         attn: Tensor,
@@ -1082,7 +1083,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
         return out_0 + out_1
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(
         ctx, grad_out: Tensor
     ) -> Tuple[Tensor, Tensor, Optional[Tensor], NoneType, NoneType, NoneType]:
@@ -1127,7 +1128,7 @@ class NeighborhoodAttention3DAVAutogradFunction(Function):
 
 class FusedNeighborhoodAttention1D(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         query: Tensor,
@@ -1199,7 +1200,7 @@ class FusedNeighborhoodAttention1D(Function):
         )
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(ctx, grad_out: Tensor) -> Tuple[
         Tensor,
         Tensor,
@@ -1264,7 +1265,7 @@ class FusedNeighborhoodAttention1D(Function):
 
 class FusedNeighborhoodAttention2D(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         query: Tensor,
@@ -1336,7 +1337,7 @@ class FusedNeighborhoodAttention2D(Function):
         )
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(ctx, grad_out: Tensor) -> Tuple[
         Tensor,
         Tensor,
@@ -1401,7 +1402,7 @@ class FusedNeighborhoodAttention2D(Function):
 
 class FusedNeighborhoodAttention3D(Function):
     @staticmethod
-    @custom_fwd
+    @amp_fwd
     def forward(
         ctx,
         query: Tensor,
@@ -1473,7 +1474,7 @@ class FusedNeighborhoodAttention3D(Function):
         )
 
     @staticmethod
-    @custom_bwd
+    @amp_bwd
     def backward(ctx, grad_out: Tensor) -> Tuple[
         Tensor,
         Tensor,
