@@ -27,6 +27,7 @@
 
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <torch/extension.h>
 
 #include <natten/natten.h>
@@ -118,6 +119,7 @@ void compute_delta(
     at::Tensor& delta,
     int32_t num_rows,
     int32_t dim) {
+  at::cuda::OptionalCUDAGuard device_guard(out.device());
 #ifdef NATTEN_WITH_CUTLASS
 
   NATTEN_CHECK(

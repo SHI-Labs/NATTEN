@@ -418,7 +418,7 @@ class MainContextTests(unittest.TestCase):
         natten.use_fused_na()
         assert (
             natten.is_fused_na_enabled()
-            and not natten.is_kv_parallelism_in_fused_na_enabled()
+            and natten.is_kv_parallelism_in_fused_na_enabled()
         )
         natten.use_fused_na(False)
         assert (
@@ -428,27 +428,27 @@ class MainContextTests(unittest.TestCase):
         natten.use_fused_na(True)
         assert (
             natten.is_fused_na_enabled()
-            and not natten.is_kv_parallelism_in_fused_na_enabled()
+            and natten.is_kv_parallelism_in_fused_na_enabled()
         )
         natten.use_fused_na(False)
         assert (
             not natten.is_fused_na_enabled()
             and not natten.is_kv_parallelism_in_fused_na_enabled()
         )
-        natten.use_fused_na(False, kv_parallel=True)
+        natten.use_fused_na(False, kv_parallel=False)
         assert (
             not natten.is_fused_na_enabled()
+            and not natten.is_kv_parallelism_in_fused_na_enabled()
+        )
+        natten.use_fused_na(True, kv_parallel=False)
+        assert (
+            natten.is_fused_na_enabled()
             and not natten.is_kv_parallelism_in_fused_na_enabled()
         )
         natten.use_fused_na(True, kv_parallel=True)
         assert (
             natten.is_fused_na_enabled()
             and natten.is_kv_parallelism_in_fused_na_enabled()
-        )
-        natten.use_fused_na(True, kv_parallel=False)
-        assert (
-            natten.is_fused_na_enabled()
-            and not natten.is_kv_parallelism_in_fused_na_enabled()
         )
         natten.use_fused_na(False, False)
         assert (

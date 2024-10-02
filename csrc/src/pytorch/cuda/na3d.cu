@@ -26,6 +26,7 @@
 
 #include <ATen/ATen.h>
 #include <ATen/cuda/CUDAContext.h>
+#include <c10/cuda/CUDAGuard.h>
 #include <torch/extension.h>
 
 #include <natten/natten.h>
@@ -57,6 +58,7 @@ void na3d_forward(
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   at::Tensor workspace;
   // TODO: figure out a better solution than this that doesn't
   // involve calling the FNA dispatcher for the sole purpose of
@@ -122,6 +124,7 @@ void na3d_backward(
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& num_splits_key,
     bool compute_delta_with_torch) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   at::Tensor workspace;
   // TODO: figure out a better solution than this that doesn't
   // involve calling the FNA dispatcher for the sole purpose of
@@ -203,6 +206,7 @@ void na3d_qk_forward(
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   DISPATCH_DTYPE(
       query.device().index(),
       at::cuda::getCurrentCUDAStream(query.device().index()),
@@ -244,6 +248,7 @@ void na3d_qk_backward(
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
   // dRPB is always computed in FP32; there is no FP16/BF16 kernel for it.
   auto should_cast_bias = false;
   void* d_bias_ptr = nullptr;
@@ -316,6 +321,7 @@ void na3d_av_forward(
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(attn.device());
   DISPATCH_DTYPE(
       attn.device().index(),
       at::cuda::getCurrentCUDAStream(attn.device().index()),
@@ -355,6 +361,7 @@ void na3d_av_backward(
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal) {
+  at::cuda::OptionalCUDAGuard device_guard(attn.device());
   DISPATCH_DTYPE(
       d_out.device().index(),
       at::cuda::getCurrentCUDAStream(attn.device().index()),
