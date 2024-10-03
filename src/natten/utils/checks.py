@@ -127,7 +127,9 @@ def check_tiling_config(na_dim: int, tiling_config: Any) -> FnaForwardConfigType
     if (
         isinstance(tiling_config, tuple)
         and len(tiling_config) == 2
-        and all(isinstance(x, tuple) and len(x) == na_dim for x in tiling_config)
+        and all(
+            isinstance(x, (tuple, list)) and len(x) == na_dim for x in tiling_config
+        )
     ):
         return tiling_config
     raise ValueError(
@@ -143,7 +145,9 @@ def check_backward_tiling_config(
     if (
         isinstance(tiling_config, tuple)
         and len(tiling_config) == 4
-        and all(isinstance(x, tuple) and len(x) == na_dim for x in tiling_config[:3])
+        and all(
+            isinstance(x, (tuple, list)) and len(x) == na_dim for x in tiling_config[:3]
+        )
         and isinstance(tiling_config[-1], bool)
     ):
         return tiling_config

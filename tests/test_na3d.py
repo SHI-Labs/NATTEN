@@ -33,6 +33,7 @@ from natten.functional import na3d_av, na3d_qk
 from natten.utils import check_all_args, get_num_na_weights
 from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
+    skip_if_fwad_is_not_supported,
     skip_if_nested_is_not_supported,
 )
 from torch.autograd import gradcheck
@@ -732,6 +733,7 @@ class NA3DTests(unittest.TestCase):
             L_extra=9,
         )
 
+    @skip_if_fwad_is_not_supported()
     def test_fwad_cpu(self):
         self._test_fwad(
             B=1,
@@ -745,6 +747,7 @@ class NA3DTests(unittest.TestCase):
             device="cpu",
         )
 
+    @skip_if_fwad_is_not_supported()
     def test_varying_args_fwad_cpu(self):
         self._test_fwad(
             B=1,
@@ -758,6 +761,7 @@ class NA3DTests(unittest.TestCase):
             device="cpu",
         )
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_cuda_is_not_supported()
     def test_fwad_cuda(self):
         self._test_fwad(
@@ -772,6 +776,7 @@ class NA3DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_cuda_is_not_supported()
     def test_varying_args_fwad_cuda(self):
         self._test_fwad(
