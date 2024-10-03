@@ -44,6 +44,7 @@ from natten.functional import na2d_av, na2d_qk
 from natten.utils import check_all_args, get_num_na_weights
 from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
+    skip_if_fwad_is_not_supported,
     skip_if_gemm_does_not_support_double_precision,
     skip_if_nested_is_not_supported,
 )
@@ -883,6 +884,7 @@ class NA2DTests(unittest.TestCase):
             L_extra=9,
         )
 
+    @skip_if_fwad_is_not_supported()
     def test_fwad_cpu(self):
         self._test_fwad(
             B=1, H=1, X=8, Y=7, D=8, kernel_size=5, dilation=1, device="cpu"
@@ -891,6 +893,7 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=7, Y=7, D=4, kernel_size=3, dilation=2, device="cpu"
         )
 
+    @skip_if_fwad_is_not_supported()
     def test_varying_args_fwad_cpu(self):
         self._test_fwad(
             B=1, H=1, X=8, Y=7, D=8, kernel_size=(5, 3), dilation=(1, 2), device="cpu"
@@ -899,6 +902,7 @@ class NA2DTests(unittest.TestCase):
             B=1, H=1, X=7, Y=7, D=4, kernel_size=(3, 5), dilation=(2, 1), device="cpu"
         )
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_cuda_is_not_supported()
     def test_fwad_cuda_naive(self):
         disable_tiled_na()
@@ -918,6 +922,7 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_cuda_is_not_supported()
     def test_varying_fwad_cuda_naive(self):
         disable_tiled_na()
@@ -954,6 +959,7 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_cuda_is_not_supported()
     def test_fwad_cuda_tiled(self):
         enable_tiled_na()
@@ -976,6 +982,7 @@ class NA2DTests(unittest.TestCase):
             device="cuda",
         )
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_gemm_does_not_support_double_precision()
     def test_fwad_cuda_gemm(self):
         enable_gemm_na()

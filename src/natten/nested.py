@@ -35,7 +35,7 @@ except ImportError:
         "https://shi-labs.com/natten for more information."
     )
 
-from .ops import av_cross_forward, qk_cross_forward
+from .ops.unfused.torch_native_ops import av_cross_forward, qk_cross_forward
 from .types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,

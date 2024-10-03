@@ -41,6 +41,7 @@ from natten.functional import na1d_av, na1d_qk
 from natten.utils import check_all_args, get_num_na_weights
 from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
+    skip_if_fwad_is_not_supported,
     skip_if_gemm_does_not_support_double_precision,
     skip_if_nested_is_not_supported,
 )
@@ -718,11 +719,13 @@ class NA1DTests(unittest.TestCase):
             L_extra=9,
         )
 
+    @skip_if_fwad_is_not_supported()
     def test_fwad_cpu(self):
         self._test_fwad(B=2, H=2, L=16, D=8, kernel_size=5, dilation=1, device="cpu")
         self._test_fwad(B=2, H=2, L=16, D=8, kernel_size=5, dilation=3, device="cpu")
         self._test_fwad(B=2, H=2, L=7, D=4, kernel_size=3, dilation=2, device="cpu")
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_cuda_is_not_supported()
     def test_fwad_cuda_naive(self):
         disable_gemm_na()
@@ -731,6 +734,7 @@ class NA1DTests(unittest.TestCase):
         self._test_fwad(B=1, H=4, L=64, D=16, kernel_size=21, dilation=1, device="cuda")
         self._test_fwad(B=1, H=2, L=64, D=16, kernel_size=21, dilation=2, device="cuda")
 
+    @skip_if_fwad_is_not_supported()
     @skip_if_gemm_does_not_support_double_precision()
     def test_fwad_cuda_gemm(self):
         enable_gemm_na()

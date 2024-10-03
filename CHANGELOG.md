@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Main branch]
+* Support torch.compile (torch >= 2.4.0)
+  * All NATTEN ops can now be registered with torch.library directly, since support
+    was added in torch 2.4.
+  * However certain experimental features like forward-mode auto diff (no interface in torch.library)
+    and nested tensors are not yet supported.
 * Enable KV parallelism by default
   * No realistic use case will disable KV parallelism, because it virtually kills occupancy in any
   small-batch/few-head case. Most packages should be using this by default, the same way PyTorch's
