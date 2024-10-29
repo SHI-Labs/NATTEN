@@ -31,7 +31,7 @@ build_one() {
   echo "Launching container with $image_name ..."
   container_name="$image_name"_"$cu"_"$pytorch_ver"
 
-  py_versions=(3.8 3.9 3.10 3.11)
+  py_versions=(3.9 3.10 3.11)
 
   # Torch started supporting python 3.12 since
   # 2.2.0
@@ -42,6 +42,10 @@ build_one() {
   torch_major=${torch_major/;/}
   if [[ $torch_major -ge 22 ]]; then
     py_versions+=(3.12)
+  fi
+  # Torch 2.5 dropped support for python 3.8.
+  if [[ $torch_major -le 24 ]]; then
+    py_versions+=(3.8)
   fi
 
   for py in "${py_versions[@]}"; do
@@ -65,6 +69,11 @@ EOF
   done
 }
 
+build_one_and_capture_output ()
+{
+  build_one $1 $2 2>&1 > log_${1}_${2}.txt
+}
+
 
 if [[ -n "$1" ]] && [[ -n "$2" ]]; then
   build_one "$1" "$2"
@@ -72,17 +81,24 @@ else
   # We don't need to build for every minor torch release; they're usually
   # compatible in their python API and ABIs.
 
-  build_one cu124 2.4.0 & build_one cu121 2.4.0
+  build_one_and_capture_output cu124 2.5.0 & build_one_and_capture_output cu121 2.5.0
 
-  build_one cu118 2.4.0 & build_one cpu 2.4.0
+  build_one_and_capture_output cu118 2.5.0 & build_one_and_capture_output cu124 2.4.0
 
-  build_one cu121 2.3.0 & build_one cu118 2.3.0
+  build_one_and_capture_output cu121 2.4.0 & build_one_and_capture_output cu118 2.4.0
 
-  build_one cu121 2.2.0 & build_one cu118 2.2.0
+  build_one_and_capture_output cu121 2.3.0 & build_one_and_capture_output cu118 2.3.0
 
-  build_one cu121 2.1.0 & build_one cu118 2.1.0
+  build_one_and_capture_output cu121 2.2.0 & build_one_and_capture_output cu118 2.2.0
 
-  build_one cu118 2.0.0 & build_one cu117 2.0.0
+  build_one_and_capture_output cu121 2.1.0 & build_one_and_capture_output cu118 2.1.0
 
-  build_one cpu 2.3.0 & build_one cpu 2.2.0 & build_one cpu 2.1.0 & build_one cpu 2.0.0
+  build_one_and_capture_output cu118 2.0.0 & build_one_and_capture_output cu117 2.0.0
+
+  build_one_and_capture_output cpu 2.5.0 & \
+  build_one_and_capture_output cpu 2.4.0 & \
+  build_one_and_capture_output cpu 2.3.0 & \
+  build_one_and_capture_output cpu 2.2.0 & \
+  build_one_and_capture_output cpu 2.1.0 & \
+  build_one_and_capture_output cpu 2.0.0
 fi
