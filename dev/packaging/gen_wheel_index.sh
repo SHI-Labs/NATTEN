@@ -21,27 +21,44 @@ for cu in cpu cu101 cu102 cu111 cu113 cu115 cu116 cu117 cu118 cu121 cu124; do
   echo "Creating $PWD/index.html ..."
   # First sort by torch version, then stable sort by d2 version with unique.
   # As a result, the latest torch version for each d2 version is kept.
+  rm index.html
+  echo "<!DOCTYPE html><html lang=\"en\"><head>" >> index.html
+  echo "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" >> index.html
+  echo "<title>Index of packages</title></head><body>" >> index.html
   for whl in $(find -type f -name '*.whl' -printf '%P\n' \
     | sort -k 1 -r  | sort -t '/' -k 2 --stable -r --unique); do
     echo "<a href=\"${whl/+/%2B}\">$whl</a><br>"
-  done > index.html
+  done >> index.html
+  echo "</body></html>" >> index.html
 
 
   for torch in torch*; do
     cd "$root/$cu/$torch"
 
+    rm index.html
+    echo "<!DOCTYPE html><html lang=\"en\"><head>" >> index.html
+    echo "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" >> index.html
+    echo "<title>Index of packages</title></head><body>" >> index.html
+
     # list all whl for each cuda,torch version
     echo "Creating $PWD/index.html ..."
     for whl in $(find . -type f -name '*.whl' -printf '%P\n' | sort -r); do
       echo "<a href=\"${whl/+/%2B}\">$whl</a><br>"
-    done > index.html
+    done >> index.html
+    echo "</body></html>" >> index.html
   done
 done
 
 cd "$root"
 # Just list everything:
+rm index.html
+echo "<!DOCTYPE html><html lang=\"en\"><head>" >> $index
+echo "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" >> $index
+echo "<title>Index of packages</title></head><body>" >> $index
+
 echo "Creating $index ..."
 for whl in $(find . -type f -name '*.whl' -printf '%P\n' | sort -r); do
   echo "<a href=\"${whl/+/%2B}\">$whl</a><br>"
-done > "$index"
+done >> "$index"
+echo "</body></html>" >> $index
 

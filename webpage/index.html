@@ -48,7 +48,7 @@
     <div class="title row">
         <div class="col-lg-12">
             <p class="h2">Install with pip</p>
-            <p>Latest release: <code>0.17.1</code></p>
+            <p>Latest release: <code>0.17.2</code></p>
         </div>
     </div>
     <div class="row">
@@ -60,7 +60,10 @@
                 <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">PyTorch:</a>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-E" data-bs-toggle="tab" data-bs-target="#v240" type="button" role="tab" aria-controls="v240" aria-selected="true">2.4.X</button>
+                <button class="nav-link active" id="tab-E" data-bs-toggle="tab" data-bs-target="#v250" type="button" role="tab" aria-controls="v250" aria-selected="true">2.5.X</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-E" data-bs-toggle="tab" data-bs-target="#v240" type="button" role="tab" aria-controls="v240" aria-selected="true">2.4.X</button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-D" data-bs-toggle="tab" data-bs-target="#v230" type="button" role="tab" aria-controls="v230" aria-selected="true">2.3.X</button>
@@ -76,7 +79,36 @@
               </li>
           </ul>
           <div class="tab-content" id="torchTabContent">
-              <div class="tab-pane fade show active" id="v240" role="tabpanel" aria-labelledby="tab-E">
+              <div class="tab-pane fade show active" id="v250" role="tabpanel" aria-labelledby="tab-F">
+                <div class="d-flex align-items-start">
+                  <div class="nav flex-column nav-pills me-3" id="v250-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v250-cu124-tab" data-bs-toggle="pill"
+                      data-bs-target="#v250-124" type="button" role="tab" aria-controls="v250-124" aria-selected="true">CUDA 12.4</button>
+                    <button class="nav-link" id="v250-cu121-tab" data-bs-toggle="pill" data-bs-target="#v250-121" type="button" role="tab" aria-controls="v250-121" aria-selected="true">CUDA 12.1</button>
+                    <button class="nav-link" id="v250-cu118-tab" data-bs-toggle="pill" data-bs-target="#v250-118" type="button" role="tab" aria-controls="v230-118" aria-selected="false">CUDA 11.8</button>
+                    <button class="nav-link" id="v250-cpu-tab" data-bs-toggle="pill" data-bs-target="#v250-cpu" type="button" role="tab" aria-controls="v230-cpu" aria-selected="false">CPU</button>
+                  </div>
+                  <div class="tab-content" id="v250-tabContent">
+                    <div class="tab-pane fade show active" id="v250-124" role="tabpanel" aria-labelledby="v250-cu124-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.2+torch250cu124 -f https://shi-labs.com/natten/wheels/</pre>
+                    </div>
+                    <div class="tab-pane fade show" id="v250-121" role="tabpanel" aria-labelledby="v250-cu121-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.2+torch250cu121 -f https://shi-labs.com/natten/wheels/</pre>
+                    </div>
+                    <div class="tab-pane fade" id="v250-118" role="tabpanel" aria-labelledby="v250-cu118-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.2+torch250cu118 -f https://shi-labs.com/natten/wheels</pre>
+                    </div>
+                    <div class="tab-pane fade" id="v250-cpu" role="tabpanel" aria-labelledby="v250-cpu-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.2+torch250cpu -f https://shi-labs.com/natten/wheels</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade show" id="v240" role="tabpanel" aria-labelledby="tab-E">
                 <div class="d-flex align-items-start">
                   <div class="nav flex-column nav-pills me-3" id="v240-tab" role="tablist" aria-orientation="vertical">
                     <button class="nav-link active" id="v240-cu124-tab" data-bs-toggle="pill"
@@ -88,19 +120,19 @@
                   <div class="tab-content" id="v240-tabContent">
                     <div class="tab-pane fade show active" id="v240-124" role="tabpanel" aria-labelledby="v240-cu124-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch240cu124 -f https://shi-labs.com/natten/wheels/</pre>
+                      <pre>pip3 install natten==0.17.2+torch240cu124 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade show" id="v240-121" role="tabpanel" aria-labelledby="v240-cu121-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch240cu121 -f https://shi-labs.com/natten/wheels/</pre>
+                      <pre>pip3 install natten==0.17.2+torch240cu121 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade" id="v240-118" role="tabpanel" aria-labelledby="v240-cu118-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch240cu118 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch240cu118 -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                     <div class="tab-pane fade" id="v240-cpu" role="tabpanel" aria-labelledby="v240-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch240cpu -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch240cpu -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                   </div>
                 </div>
@@ -115,15 +147,15 @@
                   <div class="tab-content" id="v230-tabContent">
                     <div class="tab-pane fade show active" id="v230-121" role="tabpanel" aria-labelledby="v230-cu121-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch230cu121 -f https://shi-labs.com/natten/wheels/</pre>
+                      <pre>pip3 install natten==0.17.2+torch230cu121 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade" id="v230-118" role="tabpanel" aria-labelledby="v230-cu118-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch230cu118 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch230cu118 -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                     <div class="tab-pane fade" id="v230-cpu" role="tabpanel" aria-labelledby="v230-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch230cpu -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch230cpu -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                   </div>
                 </div>
@@ -138,15 +170,15 @@
                   <div class="tab-content" id="v220-tabContent">
                     <div class="tab-pane fade show active" id="v220-121" role="tabpanel" aria-labelledby="v220-cu121-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch220cu121 -f https://shi-labs.com/natten/wheels/</pre>
+                      <pre>pip3 install natten==0.17.2+torch220cu121 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade" id="v220-118" role="tabpanel" aria-labelledby="v220-cu118-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch220cu118 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch220cu118 -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                     <div class="tab-pane fade" id="v220-cpu" role="tabpanel" aria-labelledby="v220-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch220cpu -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch220cpu -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                   </div>
                 </div>
@@ -161,15 +193,15 @@
                   <div class="tab-content" id="v210-tabContent">
                     <div class="tab-pane fade show active" id="v210-121" role="tabpanel" aria-labelledby="v210-cu121-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch210cu121 -f https://shi-labs.com/natten/wheels/</pre>
+                      <pre>pip3 install natten==0.17.2+torch210cu121 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade" id="v210-118" role="tabpanel" aria-labelledby="v210-cu118-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch210cu118 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch210cu118 -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                     <div class="tab-pane fade" id="v210-cpu" role="tabpanel" aria-labelledby="v210-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch210cpu -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch210cpu -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                   </div>
                 </div>
@@ -184,21 +216,21 @@
                   <div class="tab-content" id="v200-tabContent">
                     <div class="tab-pane fade show active" id="v200-118" role="tabpanel" aria-labelledby="v200-cu118-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch200cu118 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch200cu118 -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                     <div class="tab-pane fade" id="v200-117" role="tabpanel" aria-labelledby="v200-cu117-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch200cu117 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch200cu117 -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                     <div class="tab-pane fade" id="v200-cpu" role="tabpanel" aria-labelledby="v200-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.1+torch200cpu -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.2+torch200cpu -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                   </div>
                 </div>
               </div>
           </div>
-          <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.17.1</pre></p>
+          <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.17.2</pre></p>
           <p>Careful though, without pre-compiled wheels installing might take a while.</p>
           <p>You're also required to have CUDA &gt; 11.7, cmake &gt; 3.20 and PyTorch &gt; 2.0 installed before attempting to install/build NATTEN.</p>
           <p></p>
