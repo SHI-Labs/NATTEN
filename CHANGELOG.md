@@ -2,8 +2,11 @@
 
 ## [Main branch]
 
+## [0.17.3] - 2024-10-31
+* Bug fix for torch < 2.4
+* 0.17.2 release will be directly replaced with 0.17.3.
 
-## [0.17.2] - 2024-10-29
+## [0.17.2] - 2024-10-29 (REMOVED)
 * Enable KV parallelism by default
   * No realistic use case will disable KV parallelism, because it virtually kills occupancy in any
   small-batch/few-head case. Most packages should be using this by default, the same way PyTorch's
