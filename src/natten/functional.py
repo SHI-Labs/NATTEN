@@ -25,11 +25,17 @@ from typing import Any, Optional, Tuple
 
 import torch
 from torch import Tensor
-from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
 
-amp_fwd = functools.partial(custom_fwd, device_type="cuda")
-amp_bwd = functools.partial(custom_bwd, device_type="cuda")
+torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
+
+if torch_ver >= [2, 4]:
+    from torch.amp import custom_bwd, custom_fwd
+    amp_fwd = functools.partial(custom_fwd, device_type="cuda")
+    amp_bwd = functools.partial(custom_bwd, device_type="cuda")
+else:
+    from torch.cuda.amp import custom_fwd as amp_fwd
+    from torch.cuda.amp import custom_bwd as amp_bwd
 
 try:
     from natten import libnatten  # type: ignore

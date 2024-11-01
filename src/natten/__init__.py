@@ -116,4 +116,4 @@ __all__ = [
     "disable_tiled_na",
 ]
 
-__version__ = "0.17.2"
+__version__ = "0.17.3"
