@@ -2,7 +2,7 @@
 
 ## [Main branch]
 
-## [0.17.3] - 2024-10-31
+## [0.17.3] - 2024-11-01
 * Bug fix for torch < 2.4
 * 0.17.2 release will be directly replaced with 0.17.3.
 

@@ -121,14 +121,11 @@ NATTEN is released under the [MIT License](LICENSE).
 
 ## Citation
 ```bibtex
-@misc{hassani2024faster,
+@inproceedings{hassani2024faster,
   title        = {Faster Neighborhood Attention: Reducing the O(n^2) Cost of Self Attention at the Threadblock Level},
   author       = {Ali Hassani and Wen-Mei Hwu and Humphrey Shi},
   year         = 2024,
-  url          = {https://arxiv.org/abs/2403.04690},
-  eprint       = {2403.04690},
-  archiveprefix = {arXiv},
-  primaryclass = {cs.CV}
+  booktitle    = {Advances in Neural Information Processing Systems},
 }
 @inproceedings{hassani2023neighborhood,
   title        = {Neighborhood Attention Transformer},
