@@ -48,6 +48,7 @@ void na3d_forward(
     void* out_ptr,
     void* rpb_ptr,
     void* logsumexp_ptr,
+    void* maximums_ptr,
     int32_t batch_size,
     int32_t depth,
     int32_t height,
@@ -82,6 +83,7 @@ void na3d_forward(
         is_causal,
         attn_scale,
         logsumexp_ptr,
+        maximums_ptr,
         query_tile_size,
         key_tile_size);
   } else {

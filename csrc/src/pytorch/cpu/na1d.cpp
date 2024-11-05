@@ -43,6 +43,7 @@ void na1d_forward(
     at::Tensor& out,
     const at::optional<at::Tensor>& rpb,
     const at::optional<at::Tensor>& logsumexp,
+    const at::optional<at::Tensor>& maximums,
     int32_t batch_size,
     int32_t length,
     int32_t heads,

@@ -1141,7 +1141,8 @@ class FusedNeighborhoodAttention1D(Function):
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
-    ) -> Tensor:
+        return_statistics: bool = False,
+    ) -> Tuple[Tensor, Optional[Tensor], Optional[Tensor]]:
         kernel_size, dilation, is_causal = check_all_args(
             1, kernel_size_, dilation_, is_causal_
         )
@@ -1167,6 +1168,9 @@ class FusedNeighborhoodAttention1D(Function):
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
+        maximums = torch.empty(
+            query.shape[:-1], dtype=torch.float32, device=query.device
+        ) if return_statistics else None
 
         libnatten.na1d_forward(
             output,
@@ -1175,6 +1179,7 @@ class FusedNeighborhoodAttention1D(Function):
             value,
             bias,
             logsumexp,
+            maximums,
             kernel_size,
             dilation,
             is_causal,
@@ -1191,7 +1196,8 @@ class FusedNeighborhoodAttention1D(Function):
         ctx.tiling_config_backward = tiling_config_backward
         ctx.has_bias = bias is not None
 
-        return output
+        return output, logsumexp, maximums
+                    
 
     @staticmethod
     def jvp(ctx, *grad_inputs: Any) -> Tensor:
@@ -1201,10 +1207,11 @@ class FusedNeighborhoodAttention1D(Function):
 
     @staticmethod
     @amp_bwd
-    def backward(ctx, grad_out: Tensor) -> Tuple[
+    def backward(ctx, grad_out: Tensor, grad_logsumexp: Tensor, grad_maximums: Tensor) -> Tuple[
         Tensor,
         Tensor,
         Tensor,
+        NoneType,
         NoneType,
         NoneType,
         NoneType,
@@ -1260,7 +1267,7 @@ class FusedNeighborhoodAttention1D(Function):
             compute_delta_with_pt,
         )
 
-        return d_query, d_key, d_value, None, None, None, None, None, None, None
+        return d_query, d_key, d_value, None, None, None, None, None, None, None, None
 
 
 class FusedNeighborhoodAttention2D(Function):
@@ -1278,7 +1285,8 @@ class FusedNeighborhoodAttention2D(Function):
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
-    ) -> Tensor:
+        return_statistics: bool = False,
+    ) -> Tuple[Tensor, Optional[Tensor], Optional[Tensor]]:
         kernel_size, dilation, is_causal = check_all_args(
             2, kernel_size_, dilation_, is_causal_
         )
@@ -1304,6 +1312,9 @@ class FusedNeighborhoodAttention2D(Function):
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
+        maximums = torch.empty(
+            query.shape[:-1], dtype=torch.float32, device=query.device
+        ) if return_statistics else None
 
         libnatten.na2d_forward(
             output,
@@ -1312,6 +1323,7 @@ class FusedNeighborhoodAttention2D(Function):
             value,
             bias,
             logsumexp,
+            maximums,
             kernel_size,
             dilation,
             is_causal,
@@ -1328,7 +1340,7 @@ class FusedNeighborhoodAttention2D(Function):
         ctx.tiling_config_backward = tiling_config_backward
         ctx.has_bias = bias is not None
 
-        return output
+        return output, logsumexp, maximums
 
     @staticmethod
     def jvp(ctx, *grad_inputs: Any) -> Tensor:
@@ -1338,10 +1350,9 @@ class FusedNeighborhoodAttention2D(Function):
 
     @staticmethod
     @amp_bwd
-    def backward(ctx, grad_out: Tensor) -> Tuple[
+    def backward(ctx, grad_out: Tensor, grad_logsumexp: Tensor, grad_maximums: Tensor) -> Tuple[
         Tensor,
-        Tensor,
-        Tensor,
+        NoneType,
         NoneType,
         NoneType,
         NoneType,
@@ -1397,7 +1408,7 @@ class FusedNeighborhoodAttention2D(Function):
             compute_delta_with_pt,
         )
 
-        return d_query, d_key, d_value, None, None, None, None, None, None, None
+        return d_query, d_key, d_value, None, None, None, None, None, None, None, None
 
 
 class FusedNeighborhoodAttention3D(Function):
@@ -1415,7 +1426,8 @@ class FusedNeighborhoodAttention3D(Function):
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
-    ) -> Tensor:
+        return_statistics: bool = False,
+    ) -> Tuple[Tensor, Optional[Tensor], Optional[Tensor]]:
         kernel_size, dilation, is_causal = check_all_args(
             3, kernel_size_, dilation_, is_causal_
         )
@@ -1441,6 +1453,9 @@ class FusedNeighborhoodAttention3D(Function):
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
+        maximums = torch.empty(
+            query.shape[:-1], dtype=torch.float32, device=query.device
+        ) if return_statistics else None
 
         libnatten.na3d_forward(
             output,
@@ -1449,6 +1464,7 @@ class FusedNeighborhoodAttention3D(Function):
             value,
             bias,
             logsumexp,
+            maximums,
             kernel_size,
             dilation,
             is_causal,
@@ -1465,7 +1481,7 @@ class FusedNeighborhoodAttention3D(Function):
         ctx.tiling_config_backward = tiling_config_backward
         ctx.has_bias = bias is not None
 
-        return output
+        return output, logsumexp, maximums
 
     @staticmethod
     def jvp(ctx, *grad_inputs: Any) -> Tensor:
@@ -1475,10 +1491,11 @@ class FusedNeighborhoodAttention3D(Function):
 
     @staticmethod
     @amp_bwd
-    def backward(ctx, grad_out: Tensor) -> Tuple[
+    def backward(ctx, grad_out: Tensor, grad_logsumexp: Tensor, grad_maximums: Tensor) -> Tuple[
         Tensor,
         Tensor,
         Tensor,
+        NoneType,
         NoneType,
         NoneType,
         NoneType,
@@ -1534,7 +1551,7 @@ class FusedNeighborhoodAttention3D(Function):
             compute_delta_with_pt,
         )
 
-        return d_query, d_key, d_value, None, None, None, None, None, None, None
+        return d_query, d_key, d_value, None, None, None, None, None, None, None, None
 
 
 def na1d_qk(
@@ -1695,6 +1712,7 @@ def na1d(
     is_causal: Optional[CausalArg1DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
+    return_statistics: bool = False,
 ) -> Tensor:
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
@@ -1706,7 +1724,7 @@ def na1d(
     )
     scale = scale or query.shape[-1] ** -0.5
 
-    return FusedNeighborhoodAttention1D.apply(
+    outputs, logsumexp, maximums = FusedNeighborhoodAttention1D.apply(
         query,
         key,
         value,
@@ -1717,7 +1735,13 @@ def na1d(
         scale,
         tiling_config_forward,
         tiling_config_backward,
+        return_statistics
     )
+
+    if return_statistics:
+        return outputs, logsumexp, maximums
+    else:
+        return outputs
 
 
 def na2d(
@@ -1729,6 +1753,7 @@ def na2d(
     is_causal: Optional[CausalArg2DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
+    return_statistics: bool = False,
 ) -> Tensor:
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
@@ -1740,7 +1765,7 @@ def na2d(
     )
     scale = scale or query.shape[-1] ** -0.5
 
-    return FusedNeighborhoodAttention2D.apply(
+    outputs, logsumexp, maximums = FusedNeighborhoodAttention2D.apply(
         query,
         key,
         value,
@@ -1751,8 +1776,13 @@ def na2d(
         scale,
         tiling_config_forward,
         tiling_config_backward,
+        return_statistics
     )
 
+    if return_statistics:
+        return outputs, logsumexp, maximums
+    else:
+        return outputs
 
 def na3d(
     query: Tensor,
@@ -1763,6 +1793,7 @@ def na3d(
     is_causal: Optional[CausalArg3DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
+    return_statistics: bool = False,
 ) -> Tensor:
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
@@ -1774,7 +1805,7 @@ def na3d(
     )
     scale = scale or query.shape[-1] ** -0.5
 
-    return FusedNeighborhoodAttention3D.apply(
+    outputs, logsumexp, maximums = FusedNeighborhoodAttention3D.apply(
         query,
         key,
         value,
@@ -1785,7 +1816,14 @@ def na3d(
         scale,
         tiling_config_forward,
         tiling_config_backward,
+        return_statistics
     )
+
+    if return_statistics:
+        return outputs, logsumexp, maximums
+    else:
+        return outputs
+
 
 
 #################################################################################################

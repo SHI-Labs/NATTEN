@@ -44,6 +44,7 @@ void na3d_forward(
     const at::Tensor& value,
     const at::optional<at::Tensor>& rpb,
     const at::optional<at::Tensor>& logsumexp,
+    const at::optional<at::Tensor>& maximums,
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     const std::tuple<bool, bool, bool>& is_causal,
@@ -72,6 +73,9 @@ void na3d_forward(
   if (logsumexp.has_value()) {
     CheckLogSumExp<3>(out, logsumexp.value());
   }
+  if (maximums.has_value()) {
+    CheckMaximums<3>(out, maximums.value());
+  }
   DISPATCH_DEVICE(
       query.device(),
       na3d_forward,
@@ -81,6 +85,7 @@ void na3d_forward(
       out,
       rpb,
       logsumexp,
+      maximums,
       batch_size,
       depth,
       height,

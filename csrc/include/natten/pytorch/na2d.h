@@ -39,6 +39,7 @@ void na2d_forward(
     const at::Tensor& value,
     const at::optional<at::Tensor>& rpb,
     const at::optional<at::Tensor>& logsumexp,
+    const at::optional<at::Tensor>& maximums,
     const std::tuple<int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t>& dilation,
     const std::tuple<bool, bool>& is_causal,

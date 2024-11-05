@@ -12,16 +12,16 @@
 namespace natten { 
 namespace cuda { 
 namespace fna { 
-#define DISPATCH_FNA_FORWARD_KERNEL(rank, cc, dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_KERNEL(rank, cc, dtype, is_causal, has_rpb, cb) \
   [&] { \
     if constexpr (rank == 1) { \
-      DISPATCH_FNA_FORWARD_1D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \
+      DISPATCH_FNA_FORWARD_1D(cc, dtype, is_causal, has_rpb, cb); \
     } \
     else if constexpr (rank == 2) { \
-      DISPATCH_FNA_FORWARD_2D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \
+      DISPATCH_FNA_FORWARD_2D(cc, dtype, is_causal, has_rpb, cb); \
     } \
     else if constexpr (rank == 3) { \
-      DISPATCH_FNA_FORWARD_3D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \
+      DISPATCH_FNA_FORWARD_3D(cc, dtype, is_causal, has_rpb, cb); \
     } \
     else { \
       std::cerr << "NATTEN FNA kernel launch failed!" \

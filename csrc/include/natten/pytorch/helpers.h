@@ -276,6 +276,47 @@ void CheckLogSumExp(const at::Tensor& output, const at::Tensor& logsumexp) {
   }
 }
 
+template <size_t NaDim>
+void CheckMaximums(const at::Tensor& output, const at::Tensor& maximums) {
+  // Output: [batch, *, heads, dim]
+  // Maximums: [batch, *, heads]
+  static_assert(NaDim >= 1 && NaDim < 4);
+  TORCH_CHECK(
+      maximums.scalar_type() == torch::kFloat,
+      "`maximums` must be stored in float32 data type, got ",
+      maximums.scalar_type());
+  TORCH_CHECK(
+      maximums.device().is_cuda() == output.device().is_cuda(),
+      "Expected maximums to be on the same device as the operands.");
+  CHECK_CONTIGUOUS(maximums);
+  TORCH_CHECK(
+      output.dim() == NaDim + 3,
+      NaDim,
+      "-D NA expects operands to be ",
+      NaDim + 3,
+      " rank tensors, got ",
+      output.dim());
+  TORCH_CHECK(
+      maximums.dim() == output.dim() - 1,
+      NaDim,
+      "-D NA expects maximums to be a ",
+      NaDim + 2,
+      " rank tensor, got ",
+      maximums.dim());
+  for (size_t i = 0; i < NaDim + 2; ++i) {
+    TORCH_CHECK(
+        maximums.size(i) == output.size(i),
+        "Invalid maximums shape at dim ",
+        i,
+        "; "
+        "expected ",
+        output.size(i),
+        ", got ",
+        maximums.size(i),
+        ".");
+  }
+}
+
 inline void AssertDimsAre128BitAligned(
     const at::Tensor& query,
     const at::Tensor& value) {

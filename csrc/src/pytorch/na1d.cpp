@@ -44,6 +44,7 @@ void na1d_forward(
     const at::Tensor& value,
     const at::optional<at::Tensor>& rpb,
     const at::optional<at::Tensor>& logsumexp,
+    const at::optional<at::Tensor>& maximums,
     const std::tuple<int32_t>& kernel_size,
     const std::tuple<int32_t>& dilation,
     const std::tuple<bool>& is_causal,
@@ -70,6 +71,9 @@ void na1d_forward(
   if (logsumexp.has_value()) {
     CheckLogSumExp<1>(out, logsumexp.value());
   }
+  if (maximums.has_value()) {
+    CheckMaximums<1>(out, maximums.value());
+  }
   DISPATCH_DEVICE(
       query.device(),
       na1d_forward,
@@ -79,6 +83,7 @@ void na1d_forward(
       out,
       rpb,
       logsumexp,
+      maximums,
       batch_size,
       length,
       heads,

@@ -78,6 +78,7 @@ void fna_forward_generic(
     BooleanTuple is_causal,
     float attn_scale,
     void* logsumexp_ptr,
+    void* maximums_ptr,
     IntTuple query_tile_shape,
     IntTuple key_tile_shape) {
   static constexpr auto kRank =
@@ -86,6 +87,7 @@ void fna_forward_generic(
 
   bool has_rpb = rpb_ptr != nullptr;
   bool compute_logsumexp = logsumexp_ptr != nullptr;
+  bool compute_maximums = maximums_ptr != nullptr;
   bool kernel_launched = false;
   auto launchKernel = [&](auto _k, auto kernel_fn) {
     using Kernel = decltype(_k);
@@ -125,6 +127,9 @@ void fna_forward_generic(
     p.rpb_ptr = (scalar_t*)rpb_ptr;
     p.logsumexp_ptr = compute_logsumexp
         ? (typename Kernel::lse_scalar_t*)logsumexp_ptr
+        : nullptr;
+    p.maximums_ptr = compute_maximums
+        ? (typename Kernel::max_scalar_t*)maximums_ptr
         : nullptr;
 
     // void* accum_ptr = nullptr;
@@ -188,7 +193,7 @@ void fna_forward_generic(
   };
 
   DISPATCH_FNA_FORWARD_KERNEL(
-      kRank, cc, T, is_causal, has_rpb, compute_logsumexp, launchKernel);
+      kRank, cc, T, is_causal, has_rpb, launchKernel);
   NATTEN_CHECK(
       kernel_launched,
       "Could not find a compatible fused neighborhood attention kernel.");

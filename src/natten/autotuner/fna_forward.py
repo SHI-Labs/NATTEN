@@ -146,6 +146,7 @@ def run_fna_forward(
         v,
         None,  # rpb
         None,  # logsumexp
+        None,  # maximums 
         kernel_size,
         dilation,
         is_causal,

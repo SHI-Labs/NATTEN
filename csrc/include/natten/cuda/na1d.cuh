@@ -50,6 +50,7 @@ void na1d_forward(
     void* out_ptr,
     void* rpb_ptr,
     void* logsumexp_ptr,
+    void* maximums_ptr,
     int32_t batch_size,
     int32_t length,
     int32_t heads,
@@ -82,6 +83,7 @@ void na1d_forward(
         is_causal,
         attn_scale,
         logsumexp_ptr,
+        maximums_ptr,
         query_tile_size,
         key_tile_size);
   } else {

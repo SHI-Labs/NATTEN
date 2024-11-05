@@ -40,6 +40,7 @@ void na2d_forward(
     at::Tensor& out,
     const at::optional<at::Tensor>& rpb,
     const at::optional<at::Tensor>& logsumexp,
+    const at::optional<at::Tensor>& maximums,
     int32_t batch_size,
     int32_t height,
     int32_t width,

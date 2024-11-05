@@ -112,8 +112,7 @@ template <
     int kKeysPerBlock_,
     // upperbound on `max(value.shape[-1], query.shape[-1])`
     int kMaxK_ = (int)cutlass::platform::numeric_limits<uint32_t>::max(),
-    bool kSupportsRPB_ = false,
-    bool kStoresLSE_ = false>
+    bool kSupportsRPB_ = false>
 struct FusedNeighborhoodAttentionKernel {
   static constexpr int NADim = NADim_;
   static_assert(NADim >= 1 && NADim < 4, "Only 1D-3D NA are implemented.");
@@ -129,7 +128,6 @@ struct FusedNeighborhoodAttentionKernel {
   // MapTileSizeToNd<kKeysPerBlock, NADim>::value;
   static constexpr bool kHasCausalDims = CausalMask::AnyCausalDims;
   static constexpr bool kSupportsRPB = kSupportsRPB_;
-  static constexpr bool kStoresLSE = kStoresLSE_;
   static_assert(
       !kSupportsRPB || !kHasCausalDims,
       "Causal NA does not support RPB yet.");
@@ -137,6 +135,7 @@ struct FusedNeighborhoodAttentionKernel {
   using scalar_t = scalar_t_;
   using accum_t = float;
   using lse_scalar_t = float;
+  using max_scalar_t = float;
   using output_t = scalar_t;
   // Accumulator between 2 iterations
   // Using `accum_t` improves perf on f16 at the cost of
@@ -178,6 +177,7 @@ struct FusedNeighborhoodAttentionKernel {
     output_accum_t* output_accum_ptr = nullptr;
     // [num_heads, num_queries_post_partitioning] - can be null
     lse_scalar_t* logsumexp_ptr = nullptr;
+    max_scalar_t* maximums_ptr = nullptr;
 
     // Sliding window. ignored if == 0
     Dim kernel_size;
@@ -197,6 +197,7 @@ struct FusedNeighborhoodAttentionKernel {
     Dim key_tile_shape;
 
     Dim lse_strideM;
+    Dim maximums_strideM;
     Dim q_strideM;
     Dim k_strideM;
     Dim v_strideM;
@@ -288,23 +289,33 @@ struct FusedNeighborhoodAttentionKernel {
         output_accum_ptr = (accum_t*)output_ptr;
       }
 
-      if constexpr (kStoresLSE) {
-        if (logsumexp_ptr != nullptr) {
-          auto lse_stride_dilation = compute_stride(num_queries, num_heads);
-          lse_strideM = lse_stride_dilation * dilation;
+      if (logsumexp_ptr != nullptr) {
+        auto lse_stride_dilation = compute_stride(num_queries, num_heads);
+        lse_strideM = lse_stride_dilation * dilation;
 
-          // NOTE(alih): we don't pad for 128-bit alignment like in xFormers,
-          // because we have to rewrite the vector iterator in the backward
-          // kernel into a gather op.
-          // auto lse_dim = cutlass::ceil_div((int32_t)num_queries.prod32(),
-          // kAlignLSE) * kAlignLSE;
-          // lse[batch_id, query_start, head_id]
-          logsumexp_ptr += batch_id * num_queries.prod32() * num_heads +
-              ((first_query * lse_strideM).sum() +
-               (dilation_idx * lse_stride_dilation).sum()) +
-              head_id;
-        }
+        // NOTE(alih): we don't pad for 128-bit alignment like in xFormers,
+        // because we have to rewrite the vector iterator in the backward
+        // kernel into a gather op.
+        // auto lse_dim = cutlass::ceil_div((int32_t)num_queries.prod32(),
+        // kAlignLSE) * kAlignLSE;
+        // lse[batch_id, query_start, head_id]
+        logsumexp_ptr += batch_id * num_queries.prod32() * num_heads +
+            ((first_query * lse_strideM).sum() +
+             (dilation_idx * lse_stride_dilation).sum()) +
+            head_id;
       }
+      
+      if (maximums_ptr != nullptr){
+          // Following same pattern as lse strides
+          auto maximums_stride_dilation = compute_stride(num_queries, num_heads);
+          maximums_strideM = maximums_stride_dilation * dilation;
+          maximums_ptr += batch_id * num_queries.prod32() * num_heads + 
+              ((first_query * maximums_strideM).sum() +
+               (dilation_idx * maximums_stride_dilation).sum()) +
+              head_id;
+      }
+
+
 
       num_batches = 0; // no longer used after
       // dilation = 0;
@@ -983,7 +994,7 @@ struct FusedNeighborhoodAttentionKernel {
       epilogue(rescale, dest_iter, accum_o);
     }
 
-    if constexpr (kStoresLSE) {
+    if (p.logsumexp_ptr != nullptr) {
       // 7. Calculate logsumexp
       // To make the backward easier, we pad logsumexp with `inf`
       // this avoids a few bound checks, and is not more expensive during fwd
@@ -1002,6 +1013,16 @@ struct FusedNeighborhoodAttentionKernel {
           //  p.logsumexp_ptr[query_offset] =
           //      cutlass::platform::numeric_limits<accum_t>::infinity();
         }
+      }
+    }
+    
+    if (p.maximums_ptr && thread_id() < kQueriesPerBlock){
+      constexpr float kLog2e = 1.4426950408889634074; // log_2(e) = M_LOG2E
+      auto query_idx =
+          map_index_to_coord((int32_t)thread_id(), problem_size_0_m);
+      auto query_offset = (query_idx * p.maximums_strideM).sum();
+      if (is_coord_within_upper_bound(query_idx, problem_size_0_m)) {
+        p.maximums_ptr[query_offset] = mi[thread_id()] / kLog2e; 
       }
     }
   }

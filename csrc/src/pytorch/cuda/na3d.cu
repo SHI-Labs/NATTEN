@@ -46,6 +46,7 @@ void na3d_forward(
     at::Tensor& out,
     const at::optional<at::Tensor>& rpb,
     const at::optional<at::Tensor>& logsumexp,
+    const at::optional<at::Tensor>& maximums,
     int32_t batch_size,
     int32_t depth,
     int32_t height,
@@ -85,6 +86,8 @@ void na3d_forward(
       static_cast<void*>(out.data_ptr()),
       rpb.has_value() ? static_cast<void*>(rpb.value().data_ptr()) : nullptr,
       logsumexp.has_value() ? static_cast<void*>(logsumexp.value().data_ptr())
+                            : nullptr,
+      maximums.has_value() ? static_cast<void*>(maximums.value().data_ptr())
                             : nullptr,
       batch_size,
       depth,
