@@ -42,6 +42,7 @@ class Problem:
         dtype: Any,
         has_bias: bool,
         is_causal: CausalType = None,
+        additional_kv_length: Optional[int] = None,
     ):
         self.na_dim = na_dim
         self.batch_size = batch_size
@@ -54,6 +55,16 @@ class Problem:
         self.dtype = dtype
         self.has_bias = has_bias
         self.is_causal = is_causal or [False for _ in range(na_dim)]
+        self.has_additional_kv = (
+            additional_kv_length is not None and additional_kv_length > 0
+        )
+        self.additional_kv_length = additional_kv_length
+
+    def get_additional_kv_shape(self, fused_layout: bool) -> List:
+        assert self.additional_kv_length is not None
+        if not fused_layout:
+            return [self.batch_size, self.heads, self.additional_kv_length, self.dim]
+        return [self.batch_size, self.additional_kv_length, self.heads, self.dim]
 
     def get_tensor_shape(self, fused_layout: bool) -> List:
         if not fused_layout:
@@ -107,6 +118,7 @@ def generate_1d_problem(
     dtype: Any,
     has_bias: bool,
     is_causal: CausalType = None,
+    additional_kv_length: Optional[int] = None,
 ) -> Problem:
     return Problem(
         na_dim=1,
@@ -119,6 +131,7 @@ def generate_1d_problem(
         dtype=dtype,
         has_bias=has_bias,
         is_causal=is_causal,
+        additional_kv_length=additional_kv_length,
     )
 
 
@@ -133,6 +146,7 @@ def generate_2d_problem(
     dtype: Any,
     has_bias: bool,
     is_causal: CausalType = None,
+    additional_kv_length: Optional[int] = None,
 ) -> Problem:
     return Problem(
         na_dim=2,
@@ -145,6 +159,7 @@ def generate_2d_problem(
         dtype=dtype,
         has_bias=has_bias,
         is_causal=is_causal,
+        additional_kv_length=additional_kv_length,
     )
 
 
@@ -160,6 +175,7 @@ def generate_3d_problem(
     dtype: Any,
     has_bias: bool,
     is_causal: CausalType = None,
+    additional_kv_length: Optional[int] = None,
 ) -> Problem:
     return Problem(
         na_dim=3,
@@ -172,4 +188,5 @@ def generate_3d_problem(
         dtype=dtype,
         has_bias=has_bias,
         is_causal=is_causal,
+        additional_kv_length=additional_kv_length,
     )

@@ -55,6 +55,7 @@ from utils import (
 @click.option("--fmha", is_flag=True)
 @click.option("--fav2", is_flag=True)
 @click.option("--backprop", is_flag=True)
+@click.option("--add-kv", default=0)
 def profile_1d(
     batch_size: int,
     heads: int,
@@ -74,6 +75,7 @@ def profile_1d(
     fmha: bool,
     fav2: bool,
     backprop: bool,
+    add_kv: int,
 ):
 
     dtype = torch.float32
@@ -112,6 +114,8 @@ def profile_1d(
         dilation=dilation,
         dtype=dtype,
         has_bias=bias,
+        is_causal=causal,
+        additional_kv_length=add_kv,
     )
     logged_ops = func(
         problem=problem,

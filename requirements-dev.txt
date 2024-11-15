@@ -7,3 +7,4 @@ mypy==1.8.0
 pytest==7.4.4
 click==8.1.7
 rich
+xformers>=0.25.0

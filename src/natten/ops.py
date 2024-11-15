@@ -21,6 +21,8 @@
 #
 #################################################################################################
 
+from typing import Dict, Optional, Tuple
+
 import torch
 from torch import Tensor
 
@@ -91,3 +93,84 @@ def av_cross_backward(
     )
     torch.matmul(attn_transposed_bmm_view, d_out_bmm_view, out=d_value_bmm_view)
     torch.matmul(d_out_bmm_view, value_transposed_bmm_view, out=d_attn_bmm_view)
+
+
+def additional_sdpa(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    scale: Optional[float] = None,
+    attn_kwargs: Optional[Dict] = None,
+) -> Tuple[Tensor, Tensor]:
+    try:
+        from xformers.ops.fmha import memory_efficient_attention_partial  # type: ignore
+    except ImportError:
+        raise ImportError(
+            "Using additional KVs with Fused NA requires xFormers "
+            ">= v0.0.25. Please make sure this requirement is "
+            "satisfied, and if so, open an issue."
+        )
+
+    batch = query.shape[0]
+    heads, dim = query.shape[-2], query.shape[-1]
+    query = query.reshape(batch, -1, heads, dim)
+
+    key = key.reshape(batch, -1, heads, dim)
+    value = value.reshape(batch, -1, heads, dim)
+
+    additional_kwargs = attn_kwargs or {}
+    if "scale" not in additional_kwargs:
+        additional_kwargs["scale"] = scale
+
+    output, lse = memory_efficient_attention_partial(
+        query=query,
+        key=key,
+        value=value,
+        **additional_kwargs,
+    )
+
+    return output, lse
+
+
+@torch.compile(fullgraph=True)
+def merge_attentions(
+    output_fna: Tensor, output_sdpa: Tensor, lse_fna: Tensor, lse_sdpa: Tensor
+) -> Tensor:
+
+    assert (
+        output_sdpa.dim() == 4
+    ), "SDPA output must be a rank-4 tensor with (batch, seq, heads, dim) modes."
+    input_shape = output_sdpa.shape
+    output_shape = output_fna.shape
+    batch, seqlen, heads, dim = input_shape
+
+    accum_type = torch.float32
+    output_type = output_fna.dtype
+
+    lse_0 = lse_fna.reshape(batch, seqlen, heads).to(accum_type)
+    lse_1 = lse_sdpa.reshape(batch, heads, seqlen).to(accum_type).permute(0, 2, 1)
+
+    output_0 = output_fna.reshape(input_shape).to(accum_type)
+    output_1 = output_sdpa.reshape(input_shape).to(accum_type)
+
+    sum_of_exps_0 = lse_0.exp().unsqueeze(-1).expand(*input_shape)
+    sum_of_exps_1 = lse_1.exp().unsqueeze(-1).expand(*input_shape)
+
+    assert sum_of_exps_0.shape == sum_of_exps_1.shape == output_0.shape
+
+    output_0_rescaled = output_0 * sum_of_exps_0
+    output_1_rescaled = output_1 * sum_of_exps_1
+
+    assert output_0_rescaled.shape == output_1_rescaled.shape == output_0.shape
+
+    sum_of_exps = sum_of_exps_0 + sum_of_exps_1
+
+    output = (output_0_rescaled + output_1_rescaled) / sum_of_exps
+
+    assert (
+        output.shape == output_0.shape
+    ), f"Output shape {output.shape=} doesn't match input shape {output_0.shape=}"
+
+    output = output.reshape(output_shape).to(output_type)
+
+    return output

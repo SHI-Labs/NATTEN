@@ -38,7 +38,9 @@ from .problem import Problem
 
 def init_tensors(
     problem: Problem, flatten_sequence: bool, heads_last: bool
-) -> Tuple[Tensor, Tensor, Tensor, Tensor, Optional[Tensor]]:
+) -> Tuple[
+    Tensor, Tensor, Tensor, Tensor, Optional[Tensor], Optional[Tuple[Tensor, Tensor]]
+]:
     q = torch.randn(
         (
             problem.get_flattened_tensor_shape(True)
@@ -58,7 +60,20 @@ def init_tensors(
             dtype=problem.dtype,
             requires_grad=False,
         )
-    return q, k, v, d_out, bias
+
+    add_kv = None
+    if problem.has_additional_kv:
+        assert not flatten_sequence
+        add_k = torch.randn(
+            (problem.get_additional_kv_shape(heads_last)),
+            device="cuda",
+            dtype=problem.dtype,
+            requires_grad=False,
+        )
+        add_v = torch.randn_like(add_k)
+        add_kv = (add_k, add_v)
+
+    return q, k, v, d_out, bias, add_kv
 
 
 def _profile_na_with_torch(
@@ -72,7 +87,7 @@ def _profile_na_with_torch(
         problem.na_dim, problem.kernel_size, problem.dilation, problem.is_causal
     )
 
-    query, key, value, d_out, bias = init_tensors(
+    query, key, value, d_out, bias, additional_kv = init_tensors(
         problem, flatten_sequence=False, heads_last=fuse
     )
 
@@ -91,10 +106,17 @@ def _profile_na_with_torch(
             dilation,
             is_causal,
             disable_backward,
+            additional_kv,
         ):
             query.requires_grad = not disable_backward
             key.requires_grad = not disable_backward
             value.requires_grad = not disable_backward
+            additional_keys, additional_values = (
+                (None, None) if additional_kv is None else additional_kv
+            )
+            if additional_kv is not None:
+                additional_keys.requires_grad = not disable_backward
+                additional_values.requires_grad = not disable_backward
             out = fused_op(
                 query,
                 key,
@@ -103,6 +125,8 @@ def _profile_na_with_torch(
                 dilation=dilation,
                 is_causal=is_causal,
                 rpb=bias,
+                additional_keys=additional_keys,
+                additional_values=additional_values,
             )
             if not disable_backward:
                 out.backward(d_out)
@@ -119,12 +143,20 @@ def _profile_na_with_torch(
             dilation,
             is_causal,
             disable_backward,
+            additional_kv,
         ):
             query.requires_grad = not disable_backward
             key.requires_grad = not disable_backward
             value.requires_grad = not disable_backward
             if bias is not None:
                 bias.requires_grad = not disable_backward
+
+            additional_keys, additional_values = (
+                (None, None) if additional_kv is None else additional_kv
+            )
+            if additional_kv is not None:
+                additional_keys.requires_grad = not disable_backward
+                additional_values.requires_grad = not disable_backward
             attn = qk_op(
                 query,
                 key,
@@ -132,6 +164,7 @@ def _profile_na_with_torch(
                 dilation=dilation,
                 is_causal=is_causal,
                 rpb=bias,
+                additional_keys=additional_keys,
             )
             # NOTE: not multiplying by attention scale, since can be trivially fused
             # into any kernel or op.
@@ -142,6 +175,7 @@ def _profile_na_with_torch(
                 kernel_size=kernel_size,
                 dilation=dilation,
                 is_causal=is_causal,
+                additional_values=additional_values,
             )
             if not disable_backward:
                 out.backward(d_out)
@@ -155,16 +189,13 @@ def _profile_na_with_torch(
                 d_out.clone(),
                 None if bias is None else bias.clone(),
             )
+            add_kv = (
+                None
+                if additional_kv is None
+                else (additional_kv[0].clone(), additional_kv[1].clone())
+            )
         run_ops(
-            q,
-            k,
-            v,
-            rpb,
-            do,
-            kernel_size,
-            dilation,
-            is_causal,
-            disable_backward,
+            q, k, v, rpb, do, kernel_size, dilation, is_causal, disable_backward, add_kv
         )
 
     with torch.no_grad():
@@ -174,6 +205,11 @@ def _profile_na_with_torch(
             value.clone(),
             d_out.clone(),
             None if bias is None else bias.clone(),
+        )
+        add_kv = (
+            None
+            if additional_kv is None
+            else (additional_kv[0].clone(), additional_kv[1].clone())
         )
 
     with torch_profile(activities=[ProfilerActivity.CUDA], record_shapes=True) as prof:
@@ -188,6 +224,7 @@ def _profile_na_with_torch(
                 dilation,
                 is_causal,
                 disable_backward,
+                add_kv,
             )
 
     return prof
@@ -241,7 +278,10 @@ def _profile_fmha_with_torch(
     disable_backward: Optional[bool] = False,
 ) -> torch_profile:
     op = fmha if xformers else fav2
-    query, key, value, d_out, bias = init_tensors(
+    assert (
+        not problem.has_additional_kv
+    ), "Profiling FMHA/FA with additional KV is not supported."
+    query, key, value, d_out, bias, additional_kv = init_tensors(
         problem, flatten_sequence=True, heads_last=True
     )
 

@@ -48,12 +48,14 @@ from utils import (
 @click.option("--fp16", is_flag=True)
 @click.option("--bf16", is_flag=True)
 @click.option("--bias", is_flag=True)
+@click.option("--causal", is_flag=True)
 @click.option("--disable-autotuner", is_flag=True)
 @click.option("--warmup-steps", default=10)
 @click.option("--fuse", is_flag=True)
 @click.option("--fmha", is_flag=True)
 @click.option("--fav2", is_flag=True)
 @click.option("--backprop", is_flag=True)
+@click.option("--add-kv", default=0)
 def profile_3d(
     batch_size: int,
     heads: int,
@@ -66,12 +68,14 @@ def profile_3d(
     fp16: bool,
     bf16: bool,
     bias: bool,
+    causal: bool,
     disable_autotuner: bool,
     warmup_steps: int,
     fuse: bool,
     fmha: bool,
     fav2: bool,
     backprop: bool,
+    add_kv: int,
 ):
 
     dtype = torch.float32
@@ -107,6 +111,8 @@ def profile_3d(
         dilation=dilation,
         dtype=dtype,
         has_bias=bias,
+        is_causal=causal,
+        additional_kv_length=add_kv,
     )
     logged_ops = func(
         problem=problem,
