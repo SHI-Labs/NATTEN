@@ -21,7 +21,7 @@
 #
 #################################################################################################
 import functools
-from typing import Any, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -31,11 +31,14 @@ torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
 
 if torch_ver >= [2, 4]:
     from torch.amp import custom_bwd, custom_fwd
+
     amp_fwd = functools.partial(custom_fwd, device_type="cuda")
     amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 else:
-    from torch.cuda.amp import custom_fwd as amp_fwd
-    from torch.cuda.amp import custom_bwd as amp_bwd
+    from torch.cuda.amp import (  # type: ignore
+        custom_bwd as amp_bwd,
+        custom_fwd as amp_fwd,
+    )
 
 try:
     from natten import libnatten  # type: ignore
@@ -57,8 +60,10 @@ from .nested import (
     na3d_qk_nested,
 )
 from .ops import (
+    additional_sdpa,
     av_cross_backward,
     av_cross_forward,
+    merge_attentions,
     qk_cross_backward,
     qk_cross_forward,
 )
@@ -1147,7 +1152,7 @@ class FusedNeighborhoodAttention1D(Function):
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         kernel_size, dilation, is_causal = check_all_args(
             1, kernel_size_, dilation_, is_causal_
         )
@@ -1197,7 +1202,7 @@ class FusedNeighborhoodAttention1D(Function):
         ctx.tiling_config_backward = tiling_config_backward
         ctx.has_bias = bias is not None
 
-        return output
+        return output, logsumexp
 
     @staticmethod
     def jvp(ctx, *grad_inputs: Any) -> Tensor:
@@ -1207,7 +1212,7 @@ class FusedNeighborhoodAttention1D(Function):
 
     @staticmethod
     @amp_bwd
-    def backward(ctx, grad_out: Tensor) -> Tuple[
+    def backward(ctx, grad_out: Tensor, grad_lse: Tensor) -> Tuple[
         Tensor,
         Tensor,
         Tensor,
@@ -1284,7 +1289,7 @@ class FusedNeighborhoodAttention2D(Function):
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         kernel_size, dilation, is_causal = check_all_args(
             2, kernel_size_, dilation_, is_causal_
         )
@@ -1334,7 +1339,7 @@ class FusedNeighborhoodAttention2D(Function):
         ctx.tiling_config_backward = tiling_config_backward
         ctx.has_bias = bias is not None
 
-        return output
+        return output, logsumexp
 
     @staticmethod
     def jvp(ctx, *grad_inputs: Any) -> Tensor:
@@ -1344,7 +1349,7 @@ class FusedNeighborhoodAttention2D(Function):
 
     @staticmethod
     @amp_bwd
-    def backward(ctx, grad_out: Tensor) -> Tuple[
+    def backward(ctx, grad_out: Tensor, grad_lse: Tensor) -> Tuple[
         Tensor,
         Tensor,
         Tensor,
@@ -1421,7 +1426,7 @@ class FusedNeighborhoodAttention3D(Function):
         scale: float,
         tiling_config_: FnaForwardConfigType,
         tiling_config_backward_: FnaBackwardConfigType,
-    ) -> Tensor:
+    ) -> Tuple[Tensor, Tensor]:
         kernel_size, dilation, is_causal = check_all_args(
             3, kernel_size_, dilation_, is_causal_
         )
@@ -1471,7 +1476,7 @@ class FusedNeighborhoodAttention3D(Function):
         ctx.tiling_config_backward = tiling_config_backward
         ctx.has_bias = bias is not None
 
-        return output
+        return output, logsumexp
 
     @staticmethod
     def jvp(ctx, *grad_inputs: Any) -> Tensor:
@@ -1481,7 +1486,7 @@ class FusedNeighborhoodAttention3D(Function):
 
     @staticmethod
     @amp_bwd
-    def backward(ctx, grad_out: Tensor) -> Tuple[
+    def backward(ctx, grad_out: Tensor, grad_lse: Tensor) -> Tuple[
         Tensor,
         Tensor,
         Tensor,
@@ -1701,6 +1706,9 @@ def na1d(
     is_causal: Optional[CausalArg1DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
+    additional_keys: Optional[Tensor] = None,
+    additional_values: Optional[Tensor] = None,
+    xformers_kwargs: Optional[Dict] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
@@ -1712,7 +1720,7 @@ def na1d(
     )
     scale = scale or query.shape[-1] ** -0.5
 
-    return FusedNeighborhoodAttention1D.apply(
+    output, lse = FusedNeighborhoodAttention1D.apply(
         query,
         key,
         value,
@@ -1724,6 +1732,25 @@ def na1d(
         tiling_config_forward,
         tiling_config_backward,
     )
+
+    if additional_keys is not None and additional_values is not None:
+        if additional_keys is None or additional_values is None:
+            raise ValueError(
+                "Both `additional_keys` and `additional_values` must be "
+                "either Tensors or NoneTypes."
+            )
+
+        additional_output, additional_lse = additional_sdpa(
+            query,
+            additional_keys,
+            additional_values,
+            scale=scale,
+            attn_kwargs=xformers_kwargs,
+        )
+
+        return merge_attentions(output, additional_output, lse, additional_lse)
+
+    return output
 
 
 def na2d(
@@ -1735,6 +1762,9 @@ def na2d(
     is_causal: Optional[CausalArg2DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
+    additional_keys: Optional[Tensor] = None,
+    additional_values: Optional[Tensor] = None,
+    xformers_kwargs: Optional[Dict] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
@@ -1746,7 +1776,7 @@ def na2d(
     )
     scale = scale or query.shape[-1] ** -0.5
 
-    return FusedNeighborhoodAttention2D.apply(
+    output, lse = FusedNeighborhoodAttention2D.apply(
         query,
         key,
         value,
@@ -1758,6 +1788,25 @@ def na2d(
         tiling_config_forward,
         tiling_config_backward,
     )
+
+    if additional_keys is not None and additional_values is not None:
+        if additional_keys is None or additional_values is None:
+            raise ValueError(
+                "Both `additional_keys` and `additional_values` must be "
+                "either Tensors or NoneTypes."
+            )
+
+        additional_output, additional_lse = additional_sdpa(
+            query,
+            additional_keys,
+            additional_values,
+            scale=scale,
+            attn_kwargs=xformers_kwargs,
+        )
+
+        return merge_attentions(output, additional_output, lse, additional_lse)
+
+    return output
 
 
 def na3d(
@@ -1769,6 +1818,9 @@ def na3d(
     is_causal: Optional[CausalArg3DTypeOrDed] = False,
     rpb: Optional[Tensor] = None,
     scale: Optional[float] = None,
+    additional_keys: Optional[Tensor] = None,
+    additional_values: Optional[Tensor] = None,
+    xformers_kwargs: Optional[Dict] = None,
 ) -> Tensor:
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
@@ -1780,7 +1832,7 @@ def na3d(
     )
     scale = scale or query.shape[-1] ** -0.5
 
-    return FusedNeighborhoodAttention3D.apply(
+    output, lse = FusedNeighborhoodAttention3D.apply(
         query,
         key,
         value,
@@ -1792,6 +1844,25 @@ def na3d(
         tiling_config_forward,
         tiling_config_backward,
     )
+
+    if additional_keys is not None and additional_values is not None:
+        if additional_keys is None or additional_values is None:
+            raise ValueError(
+                "Both `additional_keys` and `additional_values` must be "
+                "either Tensors or NoneTypes."
+            )
+
+        additional_output, additional_lse = additional_sdpa(
+            query,
+            additional_keys,
+            additional_values,
+            scale=scale,
+            attn_kwargs=xformers_kwargs,
+        )
+
+        return merge_attentions(output, additional_output, lse, additional_lse)
+
+    return output
 
 
 #################################################################################################

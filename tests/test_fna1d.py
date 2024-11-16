@@ -64,6 +64,10 @@ def _reset_everything():
     torch.backends.cudnn.benchmark = False
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
+    torch.manual_seed(42)
+
+    # Attention merge recompilation requires this
+    torch._dynamo.config.cache_size_limit = 64
 
 
 HAS_HALF = has_half()
@@ -75,7 +79,16 @@ def check_args(kernel_size, dilation, is_causal):
 
 
 def compute_bmm_reference(
-    B, H, L, D, kernel_size, dilation, has_bias, is_causal=None, dtype=torch.float32
+    B,
+    H,
+    L,
+    D,
+    kernel_size,
+    dilation,
+    has_bias,
+    is_causal=None,
+    dtype=torch.float32,
+    additional_kv_length=0,
 ):
     kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
     assert not has_bias or not any(is_causal)
@@ -84,7 +97,7 @@ def compute_bmm_reference(
             torch.randn((B, H, L, D), device="cuda", dtype=dtype),
             torch.randn((B, H, L, D), device="cuda", dtype=dtype),
             torch.randn((B, H, L, D), device="cuda", dtype=dtype),
-            torch.randn((B, H, L, D), device="cuda", dtype=dtype),
+            torch.randn((B, H, L, D), device="cuda", dtype=dtype) * 0.05,
         )
         rpb = (
             None
@@ -99,11 +112,30 @@ def compute_bmm_reference(
         )
         rpb_ = None if rpb is None else rpb.clone()
 
+        additional_k, additional_v = None, None
+        additional_k_, additional_v_ = None, None
+        if additional_kv_length > 0:
+            additional_k, additional_v = (
+                torch.randn(
+                    (B, H, additional_kv_length, D), device="cuda", dtype=dtype
+                ),
+                torch.randn(
+                    (B, H, additional_kv_length, D), device="cuda", dtype=dtype
+                ),
+            )
+            additional_k_, additional_v_ = (
+                additional_k.clone().permute(0, 2, 1, 3).contiguous(),
+                additional_v.clone().permute(0, 2, 1, 3).contiguous(),
+            )
+
     if rpb is None:
         q = q.requires_grad_(True)
         k = k.requires_grad_(True)
         v = v.requires_grad_(True)
         d_out = d_out.requires_grad_(True)
+        if additional_kv_length > 0:
+            additional_k = additional_k.requires_grad_(True)
+            additional_v = additional_v.requires_grad_(True)
 
     q_scaled = q * (D**-0.5)
     attn_ref = na1d_qk(
@@ -113,6 +145,7 @@ def compute_bmm_reference(
         dilation=dilation,
         is_causal=is_causal,
         rpb=rpb,
+        additional_keys=additional_k,
     )
     attn_ref = attn_ref.softmax(dim=-1)
     out = na1d_av(
@@ -121,10 +154,12 @@ def compute_bmm_reference(
         kernel_size=kernel_size,
         dilation=dilation,
         is_causal=is_causal,
+        additional_values=additional_v,
     )
     with torch.no_grad():
         out_ref = out.clone().permute(0, 2, 1, 3).contiguous()
     dq_ref, dk_ref, dv_ref = None, None, None
+    d_additional_k, d_additional_v = None, None
     if rpb is None:
         out.backward(d_out)
         with torch.no_grad():
@@ -133,11 +168,32 @@ def compute_bmm_reference(
                 k.grad.clone().permute(0, 2, 1, 3).contiguous(),
                 v.grad.clone().permute(0, 2, 1, 3).contiguous(),
             )
-    return (q_, k_, v_, d_out_, rpb_, kernel_size, dilation, is_causal), (
+            if additional_kv_length > 0:
+                d_additional_k = (
+                    additional_k.grad.clone().permute(0, 2, 1, 3).contiguous()
+                )
+                d_additional_v = (
+                    additional_v.grad.clone().permute(0, 2, 1, 3).contiguous()
+                )
+
+    return (
+        q_,
+        k_,
+        v_,
+        d_out_,
+        rpb_,
+        kernel_size,
+        dilation,
+        is_causal,
+        additional_k_,
+        additional_v_,
+    ), (
         out_ref,
         dq_ref,
         dk_ref,
         dv_ref,
+        d_additional_k,
+        d_additional_v,
     )
 
 
@@ -184,19 +240,41 @@ class FNA1DTests(unittest.TestCase):
         _reset_everything()
 
     def _test_against_reference(self, inputs, reference, eps, dtype):
-        q, k, v, d_out, rpb, kernel_size, dilation, is_causal = inputs
+        (
+            q,
+            k,
+            v,
+            d_out,
+            rpb,
+            kernel_size,
+            dilation,
+            is_causal,
+            additional_k,
+            additional_v,
+        ) = inputs
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
-        out_ref, dq_ref, dk_ref, dv_ref = reference
+        out_ref, dq_ref, dk_ref, dv_ref, d_additional_k, d_additional_v = reference
         q_, k_, v_ = q.clone().to(dtype), k.clone().to(dtype), v.clone().to(dtype)
         d_out_ = d_out.clone()
         rpb_ = rpb if rpb is None else rpb.clone().to(dtype)
         assert q_.is_cuda and k_.is_cuda and v_.is_cuda
+
+        has_additional_kv = additional_k is not None and additional_v is not None
+        assert has_additional_kv or (additional_k is None and additional_v is None)
+        additional_k_, additional_v_ = None, None
+        if has_additional_kv:
+            additional_k_, additional_v_ = additional_k.clone().to(
+                dtype
+            ), additional_v.clone().to(dtype)
 
         if rpb is None:
             q_.requires_grad_(True)
             k_.requires_grad_(True)
             v_.requires_grad_(True)
             d_out_.requires_grad_(True)
+            if has_additional_kv:
+                additional_k_.requires_grad_(True)
+                additional_v_.requires_grad_(True)
 
         out = na1d(
             q_,
@@ -206,6 +284,8 @@ class FNA1DTests(unittest.TestCase):
             dilation=dilation,
             is_causal=is_causal,
             rpb=rpb_,
+            additional_keys=additional_k_,
+            additional_values=additional_v_,
         )
 
         torch.testing.assert_close(out.float(), out_ref, atol=eps, rtol=0)
@@ -215,6 +295,14 @@ class FNA1DTests(unittest.TestCase):
             torch.testing.assert_close(q_.grad.float(), dq_ref, atol=eps, rtol=0)
             torch.testing.assert_close(k_.grad.float(), dk_ref, atol=eps, rtol=0)
             torch.testing.assert_close(v_.grad.float(), dv_ref, atol=eps, rtol=0)
+
+            if has_additional_kv:
+                torch.testing.assert_close(
+                    additional_v_.grad.float(), d_additional_v, atol=eps, rtol=0
+                )
+                torch.testing.assert_close(
+                    additional_k_.grad.float(), d_additional_k, atol=eps, rtol=0
+                )
 
     def _test_all_dtypes_against_bmm_style(
         self,
@@ -226,6 +314,7 @@ class FNA1DTests(unittest.TestCase):
         dilation,
         has_bias=False,
         is_causal=None,
+        additional_kv_length=0,
     ):
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         assert not has_bias or not any(is_causal)
@@ -239,6 +328,7 @@ class FNA1DTests(unittest.TestCase):
             has_bias=has_bias,
             is_causal=is_causal,
             dtype=torch.float32,
+            additional_kv_length=additional_kv_length,
         )
 
         for autotune in [False, True]:
@@ -259,12 +349,14 @@ class FNA1DTests(unittest.TestCase):
             else:
                 use_autotuner(False, False, False, False)
 
-            self._test_against_reference(
-                inputs=inputs,
-                reference=reference,
-                dtype=torch.float32,
-                eps=1e-2,
-            )
+            # xFormers' cutlass backend doesn't support partial attention.
+            if additional_kv_length == 0:
+                self._test_against_reference(
+                    inputs=inputs,
+                    reference=reference,
+                    dtype=torch.float32,
+                    eps=1e-2,
+                )
             if HAS_HALF:
                 self._test_against_reference(
                     inputs=inputs,
@@ -301,16 +393,18 @@ class FNA1DTests(unittest.TestCase):
             (1, 48, 512, 256, 45, 4),
         ]
         for B, H, L, D, kernel_size, dilation in problem_sizes:
-            for is_causal in [False, True]:
-                self._test_all_dtypes_against_bmm_style(
-                    B=B,
-                    H=H,
-                    L=L,
-                    D=D,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    is_causal=is_causal,
-                )
+            for additional_kv_length in [0, 64, L]:
+                for is_causal in [False, True]:
+                    self._test_all_dtypes_against_bmm_style(
+                        B=B,
+                        H=H,
+                        L=L,
+                        D=D,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        is_causal=is_causal,
+                        additional_kv_length=additional_kv_length,
+                    )
             self._test_all_dtypes_against_bmm_style(
                 B=B,
                 H=H,

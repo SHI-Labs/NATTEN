@@ -1,6 +1,16 @@
 # Changelog
 
 ## [Main branch]
+* Support for additional KV tokens in FNA (requires xFormers)
+  * Adds experimental support for additional KV tokens (attend to local neighborhood, and some
+  additional context) to FNA interfaces, with training support.
+  * The attention branch between Q and additional KVs runs with xFormers, which targets FAv2.
+  Eventually, we'd want this branch to use PyTorch's SDPA directly, but as of now, there is no
+  SDPA interface that returns logsumexp along with the output, which makes this impossible.
+  * Reduction is done in pure torch, and if possible will be fused into a single op with torch
+  compile.
+  * In theory, any number of different attentions can be merged in this way, but the interface only
+  allows one additional KV set for now.
 
 ## [0.17.3] - 2024-11-01
 * Bug fix for torch < 2.4
