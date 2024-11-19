@@ -145,7 +145,7 @@ def get_default_tiling_config_for_fna_backward(
 ) -> FnaBackwardConfigType:
     assert na_dim > 0 and na_dim < 4
     assert input_tensor.dim() == na_dim + 3
-    spatial_extent = tuple(x for x in input_tensor.shape[1 : na_dim + 1])
+    spatial_extent = tuple(int(x) for x in input_tensor.shape[1 : na_dim + 1])
     assert len(spatial_extent) == na_dim and all(
         isinstance(x, int) for x in spatial_extent
     )
