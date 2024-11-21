@@ -39,7 +39,7 @@ def _reset_everything():
     natten.use_tiled_na()
     natten.use_gemm_na()
     natten.use_tf32_in_gemm_na()
-    torch.use_deterministic_algorithms(False)
+    natten.use_fused_na(False, kv_parallel=False)
     os.environ["NATTEN_LOG_LEVEL"] = "CRITICAL"
 
 
