@@ -34,6 +34,13 @@ _HAS_GEMM_KERNELS = has_gemm()
 _GEMM_WITH_DOUBLE_PRECISION = has_fp64_gemm()
 _HAS_FNA_KERNELS = has_fna()
 
+try:
+    import fvcore  # type: ignore  # noqa: F401
+
+    _IS_FVCORE_AVAILABLE = True
+except ImportError:
+    _IS_FVCORE_AVAILABLE = False
+
 
 def skip_if_cuda_is_not_supported():
     def decorator(f):
@@ -100,6 +107,19 @@ def skip_if_nested_is_not_supported():
                 self.skipTest(
                     "Nested tensors are not supported with this torch version."
                 )
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def skip_if_fvcore_is_not_available():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if not _IS_FVCORE_AVAILABLE:
+                self.skipTest("fvcore is not installed.")
             else:
                 return f(self, *args, **kwargs)
 
