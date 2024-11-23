@@ -25,10 +25,11 @@
             <p class="author">Neighborhood Attention Extension</p>
             <p class="author">Bringing attention to a neighborhood near you!</p>
             <p class="abstract">
-               NATTEN is an extension to PyTorch, which provides the first fast sliding window attention with efficient CPU and CUDA kernels. 
-               It provides <a href="https://arxiv.org/abs/2204.07143">Neighborhood Attention</a> (local attention)
+               NATTEN is a PyTorch extension implementing
+               <a href="https://arxiv.org/abs/2204.07143">Neighborhood Attention</a> (local attention)
                and <a href="https://arxiv.org/abs/2209.15001">Dilated Neighborhood Attention</a> 
-               (sparse global attention, a.k.a. dilated local attention) as PyTorch modules for 1D, 2D, and 3D data.
+               (sparse global attention, a.k.a. dilated local attention) as PyTorch modules  and ops
+               for 1D, 2D, and 3D data.
             </p>
             <p class="abstract">
               Start using our new <a href="https://arxiv.org/abs/2403.04690">Fused Neighborhood Attention</a> implementation
@@ -231,16 +232,88 @@
               </div>
           </div>
           <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.17.3</pre></p>
-          <p>Careful though, without pre-compiled wheels installing might take a while.</p>
-          <p>You're also required to have CUDA &gt; 11.7, cmake &gt; 3.20 and PyTorch &gt; 2.0 installed before attempting to install/build NATTEN.</p>
+          <p>Please note that without pre-compiled wheels, installing might take a while, as it will
+          involve compiling NATTEN kernels on your device. In that case, compiler tools are required
+          as well.</p>
+          <p>If you're using an NVIDIA GPU, you're also required to have CUDA Toolkit &gt; 11.7, cmake &gt; 3.20 and PyTorch &gt; 2.0 installed before attempting to install/build NATTEN.</p>
+          <p>NATTEN does not have pre-compiled wheels for Windows, but you can try 
+            <a href="https://github.com/SHI-Labs/NATTEN/blob/main/docs/install.md#windows">building from
+            source</a>.</p> 
+          <p>For more information, please refer to <a href="https://github.com/SHI-Labs/NATTEN/blob/main/docs/install.md">our docs</a>.</p>
           <p></p>
+          <p><h3>CUDA help</h3></p>
           <p>Don't know your torch/cuda version? 
           Run this: <pre class="tight">python3 -c "import torch; print(torch.__version__)"</pre></p>
-          <p><em>Note: the CUDA version refers to your torch build, not the actual CUDA version you have installed, which may be higher.</em></p>
-          <p>Make sure your Python version ∈ [3.8, 3.12].</p>
-          <p>NATTEN does not have pre-compiled wheels for Windows (you can try building from source). </p> 
-          <p>PRs and contributions are appreciated.</p>
+          <p><em>Note: the CUDA version above refers to the version of the compiler which compiled your torch build,
+              not the actual version of CUDA toolkit you may have installed locally.</em></p>
+          <p>Run this to check if you have the CUDA compiler: <pre class="tight">which nvcc</pre></p>
+          <p>and if you do, run this to check the version: <pre class="tight">nvcc --version</pre></p>
+          <p>If you don't have the CUDA toolkit, and just want to know which torch and NATTEN build is
+          best for you, check your driver version with: <pre class="tight">nvidia-smi</pre></p>
+          <p>Once you know your driver version,
+            <a href="https://docs.nvidia.com/cuda/cuda-toolkit-release-notes/index.html#id5">match it with the corresponding CUDA toolkit version</a>.</p>
           <p></p>
+          <p></p>
+        </div>
+    </div>
+</div>
+<div class="container news mt-4">
+    <div class="title row">
+        <div class="col-lg-12">
+            <p class="h2">Quick links</p>
+        </div>
+        <div class="col-lg-12">
+          <p><a href="https://github.com/SHI-Labs/NATTEN/blob/main/docs/install.md">Install / build from source guide</a></p>
+          <p><a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna">Fused neighborhood attention quickstart</a></p>
+          <p><a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/">NATTEN docs</a></p>
+        </div>
+    </div>
+</div>
+<div class="container news mt-4">
+    <div class="title row">
+        <div class="col-lg-12">
+            <p class="h2">Learn more about neighborhood attention</p>
+        </div>
+        <div class="col-lg-12">
+          <p><a href="https://www.youtube.com/watch?v=Ya4BfioxIHA">Presentation recording: Neighborhood Attention (CVPR 2023)</a></p>
+          <p><a href="https://www.youtube.com/watch?v=RCnlwtt7fUw">Presentation recording: Fused Neighborhood Attention (NeurIPS 2024)</a></p>
+        </div>
+    </div>
+</div>
+<div class="container citation mt-4">
+    <div class="title row">
+        <div class="col-lg-12">
+            <p class="h2">Citation</p>
+        </div>
+        <div class="col-lg-12">
+            <p>Please consider citing our most recent work on NATTEN:</p>
+            <p></p>
+            <p>
+<pre><code>@inproceedings{hassani2024faster,
+  title        = {Faster Neighborhood Attention: Reducing the O(n^2) Cost of Self Attention at the Threadblock Level},
+  author       = {Ali Hassani and Wen-Mei Hwu and Humphrey Shi},
+  year         = 2024,
+  booktitle    = {Advances in Neural Information Processing Systems},
+}</code></pre></p>
+            <p></p>
+            <p>and the original Neighborhood Attention Transformer papers:</p>
+            <p></p>
+            <p>
+<pre><code>@inproceedings{hassani2023neighborhood,
+  title        = {Neighborhood Attention Transformer},
+  author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
+  year         = 2023,
+  booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
+}
+@misc{hassani2022dilated,
+  title        = {Dilated Neighborhood Attention Transformer},
+  author       = {Ali Hassani and Humphrey Shi},
+  year         = 2022,
+  url          = {https://arxiv.org/abs/2209.15001},
+  eprint       = {2209.15001},
+  archiveprefix = {arXiv},
+  primaryclass = {cs.CV}
+}</code></pre></p>
         </div>
     </div>
 </div>
@@ -252,8 +325,8 @@
     </div>
     <div class="row">
         <div class="col-lg-12">
-          <p>We're only able to support the most recent major torch releases starting 2024.
-            If you're using an older torch / CUDA build, you can still installer previous NATTEN releases.</p>
+          <p>We're only able to support a few of the most recent major torch releases starting 2024.
+            If you're using an older torch / CUDA build, you can still install previous NATTEN releases.</p>
           <p></p>
           <ul class="nav nav-tabs" id="torchTab" role="tablist">
               <li class="nav-item" role="presentation">
@@ -527,54 +600,6 @@
               </div>
           </div>
           <p></p>
-        </div>
-    </div>
-</div>
-<div class="container news mt-4">
-    <div class="title row">
-        <div class="col-lg-12">
-            <p class="h2">Quick links</p>
-        </div>
-        <div class="col-lg-12">
-          <p><a href="https://github.com/SHI-Labs/NATTEN/blob/main/docs/install.md">Install / build from source guide</a></p>
-          <p><a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/fna">Fused neighborhood attention quickstart</a></p>
-          <p><a href="https://github.com/SHI-Labs/NATTEN/tree/main/docs/">NATTEN docs</a></p>
-        </div>
-    </div>
-</div>
-<div class="container citation mt-4">
-    <div class="title row">
-        <div class="col-lg-12">
-            <p class="h2">Citation</p>
-        </div>
-        <div class="col-lg-12">
-            <p>Please consider citing our papers if you use NATTEN in your work:</p>
-            <p></p>
-            <p>
-<pre><code>@misc{hassani2024faster,
-  title        = {Faster Neighborhood Attention: Reducing the O(n^2) Cost of Self Attention at the Threadblock Level},
-  author       = {Ali Hassani and Wen-Mei Hwu and Humphrey Shi},
-  year         = 2024,
-  url          = {https://arxiv.org/abs/2403.04690},
-  eprint       = {2403.04690},
-  archiveprefix = {arXiv},
-  primaryclass = {cs.CV}
-}
-@inproceedings{hassani2023neighborhood,
-  title        = {Neighborhood Attention Transformer},
-  author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
-  year         = 2023,
-        booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
-}
-@misc{hassani2022dilated,
-  title        = {Dilated Neighborhood Attention Transformer},
-  author       = {Ali Hassani and Humphrey Shi},
-  year         = 2022,
-  url          = {https://arxiv.org/abs/2209.15001},
-  eprint       = {2209.15001},
-  archiveprefix = {arXiv},
-  primaryclass = {cs.CV}
-}</code></pre></p>
         </div>
     </div>
 </div>
