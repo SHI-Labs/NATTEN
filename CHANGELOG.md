@@ -11,6 +11,9 @@
   compile.
   * In theory, any number of different attentions can be merged in this way, but the interface only
   allows one additional KV set for now.
+* Bug fixes in FLOP counter (with fvcore)
+  * Bugs introduced since FNA backwards were fixed.
+  * Finally added unit tests.
 
 ## [0.17.3] - 2024-11-01
 * Bug fix for torch < 2.4

@@ -36,21 +36,43 @@ def fna_generic_flops(inputs: List[Any], outputs: List[Any]) -> Number:
         len(inputs) >= 3
     ), f"Expected at least 3 inputs (query, key, value), got {len(inputs)}"
     has_bias = len(inputs) == 4 and inputs[-1] is not None
-    assert len(outputs) >= 1, f"Expected at least 1 output, got {len(outputs)}"
     input_shapes = [get_shape(v) for v in inputs]
-    output_shapes = [get_shape(v) for v in outputs]
+
+    # Weird fvcore / jit bug
+    assert len(outputs) in [
+        1,
+        2,
+    ], f"Expected exactly 1 or 2 outputs (tuple), got {len(outputs)}"
+    if len(outputs) == 1:
+        outputs_ = outputs[0].uses()[0].user.outputs()
+        output_shapes = [get_shape(v) for v in outputs_]
+        assert (
+            len(output_shapes) == 2
+        ), f"Expected exactly 2 outputs (attention output, and LSE), got {len(output_shapes)}"
+    else:
+        assert (
+            len(outputs) == 2
+        ), f"Expected exactly 2 outputs (attention output, and LSE), got {len(outputs)}"
+        output_shapes = [get_shape(v) for v in outputs]
+
     assert len(input_shapes[0]) in [
         4,
         5,
         6,
     ], f"Input tensors must be of rank 4, 5, or 6, got {len(input_shapes[0])}"
+
     assert len(input_shapes[1]) == len(input_shapes[1]) == len(input_shapes[2]), (
         f"All input tensors must be of the same rank, got {len(input_shapes[0])}, "
         + f"{len(input_shapes[1])} and {len(input_shapes[2])}"
     )
+
     assert len(output_shapes[0]) == len(
         input_shapes[0]
     ), f"Output tensor must match the rank of input tensors, got {len(output_shapes[0])} != {len(input_shapes[0])}"
+    assert len(output_shapes[1]) == len(
+        output_shapes[0][:-1]
+    ), f"Mismatch between output and LSE shape, got {len(output_shapes[0])} != {len(output_shapes[1])}"
+
     assert input_shapes[0] == input_shapes[1] == input_shapes[2] == output_shapes[0], (
         "Query, key, value, and output must match in shape, got q.shape="
         + f"{input_shapes[0]}, k.shape={input_shapes[1]}, v.shape={input_shapes[1]}."
@@ -74,8 +96,24 @@ def fna_generic_flops(inputs: List[Any], outputs: List[Any]) -> Number:
         and callable(_uses[0].user.scalar_args)
     )
     scalar_args = _uses[0].user.scalar_args()
-    assert hasattr(scalar_args, "__len__") and len(scalar_args) == 5
-    kernel_size, dilation, is_causal, attn_scale, tiling_config = scalar_args
+    assert hasattr(scalar_args, "__len__") and len(scalar_args) in [
+        6,
+        7,
+    ], f"Expected 6 or 7 non-tensor args to the op, got {len(scalar_args)}. {scalar_args=}"
+
+    # Kick off rpb=None
+    if len(scalar_args) == 7:
+        assert scalar_args[0] is None
+        scalar_args = scalar_args[1:]
+
+    (
+        kernel_size,
+        dilation,
+        is_causal,
+        attn_scale,
+        tiling_config,
+        tiling_config_backward,
+    ) = scalar_args
     # TODO: it's very easy to hit this assertion. We must make sure
     # arguments like kernel size are checked before calling the autograd function,
     # not inside it.
@@ -129,9 +167,13 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
     batch_size, heads, length, dim = input_shapes[0]
     batch_size, heads, length, kernel_size = output_shapes[0]
+    has_rpb = len(inputs) == 3
 
     flops = batch_size * heads * length * dim * kernel_size
+    # TODO: why is the sum of exps reduction not included in softmax's flops?
     flops += batch_size * heads * length * kernel_size
+    if has_rpb:
+        flops += batch_size * heads * length * kernel_size
     return flops
 
 
@@ -186,9 +228,13 @@ def qk_2d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
     batch_size, heads, height, width, dim = input_shapes[0]
     batch_size, heads, height, width, kernel_size_sq = output_shapes[0]
+    has_rpb = len(inputs) == 3
 
     flops = batch_size * heads * height * width * dim * kernel_size_sq
+    # TODO: why is the sum of exps reduction not included in softmax's flops?
     flops += batch_size * heads * height * width * kernel_size_sq
+    if has_rpb:
+        flops += batch_size * heads * height * width * kernel_size_sq
     return flops
 
 
@@ -243,9 +289,13 @@ def qk_3d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     ), f"Query and Key shapes did not match! Q: {input_shapes[0]}, K: {input_shapes[1]}"
     batch_size, heads, depth, height, width, dim = input_shapes[0]
     batch_size, heads, depth, height, width, kernel_size_cu = output_shapes[0]
+    has_rpb = len(inputs) == 3
 
     flops = batch_size * heads * depth * height * width * dim * kernel_size_cu
+    # TODO: why is the sum of exps reduction not included in softmax's flops?
     flops += batch_size * heads * depth * height * width * kernel_size_cu
+    if has_rpb:
+        flops += batch_size * heads * depth * height * width * kernel_size_cu
     return flops
 
 
