@@ -1175,6 +1175,8 @@ class FusedNeighborhoodAttention1D(Function):
         if bias is not None:
             bias = bias.to(query.dtype).contiguous()
         output = torch.empty_like(value)
+
+        # TODO: logsumexp should be conditional
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
@@ -1312,6 +1314,8 @@ class FusedNeighborhoodAttention2D(Function):
         if bias is not None:
             bias = bias.to(query.dtype).contiguous()
         output = torch.empty_like(value)
+
+        # TODO: logsumexp should be conditional
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
@@ -1449,6 +1453,8 @@ class FusedNeighborhoodAttention3D(Function):
         if bias is not None:
             bias = bias.to(query.dtype).contiguous()
         output = torch.empty_like(value)
+
+        # TODO: logsumexp should be conditional
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
