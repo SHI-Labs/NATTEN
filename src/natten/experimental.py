@@ -20,10 +20,13 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import Dict, Optional, Sequence, Tuple
+import math
+from typing import Any, Dict, Optional, Protocol, Sequence, Tuple
 
 import torch
-from torch import Tensor
+from torch import Size, Tensor
+from torch._ops import OpOverloadPacket
+from torch.utils.flop_counter import bmm_flop
 
 try:
     from natten import libnatten  # type: ignore
@@ -54,7 +57,7 @@ from .types import (
     Dimension3DTypeOrDed,
 )
 
-from .utils import check_all_args, check_tiling_config, log
+from .utils import check_all_args, check_tiling_config, get_num_na_weights, log
 
 logger = log.get_logger(__name__)
 
@@ -307,6 +310,158 @@ def na3d_op_fake(
 
 
 #################################################################################################
+########################################### FLOP Counts #########################################
+#################################################################################################
+
+
+class FlopCountFn(Protocol):
+    @staticmethod
+    def __call__(*args, **kwargs) -> int: ...
+
+
+def na1d_flop_count(
+    q: Size,
+    k: Size,
+    v: Size,
+    bias: Optional[Tensor],
+    kernel_size_: Sequence[int],
+    dilation_: Sequence[int],
+    is_causal_: Sequence[bool],
+    scale: float,
+    q_tiler_: Sequence[int],
+    kv_tiler_: Sequence[int],
+    out_shape: Any,
+):
+    kernel_size, dilation, is_causal = check_all_args(
+        1, kernel_size_, dilation_, is_causal_
+    )
+
+    assert q == k == v
+
+    batch_size, heads, dim = (
+        q[0],
+        q[-2],
+        q[-1],
+    )
+
+    spatial_extent = q[1 : len(kernel_size) + 1]
+    assert len(spatial_extent) == len(kernel_size)
+
+    num_tokens = math.prod(spatial_extent)
+    num_attn_weights = get_num_na_weights(kernel_size)
+
+    total_flops = 0
+
+    total_flops += bmm_flop(
+        (batch_size * heads, num_tokens, dim), (batch_size * heads, dim, num_tokens)
+    )
+
+    total_flops += bmm_flop(
+        (batch_size * heads, num_tokens, num_attn_weights),
+        (batch_size * heads, num_attn_weights, dim),
+    )
+
+    return total_flops
+
+
+def na2d_flop_count(
+    q: Size,
+    k: Size,
+    v: Size,
+    bias: Optional[Tensor],
+    kernel_size_: Sequence[int],
+    dilation_: Sequence[int],
+    is_causal_: Sequence[bool],
+    scale: float,
+    q_tiler_: Sequence[int],
+    kv_tiler_: Sequence[int],
+    out_shape: Any,
+):
+    kernel_size, dilation, is_causal = check_all_args(
+        2, kernel_size_, dilation_, is_causal_
+    )
+
+    assert q == k == v
+
+    batch_size, heads, dim = (
+        q[0],
+        q[-2],
+        q[-1],
+    )
+
+    spatial_extent = q[1 : len(kernel_size) + 1]
+    assert len(spatial_extent) == len(kernel_size)
+
+    num_tokens = math.prod(spatial_extent)
+    num_attn_weights = get_num_na_weights(kernel_size)
+
+    total_flops = 0
+
+    total_flops += bmm_flop(
+        (batch_size * heads, num_tokens, dim), (batch_size * heads, dim, num_tokens)
+    )
+
+    total_flops += bmm_flop(
+        (batch_size * heads, num_tokens, num_attn_weights),
+        (batch_size * heads, num_attn_weights, dim),
+    )
+
+    return total_flops
+
+
+def na3d_flop_count(
+    q: Size,
+    k: Size,
+    v: Size,
+    bias: Optional[Tensor],
+    kernel_size_: Sequence[int],
+    dilation_: Sequence[int],
+    is_causal_: Sequence[bool],
+    scale: float,
+    q_tiler_: Sequence[int],
+    kv_tiler_: Sequence[int],
+    out_shape: Any,
+):
+    kernel_size, dilation, is_causal = check_all_args(
+        3, kernel_size_, dilation_, is_causal_
+    )
+
+    assert q == k == v
+
+    batch_size, heads, dim = (
+        q[0],
+        q[-2],
+        q[-1],
+    )
+
+    spatial_extent = q[1 : len(kernel_size) + 1]
+    assert len(spatial_extent) == len(kernel_size)
+
+    num_tokens = math.prod(spatial_extent)
+    num_attn_weights = get_num_na_weights(kernel_size)
+
+    total_flops = 0
+
+    total_flops += bmm_flop(
+        (batch_size * heads, num_tokens, dim), (batch_size * heads, dim, num_tokens)
+    )
+
+    total_flops += bmm_flop(
+        (batch_size * heads, num_tokens, num_attn_weights),
+        (batch_size * heads, num_attn_weights, dim),
+    )
+
+    return total_flops
+
+
+custom_mapping: dict[OpOverloadPacket, FlopCountFn] = {
+    torch.ops.natten.na1d_forward_op: na1d_flop_count,
+    torch.ops.natten.na2d_forward_op: na2d_flop_count,
+    torch.ops.natten.na3d_forward_op: na3d_flop_count,
+}
+
+
+#################################################################################################
 ######################################## User-facing APIs #######################################
 #################################################################################################
 
@@ -339,7 +494,7 @@ def na1d(
 
     scale = scale or query.shape[-1] ** -0.5
 
-    output, lse = na1d_torch_library_op(
+    output, lse = torch.ops.natten.na1d_forward_op(
         query,
         key,
         value,
@@ -399,7 +554,7 @@ def na2d(
 
     scale = scale or query.shape[-1] ** -0.5
 
-    output, lse = na2d_torch_library_op(
+    output, lse = torch.ops.natten.na2d_forward_op(
         query,
         key,
         value,
@@ -459,7 +614,7 @@ def na3d(
 
     scale = scale or query.shape[-1] ** -0.5
 
-    output, lse = na3d_torch_library_op(
+    output, lse = torch.ops.natten.na3d_forward_op(
         query,
         key,
         value,

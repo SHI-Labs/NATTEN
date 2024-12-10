@@ -135,7 +135,10 @@ def fna_generic_flops(inputs: List[Any], outputs: List[Any]) -> Number:
 
     flops = batch_size * heads * spatial_extent_int * dim * kernel_size_int  # QK
 
-    flops += batch_size * heads * spatial_extent_int * kernel_size_int  # softmax
+    # NOTE: PyTorch doesn't count softmax flops in SDPA;
+    # Reference:
+    # https://github.com/pytorch/pytorch/blob/7ced49d2ccf219ec896810e6d988709c3a3a2d9a/torch/utils/flop_counter.py#L241-L256
+    # flops += batch_size * heads * spatial_extent_int * kernel_size_int  # softmax
     flops += batch_size * heads * spatial_extent_int * dim * kernel_size_int  # AV
 
     if has_bias:
@@ -170,7 +173,6 @@ def qk_1d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     has_rpb = len(inputs) == 3
 
     flops = batch_size * heads * length * dim * kernel_size
-    # TODO: why is the sum of exps reduction not included in softmax's flops?
     flops += batch_size * heads * length * kernel_size
     if has_rpb:
         flops += batch_size * heads * length * kernel_size
@@ -231,7 +233,6 @@ def qk_2d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     has_rpb = len(inputs) == 3
 
     flops = batch_size * heads * height * width * dim * kernel_size_sq
-    # TODO: why is the sum of exps reduction not included in softmax's flops?
     flops += batch_size * heads * height * width * kernel_size_sq
     if has_rpb:
         flops += batch_size * heads * height * width * kernel_size_sq
@@ -292,7 +293,6 @@ def qk_3d_rpb_flop(inputs: List[Any], outputs: List[Any]) -> Number:
     has_rpb = len(inputs) == 3
 
     flops = batch_size * heads * depth * height * width * dim * kernel_size_cu
-    # TODO: why is the sum of exps reduction not included in softmax's flops?
     flops += batch_size * heads * depth * height * width * kernel_size_cu
     if has_rpb:
         flops += batch_size * heads * depth * height * width * kernel_size_cu
