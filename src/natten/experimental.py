@@ -20,13 +20,12 @@
 # SOFTWARE.
 #
 #################################################################################################
-import math
 from typing import Any, Dict, Optional, Protocol, Sequence, Tuple
 
 import torch
 from torch import Size, Tensor
 from torch._ops import OpOverloadPacket
-from torch.utils.flop_counter import bmm_flop
+from torch.utils.flop_counter import register_flop_formula
 
 try:
     from natten import libnatten  # type: ignore
@@ -46,6 +45,9 @@ if torch_ver < [2, 4]:
     )
 
 from .autotuner.fna_forward import get_default_tiling_config_for_fna_forward
+
+from .flops import fna_flop_count
+
 from .ops import additional_sdpa, merge_attentions
 
 from .types import (
@@ -57,7 +59,7 @@ from .types import (
     Dimension3DTypeOrDed,
 )
 
-from .utils import check_all_args, check_tiling_config, get_num_na_weights, log
+from .utils import check_all_args, check_tiling_config, log
 
 logger = log.get_logger(__name__)
 
@@ -319,139 +321,82 @@ class FlopCountFn(Protocol):
     def __call__(*args, **kwargs) -> int: ...
 
 
+@register_flop_formula(torch.ops.natten.na1d_forward_op)
 def na1d_flop_count(
-    q: Size,
-    k: Size,
-    v: Size,
+    q_shape: Size,
+    k_shape: Size,
+    v_shape: Size,
     bias: Optional[Tensor],
-    kernel_size_: Sequence[int],
-    dilation_: Sequence[int],
-    is_causal_: Sequence[bool],
+    kernel_size: Sequence[int],
+    dilation: Sequence[int],
+    is_causal: Sequence[bool],
     scale: float,
-    q_tiler_: Sequence[int],
-    kv_tiler_: Sequence[int],
+    q_tiler: Sequence[int],
+    kv_tiler: Sequence[int],
     out_shape: Any,
 ):
-    kernel_size, dilation, is_causal = check_all_args(
-        1, kernel_size_, dilation_, is_causal_
+    return fna_flop_count(
+        q_shape=q_shape,
+        k_shape=k_shape,
+        v_shape=v_shape,
+        kernel_size=kernel_size,
+        dilation=dilation,
+        is_causal=is_causal,
+        is_heads_last=True,
+        return_macs=False,
     )
 
-    assert q == k == v
 
-    batch_size, heads, dim = (
-        q[0],
-        q[-2],
-        q[-1],
-    )
-
-    spatial_extent = q[1 : len(kernel_size) + 1]
-    assert len(spatial_extent) == len(kernel_size)
-
-    num_tokens = math.prod(spatial_extent)
-    num_attn_weights = get_num_na_weights(kernel_size)
-
-    total_flops = 0
-
-    total_flops += bmm_flop(
-        (batch_size * heads, num_tokens, dim), (batch_size * heads, dim, num_tokens)
-    )
-
-    total_flops += bmm_flop(
-        (batch_size * heads, num_tokens, num_attn_weights),
-        (batch_size * heads, num_attn_weights, dim),
-    )
-
-    return total_flops
-
-
+@register_flop_formula(torch.ops.natten.na2d_forward_op)
 def na2d_flop_count(
-    q: Size,
-    k: Size,
-    v: Size,
+    q_shape: Size,
+    k_shape: Size,
+    v_shape: Size,
     bias: Optional[Tensor],
-    kernel_size_: Sequence[int],
-    dilation_: Sequence[int],
-    is_causal_: Sequence[bool],
+    kernel_size: Sequence[int],
+    dilation: Sequence[int],
+    is_causal: Sequence[bool],
     scale: float,
-    q_tiler_: Sequence[int],
-    kv_tiler_: Sequence[int],
+    q_tiler: Sequence[int],
+    kv_tiler: Sequence[int],
     out_shape: Any,
 ):
-    kernel_size, dilation, is_causal = check_all_args(
-        2, kernel_size_, dilation_, is_causal_
+    return fna_flop_count(
+        q_shape=q_shape,
+        k_shape=k_shape,
+        v_shape=v_shape,
+        kernel_size=kernel_size,
+        dilation=dilation,
+        is_causal=is_causal,
+        is_heads_last=True,
+        return_macs=False,
     )
 
-    assert q == k == v
 
-    batch_size, heads, dim = (
-        q[0],
-        q[-2],
-        q[-1],
-    )
-
-    spatial_extent = q[1 : len(kernel_size) + 1]
-    assert len(spatial_extent) == len(kernel_size)
-
-    num_tokens = math.prod(spatial_extent)
-    num_attn_weights = get_num_na_weights(kernel_size)
-
-    total_flops = 0
-
-    total_flops += bmm_flop(
-        (batch_size * heads, num_tokens, dim), (batch_size * heads, dim, num_tokens)
-    )
-
-    total_flops += bmm_flop(
-        (batch_size * heads, num_tokens, num_attn_weights),
-        (batch_size * heads, num_attn_weights, dim),
-    )
-
-    return total_flops
-
-
+@register_flop_formula(torch.ops.natten.na3d_forward_op)
 def na3d_flop_count(
-    q: Size,
-    k: Size,
-    v: Size,
+    q_shape: Size,
+    k_shape: Size,
+    v_shape: Size,
     bias: Optional[Tensor],
-    kernel_size_: Sequence[int],
-    dilation_: Sequence[int],
-    is_causal_: Sequence[bool],
+    kernel_size: Sequence[int],
+    dilation: Sequence[int],
+    is_causal: Sequence[bool],
     scale: float,
-    q_tiler_: Sequence[int],
-    kv_tiler_: Sequence[int],
+    q_tiler: Sequence[int],
+    kv_tiler: Sequence[int],
     out_shape: Any,
 ):
-    kernel_size, dilation, is_causal = check_all_args(
-        3, kernel_size_, dilation_, is_causal_
+    return fna_flop_count(
+        q_shape=q_shape,
+        k_shape=k_shape,
+        v_shape=v_shape,
+        kernel_size=kernel_size,
+        dilation=dilation,
+        is_causal=is_causal,
+        is_heads_last=True,
+        return_macs=False,
     )
-
-    assert q == k == v
-
-    batch_size, heads, dim = (
-        q[0],
-        q[-2],
-        q[-1],
-    )
-
-    spatial_extent = q[1 : len(kernel_size) + 1]
-    assert len(spatial_extent) == len(kernel_size)
-
-    num_tokens = math.prod(spatial_extent)
-    num_attn_weights = get_num_na_weights(kernel_size)
-
-    total_flops = 0
-
-    total_flops += bmm_flop(
-        (batch_size * heads, num_tokens, dim), (batch_size * heads, dim, num_tokens)
-    )
-
-    total_flops += bmm_flop(
-        (batch_size * heads, num_tokens, num_attn_weights),
-        (batch_size * heads, num_attn_weights, dim),
-    )
-
-    return total_flops
 
 
 custom_mapping: dict[OpOverloadPacket, FlopCountFn] = {

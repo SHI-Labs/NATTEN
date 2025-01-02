@@ -9,6 +9,7 @@ Welcome to NATTEN docs!
   * Describes how to check NATTEN's compatibility with your system, and its available features.
   * Describes how to use torch modules `NeighborhoodAttention1D`, `NeighborhoodAttention2D`, and `NeighborhoodAttention3D`.
   * Describes when and how to use ops directly instead of modules.
+* [FLOP counting](flops.md)
 * [Fused Neighborhood Attention](fna/) (new)
   * [Quick start guide](fna/fna-quickstart.md)
   * [Fused vs unfused](fna/fused-vs-unfused.md): differences in supported features, layouts, etc.
