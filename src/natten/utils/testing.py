@@ -45,6 +45,15 @@ try:
 except ImportError:
     _IS_FVCORE_AVAILABLE = False
 
+try:
+    from xformers.ops.fmha import (  # type: ignore  # noqa: F401
+        memory_efficient_attention_partial,
+    )
+
+    _SUPPORTS_FNA_WITH_ADDITIONAL_KV = True
+except ImportError:
+    _SUPPORTS_FNA_WITH_ADDITIONAL_KV = False
+
 
 def skip_if_cuda_is_not_supported():
     def decorator(f):
@@ -145,3 +154,7 @@ def skip_if_fvcore_is_not_available():
         return wrapper
 
     return decorator
+
+
+def fna_supports_additional_kv():
+    return _SUPPORTS_FNA_WITH_ADDITIONAL_KV
