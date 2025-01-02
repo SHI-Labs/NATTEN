@@ -57,7 +57,6 @@ class FlopCounterTests(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal,
-        rel_pos_bias,
         qkv_bias,
     ):
         mod = natten.NeighborhoodAttention1D
@@ -72,7 +71,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
-            rel_pos_bias=rel_pos_bias,
             qkv_bias=qkv_bias,
         )
 
@@ -89,10 +87,9 @@ class FlopCounterTests(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal,
-        rel_pos_bias,
         qkv_bias,
     ):
-        # TODO: why is FVCore reporting MACs, not FLOPs?
+        # FVCore report MACs, not FLOPs
         # c = 2
         c = 1
 
@@ -102,7 +99,7 @@ class FlopCounterTests(unittest.TestCase):
             dim_per_head * heads,
         )
         qkv_flops = qkv_M * qkv_N * qkv_K * c
-        # TODO: FVCore doesn't count bias FLOPs
+        # FVCore doesn't count bias FLOPs
         # if qkv_bias:
         #     qkv_flops += qkv_M * qkv_N
 
@@ -127,19 +124,7 @@ class FlopCounterTests(unittest.TestCase):
         attn_0_flops = attn_0_M * attn_0_N * attn_0_K * c
         attn_1_flops = attn_1_M * attn_1_N * attn_1_K * c
 
-        # TODO: why is the sum of exps reduction not included in softmax's flops?
-        softmax_M, softmax_K = batch * heads * math.prod(spatial_extent), math.prod(
-            kernel_size
-        )
-        softmax_flops = softmax_M * softmax_K
-
-        attn_flops = attn_0_flops + attn_1_flops + softmax_flops
-
-        if rel_pos_bias:
-            rpb_M, rpb_K = batch * heads * math.prod(spatial_extent), math.prod(
-                kernel_size
-            )
-            attn_flops += rpb_M * rpb_K
+        attn_flops = attn_0_flops + attn_1_flops
 
         return qkv_flops + attn_flops + proj_flops
 
@@ -152,7 +137,6 @@ class FlopCounterTests(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal,
-        rel_pos_bias,
         qkv_bias,
         run_on_cuda=False,
     ):
@@ -169,7 +153,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
-            rel_pos_bias=rel_pos_bias,
             qkv_bias=qkv_bias,
         )
         x = self._build_input(
@@ -192,7 +175,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
-            rel_pos_bias=rel_pos_bias,
             qkv_bias=qkv_bias,
         )
 
@@ -203,7 +185,7 @@ class FlopCounterTests(unittest.TestCase):
         )
 
     @skip_if_fvcore_is_not_available()
-    def test_flops_unfused(self):
+    def test_fvcore_flops_unfused(self):
         natten.use_fused_na(False, kv_parallel=False)
 
         self._test_natten_flops(
@@ -214,7 +196,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5,),
             dilation=(2,),
             is_causal=(False,),
-            rel_pos_bias=False,
             qkv_bias=False,
         )
 
@@ -226,7 +207,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3),
             dilation=(2, 1),
             is_causal=(False, False),
-            rel_pos_bias=True,
             qkv_bias=True,
         )
 
@@ -238,14 +218,13 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3, 7),
             dilation=(1, 1, 1),
             is_causal=(True, False, False),
-            rel_pos_bias=False,
             qkv_bias=True,
         )
 
     @skip_if_fvcore_is_not_available()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
-    def test_flops_fna(self):
+    def test_fvcore_flops_fna(self):
         natten.use_fused_na(True, kv_parallel=True)
 
         self._test_natten_flops(
@@ -256,7 +235,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5,),
             dilation=(2,),
             is_causal=(False,),
-            rel_pos_bias=False,
             qkv_bias=False,
             run_on_cuda=True,
         )
@@ -269,7 +247,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3),
             dilation=(2, 1),
             is_causal=(False, False),
-            rel_pos_bias=True,
             qkv_bias=True,
             run_on_cuda=True,
         )
@@ -282,7 +259,6 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3, 7),
             dilation=(1, 1, 1),
             is_causal=(True, False, False),
-            rel_pos_bias=False,
             qkv_bias=True,
             run_on_cuda=True,
         )
