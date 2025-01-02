@@ -79,7 +79,7 @@ def _na_av_flops(
 
 # "Heads last" layout -- primarily used in fused impls.
 def _get_parameters_from_inputs_BLHD(
-    input_shape: torch.Size | Sequence[int] | List[int],
+    input_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -114,7 +114,7 @@ def _get_parameters_from_inputs_BLHD(
 
 # "Heads first" layout -- primarily used in BMM impls.
 def _get_parameters_from_inputs_BHLD(
-    input_shape: torch.Size | Sequence[int] | List[int],
+    input_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -148,7 +148,7 @@ def _get_parameters_from_inputs_BHLD(
 
 
 def _count_na_flops_generic(
-    input_shape: torch.Size | Sequence[int] | List[int],
+    input_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -192,9 +192,9 @@ def _count_na_flops_generic(
 
 
 def fna_flop_count(
-    q_shape: torch.Size | Sequence[int] | List[int],
-    k_shape: torch.Size | Sequence[int] | List[int],
-    v_shape: torch.Size | Sequence[int] | List[int],
+    q_shape: torch.Size | Sequence[int],
+    k_shape: torch.Size | Sequence[int],
+    v_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -219,8 +219,8 @@ def fna_flop_count(
 
 
 def na_qk_flop_count(
-    q_shape: torch.Size | Sequence[int] | List[int],
-    k_shape: torch.Size | Sequence[int] | List[int],
+    q_shape: torch.Size | Sequence[int],
+    k_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -245,8 +245,8 @@ def na_qk_flop_count(
 
 
 def na_av_flop_count(
-    a_shape: torch.Size | Sequence[int] | List[int],
-    v_shape: torch.Size | Sequence[int] | List[int],
+    a_shape: torch.Size | Sequence[int],
+    v_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],

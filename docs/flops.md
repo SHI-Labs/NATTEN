@@ -38,9 +38,9 @@ the entire attention operator all at once, use `fna_flop_count`:
 
 ```python
 fna_flop_count(
-    q_shape: torch.Size | Sequence[int] | List[int],
-    k_shape: torch.Size | Sequence[int] | List[int],
-    v_shape: torch.Size | Sequence[int] | List[int],
+    q_shape: torch.Size | Sequence[int],
+    k_shape: torch.Size | Sequence[int],
+    v_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -62,8 +62,8 @@ weighting operations separately, use `na_qk_flop_count` and `na_av_flop_count`:
 
 ```python
 na_qk_flop_count(
-    q_shape: torch.Size | Sequence[int] | List[int],
-    k_shape: torch.Size | Sequence[int] | List[int],
+    q_shape: torch.Size | Sequence[int],
+    k_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
@@ -72,8 +72,8 @@ na_qk_flop_count(
 ) -> int
 
 na_av_flop_count(
-    a_shape: torch.Size | Sequence[int] | List[int],
-    v_shape: torch.Size | Sequence[int] | List[int],
+    a_shape: torch.Size | Sequence[int],
+    v_shape: torch.Size | Sequence[int],
     kernel_size: Sequence[int],
     dilation: Sequence[int],
     is_causal: Sequence[bool],
