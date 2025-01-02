@@ -27,6 +27,7 @@ from torch import nn, Tensor
 from torch.nn.init import trunc_normal_
 
 from .context import is_fna_enabled
+from .experimental import na3d as experimental_na3d
 from .functional import na3d, na3d_av, na3d_qk
 from .types import CausalArg3DTypeOrDed, Dimension3DTypeOrDed
 from .utils import check_all_args, log
@@ -51,6 +52,7 @@ class NeighborhoodAttention3D(nn.Module):
         qk_scale: Optional[float] = None,
         attn_drop: float = 0.0,
         proj_drop: float = 0.0,
+        use_experimental_ops: bool = False,
     ):
         super().__init__()
         kernel_size_, dilation_, is_causal_ = check_all_args(
@@ -88,6 +90,8 @@ class NeighborhoodAttention3D(nn.Module):
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
+        self.use_experimental_ops = use_experimental_ops
+
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 5:
             raise ValueError(
@@ -111,7 +115,7 @@ class NeighborhoodAttention3D(nn.Module):
                 .permute(4, 0, 1, 2, 3, 5, 6)
             )
             q, k, v = qkv[0], qkv[1], qkv[2]
-            x = na3d(
+            x = (experimental_na3d if self.use_experimental_ops else na3d)(
                 q,
                 k,
                 v,
@@ -124,6 +128,10 @@ class NeighborhoodAttention3D(nn.Module):
             x = x.reshape(B, D, H, W, C)
 
         else:
+            if self.use_experimental_ops:
+                raise NotImplementedError(
+                    "Only fused NA is included in experimental support for torch.compile and torch's FLOP counter."
+                )
             qkv = (
                 self.qkv(x)
                 .reshape(B, D, H, W, 3, self.num_heads, self.head_dim)

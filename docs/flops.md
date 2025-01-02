@@ -101,37 +101,33 @@ More details in #170.
 
 In the meantime, we offer an experimental interface for NATTEN ops registered with torch.library,
 which only supports inference, and only implements FNA operations.
-Instead of using the `na*d` operations from `natten.functional` or our torch modules
-(`NeighborhoodAttention*D`), you will need to use the `na*d` operations from `natten.experimental`:
+Instead of using the `na*d` operations from `natten.functional` you will need to use the `na*d`
+operations from `natten.experimental`:
 
 
 ```python
 # from natten.functional import na1d, na2d, na3d
 from natten.experimental import na1d, na2d, na3d
-
-# ...
-
-class Attention1D(torch.nn.Module):
-  # ...
-  def forward(...):
-    # ...
-    x = na1d(...)
-    # ...
-
-class Attention2D(torch.nn.Module):
-  # ...
-  def forward(...):
-    # ...
-    x = na2d(...)
-    # ...
-
-class Attention3D(torch.nn.Module):
-  # ...
-  def forward(...):
-    # ...
-    x = na3d(...)
-    # ...
 ```
+
+or if you're using NATTEN's torch modules (`NeighborhoodAttention*D`), you need to pass an
+additional argument:
+
+```python
+from natten import (
+  NeighborhoodAttention1D,
+  NeighborhoodAttention2D
+  NeighborhoodAttention3D
+)
+
+m_1d = NeighborhoodAttention1D(dim=128, num_heads=4, kernel_size=7, use_experimental_ops=True)
+m_2d = NeighborhoodAttention2D(dim=128, num_heads=4, kernel_size=7, use_experimental_ops=True)
+m_3d = NeighborhoodAttention3D(dim=128, num_heads=4, kernel_size=7, use_experimental_ops=True)
+```
+
+However, note that forward pass will fail if fused NA is disabled / not supported, but using
+experimental ops is enabled.
+
 
 As long as you use these experimental ops, you can:
 * Successfully build NA-based models with `torch.compile` WITHOUT graph breaks,

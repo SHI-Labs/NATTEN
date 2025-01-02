@@ -27,6 +27,10 @@ from torch.utils.cpp_extension import CUDA_HOME
 from .. import has_cuda, has_fna, has_fp64_gemm, has_gemm
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
+_SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
+    2,
+    4,
+]
 _IS_CUDA_AVAILABLE = (
     torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
 )
@@ -106,6 +110,21 @@ def skip_if_nested_is_not_supported():
             if not _SUPPORTS_NESTED:
                 self.skipTest(
                     "Nested tensors are not supported with this torch version."
+                )
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def skip_if_experimental_ops_are_not_supported():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if not _SUPPORTS_EXPERIMENTAL_OPS:
+                self.skipTest(
+                    "Experimental ops (registered with torch.library) are not supported with this torch version."
                 )
             else:
                 return f(self, *args, **kwargs)
