@@ -36,6 +36,7 @@ from natten import (
 from natten.functional import na1d, na1d_av, na1d_qk
 from natten.utils import check_all_args
 from natten.utils.testing import (
+    fna_supports_additional_kv,
     skip_if_cuda_is_not_supported,
     skip_if_fna_is_not_supported,
 )
@@ -316,6 +317,9 @@ class FNA1DTests(unittest.TestCase):
         is_causal=None,
         additional_kv_length=0,
     ):
+        if not fna_supports_additional_kv() and additional_kv_length > 0:
+            return
+
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         assert not has_bias or not any(is_causal)
         inputs, reference = compute_bmm_reference(

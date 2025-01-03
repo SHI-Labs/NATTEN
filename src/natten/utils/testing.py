@@ -27,6 +27,10 @@ from torch.utils.cpp_extension import CUDA_HOME
 from .. import has_cuda, has_fna, has_fp64_gemm, has_gemm
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
+_SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
+    2,
+    4,
+]
 _IS_CUDA_AVAILABLE = (
     torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
 )
@@ -40,6 +44,15 @@ try:
     _IS_FVCORE_AVAILABLE = True
 except ImportError:
     _IS_FVCORE_AVAILABLE = False
+
+try:
+    from xformers.ops.fmha import (  # type: ignore  # noqa: F401
+        memory_efficient_attention_partial,
+    )
+
+    _SUPPORTS_FNA_WITH_ADDITIONAL_KV = True
+except ImportError:
+    _SUPPORTS_FNA_WITH_ADDITIONAL_KV = False
 
 
 def skip_if_cuda_is_not_supported():
@@ -115,6 +128,21 @@ def skip_if_nested_is_not_supported():
     return decorator
 
 
+def skip_if_experimental_ops_are_not_supported():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if not _SUPPORTS_EXPERIMENTAL_OPS:
+                self.skipTest(
+                    "Experimental ops (registered with torch.library) are not supported with this torch version."
+                )
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def skip_if_fvcore_is_not_available():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
@@ -126,3 +154,7 @@ def skip_if_fvcore_is_not_available():
         return wrapper
 
     return decorator
+
+
+def fna_supports_additional_kv():
+    return _SUPPORTS_FNA_WITH_ADDITIONAL_KV

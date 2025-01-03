@@ -14,6 +14,10 @@
 * Bug fixes in FLOP counter (with fvcore)
   * Bugs introduced since FNA backwards were fixed.
   * Finally added unit tests.
+* Better FLOP counting support
+  * Rename instances of FLOP counting with fvcore to MACs, since that's what fvcore reports.
+  * Add experimental support for torch's native flop counter
+  * Better documentation
 
 ## [0.17.3] - 2024-11-01
 * Bug fix for torch < 2.4

@@ -30,6 +30,7 @@ import natten
 import torch
 from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
+    skip_if_experimental_ops_are_not_supported,
     skip_if_fna_is_not_supported,
     skip_if_fvcore_is_not_available,
 )
@@ -57,8 +58,8 @@ class FlopCounterTests(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal,
-        rel_pos_bias,
         qkv_bias,
+        use_experimental_ops,
     ):
         mod = natten.NeighborhoodAttention1D
         if hasattr(kernel_size, "__len__") and len(kernel_size) == 2:
@@ -72,8 +73,8 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
-            rel_pos_bias=rel_pos_bias,
             qkv_bias=qkv_bias,
+            use_experimental_ops=use_experimental_ops,
         )
 
     def _build_input(self, batch, spatial_extent, heads, dim_per_head):
@@ -89,12 +90,12 @@ class FlopCounterTests(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal,
-        rel_pos_bias,
         qkv_bias,
+        return_macs,
     ):
-        # TODO: why is FVCore reporting MACs, not FLOPs?
-        # c = 2
-        c = 1
+        # FVCore reports MACs, not FLOPs
+        # PT reports FLOPs, not MACs
+        c = 1 if return_macs else 2
 
         qkv_M, qkv_N, qkv_K = (
             batch * math.prod(spatial_extent),
@@ -102,7 +103,7 @@ class FlopCounterTests(unittest.TestCase):
             dim_per_head * heads,
         )
         qkv_flops = qkv_M * qkv_N * qkv_K * c
-        # TODO: FVCore doesn't count bias FLOPs
+        # FVCore doesn't count bias FLOPs
         # if qkv_bias:
         #     qkv_flops += qkv_M * qkv_N
 
@@ -127,23 +128,11 @@ class FlopCounterTests(unittest.TestCase):
         attn_0_flops = attn_0_M * attn_0_N * attn_0_K * c
         attn_1_flops = attn_1_M * attn_1_N * attn_1_K * c
 
-        # TODO: why is the sum of exps reduction not included in softmax's flops?
-        softmax_M, softmax_K = batch * heads * math.prod(spatial_extent), math.prod(
-            kernel_size
-        )
-        softmax_flops = softmax_M * softmax_K
-
-        attn_flops = attn_0_flops + attn_1_flops + softmax_flops
-
-        if rel_pos_bias:
-            rpb_M, rpb_K = batch * heads * math.prod(spatial_extent), math.prod(
-                kernel_size
-            )
-            attn_flops += rpb_M * rpb_K
+        attn_flops = attn_0_flops + attn_1_flops
 
         return qkv_flops + attn_flops + proj_flops
 
-    def _test_natten_flops(
+    def _test_natten_flops_with_fvcore(
         self,
         batch,
         spatial_extent,
@@ -152,7 +141,6 @@ class FlopCounterTests(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal,
-        rel_pos_bias,
         qkv_bias,
         run_on_cuda=False,
     ):
@@ -169,8 +157,8 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
-            rel_pos_bias=rel_pos_bias,
             qkv_bias=qkv_bias,
+            use_experimental_ops=False,
         )
         x = self._build_input(
             batch=batch,
@@ -192,8 +180,71 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
-            rel_pos_bias=rel_pos_bias,
             qkv_bias=qkv_bias,
+            return_macs=True,  # fvcore reports MACs
+        )
+
+        assert reference_flops == natten_flops, (
+            "FLOPs are incorrect. "
+            + f"Expected {reference_flops} FLOPs, FVCore computed {natten_flops} FLOPs. "
+            + f"Difference: {abs(reference_flops - natten_flops)} FLOPs. "
+        )
+
+    def _test_natten_flops_with_torch(
+        self,
+        batch,
+        spatial_extent,
+        heads,
+        dim_per_head,
+        kernel_size,
+        dilation,
+        is_causal,
+        qkv_bias,
+        run_on_cuda=False,
+    ):
+        try:
+            from torch.utils.flop_counter import FlopCounterMode
+        except ImportError:
+            raise ImportError(
+                "Torch flop utilities not found, but related tests are still being run. "
+                "Did you forget to use @skip_if_experimental_ops_are_not_supported ?"
+            )
+        m = self._build_model(
+            dim_per_head=dim_per_head,
+            heads=heads,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            is_causal=is_causal,
+            qkv_bias=qkv_bias,
+            use_experimental_ops=True,  # Experimental ops required for PT's FLOP counter to work
+        )
+        x = self._build_input(
+            batch=batch,
+            spatial_extent=spatial_extent,
+            heads=heads,
+            dim_per_head=dim_per_head,
+        )
+        if run_on_cuda:
+            m = m.cuda()
+            x = x.cuda()
+
+        flop_counter = FlopCounterMode(display=False)
+
+        with flop_counter:
+            _ = m(x)
+
+        natten_flops = flop_counter.get_total_flops()
+
+        reference_flops = self._compute_flops(
+            batch=batch,
+            spatial_extent=spatial_extent,
+            heads=heads,
+            dim_per_head=dim_per_head,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            is_causal=is_causal,
+            qkv_bias=qkv_bias,
+            return_macs=False,  # PT reports FLOPs
         )
 
         assert reference_flops == natten_flops, (
@@ -203,10 +254,10 @@ class FlopCounterTests(unittest.TestCase):
         )
 
     @skip_if_fvcore_is_not_available()
-    def test_flops_unfused(self):
+    def test_fvcore_flops_unfused(self):
         natten.use_fused_na(False, kv_parallel=False)
 
-        self._test_natten_flops(
+        self._test_natten_flops_with_fvcore(
             batch=4,
             spatial_extent=(128,),
             heads=4,
@@ -214,11 +265,10 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5,),
             dilation=(2,),
             is_causal=(False,),
-            rel_pos_bias=False,
             qkv_bias=False,
         )
 
-        self._test_natten_flops(
+        self._test_natten_flops_with_fvcore(
             batch=1,
             spatial_extent=(16, 10),
             heads=2,
@@ -226,11 +276,10 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3),
             dilation=(2, 1),
             is_causal=(False, False),
-            rel_pos_bias=True,
             qkv_bias=True,
         )
 
-        self._test_natten_flops(
+        self._test_natten_flops_with_fvcore(
             batch=1,
             spatial_extent=(6, 5, 8),
             heads=2,
@@ -238,17 +287,16 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3, 7),
             dilation=(1, 1, 1),
             is_causal=(True, False, False),
-            rel_pos_bias=False,
             qkv_bias=True,
         )
 
     @skip_if_fvcore_is_not_available()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
-    def test_flops_fna(self):
+    def test_fvcore_flops_fna(self):
         natten.use_fused_na(True, kv_parallel=True)
 
-        self._test_natten_flops(
+        self._test_natten_flops_with_fvcore(
             batch=4,
             spatial_extent=(128,),
             heads=4,
@@ -256,12 +304,11 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5,),
             dilation=(2,),
             is_causal=(False,),
-            rel_pos_bias=False,
             qkv_bias=False,
             run_on_cuda=True,
         )
 
-        self._test_natten_flops(
+        self._test_natten_flops_with_fvcore(
             batch=1,
             spatial_extent=(16, 10),
             heads=2,
@@ -269,12 +316,11 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3),
             dilation=(2, 1),
             is_causal=(False, False),
-            rel_pos_bias=True,
             qkv_bias=True,
             run_on_cuda=True,
         )
 
-        self._test_natten_flops(
+        self._test_natten_flops_with_fvcore(
             batch=1,
             spatial_extent=(6, 5, 8),
             heads=2,
@@ -282,7 +328,87 @@ class FlopCounterTests(unittest.TestCase):
             kernel_size=(5, 3, 7),
             dilation=(1, 1, 1),
             is_causal=(True, False, False),
-            rel_pos_bias=False,
+            qkv_bias=True,
+            run_on_cuda=True,
+        )
+
+    # Expected failure since experimental ops only include FNA for now
+    @unittest.expectedFailure
+    @skip_if_experimental_ops_are_not_supported()
+    def test_torch_flops_unfused(self):
+        natten.use_fused_na(False, kv_parallel=False)
+
+        self._test_natten_flops_with_torch(
+            batch=4,
+            spatial_extent=(128,),
+            heads=4,
+            dim_per_head=64,
+            kernel_size=(5,),
+            dilation=(2,),
+            is_causal=(False,),
+            qkv_bias=False,
+        )
+
+        self._test_natten_flops_with_torch(
+            batch=1,
+            spatial_extent=(16, 10),
+            heads=2,
+            dim_per_head=32,
+            kernel_size=(5, 3),
+            dilation=(2, 1),
+            is_causal=(False, False),
+            qkv_bias=True,
+        )
+
+        self._test_natten_flops_with_torch(
+            batch=1,
+            spatial_extent=(6, 5, 8),
+            heads=2,
+            dim_per_head=32,
+            kernel_size=(5, 3, 7),
+            dilation=(1, 1, 1),
+            is_causal=(True, False, False),
+            qkv_bias=True,
+        )
+
+    @skip_if_experimental_ops_are_not_supported()
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_torch_flops_fna(self):
+        natten.use_fused_na(True, kv_parallel=True)
+
+        self._test_natten_flops_with_torch(
+            batch=4,
+            spatial_extent=(128,),
+            heads=4,
+            dim_per_head=64,
+            kernel_size=(5,),
+            dilation=(2,),
+            is_causal=(False,),
+            qkv_bias=False,
+            run_on_cuda=True,
+        )
+
+        self._test_natten_flops_with_torch(
+            batch=1,
+            spatial_extent=(16, 10),
+            heads=2,
+            dim_per_head=32,
+            kernel_size=(5, 3),
+            dilation=(2, 1),
+            is_causal=(False, False),
+            qkv_bias=True,
+            run_on_cuda=True,
+        )
+
+        self._test_natten_flops_with_torch(
+            batch=1,
+            spatial_extent=(6, 5, 8),
+            heads=2,
+            dim_per_head=32,
+            kernel_size=(5, 3, 7),
+            dilation=(1, 1, 1),
+            is_causal=(True, False, False),
             qkv_bias=True,
             run_on_cuda=True,
         )

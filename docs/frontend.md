@@ -417,34 +417,5 @@ disable_tiled_na()
 enable_tiled_na()
 ```
 
-### FLOP counting with FVCore
-
-NATTEN can be paired with [fvcore](https://github.com/facebookresearch/fvcore)'s FLOP counter, as long as you correctly
-import and add NATTEN's handles to the flop counter.
-
-```python
-from fvcore.nn import FlopCountAnalysis
-from natten.flops import add_natten_handle
-
-# ...
-
-flop_ctr = FlopCountAnalysis(model, input)
-flop_ctr = add_natten_handle(flop_ctr)
-
-# ...
-```
-
-Alternatively, you can use our `get_flops` interface and count FLOPs for a model that may contain
-NATTEN ops/modules:
-```python
-from natten.flops import get_flops
-
-flops = get_flops(model, input)
-```
-
-#### Installing fvcore
-fvcore is available through PyPI:
-
-```shell
-pip install fvcore
-```
+### Counting FLOPs
+Please refer to our [FLOP counting guide](flops.md) for more information.
