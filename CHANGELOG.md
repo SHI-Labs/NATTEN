@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+
+## [0.17.4] - 2025-01-28
 * Support for additional KV tokens in FNA (requires xFormers)
   * Adds experimental support for additional KV tokens (attend to local neighborhood, and some
   additional context) to FNA interfaces, with training support.
