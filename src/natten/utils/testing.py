@@ -22,18 +22,23 @@
 #################################################################################################
 
 import torch
-from torch.utils.cpp_extension import CUDA_HOME
 
 from .. import has_cuda, has_fna, has_fp64_gemm, has_gemm
+
+try:
+    from torch.utils.cpp_extension import CUDA_HOME
+
+    _IS_CUDA_AVAILABLE = (
+        torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
+    )
+except:
+    _IS_CUDA_AVAILABLE = False
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
 _SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
     2,
     4,
 ]
-_IS_CUDA_AVAILABLE = (
-    torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
-)
 _HAS_GEMM_KERNELS = has_gemm()
 _GEMM_WITH_DOUBLE_PRECISION = has_fp64_gemm()
 _HAS_FNA_KERNELS = has_fna()
