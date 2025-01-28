@@ -27,14 +27,7 @@ import torch
 
 from .. import has_cuda, has_fna, has_fp64_gemm, has_gemm
 
-try:
-    from torch.utils.cpp_extension import CUDA_HOME
-
-    _IS_CUDA_AVAILABLE = (
-        torch.cuda.is_available() and (CUDA_HOME is not None) and has_cuda()
-    )
-except:
-    _IS_CUDA_AVAILABLE = False
+_IS_CUDA_AVAILABLE = torch.cuda.is_available() and has_cuda()
 
 _PYTHON_SUPPORTS_DYNAMO = [sys.version_info[0], sys.version_info[1]] < [3, 12]
 _IS_TORCH_COMPILE_SUPPORTED = _PYTHON_SUPPORTS_DYNAMO and [
