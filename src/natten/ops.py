@@ -26,6 +26,17 @@ from typing import Dict, Optional, Tuple
 import torch
 from torch import Tensor
 
+from .utils.testing import _IS_TORCH_COMPILE_SUPPORTED
+
+
+def maybe_torch_compile(*args, **kwargs):
+    def decorator(f):
+        if _IS_TORCH_COMPILE_SUPPORTED:
+            return torch.compile(f, *args, **kwargs)
+        return f
+
+    return decorator
+
 
 def qk_cross_forward(query: Tensor, key: Tensor, out: Tensor):
     """
@@ -132,7 +143,7 @@ def additional_sdpa(
     return output, lse
 
 
-@torch.compile(fullgraph=True)
+@maybe_torch_compile(fullgraph=True)
 def merge_attentions(
     output_fna: Tensor, output_sdpa: Tensor, lse_fna: Tensor, lse_sdpa: Tensor
 ) -> Tensor:

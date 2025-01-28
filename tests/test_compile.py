@@ -31,6 +31,7 @@ from natten.utils.testing import (
     skip_if_cuda_is_not_supported,
     skip_if_experimental_ops_are_not_supported,
     skip_if_fna_is_not_supported,
+    skip_if_torch_compile_is_not_supported,
 )
 
 
@@ -113,6 +114,7 @@ class TorchCompileTests(unittest.TestCase):
 
     # Expected failure since only experimental ops support torch.compile
     @unittest.expectedFailure
+    @skip_if_torch_compile_is_not_supported()
     @skip_if_experimental_ops_are_not_supported()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
@@ -133,6 +135,7 @@ class TorchCompileTests(unittest.TestCase):
 
     # Expected failure since experimental ops only include FNA for now
     @unittest.expectedFailure
+    @skip_if_torch_compile_is_not_supported()
     @skip_if_experimental_ops_are_not_supported()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
@@ -153,6 +156,7 @@ class TorchCompileTests(unittest.TestCase):
 
     # Expected failure since only experimental ops support torch.compile
     @unittest.expectedFailure
+    @skip_if_torch_compile_is_not_supported()
     @skip_if_experimental_ops_are_not_supported()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
@@ -170,6 +174,7 @@ class TorchCompileTests(unittest.TestCase):
             use_experimental_ops=False,
         )
 
+    @skip_if_torch_compile_is_not_supported()
     @skip_if_experimental_ops_are_not_supported()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
