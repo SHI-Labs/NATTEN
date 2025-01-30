@@ -33,6 +33,10 @@ _PYTHON_SUPPORTS_DYNAMO = [sys.version_info[0], sys.version_info[1]] < [3, 12]
 _IS_TORCH_COMPILE_SUPPORTED = _PYTHON_SUPPORTS_DYNAMO and [
     int(x) for x in torch.__version__.split(".")[:2]
 ] >= [2, 4]
+_IS_TORCH_FLOP_COUNT_SUPPORTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [
+    2,
+    5,
+]
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
 _SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
@@ -166,6 +170,19 @@ def skip_if_torch_compile_is_not_supported():
         def wrapper(self, *args, **kwargs):
             if not _IS_TORCH_COMPILE_SUPPORTED:
                 self.skipTest("torch.compile is not supported.")
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def skip_if_torch_flop_count_is_not_supported():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if not _IS_TORCH_FLOP_COUNT_SUPPORTED:
+                self.skipTest("FLOP counting with torch is not supported.")
             else:
                 return f(self, *args, **kwargs)
 

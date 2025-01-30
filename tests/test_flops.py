@@ -33,6 +33,7 @@ from natten.utils.testing import (
     skip_if_experimental_ops_are_not_supported,
     skip_if_fna_is_not_supported,
     skip_if_fvcore_is_not_available,
+    skip_if_torch_flop_count_is_not_supported,
 )
 
 
@@ -334,6 +335,7 @@ class FlopCounterTests(unittest.TestCase):
 
     # Expected failure since experimental ops only include FNA for now
     @unittest.expectedFailure
+    @skip_if_torch_flop_count_is_not_supported()
     @skip_if_experimental_ops_are_not_supported()
     def test_torch_flops_unfused(self):
         natten.use_fused_na(False, kv_parallel=False)
@@ -371,6 +373,7 @@ class FlopCounterTests(unittest.TestCase):
             qkv_bias=True,
         )
 
+    @skip_if_torch_flop_count_is_not_supported()
     @skip_if_experimental_ops_are_not_supported()
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
