@@ -51,6 +51,8 @@ except ImportError:
     )
 
 from .autotuner import autotune_fna
+from .context import should_use_flex_attention
+from .flex import flex_na1d, flex_na2d, flex_na3d
 from .nested import (
     na1d_av_nested,
     na1d_qk_nested,
@@ -1721,6 +1723,29 @@ def na1d(
             "Fused neighborhood attention does not support nested tensors yet."
         )
 
+    if should_use_flex_attention():
+        if scale is not None:
+            raise NotImplementedError(
+                "Custom attention scale is not supported in the Flex Attention backend."
+            )
+        if rpb is not None:
+            raise NotImplementedError(
+                "RPB is not supported in the Flex Attention backend."
+            )
+        if additional_keys is not None or additional_values is not None:
+            raise NotImplementedError(
+                "Additional keys/values is not supported in the Flex Attention backend."
+            )
+
+        return flex_na1d(
+            query,
+            key,
+            value,
+            kernel_size,
+            dilation,
+            is_causal,
+        )
+
     tiling_config_forward, tiling_config_backward = autotune_fna(
         1, query, kernel_size, dilation, is_causal
     )
@@ -1777,6 +1802,29 @@ def na2d(
             "Fused neighborhood attention does not support nested tensors yet."
         )
 
+    if should_use_flex_attention():
+        if scale is not None:
+            raise NotImplementedError(
+                "Custom attention scale is not supported in the Flex Attention backend."
+            )
+        if rpb is not None:
+            raise NotImplementedError(
+                "RPB is not supported in the Flex Attention backend."
+            )
+        if additional_keys is not None or additional_values is not None:
+            raise NotImplementedError(
+                "Additional keys/values is not supported in the Flex Attention backend."
+            )
+
+        return flex_na2d(
+            query,
+            key,
+            value,
+            kernel_size,
+            dilation,
+            is_causal,
+        )
+
     tiling_config_forward, tiling_config_backward = autotune_fna(
         2, query, kernel_size, dilation, is_causal
     )
@@ -1831,6 +1879,29 @@ def na3d(
     if query.is_nested or key.is_nested or value.is_nested:
         raise NotImplementedError(
             "Fused neighborhood attention does not support nested tensors yet."
+        )
+
+    if should_use_flex_attention():
+        if scale is not None:
+            raise NotImplementedError(
+                "Custom attention scale is not supported in the Flex Attention backend."
+            )
+        if rpb is not None:
+            raise NotImplementedError(
+                "RPB is not supported in the Flex Attention backend."
+            )
+        if additional_keys is not None or additional_values is not None:
+            raise NotImplementedError(
+                "Additional keys/values is not supported in the Flex Attention backend."
+            )
+
+        return flex_na3d(
+            query,
+            key,
+            value,
+            kernel_size,
+            dilation,
+            is_causal,
         )
 
     tiling_config_forward, tiling_config_backward = autotune_fna(

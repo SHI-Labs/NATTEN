@@ -302,14 +302,14 @@ def extract_na_ops(
                 tags[op] = tag
             else:
                 assert tags[op] == tag
-            logged_ops[op].append(evt.cuda_time_total)
-        elif evt.cuda_time_total > 0:
+            logged_ops[op].append(evt.device_time_total)
+        elif evt.device_time_total > 0:
             op_namespace, op_name = custom_op_to_name(evt.key)
             op_key = CustomOp(op_name, op_namespace)
             if op_key not in logged_ops:
-                logged_ops[op_key] = [evt.cuda_time_total]
+                logged_ops[op_key] = [evt.device_time_total]
             else:
-                logged_ops[op_key].append(evt.cuda_time_total)
+                logged_ops[op_key].append(evt.device_time_total)
 
     converted_ops = convert_ops(logged_ops, tags)
     return None if converted_ops is None else sorted(converted_ops)

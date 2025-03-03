@@ -57,6 +57,7 @@ from utils import (
 @click.option("--fmha", is_flag=True)
 @click.option("--fav2", is_flag=True)
 @click.option("--backprop", is_flag=True)
+@click.option("--flex", is_flag=True)
 @click.option("--add-kv", default=0)
 def profile_2d(
     batch_size: int,
@@ -80,6 +81,7 @@ def profile_2d(
     fav2: bool,
     backprop: bool,
     add_kv: int,
+    flex: bool,
 ):
 
     dtype = torch.float32
@@ -96,7 +98,7 @@ def profile_2d(
         natten.libnatten.set_gemm_tf32(False)
 
     if fuse:
-        natten.use_fused_na()
+        natten.use_fused_na(True, use_flex_attention=flex)
         natten.use_kv_parallelism_in_fused_na()
         natten.set_memory_usage_preference("unrestricted")
 
@@ -104,6 +106,8 @@ def profile_2d(
             natten.use_autotuner(False, False, False, False)
         else:
             natten.use_autotuner(True, True)
+    elif flex:
+        natten.use_fused_na(True, use_flex_attention=flex)
 
     func = partial(profile_na_with_torch, fuse=fuse)
     if fmha:

@@ -34,6 +34,7 @@ from natten import (
     use_autotuner,
     use_kv_parallelism_in_fused_na,
 )
+from natten.flex import flex_na2d
 from natten.functional import na2d, na2d_av, na2d_qk
 from natten.utils import check_all_args
 from natten.utils.testing import (
@@ -548,6 +549,182 @@ class FNA2DTests(unittest.TestCase):
                 Y=Y,
                 D=D,
             )
+
+
+class FlexAttentionFNA2DTest(unittest.TestCase):
+    def setUp(self):
+        _reset_everything()
+
+    def tearDown(self):
+        _reset_everything()
+
+    def _test_against_cutlass_fna(
+        self, B, H, X, Y, D, kernel_size, dilation, is_causal, eps, dtype
+    ):
+        kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
+        with torch.no_grad():
+            q, k, v, d_out = (
+                torch.randn((B, X, Y, H, D), device="cuda", dtype=dtype),
+                torch.randn((B, X, Y, H, D), device="cuda", dtype=dtype),
+                torch.randn((B, X, Y, H, D), device="cuda", dtype=dtype),
+                torch.randn((B, X, Y, H, D), device="cuda", dtype=dtype) * 0.05,
+            )
+
+            q_ref, k_ref, v_ref, d_out_ref = (
+                q.clone(),
+                k.clone(),
+                v.clone(),
+                d_out.clone(),
+            )
+
+        # Reference
+        q_ref.requires_grad_(True)
+        k_ref.requires_grad_(True)
+        v_ref.requires_grad_(True)
+        d_out_ref.requires_grad_(True)
+        out_ref_ = na2d(
+            q_ref,
+            k_ref,
+            v_ref,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            is_causal=is_causal,
+        )
+        out_ref = out_ref_.data.clone().float()
+
+        dq_ref, dk_ref, dv_ref = None, None, None
+        out_ref_.backward(d_out_ref)
+        with torch.no_grad():
+            dq_ref, dk_ref, dv_ref = (
+                q_ref.grad.clone().float(),
+                k_ref.grad.clone().float(),
+                v_ref.grad.clone().float(),
+            )
+
+        # Flex
+        q.requires_grad_(True)
+        k.requires_grad_(True)
+        v.requires_grad_(True)
+        d_out.requires_grad_(True)
+
+        out_ = flex_na2d(
+            q,
+            k,
+            v,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            is_causal=is_causal,
+        )
+        out = out_.data.clone().float()
+
+        dq, dk, dv = None, None, None
+        out_.backward(d_out)
+        with torch.no_grad():
+            dq, dk, dv = (
+                q.grad.clone().float(),
+                k.grad.clone().float(),
+                v.grad.clone().float(),
+            )
+
+        torch.testing.assert_close(out, out_ref, atol=eps, rtol=0)
+        torch.testing.assert_close(dq, dq_ref, atol=eps, rtol=0)
+        torch.testing.assert_close(dk, dk_ref, atol=eps, rtol=0)
+        torch.testing.assert_close(dv, dv_ref, atol=eps, rtol=0)
+
+    def _test_all_dtypes(
+        self,
+        B,
+        H,
+        X,
+        Y,
+        D,
+        kernel_size,
+        dilation,
+        is_causal=None,
+    ):
+        self._test_against_cutlass_fna(
+            B=B,
+            H=H,
+            X=X,
+            Y=Y,
+            D=D,
+            kernel_size=kernel_size,
+            dilation=dilation,
+            is_causal=is_causal,
+            dtype=torch.float32,
+            eps=1e-2,
+        )
+        if HAS_HALF:
+            self._test_against_cutlass_fna(
+                B=B,
+                H=H,
+                X=X,
+                Y=Y,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+                dtype=torch.float16,
+                eps=1e-1,
+            )
+        if HAS_BFLOAT:
+            self._test_against_cutlass_fna(
+                B=B,
+                H=H,
+                X=X,
+                Y=Y,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+                dtype=torch.bfloat16,
+                eps=1e-1,
+            )
+
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_against_cutlass_fna(self):
+        problem_sizes = [
+            (1, 1, 3, 3, 16, 3, 3, 1, 1),
+            (1, 1, 8, 10, 16, 3, 5, 1, 2),
+            (1, 2, 15, 20, 32, 5, 15, 3, 1),
+            (1, 2, 17, 19, 32, 9, 7, 1, 1),
+            (1, 2, 17, 19, 32, 9, 7, 1, 2),
+            (4, 3, 32, 32, 32, 31, 31, 1, 1),
+            (2, 2, 32, 64, 64, 25, 31, 1, 2),
+            (2, 4, 64, 128, 64, 55, 101, 1, 1),
+            (2, 4, 64, 128, 64, 21, 29, 3, 4),
+            # TODO: these will fail on most non-A100/H100 cards due to the 99KB shmem limit
+            # (4, 3, 56, 56, 128, 7, 7, 2, 4),
+            # (4, 3, 28, 46, 128, 11, 13, 1, 1),
+            (4, 3, 56, 56, 64, 7, 7, 2, 4),
+            (4, 3, 28, 46, 64, 11, 13, 1, 1),
+        ]
+        for (
+            B,
+            H,
+            X,
+            Y,
+            D,
+            kernel_size_h,
+            kernel_size_w,
+            dilation_h,
+            dilation_w,
+        ) in problem_sizes:
+            for causal_h, causal_w in product([True, False], [True, False]):
+                kernel_size = (kernel_size_h, kernel_size_w)
+                dilation = (dilation_h, dilation_w)
+                is_causal = (causal_h, causal_w)
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    X=X,
+                    Y=Y,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
 
 if __name__ == "__main__":

@@ -114,6 +114,7 @@ __all__ = [
     "disable_gemm_na",
     "enable_tiled_na",
     "disable_tiled_na",
+    "use_flex_attention",
 ]
 
-__version__ = "0.17.4"
+__version__ = "0.17.5.dev0"

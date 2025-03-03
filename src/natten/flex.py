@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Dict, Optional, Tuple
+from typing import Optional, Tuple
 
 import torch
 from torch import BoolTensor, IntTensor, Tensor
@@ -30,14 +30,18 @@ def get_block_mask(
     is_causal: Tuple[bool],
 ):
 
-    def get_location_1d(idx: IntTensor) -> IntTensor:
+    def get_location_1d(idx: IntTensor) -> Tuple[IntTensor]:
         return (idx,)
 
     def get_location_2d(idx: IntTensor) -> Tuple[IntTensor, IntTensor]:
-        return (idx // image_shape[1], idx % image_shape[1])
+        return (idx // image_shape[1], idx % image_shape[1])  # type: ignore
 
     def get_location_3d(idx: IntTensor) -> Tuple[IntTensor, IntTensor, IntTensor]:
-        return (idx // image_shape[2] // image_shape[1], (idx // image_shape[2]) % image_shape[1], idx % image_shape[2])
+        return (
+            idx // image_shape[2] // image_shape[1],  # type: ignore
+            (idx // image_shape[2]) % image_shape[1],  # type: ignore
+            idx % image_shape[2],  # type: ignore
+        )
 
     get_location = {
         1: get_location_1d,
@@ -45,9 +49,11 @@ def get_block_mask(
         3: get_location_3d,
     }[num_dimension]
 
-    def natten_mask_mod(b: IntTensor, h: IntTensor, q_idx: IntTensor, kv_idx: IntTensor) -> BoolTensor:
-        q_idx = get_location(q_idx)
-        kv_idx = get_location(kv_idx)
+    def natten_mask_mod(
+        b: IntTensor, h: IntTensor, q_idx: IntTensor, kv_idx: IntTensor
+    ) -> BoolTensor:
+        q_idx = get_location(q_idx)  # type: ignore
+        kv_idx = get_location(kv_idx)  # type: ignore
 
         masks = []
         for i in range(num_dimension):
@@ -60,7 +66,8 @@ def get_block_mask(
                 )
             else:
                 kernel_center_x = q_idx[i].clamp(
-                    (dilate_kernel - 1) // 2, (image_shape[i] - 1) - (dilate_kernel - 1) // 2
+                    (dilate_kernel - 1) // 2,
+                    (image_shape[i] - 1) - (dilate_kernel - 1) // 2,
                 )
                 mask = ((kernel_center_x - kv_idx[i]).abs() <= dilate_kernel // 2) & (
                     (q_idx[i] % dilation[i]) == (kv_idx[i] % dilation[i])
@@ -68,10 +75,10 @@ def get_block_mask(
 
             masks.append(mask)
 
-        return functools.reduce(lambda x, y: x & y, masks)
+        return functools.reduce(lambda x, y: x & y, masks)  # type: ignore
 
     seq_length = functools.reduce(lambda x, y: x * y, image_shape)
-    block_mask = create_block_mask(natten_mask_mod, 1, 1, seq_length, seq_length)
+    block_mask = create_block_mask(natten_mask_mod, 1, 1, seq_length, seq_length)  # type: ignore
     return block_mask
 
 
@@ -82,11 +89,6 @@ def flex_na1d(
     kernel_size: Dimension1DTypeOrDed,
     dilation: Dimension1DTypeOrDed = 1,
     is_causal: Optional[CausalArg1DTypeOrDed] = False,
-    rpb: Optional[Tensor] = None,
-    scale: Optional[float] = None,
-    additional_keys: Optional[Tensor] = None,
-    additional_values: Optional[Tensor] = None,
-    xformers_kwargs: Optional[Dict] = None,
 ) -> torch.Tensor:
     """
     Args:
@@ -98,12 +100,9 @@ def flex_na1d(
         is_causal: Union[bool, Tuple[bool]]
     """
 
-    kernel_size, dilation, is_causal = check_all_args(1, kernel_size, dilation, is_causal)
-    assert rpb is None, "rpb is not supported"
-    assert scale is None, "scale is not supported"
-    assert additional_keys is None, "additional_keys is not supported"
-    assert additional_values is None, "additional_values is not supported"
-    assert xformers_kwargs is None, "xformers_kwargs is not supported"
+    kernel_size_, dilation_, is_causal_ = check_all_args(
+        1, kernel_size, dilation, is_causal
+    )
 
     batch_size, seq_length, num_head, head_dim = query.shape
     image_shape = (seq_length,)
@@ -112,7 +111,7 @@ def flex_na1d(
     _key = key.transpose(1, 2)
     _value = value.transpose(1, 2)
 
-    block_mask = get_block_mask(1, image_shape, kernel_size, dilation, is_causal)
+    block_mask = get_block_mask(1, image_shape, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
     out = flex_attention_compiled(_query, _key, _value, block_mask=block_mask)
 
@@ -128,11 +127,6 @@ def flex_na2d(
     kernel_size: Dimension2DTypeOrDed,
     dilation: Dimension2DTypeOrDed = 1,
     is_causal: Optional[CausalArg2DTypeOrDed] = False,
-    rpb: Optional[Tensor] = None,
-    scale: Optional[float] = None,
-    additional_keys: Optional[Tensor] = None,
-    additional_values: Optional[Tensor] = None,
-    xformers_kwargs: Optional[Dict] = None,
 ) -> torch.Tensor:
     """
     Args:
@@ -144,12 +138,9 @@ def flex_na2d(
         is_causal: Union[bool, Tuple[bool, bool]]
     """
 
-    kernel_size, dilation, is_causal = check_all_args(2, kernel_size, dilation, is_causal)
-    assert rpb is None, "rpb is not supported"
-    assert scale is None, "scale is not supported"
-    assert additional_keys is None, "additional_keys is not supported"
-    assert additional_values is None, "additional_values is not supported"
-    assert xformers_kwargs is None, "xformers_kwargs is not supported"
+    kernel_size_, dilation_, is_causal_ = check_all_args(
+        2, kernel_size, dilation, is_causal
+    )
 
     batch_size, image_height, image_width, num_head, head_dim = query.shape
     seq_length = image_height * image_width
@@ -159,11 +150,13 @@ def flex_na2d(
     _key = key.view(batch_size, seq_length, num_head, head_dim).transpose(1, 2)
     _value = value.view(batch_size, seq_length, num_head, head_dim).transpose(1, 2)
 
-    block_mask = get_block_mask(2, image_shape, kernel_size, dilation, is_causal)
+    block_mask = get_block_mask(2, image_shape, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
     out = flex_attention_compiled(_query, _key, _value, block_mask=block_mask)
 
-    out = out.transpose(1, 2).view(batch_size, image_height, image_width, num_head, head_dim)
+    out = out.transpose(1, 2).view(
+        batch_size, image_height, image_width, num_head, head_dim
+    )
 
     return out
 
@@ -175,11 +168,6 @@ def flex_na3d(
     kernel_size: Dimension3DTypeOrDed,
     dilation: Dimension3DTypeOrDed = 1,
     is_causal: Optional[CausalArg3DTypeOrDed] = False,
-    rpb: Optional[Tensor] = None,
-    scale: Optional[float] = None,
-    additional_keys: Optional[Tensor] = None,
-    additional_values: Optional[Tensor] = None,
-    xformers_kwargs: Optional[Dict] = None,
 ) -> torch.Tensor:
     """
     Args:
@@ -191,12 +179,9 @@ def flex_na3d(
         is_causal: Union[bool, Tuple[bool, bool]]
     """
 
-    kernel_size, dilation, is_causal = check_all_args(3, kernel_size, dilation, is_causal)
-    assert rpb is None, "rpb is not supported"
-    assert scale is None, "scale is not supported"
-    assert additional_keys is None, "additional_keys is not supported"
-    assert additional_values is None, "additional_values is not supported"
-    assert xformers_kwargs is None, "xformers_kwargs is not supported"
+    kernel_size_, dilation_, is_causal_ = check_all_args(
+        3, kernel_size, dilation, is_causal
+    )
 
     batch_size, image_depth, image_height, image_width, num_head, head_dim = query.shape
     seq_length = image_depth * image_height * image_width
@@ -206,10 +191,12 @@ def flex_na3d(
     _key = key.view(batch_size, seq_length, num_head, head_dim).transpose(1, 2)
     _value = value.view(batch_size, seq_length, num_head, head_dim).transpose(1, 2)
 
-    block_mask = get_block_mask(3, image_shape, kernel_size, dilation, is_causal)
+    block_mask = get_block_mask(3, image_shape, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
     out = flex_attention_compiled(_query, _key, _value, block_mask=block_mask)
 
-    out = out.transpose(1, 2).view(batch_size, image_depth, image_height, image_width, num_head, head_dim)
+    out = out.transpose(1, 2).view(
+        batch_size, image_depth, image_height, image_width, num_head, head_dim
+    )
 
     return out
