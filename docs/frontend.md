@@ -167,21 +167,35 @@ For more information, refer to [KV parallelism](fna/kv-parallelism.md).
 
 #### Using FlexAttention Backend
 
-NATTEN also supports FlexAttention Backend, which can be enabled as follows:
+NATTEN also supports using [FlexAttention](https://pytorch.org/blog/flexattention/) as a backend
+for FNA, which can be enabled as follows:
 
 ```python
 from natten import use_flex_attention
 
-use_flex_attention(True)
-# Enable FlexAttention Backend
-
-use_flex_attention(False)
-# Disable FlexAttention Backend (default)
+use_flex_attention()
 ```
 
-FlexAttention could be potentially faster than FNA on modern GPU architectures, especially for higher dimensionals (2-D or 3-D).
+or directly via `use_fused_na`:
 
-However, FlexAttention backend is still experimental, and may contain certain bugs due to its kernel implementation. Bug reports related to this backend in general are strongly appreciated.
+```python
+from natten import use_fused_na
+
+use_fused_na(True, use_flex_attention=True)
+# FNA runs with Flex Attention.
+
+use_fused_na(False)
+# Disable Fused NA (default)
+```
+
+FlexAttention can potentially bring speedups to your application on newer hardware architectures
+until we create specialized kernels for them. FlexAttention can also speed up certain problem sizes
+in 2D/3D NA, when the software predication overhead undoes the FLOP savings (refer to the FNA paper
+for more details on this.)
+
+However, note that the FlexAttention backend is still experimental, and use of `dilation`
+significantly reduces the likelihood of speedup compared to full self attention.
+Bug reports related to this backend in general are strongly appreciated.
 
 ### Operations
 Operations are one level below our modules, and are intended to give you full control over the module-level
