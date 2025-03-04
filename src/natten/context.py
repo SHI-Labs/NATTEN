@@ -46,6 +46,7 @@ class NattenContext:
     is_deterministic_mode_enabled: bool = False
     is_fused_na_enabled: bool = False
     is_kv_parallelism_enabled: bool = False
+    use_flex_attention: bool = False
 
     training_memory_preference: MemoryUsagePreference = MemoryUsagePreference.Default
 
@@ -53,6 +54,7 @@ class NattenContext:
     def reset():
         NattenContext.is_deterministic_mode_enabled = False
         NattenContext.is_fused_na_enabled = False
+        NattenContext.use_flex_attention = False
         NattenContext.is_kv_parallelism_enabled = False
         NattenContext.training_memory_preference = MemoryUsagePreference.Default
 
@@ -133,9 +135,12 @@ def is_kv_parallelism_in_fused_na_enabled() -> bool:
     return NattenContext.is_kv_parallelism_enabled
 
 
-def use_fused_na(mode: bool = True, kv_parallel: bool = True):
+def use_fused_na(
+    mode: bool = True, kv_parallel: bool = True, use_flex_attention: bool = False
+):
     if not mode:
         NattenContext.is_fused_na_enabled = False
+        NattenContext.use_flex_attention = False
         use_kv_parallelism_in_fused_na(False)
         return
 
@@ -147,10 +152,19 @@ def use_fused_na(mode: bool = True, kv_parallel: bool = True):
     )
     use_kv_parallelism_in_fused_na(kv_parallel)
     NattenContext.is_fused_na_enabled = True
+    NattenContext.use_flex_attention = use_flex_attention
 
 
 def is_fused_na_enabled() -> bool:
     return NattenContext.is_fused_na_enabled
+
+
+def should_use_flex_attention() -> bool:
+    return NattenContext.use_flex_attention
+
+
+def use_flex_attention() -> bool:
+    return use_fused_na(mode=True, use_flex_attention=True)
 
 
 use_fna = use_fused_na

@@ -55,12 +55,15 @@ uninstall:
 install: 
 	@echo "Installing NATTEN from source"
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
-			 NATTEN_N_WORKERS="${WORKERS}" \
-			 NATTEN_WITH_CUDA="${WITH_CUDA}" \
-			 NATTEN_VERBOSE="${VERBOSE}" \
-			 pip install -v -e . 2>&1 | tee install.out
+	NATTEN_N_WORKERS="${WORKERS}" \
+	NATTEN_WITH_CUDA="${WITH_CUDA}" \
+	NATTEN_VERBOSE="${VERBOSE}" \
+	pip install -v -e . 2>&1 | tee install.out
 
 test:
+	NATTEN_LOG_LEVEL="CRITICAL" \
+	PYTORCH_NO_CUDA_MEMORY_CACHING=1 \
+	CUBLAS_WORKSPACE_CONFIG=":4096:8" \
 	pytest -v -x ./tests
 
 style:

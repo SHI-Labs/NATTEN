@@ -70,6 +70,7 @@ def _reset_everything():
     torch.backends.cudnn.benchmark = False
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
+    torch.cuda.empty_cache()
 
 
 HAS_GEMM = has_gemm()

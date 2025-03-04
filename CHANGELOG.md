@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Main branch]
+* Added Flex Attention as a backend.
+    * Now you can use Flex Attention instead of FNA through NATTEN directly.
+    * Just import `use_flex_attention()` from `natten`, call it, and enjoy potentially significant
+     speedups on newer architectures.
+     
 
 ## [0.17.4] - 2025-01-28
 * Support for additional KV tokens in FNA (requires xFormers)
