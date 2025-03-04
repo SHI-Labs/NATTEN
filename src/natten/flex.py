@@ -46,7 +46,6 @@ def get_flex_attention_compiled():
     return torch.compile(flex_attention, dynamic=False)
 
 
-@functools.lru_cache(maxsize=None)
 def get_na_flex_mask(
     na_dim: int,
     input_size: DimensionType,
