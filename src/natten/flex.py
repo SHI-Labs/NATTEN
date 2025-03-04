@@ -42,7 +42,6 @@ from .types import (
 from .utils import check_all_args
 
 
-@functools.lru_cache(maxsize=1)
 def get_flex_attention_compiled():
     return torch.compile(flex_attention, dynamic=False)
 
@@ -108,7 +107,7 @@ def get_na_flex_mask(
 
     seq_length = math.prod(input_size)
     return create_block_mask(
-        na_mask_mod, B=None, H=None, Q_LEN=seq_length, KV_LEN=seq_length  # type: ignore
+        na_mask_mod, B=None, H=None, Q_LEN=seq_length, KV_LEN=seq_length, _compile=True  # type: ignore
     )
 
 
@@ -127,7 +126,7 @@ def flex_na1d(
 
     if query.dim() != 4 or key.dim() != 4 or value.dim() != 4:
         raise ValueError(
-            "flex_na1d expects query, key, and value to be 5-dimensional tensors, "
+            "flex_na1d expects query, key, and value to be 4-dimensional tensors, "
             f"got {query.shape=}, {key.shape=}, {value.shape=}."
         )
 

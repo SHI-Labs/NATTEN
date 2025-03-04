@@ -2,6 +2,9 @@
 
 ## [Main branch]
 
+## [0.17.5.dev0] - 2025-03-04
+* Integrate flex attention backend.
+
 ## [0.17.4] - 2025-01-28
 * Support for additional KV tokens in FNA (requires xFormers)
   * Adds experimental support for additional KV tokens (attend to local neighborhood, and some
