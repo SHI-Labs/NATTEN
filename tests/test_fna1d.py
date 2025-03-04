@@ -67,9 +67,10 @@ def _reset_everything():
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
     torch.manual_seed(42)
+    torch.cuda.empty_cache()
 
     # Attention merge recompilation requires this
-    torch._dynamo.config.cache_size_limit = 64
+    torch._dynamo.config.cache_size_limit = 1024
 
 
 HAS_HALF = has_half()
