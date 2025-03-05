@@ -42,6 +42,11 @@ from .types import (
 from .utils import check_all_args
 
 
+def can_run_flex_attention(input_shape) -> bool: 
+    batch_size, *seq_dims, num_heads, head_dim = input_shape
+    seq_length = math.prod(seq_dims)
+    return seq_length % 128 == 0 and math.log2(head_dim).is_integer() and head_dim <= 256
+
 def get_flex_attention_compiled():
     return torch.compile(flex_attention, dynamic=False)
 
@@ -141,8 +146,14 @@ def flex_na1d(
             f"got {query.dtype=}, {key.dtype=}, {value.dtype=}."
         )
 
-    batch_size, seqlen, num_heads, head_dim = query.shape
-    input_size = (seqlen,)
+    batch_size, seq_length, num_heads, head_dim = query.shape
+    input_size = (seq_length,)
+
+    if not can_run_flex_attention(query.shape):
+        raise ValueError(f"FlexAttention does only supports sequence lengths "
+                         f"divisible by 128, and head dimension being a power "
+                         f"of 2 and at most 256. Got {seq_length=} and "
+                         f"{head_dim=}.")
 
     query_ = query.transpose(1, 2)
     key_ = key.transpose(1, 2)
@@ -191,6 +202,12 @@ def flex_na2d(
     batch_size, seqlen_1, seqlen_2, num_heads, head_dim = query.shape
     seq_length = seqlen_1 * seqlen_2
     input_size = (seqlen_1, seqlen_2)
+    
+    if not can_run_flex_attention(query.shape):
+        raise ValueError(f"FlexAttention does only supports sequence lengths "
+                         f"divisible by 128, and head dimension being a power "
+                         f"of 2 and at most 256. Got {seq_length=} and "
+                         f"{head_dim=}.")
 
     query_ = query.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
     key_ = key.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
@@ -239,6 +256,12 @@ def flex_na3d(
     batch_size, seqlen_0, seqlen_1, seqlen_2, num_heads, head_dim = query.shape
     seq_length = seqlen_0 * seqlen_1 * seqlen_2
     input_size = (seqlen_0, seqlen_1, seqlen_2)
+    
+    if not can_run_flex_attention(query.shape):
+        raise ValueError(f"FlexAttention does only supports sequence lengths "
+                         f"divisible by 128, and head dimension being a power "
+                         f"of 2 and at most 256. Got {seq_length=} and "
+                         f"{head_dim=}.")
 
     query_ = query.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
     key_ = key.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)

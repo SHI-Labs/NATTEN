@@ -47,6 +47,7 @@ class NattenContext:
     is_fused_na_enabled: bool = False
     is_kv_parallelism_enabled: bool = False
     use_flex_attention: bool = False
+    force_flex_attention: bool = False
 
     training_memory_preference: MemoryUsagePreference = MemoryUsagePreference.Default
 
@@ -136,11 +137,12 @@ def is_kv_parallelism_in_fused_na_enabled() -> bool:
 
 
 def use_fused_na(
-    mode: bool = True, kv_parallel: bool = True, use_flex_attention: bool = False
+    mode: bool = True, kv_parallel: bool = True, use_flex_attention: bool = False, force_flex_attention: bool = False,
 ):
     if not mode:
         NattenContext.is_fused_na_enabled = False
         NattenContext.use_flex_attention = False
+        NattenContext.force_flex_attention = False
         use_kv_parallelism_in_fused_na(False)
         return
 
@@ -153,18 +155,28 @@ def use_fused_na(
     use_kv_parallelism_in_fused_na(kv_parallel)
     NattenContext.is_fused_na_enabled = True
     NattenContext.use_flex_attention = use_flex_attention
+    NattenContext.force_flex_attention = force_flex_attention
 
 
 def is_fused_na_enabled() -> bool:
     return NattenContext.is_fused_na_enabled
 
 
+# (akane) Ali are you sure this function returns a bool?
+def use_flex_attention() -> bool:
+    return use_fused_na(mode=True, use_flex_attention=True, force_flex_attention=False)
+
+
 def should_use_flex_attention() -> bool:
     return NattenContext.use_flex_attention
 
 
-def use_flex_attention() -> bool:
-    return use_fused_na(mode=True, use_flex_attention=True)
+def force_flex_attention() -> bool:
+    return use_fused_na(mode=True, use_flex_attention=True, force_flex_attention=True)
+
+
+def should_force_flex_attention() -> bool:
+    return NattenContext.force_flex_attention
 
 
 use_fna = use_fused_na

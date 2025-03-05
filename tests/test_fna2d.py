@@ -686,11 +686,11 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
     @skip_if_fna_is_not_supported()
     def test_against_cutlass_fna(self):
         problem_sizes = [
-            (1, 1, 3, 3, 16, 3, 3, 1, 1),
-            (1, 1, 8, 10, 16, 3, 5, 1, 2),
-            (1, 2, 15, 20, 32, 5, 15, 3, 1),
-            (1, 2, 17, 19, 32, 9, 7, 1, 1),
-            (1, 2, 17, 19, 32, 9, 7, 1, 2),
+            (1, 1, 16, 16, 16, 3, 3, 1, 1),
+            (1, 1, 8, 16, 16, 3, 5, 1, 2),
+            (1, 2, 32, 16, 32, 5, 15, 3, 1),
+            (1, 2, 16, 16, 32, 9, 7, 1, 1),
+            (1, 2, 16, 16, 32, 9, 7, 1, 2),
             (4, 3, 32, 32, 32, 31, 31, 1, 1),
             (2, 2, 32, 64, 64, 25, 31, 1, 2),
             (2, 4, 64, 128, 64, 55, 101, 1, 1),
@@ -700,6 +700,45 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             # (4, 3, 28, 46, 128, 11, 13, 1, 1),
             (4, 3, 56, 56, 64, 7, 7, 2, 4),
             (4, 3, 28, 46, 64, 11, 13, 1, 1),
+        ]
+        for (
+            B,
+            H,
+            X,
+            Y,
+            D,
+            kernel_size_h,
+            kernel_size_w,
+            dilation_h,
+            dilation_w,
+        ) in problem_sizes:
+            for causal_h, causal_w in product([True, False], [True, False]):
+                kernel_size = (kernel_size_h, kernel_size_w)
+                dilation = (dilation_h, dilation_w)
+                is_causal = (causal_h, causal_w)
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    X=X,
+                    Y=Y,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @unittest.expectedFailure
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_against_cutlass_fna(self):
+        problem_sizes = [
+            (1, 1, 3, 3, 16, 3, 3, 1, 1),
+            (1, 1, 8, 10, 16, 3, 5, 1, 2),
+            (1, 2, 15, 20, 32, 5, 15, 3, 1),
+            (1, 2, 17, 19, 32, 9, 7, 1, 1),
+            (1, 2, 17, 19, 32, 9, 7, 1, 2),
+            (1, 2, 16, 16, 15, 9, 7, 1, 1),
+            (1, 2, 16, 16, 34, 9, 7, 1, 2),
         ]
         for (
             B,
