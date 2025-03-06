@@ -45,7 +45,7 @@ from .utils import check_all_args
 def can_run_flex_attention(input_shape) -> bool: 
     batch_size, *seq_dims, num_heads, head_dim = input_shape
     seq_length = math.prod(seq_dims)
-    return seq_length % 128 == 0 and math.log2(head_dim).is_integer() and head_dim <= 256
+    return seq_length % 128 == 0 and math.log2(head_dim).is_integer()
 
 def get_flex_attention_compiled():
     return torch.compile(flex_attention, dynamic=False)
