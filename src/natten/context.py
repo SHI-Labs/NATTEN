@@ -162,8 +162,7 @@ def is_fused_na_enabled() -> bool:
     return NattenContext.is_fused_na_enabled
 
 
-# (akane) Ali are you sure this function returns a bool?
-def use_flex_attention() -> bool:
+def use_flex_attention():
     return use_fused_na(mode=True, use_flex_attention=True, force_flex_attention=False)
 
 
