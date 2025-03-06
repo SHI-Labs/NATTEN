@@ -171,7 +171,7 @@ def should_use_flex_attention() -> bool:
     return NattenContext.use_flex_attention
 
 
-def force_flex_attention() -> bool:
+def force_flex_attention():
     return use_fused_na(mode=True, use_flex_attention=True, force_flex_attention=True)
 
 
