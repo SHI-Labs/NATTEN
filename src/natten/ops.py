@@ -164,17 +164,16 @@ def merge_attentions(
     output_0 = output_fna.reshape(input_shape).to(accum_type)
     output_1 = output_sdpa.reshape(input_shape).to(accum_type)
 
-    sum_of_exps_0 = lse_0.exp().unsqueeze(-1).expand(*input_shape)
-    sum_of_exps_1 = lse_1.exp().unsqueeze(-1).expand(*input_shape)
+    lse_max = torch.maximum(lse_0, lse_1)
+    exp_diff_0 = torch.exp(lse_0 - lse_max).unsqueeze(-1)
+    exp_diff_1 = torch.exp(lse_1 - lse_max).unsqueeze(-1)
 
-    assert sum_of_exps_0.shape == sum_of_exps_1.shape == output_0.shape
-
-    output_0_rescaled = output_0 * sum_of_exps_0
-    output_1_rescaled = output_1 * sum_of_exps_1
+    output_0_rescaled = output_0 * exp_diff_0
+    output_1_rescaled = output_1 * exp_diff_1
 
     assert output_0_rescaled.shape == output_1_rescaled.shape == output_0.shape
 
-    sum_of_exps = sum_of_exps_0 + sum_of_exps_1
+    sum_of_exps = exp_diff_0 + exp_diff_1
 
     output = (output_0_rescaled + output_1_rescaled) / sum_of_exps
 
