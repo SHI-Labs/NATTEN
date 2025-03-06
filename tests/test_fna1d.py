@@ -234,6 +234,7 @@ def compute_sdpa_reference(B, H, L, D, is_causal=False, dtype=torch.float32):
         )
     return (q_, k_, v_, d_out_, is_causal), (out_ref, dq_ref, dk_ref, dv_ref)
 
+
 class FNA1DTests(unittest.TestCase):
     def setUp(self):
         _reset_everything()
@@ -533,6 +534,7 @@ class FNA1DTests(unittest.TestCase):
                     is_causal=is_causal,
                 )
 
+
 class FlexAttentionFNA1DTest(unittest.TestCase):
     def setUp(self):
         _reset_everything()
@@ -686,7 +688,7 @@ class FlexAttentionFNA1DTest(unittest.TestCase):
                     dilation=dilation,
                     is_causal=is_causal,
                 )
-    
+
     @unittest.expectedFailure
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()

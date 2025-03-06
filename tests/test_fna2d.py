@@ -241,6 +241,7 @@ def compute_sdpa_reference(B, H, X, Y, D, dtype=torch.float32):
         )
     return (q_, k_, v_, d_out_), (out_ref, dq_ref, dk_ref, dv_ref)
 
+
 class FNA2DTests(unittest.TestCase):
     def setUp(self):
         _reset_everything()
@@ -685,8 +686,8 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
     @skip_if_fna_is_not_supported()
     def test_against_cutlass_fna(self):
         problem_sizes = [
-            # (akane): 
-            # If we just run this file, having the (8, 16) problem 
+            # (akane):
+            # If we just run this file, having the (8, 16) problem
             # after (16, 16)
             # is causing a 1/2048 mismatch in dk (0.1 vs 0.123).
             #
@@ -694,7 +695,6 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             # -- Keeping (8, 16) first errors out with 38.4% mismatched elements.
             # -- Keeping (8, 16) second erros out with >90% mismatched elements.
             # I find it better to comment out this test until further investigation.
-
             # (1, 1, 8, 16, 16, 3, 5, 1, 2),
             (1, 1, 16, 16, 16, 3, 3, 1, 1),
             (1, 2, 32, 16, 32, 5, 15, 3, 1),

@@ -51,7 +51,7 @@ except ImportError:
     )
 
 from .autotuner import autotune_fna
-from .context import should_use_flex_attention, should_force_flex_attention
+from .context import should_force_flex_attention, should_use_flex_attention
 from .flex import can_run_flex_attention, flex_na1d, flex_na2d, flex_na3d
 from .nested import (
     na1d_av_nested,
@@ -1723,9 +1723,10 @@ def na1d(
             "Fused neighborhood attention does not support nested tensors yet."
         )
 
-    if should_force_flex_attention() or \
-        (should_use_flex_attention() and can_run_flex_attention(query.shape)):
-        
+    if should_force_flex_attention() or (
+        should_use_flex_attention() and can_run_flex_attention(query.shape)
+    ):
+
         if scale is not None:
             raise NotImplementedError(
                 "Custom attention scale is not supported in the Flex Attention backend."
@@ -1804,9 +1805,10 @@ def na2d(
             "Fused neighborhood attention does not support nested tensors yet."
         )
 
-    if should_force_flex_attention() or \
-        (should_use_flex_attention() and can_run_flex_attention(query.shape)):
-        
+    if should_force_flex_attention() or (
+        should_use_flex_attention() and can_run_flex_attention(query.shape)
+    ):
+
         if scale is not None:
             raise NotImplementedError(
                 "Custom attention scale is not supported in the Flex Attention backend."
@@ -1885,9 +1887,10 @@ def na3d(
             "Fused neighborhood attention does not support nested tensors yet."
         )
 
-    if should_force_flex_attention() or \
-        (should_use_flex_attention() and can_run_flex_attention(query.shape)):
-        
+    if should_force_flex_attention() or (
+        should_use_flex_attention() and can_run_flex_attention(query.shape)
+    ):
+
         if scale is not None:
             raise NotImplementedError(
                 "Custom attention scale is not supported in the Flex Attention backend."

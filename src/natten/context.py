@@ -137,7 +137,10 @@ def is_kv_parallelism_in_fused_na_enabled() -> bool:
 
 
 def use_fused_na(
-    mode: bool = True, kv_parallel: bool = True, use_flex_attention: bool = False, force_flex_attention: bool = False,
+    mode: bool = True,
+    kv_parallel: bool = True,
+    use_flex_attention: bool = False,
+    force_flex_attention: bool = False,
 ):
     if not mode:
         NattenContext.is_fused_na_enabled = False

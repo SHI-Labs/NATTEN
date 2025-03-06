@@ -738,7 +738,6 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
                     is_causal=is_causal,
                 )
 
-
     @unittest.expectedFailure
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
