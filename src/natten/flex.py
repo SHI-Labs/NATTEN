@@ -150,10 +150,9 @@ def flex_na1d(
     input_size = (seq_length,)
 
     if not can_run_flex_attention(query.shape):
-        raise ValueError(f"FlexAttention does only supports sequence lengths "
-                         f"divisible by 128, and head dimension being a power "
-                         f"of 2 and at most 256. Got {seq_length=} and "
-                         f"{head_dim=}.")
+        raise ValueError(f"FlexAttention only supports sequence lengths "
+                         f"divisible by 128, and head dim must be a power "
+                         f"of 2. Got {seq_length=} and {head_dim=}.")
 
     query_ = query.transpose(1, 2)
     key_ = key.transpose(1, 2)
