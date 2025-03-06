@@ -234,7 +234,6 @@ def compute_sdpa_reference(B, H, L, D, is_causal=False, dtype=torch.float32):
         )
     return (q_, k_, v_, d_out_, is_causal), (out_ref, dq_ref, dk_ref, dv_ref)
 
-
 class FNA1DTests(unittest.TestCase):
     def setUp(self):
         _reset_everything()
@@ -534,7 +533,6 @@ class FNA1DTests(unittest.TestCase):
                     is_causal=is_causal,
                 )
 
-
 class FlexAttentionFNA1DTest(unittest.TestCase):
     def setUp(self):
         _reset_everything()
@@ -692,16 +690,47 @@ class FlexAttentionFNA1DTest(unittest.TestCase):
     @unittest.expectedFailure
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
-    def test_invalid_problem_sizes(self):
+    def test_invalid_problem_sizes_1(self):
         problem_sizes = [
             (1, 1, 3, 16, 3, 1),
-            (1, 1, 16, 32, 3, 1),
-            (1, 2, 33, 32, 15, 1),
-            (1, 2, 33, 64, 15, 2),
-            (1, 2, 33, 31, 15, 1),
-            (1, 2, 33, 65, 15, 2),
+        ]
+        for B, H, L, D, kernel_size, dilation in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @unittest.expectedFailure
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_invalid_problem_sizes_2(self):
+        problem_sizes = [
             (4, 3, 5000, 64, 511, 8),
-            (4, 3, 5000, 64, 255, 16),
+        ]
+        for B, H, L, D, kernel_size, dilation in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @unittest.expectedFailure
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_invalid_problem_sizes_3(self):
+        problem_sizes = [
+            (1, 2, 128, 31, 15, 1),
         ]
         for B, H, L, D, kernel_size, dilation in problem_sizes:
             for is_causal in [False, True]:
