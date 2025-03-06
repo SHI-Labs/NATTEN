@@ -153,8 +153,8 @@ def flex_na1d(
 
     if not can_run_flex_attention(query.shape):
         raise ValueError(
-            f"FlexAttention only supports sequence lengths "
-            f"divisible by 128, and head dim must be a power "
+            f"FlexAttention backend only allows sequence lengths "
+            f"divisible by 128, and head dims that are powers "
             f"of 2. Got {seqlen=} and {head_dim=}."
         )
 
@@ -208,8 +208,8 @@ def flex_na2d(
 
     if not can_run_flex_attention(query.shape):
         raise ValueError(
-            f"FlexAttention only supports sequence lengths "
-            f"divisible by 128, and head dim must be a power "
+            f"FlexAttention backend only allows sequence lengths "
+            f"divisible by 128, and head dims that are powers "
             f"of 2. Got {seqlen=} ({num_tokens_tuple=}) and {head_dim=}."
         )
 
@@ -263,8 +263,8 @@ def flex_na3d(
 
     if not can_run_flex_attention(query.shape):
         raise ValueError(
-            f"FlexAttention only supports sequence lengths "
-            f"divisible by 128, and head dim must be a power "
+            f"FlexAttention backend only allows sequence lengths "
+            f"divisible by 128, and head dims that are powers "
             f"of 2. Got {seqlen=} ({num_tokens_tuple=}) and {head_dim=}."
         )
 

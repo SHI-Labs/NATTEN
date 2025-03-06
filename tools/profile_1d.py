@@ -92,7 +92,7 @@ def profile_1d(
         natten.libnatten.set_gemm_tf32(False)
 
     if fuse:
-        natten.use_fused_na(True, use_flex_attention=flex)
+        natten.use_fused_na(True, use_flex_attention=flex, force_flex_attention=flex)
         natten.use_kv_parallelism_in_fused_na()
         natten.set_memory_usage_preference("unrestricted")
 
@@ -101,7 +101,7 @@ def profile_1d(
         else:
             natten.use_autotuner(True, True)
     elif flex:
-        natten.use_fused_na(True, use_flex_attention=flex)
+        natten.use_fused_na(True, use_flex_attention=True, force_flex_attention=True)
 
     func = partial(profile_na_with_torch, fuse=fuse)
     if fmha:
