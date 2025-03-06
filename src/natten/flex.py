@@ -39,7 +39,13 @@ from .types import (
     Dimension3DTypeOrDed,
     DimensionType,
 )
-from .utils import check_all_args
+from .utils import check_all_args, check_input_size_arg
+
+
+def can_run_flex_attention(input_shape) -> bool:
+    batch_size, *seq_dims, num_heads, head_dim = input_shape
+    seq_length = math.prod(seq_dims)
+    return seq_length % 128 == 0 and math.log2(head_dim).is_integer()
 
 
 def get_flex_attention_compiled():
@@ -141,14 +147,22 @@ def flex_na1d(
             f"got {query.dtype=}, {key.dtype=}, {value.dtype=}."
         )
 
-    batch_size, seqlen, num_heads, head_dim = query.shape
-    input_size = (seqlen,)
+    batch_size, *num_tokens_tuple_, num_heads, head_dim = query.shape
+    num_tokens_tuple = check_input_size_arg(1, num_tokens_tuple_)
+    seqlen = math.prod(num_tokens_tuple)
+
+    if not can_run_flex_attention(query.shape):
+        raise ValueError(
+            f"FlexAttention backend only allows sequence lengths "
+            f"divisible by 128, and head dims that are powers "
+            f"of 2. Got {seqlen=} and {head_dim=}."
+        )
 
     query_ = query.transpose(1, 2)
     key_ = key.transpose(1, 2)
     value_ = value.transpose(1, 2)
 
-    na_mask = get_na_flex_mask(1, input_size, kernel_size_, dilation_, is_causal_)
+    na_mask = get_na_flex_mask(1, num_tokens_tuple, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
     out_ = flex_attention_compiled(query_, key_, value_, block_mask=na_mask)
 
@@ -188,19 +202,26 @@ def flex_na2d(
             f"got {query.dtype=}, {key.dtype=}, {value.dtype=}."
         )
 
-    batch_size, seqlen_1, seqlen_2, num_heads, head_dim = query.shape
-    seq_length = seqlen_1 * seqlen_2
-    input_size = (seqlen_1, seqlen_2)
+    batch_size, *num_tokens_tuple_, num_heads, head_dim = query.shape
+    num_tokens_tuple = check_input_size_arg(2, num_tokens_tuple_)
+    seqlen = math.prod(num_tokens_tuple)
 
-    query_ = query.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
-    key_ = key.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
-    value_ = value.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
+    if not can_run_flex_attention(query.shape):
+        raise ValueError(
+            f"FlexAttention backend only allows sequence lengths "
+            f"divisible by 128, and head dims that are powers "
+            f"of 2. Got {seqlen=} ({num_tokens_tuple=}) and {head_dim=}."
+        )
 
-    na_mask = get_na_flex_mask(2, input_size, kernel_size_, dilation_, is_causal_)
+    query_ = query.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+    key_ = key.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+    value_ = value.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+
+    na_mask = get_na_flex_mask(2, num_tokens_tuple, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
     out_ = flex_attention_compiled(query_, key_, value_, block_mask=na_mask)
 
-    out = out_.transpose(1, 2).view(batch_size, seqlen_1, seqlen_2, num_heads, head_dim)
+    out = out_.transpose(1, 2).view(batch_size, *num_tokens_tuple, num_heads, head_dim)
 
     return out
 
@@ -236,20 +257,25 @@ def flex_na3d(
             f"got {query.dtype=}, {key.dtype=}, {value.dtype=}."
         )
 
-    batch_size, seqlen_0, seqlen_1, seqlen_2, num_heads, head_dim = query.shape
-    seq_length = seqlen_0 * seqlen_1 * seqlen_2
-    input_size = (seqlen_0, seqlen_1, seqlen_2)
+    batch_size, *num_tokens_tuple_, num_heads, head_dim = query.shape
+    num_tokens_tuple = check_input_size_arg(3, num_tokens_tuple_)
+    seqlen = math.prod(num_tokens_tuple)
 
-    query_ = query.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
-    key_ = key.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
-    value_ = value.view(batch_size, seq_length, num_heads, head_dim).transpose(1, 2)
+    if not can_run_flex_attention(query.shape):
+        raise ValueError(
+            f"FlexAttention backend only allows sequence lengths "
+            f"divisible by 128, and head dims that are powers "
+            f"of 2. Got {seqlen=} ({num_tokens_tuple=}) and {head_dim=}."
+        )
 
-    na_mask = get_na_flex_mask(3, input_size, kernel_size_, dilation_, is_causal_)
+    query_ = query.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+    key_ = key.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+    value_ = value.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+
+    na_mask = get_na_flex_mask(3, num_tokens_tuple, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
     out_ = flex_attention_compiled(query_, key_, value_, block_mask=na_mask)
 
-    out = out_.transpose(1, 2).view(
-        batch_size, seqlen_0, seqlen_1, seqlen_2, num_heads, head_dim
-    )
+    out = out_.transpose(1, 2).view(batch_size, *num_tokens_tuple, num_heads, head_dim)
 
     return out

@@ -665,19 +665,74 @@ class FlexAttentionFNA1DTest(unittest.TestCase):
     @skip_if_fna_is_not_supported()
     def test_against_cutlass_fna(self):
         problem_sizes = [
-            (1, 1, 3, 16, 3, 1),
-            (1, 1, 16, 32, 3, 1),
-            (1, 2, 33, 32, 15, 1),
-            (1, 2, 33, 64, 15, 2),
+            (1, 1, 128, 16, 3, 1),
+            (1, 1, 128, 32, 3, 1),
+            (1, 2, 128, 32, 15, 1),
+            (1, 2, 128, 64, 15, 2),
             (4, 3, 256, 64, 255, 1),
             (2, 2, 4096, 64, 2047, 1),
             (2, 4, 4096, 64, 2047, 2),
-            (4, 3, 5000, 64, 511, 8),
-            (4, 3, 5000, 64, 255, 16),
             (1, 12, 512, 64, 255, 1),
             # TODO: these will fail on most non-A100/H100 cards due to the 99KB shmem limit
             # (4, 24, 512, 128, 99, 1),
             # (1, 48, 512, 256, 45, 4),
+        ]
+        for B, H, L, D, kernel_size, dilation in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @unittest.expectedFailure
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_invalid_problem_sizes_1(self):
+        problem_sizes = [
+            (1, 1, 3, 16, 3, 1),
+        ]
+        for B, H, L, D, kernel_size, dilation in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @unittest.expectedFailure
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_invalid_problem_sizes_2(self):
+        problem_sizes = [
+            (4, 3, 5000, 64, 511, 8),
+        ]
+        for B, H, L, D, kernel_size, dilation in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_all_dtypes(
+                    B=B,
+                    H=H,
+                    L=L,
+                    D=D,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @unittest.expectedFailure
+    @skip_if_cuda_is_not_supported()
+    @skip_if_fna_is_not_supported()
+    def test_invalid_problem_sizes_3(self):
+        problem_sizes = [
+            (1, 2, 128, 31, 15, 1),
         ]
         for B, H, L, D, kernel_size, dilation in problem_sizes:
             for is_causal in [False, True]:

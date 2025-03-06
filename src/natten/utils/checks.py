@@ -42,6 +42,28 @@ def get_num_na_weights(kernel_size: DimensionType) -> int:
     return math.prod(kernel_size)
 
 
+def check_input_size_arg(na_dim: int, input_size: Any) -> DimensionType:
+    assert na_dim > 0 and na_dim < 4
+    if (
+        isinstance(input_size, tuple)
+        and len(input_size) == na_dim
+        and all(isinstance(d, int) for d in input_size)
+    ):
+        return input_size
+    if (
+        isinstance(input_size, list)
+        and len(input_size) == na_dim
+        and all(isinstance(d, int) for d in input_size)
+    ):
+        return tuple(input_size)
+    if isinstance(input_size, int):
+        return create_dim_from_int(na_dim, value=input_size)
+    raise ValueError(
+        "Invalid value for `input_size`; expected an integer or tuple of integers, "
+        f"got {type(input_size)}"
+    )
+
+
 def check_kernel_size_arg(na_dim: int, kernel_size: Any) -> DimensionType:
     assert na_dim > 0 and na_dim < 4
     if (
