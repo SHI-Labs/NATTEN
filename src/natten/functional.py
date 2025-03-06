@@ -1723,7 +1723,7 @@ def na1d(
             "Fused neighborhood attention does not support nested tensors yet."
         )
 
-    if should_force_flex_attention() or\
+    if should_force_flex_attention() or \
         (should_use_flex_attention() and can_run_flex_attention(query.shape)):
         
         if scale is not None:
