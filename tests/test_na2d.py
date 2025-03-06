@@ -1469,11 +1469,12 @@ class NA2DTests(unittest.TestCase):
 
     @skip_if_cuda_is_not_supported()
     def test_cuda_with_extra_tokens(self):
-        # akane: This specific problem size fails on SM89 for bf16.
-        # Surprisingly, only the "extra" attention part (and anything\
+        # (akane): This specific problem size fails on SM89 for bf16.
+        # Surprisingly, only the "extra" attention part (and anything
         # depending on it) does not pass the allclose. 
         # Might be related to PyTorch version. Was first observed on
         # PyTorch 2.6.0, March 5 2025.
+        # https://github.com/SHI-Labs/NATTEN/issues/205
         # self._test_cuda_with_extra_tokens(
         #     B=1, H=1, X=16, Y=16, D=32, kernel_size=7, dilation=1
         # )
