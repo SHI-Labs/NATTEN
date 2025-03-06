@@ -198,9 +198,8 @@ def flex_na2d(
             f"got {query.dtype=}, {key.dtype=}, {value.dtype=}."
         )
 
-    batch_size, seqlen_1, seqlen_2, num_heads, head_dim = query.shape
-    seq_length = seqlen_1 * seqlen_2
-    input_size = (seqlen_1, seqlen_2)
+    batch_size, *seqlen_list, num_heads, head_dim = query.shape
+    input_size = math.prod(seqlen_list)
     
     if not can_run_flex_attention(query.shape):
         raise ValueError(f"FlexAttention does only supports sequence lengths "
