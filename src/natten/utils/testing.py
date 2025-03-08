@@ -201,9 +201,16 @@ def fna_supports_additional_kv(
         return False
 
     device_cc = get_device_cc(device_index)
+
+    if device_cc < 80:
+        # xFormers FMHA API doesn't support returning LSE,
+        # so the only pre-Hopper choice winds up being FAv2, which is only SM80 and above.
+        return False
+
     if device_cc == 90 and head_dim not in [64, 128, 256]:
         # xFormers calls into FAv3, which only supports 64, 128, 256 headdim
         return False
+
     if device_cc > 90:
         # Blackwell status unclear
         return False
