@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2022-2024 Ali Hassani.
+ * Copyright (c) 2022-2025 Ali Hassani.
  *
  * Fused Neighborhood Attention kernels are heavily based on the
  * memory-efficient attention kernels from the xFormers project by Meta

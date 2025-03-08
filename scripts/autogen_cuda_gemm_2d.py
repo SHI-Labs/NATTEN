@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024 Ali Hassani.
+# Copyright (c) 2022-2025 Ali Hassani.
 #
 # This script is intended to emit naive kernel instantiations into
 # a variable number of source files, generate appropriate headers

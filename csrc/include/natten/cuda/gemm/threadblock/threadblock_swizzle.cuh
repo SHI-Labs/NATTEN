@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2022-2024 Ali Hassani.
+ * Copyright (c) 2022-2025 Ali Hassani.
  * NATTEN's CUTLASS kernels started off from CUTLASS 2.X's implicit GEMM kernels
  *for convolution.
  **************************************************************************************************/
