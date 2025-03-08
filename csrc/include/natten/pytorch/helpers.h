@@ -86,6 +86,35 @@ inline void AssertOddKernelSize(
   AssertOddKernelSize(std::get<2>(kernel_size));
 }
 
+inline void AssertOddKernelSizeIfHasRPB(int32_t kernel_size, bool has_rpb) {
+  TORCH_CHECK(
+      !has_rpb || kernel_size % 2 == 1,
+      "This operation only supports odd-sized kernel sizes with RPB enabled, got ",
+      kernel_size,
+      ".");
+}
+
+inline void AssertOddKernelSizeIfHasRPB(
+    const std::tuple<int32_t>& kernel_size,
+    bool has_rpb) {
+  AssertOddKernelSizeIfHasRPB(std::get<0>(kernel_size), has_rpb);
+}
+
+inline void AssertOddKernelSizeIfHasRPB(
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    bool has_rpb) {
+  AssertOddKernelSizeIfHasRPB(std::get<0>(kernel_size), has_rpb);
+  AssertOddKernelSizeIfHasRPB(std::get<1>(kernel_size), has_rpb);
+}
+
+inline void AssertOddKernelSizeIfHasRPB(
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    bool has_rpb) {
+  AssertOddKernelSizeIfHasRPB(std::get<0>(kernel_size), has_rpb);
+  AssertOddKernelSizeIfHasRPB(std::get<1>(kernel_size), has_rpb);
+  AssertOddKernelSizeIfHasRPB(std::get<2>(kernel_size), has_rpb);
+}
+
 inline void CheckArgs(int32_t kernel_size, int32_t dilation) {
   TORCH_CHECK(
       kernel_size > 1,

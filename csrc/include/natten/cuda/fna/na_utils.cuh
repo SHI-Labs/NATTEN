@@ -1094,6 +1094,8 @@ struct NeighborhoodAttentionMaskBase<false> {
   }
 
   CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) const {
+    // NOTE: RPB does not support window_radius_left != window_radius_right
+    // This will be checked in the host-side API
     return cutlass::fast_max(
         window_radius_left + cutlass::fast_max(window_radius_left - index, 0) -
             cutlass::fast_max(index - spatial_extent + window_radius_left + 1, 0),

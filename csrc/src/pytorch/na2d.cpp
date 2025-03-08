@@ -55,6 +55,7 @@ void na2d_forward(
   CHECK_CONTIGUOUS(key);
   CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
+  AssertOddKernelSizeIfHasRPB(kernel_size, rpb.has_value());
   CheckIfPropertiesMatch(query, key, value);
   CheckIfTensorShapesMatch<2>(query, key);
   CheckIfTensorShapesMatch<2>(query, value);
