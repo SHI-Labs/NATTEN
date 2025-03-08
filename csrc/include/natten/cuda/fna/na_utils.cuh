@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2022-2024 Ali Hassani.
+ * Copyright (c) 2022-2025 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1098,7 +1098,8 @@ struct NeighborhoodAttentionMaskBase<false> {
     // This will be checked in the host-side API
     return cutlass::fast_max(
         window_radius_left + cutlass::fast_max(window_radius_left - index, 0) -
-            cutlass::fast_max(index - spatial_extent + window_radius_left + 1, 0),
+            cutlass::fast_max(
+                index - spatial_extent + window_radius_left + 1, 0),
         0);
   }
 };
@@ -1114,8 +1115,7 @@ struct NeighborhoodAttentionMaskBase<true> {
   CUTLASS_DEVICE NeighborhoodAttentionMaskBase(
       int32_t kernel_size,
       int32_t spatial_extent_)
-      : window_size(kernel_size),
-        spatial_extent(spatial_extent_) {}
+      : window_size(kernel_size), spatial_extent(spatial_extent_) {}
 
   CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
     return cutlass::fast_max(index - window_size + 1, 0);

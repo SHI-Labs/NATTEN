@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2024 Ali Hassani.
+# Copyright (c) 2022-2025 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -191,7 +191,7 @@ def skip_if_triton_is_not_supported():
 def skip_if_torch_compile_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if not _IS_TORCH_COMPILE_SUPPORTED:
+            if not _IS_TORCH_COMPILE_SUPPORTED or not _IS_TRITON_SUPPORTED:
                 self.skipTest("torch.compile is not supported.")
             else:
                 return f(self, *args, **kwargs)

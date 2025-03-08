@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2022-2024 Ali Hassani.
+ * Copyright (c) 2022-2025 Ali Hassani.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -68,8 +68,7 @@ inline void AssertOddKernelSize(int32_t kernel_size) {
       ".");
 }
 
-inline void AssertOddKernelSize(
-    const std::tuple<int32_t>& kernel_size) {
+inline void AssertOddKernelSize(const std::tuple<int32_t>& kernel_size) {
   AssertOddKernelSize(std::get<0>(kernel_size));
 }
 
