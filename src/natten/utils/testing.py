@@ -41,6 +41,11 @@ _IS_TORCH_FLOP_COUNT_SUPPORTED = [int(x) for x in torch.__version__.split(".")[:
     5,
 ]
 
+# NOTE (ahassani): _IS_TRITON_SUPPORTED, `has_gemm`, `has_fp64_gemm`, and the like
+# all use the default CUDA device. This can break things on systems where there's
+# different archs available.
+_IS_TRITON_SUPPORTED = get_device_cc() >= 70
+
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
 _SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
     2,
@@ -168,6 +173,21 @@ def skip_if_fvcore_is_not_available():
     return decorator
 
 
+def skip_if_triton_is_not_supported():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if not _IS_TRITON_SUPPORTED:
+                self.skipTest(
+                    "Triton is not supported on this GPU architecture (SM70 and above only)."
+                )
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
 def skip_if_torch_compile_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
@@ -201,9 +221,16 @@ def fna_supports_additional_kv(
         return False
 
     device_cc = get_device_cc(device_index)
+
+    if device_cc < 80:
+        # xFormers FMHA API doesn't support returning LSE,
+        # so the only pre-Hopper choice winds up being FAv2, which is only SM80 and above.
+        return False
+
     if device_cc == 90 and head_dim not in [64, 128, 256]:
         # xFormers calls into FAv3, which only supports 64, 128, 256 headdim
         return False
+
     if device_cc > 90:
         # Blackwell status unclear
         return False

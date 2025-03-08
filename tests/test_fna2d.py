@@ -41,6 +41,7 @@ from natten.utils.testing import (
     fna_supports_additional_kv,
     skip_if_cuda_is_not_supported,
     skip_if_fna_is_not_supported,
+    skip_if_triton_is_not_supported,
 )
 
 
@@ -686,6 +687,7 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
 
     @skip_if_cuda_is_not_supported()
     @skip_if_fna_is_not_supported()
+    @skip_if_triton_is_not_supported()
     def test_against_cutlass_fna(self):
         problem_sizes = [
             # (akane):
