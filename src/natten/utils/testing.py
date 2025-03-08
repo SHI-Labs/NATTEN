@@ -40,6 +40,7 @@ _IS_TORCH_FLOP_COUNT_SUPPORTED = [int(x) for x in torch.__version__.split(".")[:
     2,
     5,
 ]
+_IS_TRITON_SUPPORTED = get_device_cc(0) >= 70
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
 _SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
@@ -160,6 +161,19 @@ def skip_if_fvcore_is_not_available():
         def wrapper(self, *args, **kwargs):
             if not _IS_FVCORE_AVAILABLE:
                 self.skipTest("fvcore is not installed.")
+            else:
+                return f(self, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def skip_if_triton_is_not_supported():
+    def decorator(f):
+        def wrapper(self, *args, **kwargs):
+            if not _IS_TRITON_SUPPORTED:
+                self.skipTest("Triton is not supported.")
             else:
                 return f(self, *args, **kwargs)
 
