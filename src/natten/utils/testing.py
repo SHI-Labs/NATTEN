@@ -191,7 +191,7 @@ def skip_if_triton_is_not_supported():
 def skip_if_torch_compile_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if not _IS_TORCH_COMPILE_SUPPORTED:
+            if not _IS_TORCH_COMPILE_SUPPORTED or not _IS_TRITON_SUPPORTED:
                 self.skipTest("torch.compile is not supported.")
             else:
                 return f(self, *args, **kwargs)
