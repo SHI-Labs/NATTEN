@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Main branch]
+* Added support for even-sized kernels!
+  * NATTEN now allows any kernel size greater than 1 in fused ops.
+  * Only available in Fused NA (both the CUTLASS 2.X kernels and Flex) for now.
+  * NOTE: any even sized kernel `2r` will force each token to attend to `r` tokens on the left,
+    itself, and `r - 1` tokens on the right (in non-corner cases).
 * Added Flex Attention as a backend.
     * Now you can use Flex Attention instead of FNA through NATTEN directly.
     * Just import `use_flex_attention()` from `natten`, call it, and enjoy potentially significant

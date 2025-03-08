@@ -330,7 +330,7 @@ class FNA3DTests(unittest.TestCase):
         is_causal=None,
         additional_kv_length=0,
     ):
-        if not fna_supports_additional_kv() and additional_kv_length > 0:
+        if not fna_supports_additional_kv(D) and additional_kv_length > 0:
             return
 
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
@@ -538,17 +538,17 @@ class FNA3DTests(unittest.TestCase):
     @skip_if_fna_is_not_supported()
     def test_against_sdpa(self):
         problem_sizes = [
-            (1, 1, 3, 3, 3, 16),
+            (1, 1, 4, 4, 4, 16),
             (2, 1, 5, 7, 3, 24),
             (1, 2, 9, 5, 13, 32),
             (2, 2, 15, 3, 5, 40),
             (1, 2, 17, 19, 21, 48),
-            (1, 2, 3, 5, 9, 56),
-            (1, 1, 7, 9, 3, 64),
+            (1, 2, 3, 5, 8, 56),
+            (1, 1, 7, 9, 4, 64),
             (1, 2, 5, 3, 11, 96),
             (1, 1, 9, 11, 3, 128),
-            (1, 1, 3, 5, 9, 256),
-            (1, 2, 3, 5, 9, 256),
+            (1, 1, 2, 5, 9, 256),
+            (1, 2, 4, 5, 9, 256),
         ]
         for B, H, X, Y, Z, D in problem_sizes:
             self._test_all_dtypes_against_sdpa(
@@ -699,10 +699,10 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
     @skip_if_fna_is_not_supported()
     def test_against_cutlass_fna(self):
         problem_sizes = [
-            (1, 1, 8, 8, 4, 16, 3, 3, 3, 1, 1, 1),
-            (1, 2, 8, 8, 12, 16, 5, 7, 11, 1, 1, 1),
+            (1, 1, 8, 8, 4, 16, 3, 4, 3, 1, 1, 1),
+            (1, 2, 8, 8, 12, 16, 5, 8, 11, 1, 1, 1),
             (1, 4, 8, 8, 16, 32, 3, 3, 3, 2, 2, 4),
-            (2, 2, 8, 8, 10, 32, 3, 3, 3, 1, 1, 1),
+            (2, 2, 8, 8, 10, 32, 3, 4, 3, 1, 1, 1),
             (1, 12, 32, 8, 8, 64, 7, 5, 5, 2, 1, 1),
             (4, 8, 32, 10, 10, 64, 7, 3, 3, 1, 2, 3),
         ]

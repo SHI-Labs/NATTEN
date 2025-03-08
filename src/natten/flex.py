@@ -98,12 +98,18 @@ def get_na_flex_mask(
                     & ((q_coord[i] % dilation[i]) == (kv_coord[i] % dilation[i]))
                 )
             else:
-                kernel_center_x = q_coord[i].clamp(
-                    (kernel_times_dilation - 1) // 2,
-                    (input_size[i] - 1) - (kernel_times_dilation - 1) // 2,
+                window_size_left = (kernel_times_dilation) // 2
+                window_size_right = (kernel_times_dilation) // 2 + (
+                    (kernel_times_dilation) % 2 - 1
                 )
+                kernel_center_x = q_coord[i].clamp(
+                    window_size_left, input_size[i] - 1 - window_size_right
+                )
+                w0 = kernel_center_x - kv_coord[i]
+                w1 = kv_coord[i] - kernel_center_x
                 mask = (
-                    (kernel_center_x - kv_coord[i]).abs() <= kernel_times_dilation // 2
+                    ((0 <= w0) & (w0 <= window_size_left))
+                    | ((0 <= w1) & (w1 <= window_size_right))
                 ) & ((q_coord[i] % dilation[i]) == (kv_coord[i] % dilation[i]))
 
             masks.append(mask)

@@ -55,6 +55,7 @@ void na1d_forward(
   CHECK_CONTIGUOUS(key);
   CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
+  AssertOddKernelSizeIfHasRPB(kernel_size, rpb.has_value());
   CheckIfPropertiesMatch(query, key, value);
   CheckIfTensorShapesMatch<1>(query, key);
   CheckIfTensorShapesMatch<1>(query, value);
@@ -178,6 +179,7 @@ void na1d_qk_forward(
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
+  AssertOddKernelSize(kernel_size);
   CheckIfPropertiesMatch(query, key, attn);
   CheckIfTensorShapesMatch<1>(query, key);
   CheckAttnShape<1>(query, attn, kernel_size);
@@ -223,6 +225,7 @@ void na1d_qk_backward(
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
   CheckArgs(kernel_size, dilation);
+  AssertOddKernelSize(kernel_size);
   CheckIfPropertiesMatch(query, key);
   CheckIfPropertiesMatch(d_query, d_key, d_attn);
   CheckIfTensorShapesMatch<1>(query, key);
@@ -265,6 +268,7 @@ void na1d_av_forward(
   CHECK_CONTIGUOUS(out);
   CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
+  AssertOddKernelSize(kernel_size);
   CheckIfPropertiesMatch(out, value, attn);
   CheckIfTensorShapesMatch<1>(out, value);
   CheckAttnShape<1>(value, attn, kernel_size);
@@ -301,6 +305,7 @@ void na1d_av_backward(
   CHECK_CONTIGUOUS(d_value);
   CHECK_CONTIGUOUS(value);
   CheckArgs(kernel_size, dilation);
+  AssertOddKernelSize(kernel_size);
   CheckIfPropertiesMatch(attn, value);
   CheckIfPropertiesMatch(d_attn, d_value, d_out);
   CheckIfTensorShapesMatch<1>(value, d_value);

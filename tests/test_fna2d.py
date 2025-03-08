@@ -327,7 +327,7 @@ class FNA2DTests(unittest.TestCase):
         is_causal=None,
         additional_kv_length=0,
     ):
-        if not fna_supports_additional_kv() and additional_kv_length > 0:
+        if not fna_supports_additional_kv(D) and additional_kv_length > 0:
             return
 
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
@@ -531,15 +531,17 @@ class FNA2DTests(unittest.TestCase):
     def test_against_sdpa(self):
         problem_sizes = [
             (1, 1, 3, 3, 16),
+            (1, 1, 8, 8, 16),
             (2, 1, 5, 7, 24),
             (1, 2, 7, 11, 32),
             (2, 2, 9, 13, 40),
             (1, 2, 11, 17, 48),
             (1, 2, 13, 19, 56),
             (1, 1, 15, 21, 64),
-            (1, 2, 33, 23, 96),
+            (1, 2, 32, 22, 96),
             (1, 1, 35, 37, 128),
             (1, 1, 39, 41, 256),
+            (1, 1, 16, 16, 256),
             (1, 2, 45, 43, 256),
         ]
         for B, H, X, Y, D in problem_sizes:
@@ -697,11 +699,17 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             # I find it better to comment out this test until further investigation.
             # (1, 1, 8, 16, 16, 3, 5, 1, 2),
             (1, 1, 16, 16, 16, 3, 3, 1, 1),
+            (1, 1, 16, 16, 16, 4, 4, 1, 1),
+            (1, 1, 16, 16, 16, 6, 6, 1, 1),
+            (1, 1, 16, 16, 16, 6, 6, 1, 2),
+            (1, 1, 32, 16, 16, 6, 6, 3, 2),
+            (1, 2, 32, 16, 32, 2, 8, 3, 1),
             (1, 2, 32, 16, 32, 5, 15, 3, 1),
             (1, 2, 16, 16, 32, 9, 7, 1, 1),
-            (1, 2, 16, 16, 32, 9, 7, 1, 2),
+            (1, 2, 16, 16, 32, 8, 6, 1, 2),
             (4, 3, 32, 32, 32, 31, 31, 1, 1),
             (2, 2, 32, 64, 64, 25, 31, 1, 2),
+            (2, 2, 32, 64, 64, 26, 30, 1, 2),
             (2, 4, 64, 128, 64, 55, 101, 1, 1),
             (2, 4, 64, 128, 64, 21, 29, 3, 4),
             # TODO: these will fail on most non-A100/H100 cards due to the 99KB shmem limit
