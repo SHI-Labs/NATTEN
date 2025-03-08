@@ -22,10 +22,13 @@
 #################################################################################################
 
 import sys
+from typing import Optional
 
 import torch
+from torch.cuda import _device_t
 
 from .. import has_cuda, has_fna, has_fp64_gemm, has_gemm
+from .misc import get_device_cc
 
 _IS_CUDA_AVAILABLE = torch.cuda.is_available() and has_cuda()
 
@@ -59,9 +62,9 @@ try:
         memory_efficient_attention_partial,
     )
 
-    _SUPPORTS_FNA_WITH_ADDITIONAL_KV = True
+    _HAS_XFORMERS_PARTIAL_ATTENTION = True
 except ImportError:
-    _SUPPORTS_FNA_WITH_ADDITIONAL_KV = False
+    _HAS_XFORMERS_PARTIAL_ATTENTION = False
 
 
 def skip_if_cuda_is_not_supported():
@@ -191,5 +194,18 @@ def skip_if_torch_flop_count_is_not_supported():
     return decorator
 
 
-def fna_supports_additional_kv():
-    return _SUPPORTS_FNA_WITH_ADDITIONAL_KV
+def fna_supports_additional_kv(
+    head_dim: int, device_index: Optional[_device_t] = None
+) -> bool:
+    if not _HAS_XFORMERS_PARTIAL_ATTENTION:
+        return False
+
+    device_cc = get_device_cc(device_index)
+    if device_cc == 90 and head_dim not in [64, 128, 256]:
+        # xFormers calls into FAv3, which only supports 64, 128, 256 headdim
+        return False
+    if device_cc > 90:
+        # Blackwell status unclear
+        return False
+
+    return True

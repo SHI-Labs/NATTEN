@@ -60,10 +60,36 @@
 namespace natten {
 namespace pytorch {
 
+inline void AssertOddKernelSize(int32_t kernel_size) {
+  TORCH_CHECK(
+      kernel_size % 2 == 1,
+      "This operation only supports odd-sized kernel sizes, got ",
+      kernel_size,
+      ".");
+}
+
+inline void AssertOddKernelSize(
+    const std::tuple<int32_t>& kernel_size) {
+  AssertOddKernelSize(std::get<0>(kernel_size));
+}
+
+inline void AssertOddKernelSize(
+    const std::tuple<int32_t, int32_t>& kernel_size) {
+  AssertOddKernelSize(std::get<0>(kernel_size));
+  AssertOddKernelSize(std::get<1>(kernel_size));
+}
+
+inline void AssertOddKernelSize(
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size) {
+  AssertOddKernelSize(std::get<0>(kernel_size));
+  AssertOddKernelSize(std::get<1>(kernel_size));
+  AssertOddKernelSize(std::get<2>(kernel_size));
+}
+
 inline void CheckArgs(int32_t kernel_size, int32_t dilation) {
   TORCH_CHECK(
-      kernel_size > 1 && kernel_size % 2 == 1,
-      "Kernel size must be an odd number greater than 1, got ",
+      kernel_size > 1,
+      "Kernel size must be greater than 1, got ",
       kernel_size,
       ".");
   TORCH_CHECK(

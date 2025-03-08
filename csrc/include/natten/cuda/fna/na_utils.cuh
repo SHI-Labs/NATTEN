@@ -1034,7 +1034,8 @@ struct NeighborhoodAttentionMaskBase<false> {
   static constexpr bool DoCausalMasking = false;
 
   int32_t window_size;
-  int32_t window_radius;
+  int32_t window_radius_left;
+  int32_t window_radius_right;
   int32_t spatial_extent;
 #ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
   int32_t last_start;
@@ -1044,10 +1045,11 @@ struct NeighborhoodAttentionMaskBase<false> {
       int32_t kernel_size,
       int32_t spatial_extent_)
       : window_size(kernel_size),
-        window_radius(kernel_size / 2),
+        window_radius_left(kernel_size / 2),
+        window_radius_right((kernel_size / 2) + ((kernel_size % 2) - 1)),
 #ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
         spatial_extent(spatial_extent_),
-        last_start(spatial_extent_ - window_radius - 1) {
+        last_start(spatial_extent_ - window_radius_right - 1) {
   }
 #else
         spatial_extent(spatial_extent_) {
@@ -1056,12 +1058,12 @@ struct NeighborhoodAttentionMaskBase<false> {
 
   CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
 #ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
-    return cutlass::fast_max(index - window_radius, 0) +
+    return cutlass::fast_max(index - window_radius_left, 0) +
         cutlass::fast_min(last_start - index, 0);
 #else
-    return cutlass::fast_max(index - window_radius, 0) +
-        (index + window_radius >= spatial_extent) *
-        (spatial_extent - index - window_radius - 1);
+    return cutlass::fast_max(index - window_radius_left, 0) +
+        (index + window_radius_right >= spatial_extent) *
+        (spatial_extent - index - window_radius_right - 1);
 #endif
   }
 
@@ -1071,30 +1073,30 @@ struct NeighborhoodAttentionMaskBase<false> {
 
   CUTLASS_DEVICE int32_t get_window_end_(int32_t index) const {
 #ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
-    return cutlass::fast_max(index - window_radius, 0) +
+    return cutlass::fast_max(index - window_radius_left, 0) +
         cutlass::fast_min(last_start - index, 0) + window_size;
 #else
-    return cutlass::fast_max(index - window_radius, 0) +
-        (index + window_radius >= spatial_extent) *
-        (spatial_extent - index - window_radius - 1) +
+    return cutlass::fast_max(index - window_radius_left, 0) +
+        (index + window_radius_right >= spatial_extent) *
+        (spatial_extent - index - window_radius_right - 1) +
         window_size;
 #endif
   }
 
   CUTLASS_DEVICE int32_t get_backward_window_start(int32_t index) const {
-    return (index >= window_size) * (index - window_radius);
+    return (index >= window_size) * (index - window_radius_right);
   }
 
   CUTLASS_DEVICE int32_t get_backward_window_end(int32_t index) const {
     return (index >= spatial_extent - window_size)
         ? (spatial_extent)
-        : (index + (window_radius + 1));
+        : (index + (window_radius_left + 1));
   }
 
   CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) const {
     return cutlass::fast_max(
-        window_radius + cutlass::fast_max(window_radius - index, 0) -
-            cutlass::fast_max(index - spatial_extent + window_radius + 1, 0),
+        window_radius_left + cutlass::fast_max(window_radius_left - index, 0) -
+            cutlass::fast_max(index - spatial_extent + window_radius_left + 1, 0),
         0);
   }
 };
@@ -1105,14 +1107,12 @@ struct NeighborhoodAttentionMaskBase<true> {
   static constexpr bool DoCausalMasking = true;
 
   int32_t window_size;
-  int32_t window_radius;
   int32_t spatial_extent;
 
   CUTLASS_DEVICE NeighborhoodAttentionMaskBase(
       int32_t kernel_size,
       int32_t spatial_extent_)
       : window_size(kernel_size),
-        window_radius(kernel_size / 2),
         spatial_extent(spatial_extent_) {}
 
   CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
