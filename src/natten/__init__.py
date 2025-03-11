@@ -57,6 +57,7 @@ from .context import (
     set_memory_usage_preference,
     use_autotuner,
     use_deterministic_algorithms,
+    use_flex_attention,
     use_fna,
     use_fused_na,
     use_gemm_na,

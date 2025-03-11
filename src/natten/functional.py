@@ -1735,10 +1735,6 @@ def na1d(
             raise NotImplementedError(
                 "RPB is not supported in the Flex Attention backend."
             )
-        if additional_keys is not None or additional_values is not None:
-            raise NotImplementedError(
-                "Additional keys/values is not supported in the Flex Attention backend."
-            )
 
         return flex_na1d(
             query,
@@ -1747,6 +1743,9 @@ def na1d(
             kernel_size,
             dilation,
             is_causal,
+            additional_keys=additional_keys,
+            additional_values=additional_values,
+            xformers_kwargs=xformers_kwargs,
         )
 
     tiling_config_forward, tiling_config_backward = autotune_fna(
@@ -1817,10 +1816,6 @@ def na2d(
             raise NotImplementedError(
                 "RPB is not supported in the Flex Attention backend."
             )
-        if additional_keys is not None or additional_values is not None:
-            raise NotImplementedError(
-                "Additional keys/values is not supported in the Flex Attention backend."
-            )
 
         return flex_na2d(
             query,
@@ -1829,6 +1824,9 @@ def na2d(
             kernel_size,
             dilation,
             is_causal,
+            additional_keys=additional_keys,
+            additional_values=additional_values,
+            xformers_kwargs=xformers_kwargs,
         )
 
     tiling_config_forward, tiling_config_backward = autotune_fna(
@@ -1899,10 +1897,6 @@ def na3d(
             raise NotImplementedError(
                 "RPB is not supported in the Flex Attention backend."
             )
-        if additional_keys is not None or additional_values is not None:
-            raise NotImplementedError(
-                "Additional keys/values is not supported in the Flex Attention backend."
-            )
 
         return flex_na3d(
             query,
@@ -1911,6 +1905,9 @@ def na3d(
             kernel_size,
             dilation,
             is_causal,
+            additional_keys=additional_keys,
+            additional_values=additional_values,
+            xformers_kwargs=xformers_kwargs,
         )
 
     tiling_config_forward, tiling_config_backward = autotune_fna(
