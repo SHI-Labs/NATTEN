@@ -570,7 +570,19 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
         _reset_everything()
 
     def _test_against_cutlass_fna(
-        self, B, H, X, Y, Z, D, kernel_size, dilation, is_causal, additional_kv_length, eps, dtype
+        self,
+        B,
+        H,
+        X,
+        Y,
+        Z,
+        D,
+        kernel_size,
+        dilation,
+        is_causal,
+        additional_kv_length,
+        eps,
+        dtype,
     ):
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         with torch.no_grad():
@@ -591,8 +603,12 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
             additional_k, additional_v = None, None
             additional_k_ref, additional_v_ref = None, None
             if additional_kv_length > 0:
-                additional_k = torch.randn((B, additional_kv_length, H, D), device="cuda", dtype=dtype)
-                additional_v = torch.randn((B, additional_kv_length, H, D), device="cuda", dtype=dtype)
+                additional_k = torch.randn(
+                    (B, additional_kv_length, H, D), device="cuda", dtype=dtype
+                )
+                additional_v = torch.randn(
+                    (B, additional_kv_length, H, D), device="cuda", dtype=dtype
+                )
                 additional_k_ref = additional_k.clone()
                 additional_v_ref = additional_v.clone()
 
@@ -663,17 +679,17 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
                 d_additional_k = additional_k.grad.clone().float()
                 d_additional_v = additional_v.grad.clone().float()
 
-        try:
-            torch.testing.assert_close(out, out_ref, atol=eps, rtol=0)
-            torch.testing.assert_close(dq, dq_ref, atol=eps, rtol=0)
-            torch.testing.assert_close(dk, dk_ref, atol=eps, rtol=0)
-            torch.testing.assert_close(dv, dv_ref, atol=eps, rtol=0)
-            if additional_kv_length > 0:
-                torch.testing.assert_close(d_additional_k, d_additional_k_ref, atol=eps, rtol=0)
-                torch.testing.assert_close(d_additional_v, d_additional_v_ref, atol=eps, rtol=0)
-        except AssertionError as e:
-            import ipdb; ipdb.set_trace()
-            raise e
+        torch.testing.assert_close(out, out_ref, atol=eps, rtol=0)
+        torch.testing.assert_close(dq, dq_ref, atol=eps, rtol=0)
+        torch.testing.assert_close(dk, dk_ref, atol=eps, rtol=0)
+        torch.testing.assert_close(dv, dv_ref, atol=eps, rtol=0)
+        if additional_kv_length > 0:
+            torch.testing.assert_close(
+                d_additional_k, d_additional_k_ref, atol=eps, rtol=0
+            )
+            torch.testing.assert_close(
+                d_additional_v, d_additional_v_ref, atol=eps, rtol=0
+            )
 
     def _test_all_dtypes(
         self,
@@ -719,7 +735,9 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
                 is_causal=is_causal,
                 additional_kv_length=additional_kv_length,
                 dtype=torch.float16,
-                eps=12e-2,
+                eps=(
+                    12e-2 if additional_kv_length > 0 else 1e-1
+                ),  # TODO: use a unified eps
             )
         if HAS_BFLOAT:
             self._test_against_cutlass_fna(
@@ -734,7 +752,9 @@ class FlexAttentionFNA3DTest(unittest.TestCase):
                 is_causal=is_causal,
                 additional_kv_length=additional_kv_length,
                 dtype=torch.bfloat16,
-                eps=12e-2,
+                eps=(
+                    12e-2 if additional_kv_length > 0 else 1e-1
+                ),  # TODO: use a unified eps
             )
 
     @skip_if_cuda_is_not_supported()

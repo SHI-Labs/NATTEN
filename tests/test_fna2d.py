@@ -563,7 +563,18 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
         _reset_everything()
 
     def _test_against_cutlass_fna(
-        self, B, H, X, Y, D, kernel_size, dilation, is_causal, additional_kv_length, eps, dtype
+        self,
+        B,
+        H,
+        X,
+        Y,
+        D,
+        kernel_size,
+        dilation,
+        is_causal,
+        additional_kv_length,
+        eps,
+        dtype,
     ):
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         with torch.no_grad():
@@ -584,8 +595,12 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             additional_k, additional_v = None, None
             additional_k_ref, additional_v_ref = None, None
             if additional_kv_length > 0:
-                additional_k = torch.randn((B, additional_kv_length, H, D), device="cuda", dtype=dtype)
-                additional_v = torch.randn((B, additional_kv_length, H, D), device="cuda", dtype=dtype)
+                additional_k = torch.randn(
+                    (B, additional_kv_length, H, D), device="cuda", dtype=dtype
+                )
+                additional_v = torch.randn(
+                    (B, additional_kv_length, H, D), device="cuda", dtype=dtype
+                )
                 additional_k_ref = additional_k.clone()
                 additional_v_ref = additional_v.clone()
 
@@ -661,8 +676,12 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
         torch.testing.assert_close(dk, dk_ref, atol=eps, rtol=0)
         torch.testing.assert_close(dv, dv_ref, atol=eps, rtol=0)
         if additional_kv_length > 0:
-            torch.testing.assert_close(d_additional_k, d_additional_k_ref, atol=eps, rtol=0)
-            torch.testing.assert_close(d_additional_v, d_additional_v_ref, atol=eps, rtol=0)
+            torch.testing.assert_close(
+                d_additional_k, d_additional_k_ref, atol=eps, rtol=0
+            )
+            torch.testing.assert_close(
+                d_additional_v, d_additional_v_ref, atol=eps, rtol=0
+            )
 
     def _test_all_dtypes(
         self,
