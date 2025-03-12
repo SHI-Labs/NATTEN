@@ -563,7 +563,18 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
         _reset_everything()
 
     def _test_against_cutlass_fna(
-        self, B, H, X, Y, D, kernel_size, dilation, is_causal, eps, dtype
+        self,
+        B,
+        H,
+        X,
+        Y,
+        D,
+        kernel_size,
+        dilation,
+        is_causal,
+        additional_kv_length,
+        eps,
+        dtype,
     ):
         kernel_size, dilation, is_causal = check_args(kernel_size, dilation, is_causal)
         with torch.no_grad():
@@ -581,11 +592,26 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
                 d_out.clone(),
             )
 
+            additional_k, additional_v = None, None
+            additional_k_ref, additional_v_ref = None, None
+            if additional_kv_length > 0:
+                additional_k = torch.randn(
+                    (B, additional_kv_length, H, D), device="cuda", dtype=dtype
+                )
+                additional_v = torch.randn(
+                    (B, additional_kv_length, H, D), device="cuda", dtype=dtype
+                )
+                additional_k_ref = additional_k.clone()
+                additional_v_ref = additional_v.clone()
+
         # Reference
         q_ref.requires_grad_(True)
         k_ref.requires_grad_(True)
         v_ref.requires_grad_(True)
         d_out_ref.requires_grad_(True)
+        if additional_kv_length > 0:
+            additional_k_ref = additional_k_ref.requires_grad_(True)
+            additional_v_ref = additional_v_ref.requires_grad_(True)
         out_ref_ = na2d(
             q_ref,
             k_ref,
@@ -593,10 +619,13 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
+            additional_keys=additional_k_ref,
+            additional_values=additional_v_ref,
         )
         out_ref = out_ref_.data.clone().float()
 
         dq_ref, dk_ref, dv_ref = None, None, None
+        d_additional_k_ref, d_additional_v_ref = None, None
         out_ref_.backward(d_out_ref)
         with torch.no_grad():
             dq_ref, dk_ref, dv_ref = (
@@ -604,12 +633,18 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
                 k_ref.grad.clone().float(),
                 v_ref.grad.clone().float(),
             )
+            if additional_kv_length > 0:
+                d_additional_k_ref = additional_k_ref.grad.clone().float()
+                d_additional_v_ref = additional_v_ref.grad.clone().float()
 
         # Flex
         q.requires_grad_(True)
         k.requires_grad_(True)
         v.requires_grad_(True)
         d_out.requires_grad_(True)
+        if additional_kv_length > 0:
+            additional_k = additional_k.requires_grad_(True)
+            additional_v = additional_v.requires_grad_(True)
 
         out_ = flex_na2d(
             q,
@@ -618,10 +653,13 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             kernel_size=kernel_size,
             dilation=dilation,
             is_causal=is_causal,
+            additional_keys=additional_k,
+            additional_values=additional_v,
         )
         out = out_.data.clone().float()
 
         dq, dk, dv = None, None, None
+        d_additional_k, d_additional_v = None, None
         out_.backward(d_out)
         with torch.no_grad():
             dq, dk, dv = (
@@ -629,11 +667,21 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
                 k.grad.clone().float(),
                 v.grad.clone().float(),
             )
+            if additional_kv_length > 0:
+                d_additional_k = additional_k.grad.clone().float()
+                d_additional_v = additional_v.grad.clone().float()
 
         torch.testing.assert_close(out, out_ref, atol=eps, rtol=0)
         torch.testing.assert_close(dq, dq_ref, atol=eps, rtol=0)
         torch.testing.assert_close(dk, dk_ref, atol=eps, rtol=0)
         torch.testing.assert_close(dv, dv_ref, atol=eps, rtol=0)
+        if additional_kv_length > 0:
+            torch.testing.assert_close(
+                d_additional_k, d_additional_k_ref, atol=eps, rtol=0
+            )
+            torch.testing.assert_close(
+                d_additional_v, d_additional_v_ref, atol=eps, rtol=0
+            )
 
     def _test_all_dtypes(
         self,
@@ -645,19 +693,26 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
         kernel_size,
         dilation,
         is_causal=None,
+        additional_kv_length=0,
     ):
-        self._test_against_cutlass_fna(
-            B=B,
-            H=H,
-            X=X,
-            Y=Y,
-            D=D,
-            kernel_size=kernel_size,
-            dilation=dilation,
-            is_causal=is_causal,
-            dtype=torch.float32,
-            eps=1e-2,
-        )
+        if not fna_supports_additional_kv(D) and additional_kv_length > 0:
+            return
+
+        # xFormers' cutlass backend doesn't support partial attention.
+        if additional_kv_length == 0:
+            self._test_against_cutlass_fna(
+                B=B,
+                H=H,
+                X=X,
+                Y=Y,
+                D=D,
+                kernel_size=kernel_size,
+                dilation=dilation,
+                is_causal=is_causal,
+                additional_kv_length=additional_kv_length,
+                dtype=torch.float32,
+                eps=1e-2,
+            )
         if HAS_HALF:
             self._test_against_cutlass_fna(
                 B=B,
@@ -668,6 +723,7 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
                 kernel_size=kernel_size,
                 dilation=dilation,
                 is_causal=is_causal,
+                additional_kv_length=additional_kv_length,
                 dtype=torch.float16,
                 eps=1e-1,
             )
@@ -681,6 +737,7 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
                 kernel_size=kernel_size,
                 dilation=dilation,
                 is_causal=is_causal,
+                additional_kv_length=additional_kv_length,
                 dtype=torch.bfloat16,
                 eps=1e-1,
             )
@@ -729,20 +786,22 @@ class FlexAttentionFNA2DTest(unittest.TestCase):
             dilation_h,
             dilation_w,
         ) in problem_sizes:
-            for causal_h, causal_w in product([True, False], [True, False]):
-                kernel_size = (kernel_size_h, kernel_size_w)
-                dilation = (dilation_h, dilation_w)
-                is_causal = (causal_h, causal_w)
-                self._test_all_dtypes(
-                    B=B,
-                    H=H,
-                    X=X,
-                    Y=Y,
-                    D=D,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    is_causal=is_causal,
-                )
+            for additional_kv_length in [0, 64]:
+                for causal_h, causal_w in product([True, False], [True, False]):
+                    kernel_size = (kernel_size_h, kernel_size_w)
+                    dilation = (dilation_h, dilation_w)
+                    is_causal = (causal_h, causal_w)
+                    self._test_all_dtypes(
+                        B=B,
+                        H=H,
+                        X=X,
+                        Y=Y,
+                        D=D,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        is_causal=is_causal,
+                        additional_kv_length=additional_kv_length,
+                    )
 
     @unittest.expectedFailure
     @skip_if_cuda_is_not_supported()

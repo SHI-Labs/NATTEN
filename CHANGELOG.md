@@ -10,6 +10,8 @@
     * Now you can use Flex Attention instead of FNA through NATTEN directly.
     * Just import `use_flex_attention()` from `natten`, call it, and enjoy potentially significant
      speedups on newer architectures.
+    * With support for additional KV tokens.
+* Better precision on fused ops with additional KV.
      
 
 ## [0.17.4] - 2025-01-28

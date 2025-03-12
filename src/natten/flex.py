@@ -23,12 +23,13 @@
 
 import functools
 import math
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import torch
 from torch import BoolTensor, IntTensor, Tensor
 from torch.nn.attention.flex_attention import create_block_mask, flex_attention
 
+from .ops import additional_sdpa, merge_attentions
 from .types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
@@ -129,7 +130,10 @@ def flex_na1d(
     kernel_size: Dimension1DTypeOrDed,
     dilation: Dimension1DTypeOrDed = 1,
     is_causal: Optional[CausalArg1DTypeOrDed] = False,
-) -> torch.Tensor:
+    additional_keys: Optional[Tensor] = None,
+    additional_values: Optional[Tensor] = None,
+    xformers_kwargs: Optional[Dict] = None,
+) -> Tensor:
 
     kernel_size_, dilation_, is_causal_ = check_all_args(
         1, kernel_size, dilation, is_causal
@@ -170,9 +174,30 @@ def flex_na1d(
 
     na_mask = get_na_flex_mask(1, num_tokens_tuple, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
-    out_ = flex_attention_compiled(query_, key_, value_, block_mask=na_mask)
+    out_, lse_ = flex_attention_compiled(
+        query_, key_, value_, block_mask=na_mask, return_lse=True
+    )
 
     out = out_.transpose(1, 2)
+    lse = lse_.transpose(1, 2)
+
+    if additional_keys is not None and additional_values is not None:
+        if additional_keys is None or additional_values is None:
+            raise ValueError(
+                "Both `additional_keys` and `additional_values` must be "
+                "either Tensors or NoneTypes."
+            )
+
+        scale = query.shape[-1] ** -0.5
+        additional_output, additional_lse = additional_sdpa(
+            query,
+            additional_keys,
+            additional_values,
+            scale=scale,
+            attn_kwargs=xformers_kwargs,
+        )
+
+        return merge_attentions(out, additional_output, lse, additional_lse)
 
     return out
 
@@ -184,7 +209,10 @@ def flex_na2d(
     kernel_size: Dimension2DTypeOrDed,
     dilation: Dimension2DTypeOrDed = 1,
     is_causal: Optional[CausalArg2DTypeOrDed] = False,
-) -> torch.Tensor:
+    additional_keys: Optional[Tensor] = None,
+    additional_values: Optional[Tensor] = None,
+    xformers_kwargs: Optional[Dict] = None,
+) -> Tensor:
 
     kernel_size_, dilation_, is_causal_ = check_all_args(
         2, kernel_size, dilation, is_causal
@@ -225,9 +253,30 @@ def flex_na2d(
 
     na_mask = get_na_flex_mask(2, num_tokens_tuple, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
-    out_ = flex_attention_compiled(query_, key_, value_, block_mask=na_mask)
+    out_, lse_ = flex_attention_compiled(
+        query_, key_, value_, block_mask=na_mask, return_lse=True
+    )
 
     out = out_.transpose(1, 2).view(batch_size, *num_tokens_tuple, num_heads, head_dim)
+    lse = lse_.transpose(1, 2).view(batch_size, *num_tokens_tuple, num_heads)
+
+    if additional_keys is not None and additional_values is not None:
+        if additional_keys is None or additional_values is None:
+            raise ValueError(
+                "Both `additional_keys` and `additional_values` must be "
+                "either Tensors or NoneTypes."
+            )
+
+        scale = query.shape[-1] ** -0.5
+        additional_output, additional_lse = additional_sdpa(
+            query,
+            additional_keys,
+            additional_values,
+            scale=scale,
+            attn_kwargs=xformers_kwargs,
+        )
+
+        return merge_attentions(out, additional_output, lse, additional_lse)
 
     return out
 
@@ -239,7 +288,10 @@ def flex_na3d(
     kernel_size: Dimension3DTypeOrDed,
     dilation: Dimension3DTypeOrDed = 1,
     is_causal: Optional[CausalArg3DTypeOrDed] = False,
-) -> torch.Tensor:
+    additional_keys: Optional[Tensor] = None,
+    additional_values: Optional[Tensor] = None,
+    xformers_kwargs: Optional[Dict] = None,
+) -> Tensor:
 
     kernel_size_, dilation_, is_causal_ = check_all_args(
         3, kernel_size, dilation, is_causal
@@ -280,8 +332,29 @@ def flex_na3d(
 
     na_mask = get_na_flex_mask(3, num_tokens_tuple, kernel_size_, dilation_, is_causal_)
     flex_attention_compiled = get_flex_attention_compiled()
-    out_ = flex_attention_compiled(query_, key_, value_, block_mask=na_mask)
+    out_, lse_ = flex_attention_compiled(
+        query_, key_, value_, block_mask=na_mask, return_lse=True
+    )
 
     out = out_.transpose(1, 2).view(batch_size, *num_tokens_tuple, num_heads, head_dim)
+    lse = lse_.transpose(1, 2).view(batch_size, *num_tokens_tuple, num_heads)
+
+    if additional_keys is not None and additional_values is not None:
+        if additional_keys is None or additional_values is None:
+            raise ValueError(
+                "Both `additional_keys` and `additional_values` must be "
+                "either Tensors or NoneTypes."
+            )
+
+        scale = query.shape[-1] ** -0.5
+        additional_output, additional_lse = additional_sdpa(
+            query,
+            additional_keys,
+            additional_values,
+            scale=scale,
+            attn_kwargs=xformers_kwargs,
+        )
+
+        return merge_attentions(out, additional_output, lse, additional_lse)
 
     return out
