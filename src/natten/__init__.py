@@ -30,6 +30,7 @@ from .context import (
     enable_gemm_na,
     enable_tf32,
     enable_tiled_na,
+    force_flex_attention,
     get_memory_usage_preference,
     has_bfloat,
     has_cuda,
@@ -82,6 +83,7 @@ __all__ = [
     "use_fused_na",
     "is_fused_na_enabled",
     "use_autotuner",
+    "force_flex_attention",
     "disable_autotuner",
     "is_autotuner_enabled",
     "is_autotuner_enabled_for_forward",
@@ -100,6 +102,7 @@ __all__ = [
     "use_tf32_in_gemm_na",
     "use_tiled_na",
     "use_gemm_na",
+    "use_flex_attention",
     "is_tf32_in_gemm_na_enabled",
     "is_tiled_na_enabled",
     "is_gemm_na_enabled",
@@ -115,7 +118,6 @@ __all__ = [
     "disable_gemm_na",
     "enable_tiled_na",
     "disable_tiled_na",
-    "use_flex_attention",
 ]
 
 __version__ = "0.17.5.dev0"

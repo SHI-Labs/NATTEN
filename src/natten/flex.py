@@ -189,7 +189,6 @@ def flex_na1d(
             )
 
         scale = query.shape[-1] ** -0.5
-        scale = query.shape[-1] ** -0.5
         additional_output, additional_lse = additional_sdpa(
             query,
             additional_keys,

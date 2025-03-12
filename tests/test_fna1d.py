@@ -675,6 +675,7 @@ class FlexAttentionFNA1DTest(unittest.TestCase):
         if not fna_supports_additional_kv(D) and additional_kv_length > 0:
             return
 
+        # xFormers' cutlass backend doesn't support partial attention.
         if additional_kv_length == 0:
             self._test_against_cutlass_fna(
                 B=B,
