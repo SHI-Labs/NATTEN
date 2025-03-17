@@ -12,24 +12,21 @@ git submodule update --init --recursive
 }
 
 build_one() {
-  cu=$1
+  target=$1
   pytorch_ver=$2
+  cu=${target/cuda/cu}
+  cu=${cu/./}
+  ctk_ver=${cu/cu/}
 
-  case "$cu" in
-    cu*)
-      image_name=manylinux-cuda${cu/cu/}
-      ;;
-    cpu)
-      image_name=manylinux-cpu
-      ;;
-    *)
-      echo "Unrecognized cu=$cu"
-      exit 1
-      ;;
-  esac
+  if [[ $ctk_ver -ge 126 ]]; then
+    # (ahassani) what in god's name is manylinux2_28?
+    image_name=pytorch/manylinux2_28-builder:${target}-main
+  else
+    image_name=pytorch/manylinux-builder:${target}-main
+  fi
 
-  echo "Launching container with $image_name ..."
-  container_name="$image_name"_"$cu"_"$pytorch_ver"
+  echo "Launching container with $image_name to build for torch $pytorch_ver + $cu..."
+  container_name="natten_build_"_"$cu"_"$pytorch_ver"
 
   py_versions=(3.9 3.10 3.11)
 
@@ -55,7 +52,7 @@ build_one() {
       --gpus=all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
       --name "$container_name_" \
       --mount type=bind,source="$(pwd)",target=/natten \
-      pytorch/$image_name
+      $image_name
     cat <<EOF | docker exec -i $container_name_ sh
       export CU_VERSION=$cu PYTHON_VERSION=$py
       export PYTORCH_VERSION=$pytorch_ver
@@ -81,24 +78,11 @@ else
   # We don't need to build for every minor torch release; they're usually
   # compatible in their python API and ABIs.
 
-  build_one_and_capture_output cu124 2.5.0 & build_one_and_capture_output cu121 2.5.0
+  # We're only building for torch 2.5 and 2.6, and only CTK > 12.0 starting 0.17.5.
+  build_one_and_capture_output cuda12.6 2.6.0 & build_one_and_capture_output cuda12.4 2.6.0
 
-  build_one_and_capture_output cu118 2.5.0 & build_one_and_capture_output cu124 2.4.0
+  build_one_and_capture_output cuda12.4 2.5.0 & build_one_and_capture_output cuda12.1 2.5.0
 
-  build_one_and_capture_output cu121 2.4.0 & build_one_and_capture_output cu118 2.4.0
+  build_one_and_capture_output cpu 2.6.0 & build_one_and_capture_output cpu 2.5.0
 
-  build_one_and_capture_output cu121 2.3.0 & build_one_and_capture_output cu118 2.3.0
-
-  build_one_and_capture_output cu121 2.2.0 & build_one_and_capture_output cu118 2.2.0
-
-  build_one_and_capture_output cu121 2.1.0 & build_one_and_capture_output cu118 2.1.0
-
-  build_one_and_capture_output cu118 2.0.0 & build_one_and_capture_output cu117 2.0.0
-
-  build_one_and_capture_output cpu 2.5.0 & \
-  build_one_and_capture_output cpu 2.4.0 & \
-  build_one_and_capture_output cpu 2.3.0 & \
-  build_one_and_capture_output cpu 2.2.0 & \
-  build_one_and_capture_output cpu 2.1.0 & \
-  build_one_and_capture_output cpu 2.0.0
 fi
