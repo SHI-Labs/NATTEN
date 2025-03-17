@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+
+## [0.17.5] - 2025-03-20
 * Added support for even-sized kernels!
   * NATTEN now allows any kernel size greater than 1 in fused ops.
   * Only available in Fused NA (both the CUTLASS 2.X kernels and Flex) for now.
@@ -11,7 +13,12 @@
     * Just import `use_flex_attention()` from `natten`, call it, and enjoy potentially significant
      speedups on newer architectures.
     * With support for additional KV tokens.
+    * NOTE: we've been observing some instabilities with Flex Attention when using torch 2.6. We'll
+    try to raise the issue with the PyTorch team, but please proceed with caution.
 * Better precision on fused ops with additional KV.
+* Torch 2.6 support.
+* Dropped support for CTK < 12.0, and torch < 2.5
+* Dropped deprecated ops (`natten.functional.natten*d{qk,qkrpb,av}`)
      
 
 ## [0.17.4] - 2025-01-28

@@ -49,7 +49,7 @@
     <div class="title row">
         <div class="col-lg-12">
             <p class="h2">Install with pip</p>
-            <p>Latest release: <code>0.17.4</code></p>
+            <p>Latest release: <code>0.17.5</code></p>
         </div>
     </div>
     <div class="row">
@@ -61,177 +61,63 @@
                 <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">PyTorch:</a>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-E" data-bs-toggle="tab" data-bs-target="#v250" type="button" role="tab" aria-controls="v250" aria-selected="true">2.5.X</button>
+                <button class="nav-link active" id="tab26" data-bs-toggle="tab" data-bs-target="#v260" type="button" role="tab" aria-controls="v260" aria-selected="true">2.6.X</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-E" data-bs-toggle="tab" data-bs-target="#v240" type="button" role="tab" aria-controls="v240" aria-selected="true">2.4.X</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-D" data-bs-toggle="tab" data-bs-target="#v230" type="button" role="tab" aria-controls="v230" aria-selected="true">2.3.X</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-C" data-bs-toggle="tab" data-bs-target="#v220" type="button" role="tab" aria-controls="v220" aria-selected="true">2.2.X</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-B" data-bs-toggle="tab" data-bs-target="#v210" type="button" role="tab" aria-controls="v210" aria-selected="true">2.1.X</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-A" data-bs-toggle="tab" data-bs-target="#v200" type="button" role="tab" aria-controls="v200" aria-selected="true">2.0.X</button>
+                <button class="nav-link" id="tab25" data-bs-toggle="tab" data-bs-target="#v250" type="button" role="tab" aria-controls="v250" aria-selected="true">2.5.X</button>
               </li>
           </ul>
           <div class="tab-content" id="torchTabContent">
-              <div class="tab-pane fade show active" id="v250" role="tabpanel" aria-labelledby="tab-F">
+              <div class="tab-pane fade show active" id="v260" role="tabpanel" aria-labelledby="tab26">
+                <div class="d-flex align-items-start">
+                  <div class="nav flex-column nav-pills me-3" id="v260-tab" role="tablist" aria-orientation="vertical">
+                    <button class="nav-link active" id="v260-cu124-tab" data-bs-toggle="pill"
+                      data-bs-target="#v260-126" type="button" role="tab" aria-controls="v260-126" aria-selected="true">CUDA 12.6</button>
+                    <button class="nav-link" id="v260-cu124-tab" data-bs-toggle="pill" data-bs-target="#v260-124" type="button" role="tab" aria-controls="v260-124" aria-selected="true">CUDA 12.4</button>
+                    <button class="nav-link" id="v260-cpu-tab" data-bs-toggle="pill" data-bs-target="#v260-cpu" type="button" role="tab" aria-controls="v230-cpu" aria-selected="false">CPU</button>
+                  </div>
+                  <div class="tab-content" id="v260-tabContent">
+                    <div class="tab-pane fade show active" id="v260-126" role="tabpanel" aria-labelledby="v260-cu126-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.5+torch260cu126 -f https://shi-labs.com/natten/wheels/</pre>
+                    </div>
+                    <div class="tab-pane fade show" id="v260-124" role="tabpanel" aria-labelledby="v260-cu124-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.5+torch260cu124 -f https://shi-labs.com/natten/wheels/</pre>
+                    </div>
+                    <div class="tab-pane fade" id="v260-cpu" role="tabpanel" aria-labelledby="v260-cpu-tab">
+                      <p>Run this command:</p>
+                      <pre>pip3 install natten==0.17.5+torch260cpu -f https://shi-labs.com/natten/wheels</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-pane fade show" id="v250" role="tabpanel" aria-labelledby="tab25">
                 <div class="d-flex align-items-start">
                   <div class="nav flex-column nav-pills me-3" id="v250-tab" role="tablist" aria-orientation="vertical">
                     <button class="nav-link active" id="v250-cu124-tab" data-bs-toggle="pill"
                       data-bs-target="#v250-124" type="button" role="tab" aria-controls="v250-124" aria-selected="true">CUDA 12.4</button>
                     <button class="nav-link" id="v250-cu121-tab" data-bs-toggle="pill" data-bs-target="#v250-121" type="button" role="tab" aria-controls="v250-121" aria-selected="true">CUDA 12.1</button>
-                    <button class="nav-link" id="v250-cu118-tab" data-bs-toggle="pill" data-bs-target="#v250-118" type="button" role="tab" aria-controls="v230-118" aria-selected="false">CUDA 11.8</button>
                     <button class="nav-link" id="v250-cpu-tab" data-bs-toggle="pill" data-bs-target="#v250-cpu" type="button" role="tab" aria-controls="v230-cpu" aria-selected="false">CPU</button>
                   </div>
                   <div class="tab-content" id="v250-tabContent">
                     <div class="tab-pane fade show active" id="v250-124" role="tabpanel" aria-labelledby="v250-cu124-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch250cu124 -f https://shi-labs.com/natten/wheels/</pre>
+                      <pre>pip3 install natten==0.17.5+torch250cu124 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade show" id="v250-121" role="tabpanel" aria-labelledby="v250-cu121-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch250cu121 -f https://shi-labs.com/natten/wheels/</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v250-118" role="tabpanel" aria-labelledby="v250-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch250cu118 -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.5+torch250cu121 -f https://shi-labs.com/natten/wheels/</pre>
                     </div>
                     <div class="tab-pane fade" id="v250-cpu" role="tabpanel" aria-labelledby="v250-cpu-tab">
                       <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch250cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade show" id="v240" role="tabpanel" aria-labelledby="tab-E">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v240-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v240-cu124-tab" data-bs-toggle="pill"
-                      data-bs-target="#v240-124" type="button" role="tab" aria-controls="v240-124" aria-selected="true">CUDA 12.4</button>
-                    <button class="nav-link" id="v240-cu121-tab" data-bs-toggle="pill" data-bs-target="#v240-121" type="button" role="tab" aria-controls="v240-121" aria-selected="true">CUDA 12.1</button>
-                    <button class="nav-link" id="v240-cu118-tab" data-bs-toggle="pill" data-bs-target="#v240-118" type="button" role="tab" aria-controls="v230-118" aria-selected="false">CUDA 11.8</button>
-                    <button class="nav-link" id="v240-cpu-tab" data-bs-toggle="pill" data-bs-target="#v240-cpu" type="button" role="tab" aria-controls="v230-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v240-tabContent">
-                    <div class="tab-pane fade show active" id="v240-124" role="tabpanel" aria-labelledby="v240-cu124-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch240cu124 -f https://shi-labs.com/natten/wheels/</pre>
-                    </div>
-                    <div class="tab-pane fade show" id="v240-121" role="tabpanel" aria-labelledby="v240-cu121-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch240cu121 -f https://shi-labs.com/natten/wheels/</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v240-118" role="tabpanel" aria-labelledby="v240-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch240cu118 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v240-cpu" role="tabpanel" aria-labelledby="v240-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch240cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade show" id="v230" role="tabpanel" aria-labelledby="tab-D">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v230-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v230-cu121-tab" data-bs-toggle="pill" data-bs-target="#v230-121" type="button" role="tab" aria-controls="v230-121" aria-selected="true">CUDA 12.1</button>
-                    <button class="nav-link" id="v230-cu118-tab" data-bs-toggle="pill" data-bs-target="#v230-118" type="button" role="tab" aria-controls="v230-118" aria-selected="false">CUDA 11.8</button>
-                    <button class="nav-link" id="v230-cpu-tab" data-bs-toggle="pill" data-bs-target="#v230-cpu" type="button" role="tab" aria-controls="v230-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v230-tabContent">
-                    <div class="tab-pane fade show active" id="v230-121" role="tabpanel" aria-labelledby="v230-cu121-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch230cu121 -f https://shi-labs.com/natten/wheels/</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v230-118" role="tabpanel" aria-labelledby="v230-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch230cu118 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v230-cpu" role="tabpanel" aria-labelledby="v230-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch230cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade show" id="v220" role="tabpanel" aria-labelledby="tab-C">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v220-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v220-cu121-tab" data-bs-toggle="pill" data-bs-target="#v220-121" type="button" role="tab" aria-controls="v220-121" aria-selected="true">CUDA 12.1</button>
-                    <button class="nav-link" id="v220-cu118-tab" data-bs-toggle="pill" data-bs-target="#v220-118" type="button" role="tab" aria-controls="v220-118" aria-selected="false">CUDA 11.8</button>
-                    <button class="nav-link" id="v220-cpu-tab" data-bs-toggle="pill" data-bs-target="#v220-cpu" type="button" role="tab" aria-controls="v220-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v220-tabContent">
-                    <div class="tab-pane fade show active" id="v220-121" role="tabpanel" aria-labelledby="v220-cu121-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch220cu121 -f https://shi-labs.com/natten/wheels/</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v220-118" role="tabpanel" aria-labelledby="v220-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch220cu118 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v220-cpu" role="tabpanel" aria-labelledby="v220-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch220cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade show" id="v210" role="tabpanel" aria-labelledby="tab-B">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v210-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v210-cu121-tab" data-bs-toggle="pill" data-bs-target="#v210-121" type="button" role="tab" aria-controls="v210-121" aria-selected="true">CUDA 12.1</button>
-                    <button class="nav-link" id="v210-cu118-tab" data-bs-toggle="pill" data-bs-target="#v210-118" type="button" role="tab" aria-controls="v210-118" aria-selected="false">CUDA 11.8</button>
-                    <button class="nav-link" id="v210-cpu-tab" data-bs-toggle="pill" data-bs-target="#v210-cpu" type="button" role="tab" aria-controls="v210-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v210-tabContent">
-                    <div class="tab-pane fade show active" id="v210-121" role="tabpanel" aria-labelledby="v210-cu121-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch210cu121 -f https://shi-labs.com/natten/wheels/</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v210-118" role="tabpanel" aria-labelledby="v210-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch210cu118 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v210-cpu" role="tabpanel" aria-labelledby="v210-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch210cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade show" id="v200" role="tabpanel" aria-labelledby="tab-A">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v200-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v200-cu118-tab" data-bs-toggle="pill" data-bs-target="#v200-118" type="button" role="tab" aria-controls="v200-118" aria-selected="true">CUDA 11.8</button>
-                    <button class="nav-link" id="v200-cu117-tab" data-bs-toggle="pill" data-bs-target="#v200-117" type="button" role="tab" aria-controls="v200-117" aria-selected="false">CUDA 11.7</button>
-                    <button class="nav-link" id="v200-cpu-tab" data-bs-toggle="pill" data-bs-target="#v200-cpu" type="button" role="tab" aria-controls="v200-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v200-tabContent">
-                    <div class="tab-pane fade show active" id="v200-118" role="tabpanel" aria-labelledby="v200-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch200cu118 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v200-117" role="tabpanel" aria-labelledby="v200-cu117-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch200cu117 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v200-cpu" role="tabpanel" aria-labelledby="v200-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.17.4+torch200cpu -f https://shi-labs.com/natten/wheels</pre>
+                      <pre>pip3 install natten==0.17.5+torch250cpu -f https://shi-labs.com/natten/wheels</pre>
                     </div>
                   </div>
                 </div>
               </div>
           </div>
-          <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.17.4</pre></p>
+          <p>Your build isn't listed? Mac user? Just do: <pre class="tight">pip install natten==0.17.5</pre></p>
           <p>Please note that without pre-compiled wheels, installing might take a while, as it will
           involve compiling NATTEN kernels on your device. In that case, compiler tools are required
           as well.</p>
@@ -314,292 +200,6 @@
   archiveprefix = {arXiv},
   primaryclass = {cs.CV}
 }</code></pre></p>
-        </div>
-    </div>
-</div>
-<div class="container news mt-4">
-    <div class="title row">
-        <div class="col-lg-12">
-            <p class="h2">Older releases</p>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-lg-12">
-          <p>We're only able to support a few of the most recent major torch releases starting 2024.
-            If you're using an older torch / CUDA build, you can still install previous NATTEN releases.</p>
-          <p></p>
-          <ul class="nav nav-tabs" id="torchTab" role="tablist">
-              <li class="nav-item" role="presentation">
-                <a class="nav-link disabled" href="#" tabindex="-1" aria-disabled="true">PyTorch:</a>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tab-H" data-bs-toggle="tab" data-bs-target="#v200" type="button" role="tab" aria-controls="v200" aria-selected="true">2.0</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-H" data-bs-toggle="tab" data-bs-target="#v113" type="button" role="tab" aria-controls="v113" aria-selected="true">1.13</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-G" data-bs-toggle="tab" data-bs-target="#v1121" type="button" role="tab" aria-controls="v1121" aria-selected="false">1.12.1</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-F" data-bs-toggle="tab" data-bs-target="#v1120" type="button" role="tab" aria-controls="v1120" aria-selected="false">1.12</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-E" data-bs-toggle="tab" data-bs-target="#v1110" type="button" role="tab" aria-controls="v1110" aria-selected="false">1.11</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-D" data-bs-toggle="tab" data-bs-target="#v1101" type="button" role="tab" aria-controls="v1101" aria-selected="true">1.10.1</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-C" data-bs-toggle="tab" data-bs-target="#v1100" type="button" role="tab" aria-controls="v1100" aria-selected="false">1.10</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-B" data-bs-toggle="tab" data-bs-target="#v1090" type="button" role="tab" aria-controls="v1090" aria-selected="false">1.9</button>
-              </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-A" data-bs-toggle="tab" data-bs-target="#v1080" type="button" role="tab" aria-controls="v1080" aria-selected="false">1.8</button>
-              </li>
-          </ul>
-          <div class="tab-content" id="torchTabContent">
-              <div class="tab-pane fade show active" id="v200" role="tabpanel" aria-labelledby="tab-I">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v200-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v200-cu118-tab" data-bs-toggle="pill" data-bs-target="#v200-118" type="button" role="tab" aria-controls="v200-118" aria-selected="true">CUDA 11.8</button>
-                    <button class="nav-link" id="v200-cu117-tab" data-bs-toggle="pill" data-bs-target="#v200-117" type="button" role="tab" aria-controls="v200-117" aria-selected="false">CUDA 11.7</button>
-                    <button class="nav-link" id="v200-cpu-tab" data-bs-toggle="pill" data-bs-target="#v200-cpu" type="button" role="tab" aria-controls="v200-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v200-tabContent">
-                    <div class="tab-pane fade show active" id="v200-118" role="tabpanel" aria-labelledby="v200-cu118-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch200cu118 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v200-117" role="tabpanel" aria-labelledby="v200-cu117-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch200cu117 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v200-cpu" role="tabpanel" aria-labelledby="v200-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch200cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade show" id="v113" role="tabpanel" aria-labelledby="tab-H">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v113-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v113-cu117-tab" data-bs-toggle="pill" data-bs-target="#v113-117" type="button" role="tab" aria-controls="v113-117" aria-selected="true">CUDA 11.7</button>
-                    <button class="nav-link" id="v113-cu116-tab" data-bs-toggle="pill" data-bs-target="#v113-116" type="button" role="tab" aria-controls="v113-116" aria-selected="false">CUDA 11.6</button>
-                    <button class="nav-link" id="v113-cpu-tab" data-bs-toggle="pill" data-bs-target="#v113-cpu" type="button" role="tab" aria-controls="v113-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v113-tabContent">
-                    <div class="tab-pane fade show active" id="v113-117" role="tabpanel" aria-labelledby="v113-cu117-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1130cu117 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v113-116" role="tabpanel" aria-labelledby="v113-cu116-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1130cu116 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v113-cpu" role="tabpanel" aria-labelledby="v113-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1130cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1121" role="tabpanel" aria-labelledby="tab-G">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1121-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1121-cu116-tab" data-bs-toggle="pill" data-bs-target="#v1121-116" type="button" role="tab" aria-controls="v1121-116" aria-selected="true">CUDA 11.6</button>
-                    <button class="nav-link" id="v1121-cu113-tab" data-bs-toggle="pill" data-bs-target="#v1121-113" type="button" role="tab" aria-controls="v1121-113" aria-selected="false">CUDA 11.3</button>
-                    <button class="nav-link" id="v1121-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1121-102" type="button" role="tab" aria-controls="v1121-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1121-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1121-cpu" type="button" role="tab" aria-controls="v1121-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1121-tabContent">
-                    <div class="tab-pane fade show active" id="v1121-116" role="tabpanel" aria-labelledby="v1121-cu116-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1121cu116 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1121-113" role="tabpanel" aria-labelledby="v1121-cu113-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1121cu113 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1121-102" role="tabpanel" aria-labelledby="v1121-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1121cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1121-cpu" role="tabpanel" aria-labelledby="v1121-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1121cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1120" role="tabpanel" aria-labelledby="tab-F">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1120-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1120-cu116-tab" data-bs-toggle="pill" data-bs-target="#v1120-116" type="button" role="tab" aria-controls="v1120-116" aria-selected="true">CUDA 11.6</button>
-                    <button class="nav-link" id="v1120-cu113-tab" data-bs-toggle="pill" data-bs-target="#v1120-113" type="button" role="tab" aria-controls="v1120-113" aria-selected="false">CUDA 11.3</button>
-                    <button class="nav-link" id="v1120-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1120-102" type="button" role="tab" aria-controls="v1120-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1120-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1120-cpu" type="button" role="tab" aria-controls="v1120-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1120-tabContent">
-                    <div class="tab-pane fade show active" id="v1120-116" role="tabpanel" aria-labelledby="v1120-cu116-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1120cu116 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1120-113" role="tabpanel" aria-labelledby="v1120-cu113-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1120cu113 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1120-102" role="tabpanel" aria-labelledby="v1120-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1120cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1120-cpu" role="tabpanel" aria-labelledby="v1120-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1120cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1110" role="tabpanel" aria-labelledby="tab-E">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1110-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1110-cu115-tab" data-bs-toggle="pill" data-bs-target="#v1110-115" type="button" role="tab" aria-controls="v1110-115" aria-selected="true">CUDA 11.5</button>
-                    <button class="nav-link" id="v1110-cu113-tab" data-bs-toggle="pill" data-bs-target="#v1110-113" type="button" role="tab" aria-controls="v1110-113" aria-selected="false">CUDA 11.3</button>
-                    <button class="nav-link" id="v1110-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1110-102" type="button" role="tab" aria-controls="v1110-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1110-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1110-cpu" type="button" role="tab" aria-controls="v1110-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1110-tabContent">
-                    <div class="tab-pane fade show active" id="v1110-115" role="tabpanel" aria-labelledby="v1110-cu115-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1110cu115 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1110-113" role="tabpanel" aria-labelledby="v1110-cu113-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1110cu113 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1110-102" role="tabpanel" aria-labelledby="v1110-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1110cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1110-cpu" role="tabpanel" aria-labelledby="v1110-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1110cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1101" role="tabpanel" aria-labelledby="tab-D">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1101-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1101-cu113-tab" data-bs-toggle="pill" data-bs-target="#v1101-113" type="button" role="tab" aria-controls="v1101-113" aria-selected="true">CUDA 11.3</button>
-                    <button class="nav-link" id="v1101-cu111-tab" data-bs-toggle="pill" data-bs-target="#v1101-111" type="button" role="tab" aria-controls="v1101-111" aria-selected="false">CUDA 11.1</button>
-                    <button class="nav-link" id="v1101-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1101-102" type="button" role="tab" aria-controls="v1101-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1101-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1101-cpu" type="button" role="tab" aria-controls="v1101-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1101-tabContent">
-                    <div class="tab-pane fade show active" id="v1101-113" role="tabpanel" aria-labelledby="v1101-cu113-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1101cu113 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1101-111" role="tabpanel" aria-labelledby="v1101-cu111-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1101cu111 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1101-102" role="tabpanel" aria-labelledby="v1101-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1101cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1101-cpu" role="tabpanel" aria-labelledby="v1101-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1101cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1100" role="tabpanel" aria-labelledby="tab-C">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1100-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1100-cu113-tab" data-bs-toggle="pill" data-bs-target="#v1100-113" type="button" role="tab" aria-controls="v1100-113" aria-selected="true">CUDA 11.3</button>
-                    <button class="nav-link" id="v1100-cu111-tab" data-bs-toggle="pill" data-bs-target="#v1100-111" type="button" role="tab" aria-controls="v1100-111" aria-selected="false">CUDA 11.1</button>
-                    <button class="nav-link" id="v1100-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1100-102" type="button" role="tab" aria-controls="v1100-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1100-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1100-cpu" type="button" role="tab" aria-controls="v1100-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1100-tabContent">
-                    <div class="tab-pane fade show active" id="v1100-113" role="tabpanel" aria-labelledby="v1100-cu113-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1100cu113 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1100-111" role="tabpanel" aria-labelledby="v1100-cu111-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1100cu111 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1100-102" role="tabpanel" aria-labelledby="v1100-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1100cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1100-cpu" role="tabpanel" aria-labelledby="v1100-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch1100cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1090" role="tabpanel" aria-labelledby="tab-B">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1090-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1090-cu111-tab" data-bs-toggle="pill" data-bs-target="#v1090-111" type="button" role="tab" aria-controls="v1090-111" aria-selected="false">CUDA 11.1</button>
-                    <button class="nav-link" id="v1090-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1090-102" type="button" role="tab" aria-controls="v1090-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1090-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1090-cpu" type="button" role="tab" aria-controls="v1090-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1090-tabContent">
-                    <div class="tab-pane fade show active" id="v1090-111" role="tabpanel" aria-labelledby="v1090-cu111-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch190cu111 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1090-102" role="tabpanel" aria-labelledby="v1090-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch190cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1090-cpu" role="tabpanel" aria-labelledby="v1090-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch190cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-pane fade" id="v1080" role="tabpanel" aria-labelledby="tab-A">
-                <div class="d-flex align-items-start">
-                  <div class="nav flex-column nav-pills me-3" id="v1080-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v1080-cu111-tab" data-bs-toggle="pill" data-bs-target="#v1080-111" type="button" role="tab" aria-controls="v1080-111" aria-selected="true">CUDA 11.1</button>
-                    <button class="nav-link" id="v1080-cu102-tab" data-bs-toggle="pill" data-bs-target="#v1080-102" type="button" role="tab" aria-controls="v1080-102" aria-selected="false">CUDA 10.2</button>
-                    <button class="nav-link" id="v1080-cu101-tab" data-bs-toggle="pill" data-bs-target="#v1080-101" type="button" role="tab" aria-controls="v1080-101" aria-selected="false">CUDA 10.1</button>
-                    <button class="nav-link" id="v1080-cpu-tab" data-bs-toggle="pill" data-bs-target="#v1080-cpu" type="button" role="tab" aria-controls="v1080-cpu" aria-selected="false">CPU</button>
-                  </div>
-                  <div class="tab-content" id="v1080-tabContent">
-                    <div class="tab-pane fade show active" id="v1080-111" role="tabpanel" aria-labelledby="v1080-cu111-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch180cu111 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1080-102" role="tabpanel" aria-labelledby="v1080-cu102-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch180cu102 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1080-101" role="tabpanel" aria-labelledby="v1080-cu101-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch180cu101 -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                    <div class="tab-pane fade" id="v1080-cpu" role="tabpanel" aria-labelledby="v1080-cpu-tab">
-                      <p>Run this command:</p>
-                      <pre>pip3 install natten==0.14.6+torch180cpu -f https://shi-labs.com/natten/wheels</pre>
-                    </div>
-                  </div>
-                </div>
-              </div>
-          </div>
-          <p></p>
         </div>
     </div>
 </div>

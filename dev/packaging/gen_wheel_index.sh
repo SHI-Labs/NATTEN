@@ -15,13 +15,13 @@ export LC_ALL=C  # reproducible sort
 index=$root/index.html
 
 cd "$root"
-for cu in cpu cu101 cu102 cu111 cu113 cu115 cu116 cu117 cu118 cu121 cu124; do
+for cu in cpu cu101 cu102 cu111 cu113 cu115 cu116 cu117 cu118 cu121 cu124 cu126; do
   mkdir -p "$root/$cu"
   cd "$root/$cu"
   echo "Creating $PWD/index.html ..."
   # First sort by torch version, then stable sort by d2 version with unique.
   # As a result, the latest torch version for each d2 version is kept.
-  rm index.html
+  rm -f index.html
   echo "<!DOCTYPE html><html lang=\"en\"><head>" >> index.html
   echo "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" >> index.html
   echo "<title>Index of packages</title></head><body>" >> index.html
@@ -35,7 +35,7 @@ for cu in cpu cu101 cu102 cu111 cu113 cu115 cu116 cu117 cu118 cu121 cu124; do
   for torch in torch*; do
     cd "$root/$cu/$torch"
 
-    rm index.html
+    rm -f index.html
     echo "<!DOCTYPE html><html lang=\"en\"><head>" >> index.html
     echo "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" >> index.html
     echo "<title>Index of packages</title></head><body>" >> index.html
@@ -51,7 +51,7 @@ done
 
 cd "$root"
 # Just list everything:
-rm index.html
+rm -f index.html
 echo "<!DOCTYPE html><html lang=\"en\"><head>" >> $index
 echo "<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" >> $index
 echo "<title>Index of packages</title></head><body>" >> $index

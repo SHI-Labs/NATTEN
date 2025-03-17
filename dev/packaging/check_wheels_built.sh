@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-NATTEN_VERSION="0.17.4"
+NATTEN_VERSION="0.17.5"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 
@@ -13,19 +13,6 @@ check_one() {
   cu=$1
   pytorch_ver=$2
   torch_build="torch${pytorch_ver//./}${cu}"
-
-  case "$cu" in
-    cu*)
-      image_name=manylinux-cuda${cu/cu/}
-      ;;
-    cpu)
-      image_name=manylinux-cpu
-      ;;
-    *)
-      echo "Unrecognized cu=$cu"
-      exit 1
-      ;;
-  esac
 
   py_versions=(3.9 3.10 3.11)
 
@@ -52,31 +39,13 @@ check_one() {
   done
 }
 
+check_one cu126 2.6.0
+check_one cu124 2.6.0
+check_one cpu 2.6.0
+
 check_one cu124 2.5.0
 check_one cu121 2.5.0
-check_one cu118 2.5.0
 check_one cpu 2.5.0
-
-check_one cu124 2.4.0
-check_one cu121 2.4.0
-check_one cu118 2.4.0
-check_one cpu 2.4.0
-
-check_one cu121 2.3.0
-check_one cu118 2.3.0
-check_one cpu 2.3.0
-
-check_one cu121 2.2.0
-check_one cu118 2.2.0
-check_one cpu 2.2.0
-
-check_one cu121 2.1.0
-check_one cu118 2.1.0
-check_one cpu 2.1.0
-
-check_one cu118 2.0.0
-check_one cu117 2.0.0
-check_one cpu 2.0.0
 
 WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING))
 
