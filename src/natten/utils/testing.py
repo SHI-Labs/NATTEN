@@ -44,7 +44,7 @@ _IS_TORCH_FLOP_COUNT_SUPPORTED = [int(x) for x in torch.__version__.split(".")[:
 # NOTE (ahassani): _IS_TRITON_SUPPORTED, `has_gemm`, `has_fp64_gemm`, and the like
 # all use the default CUDA device. This can break things on systems where there's
 # different archs available.
-_IS_TRITON_SUPPORTED = get_device_cc() >= 70
+_IS_TRITON_SUPPORTED = _IS_CUDA_AVAILABLE and get_device_cc() >= 70
 
 _SUPPORTS_NESTED = [int(x) for x in torch.__version__.split(".")[:2]] >= [2, 1]
 _SUPPORTS_EXPERIMENTAL_OPS = [int(x) for x in torch.__version__.split(".")[:2]] >= [
