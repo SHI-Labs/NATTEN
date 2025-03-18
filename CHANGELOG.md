@@ -20,7 +20,6 @@
 * Torch 2.6 support.
 * Dropped support for CTK < 12.0, and torch < 2.5
 * Dropped deprecated ops (`natten.functional.natten*d{qk,qkrpb,av}`)
-     
 
 ## [0.17.4] - 2025-01-28
 * Support for additional KV tokens in FNA (requires xFormers)
