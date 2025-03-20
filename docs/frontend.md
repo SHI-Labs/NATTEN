@@ -137,10 +137,10 @@ from natten import (
 )
 
 use_kv_parallelism_in_fused_na(True)
-# Enables using KV parallelism
+# Enables using KV parallelism (default)
 
 use_kv_parallelism_in_fused_na(False)
-# Go back to no KV parallelism (default)
+# Disables KV parallelism 
 ```
 
 If you're limited by memory capacity, but would still like to use KV parallelism, you can try adjusting
