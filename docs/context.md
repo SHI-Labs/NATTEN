@@ -97,16 +97,16 @@ You can additionally check what the current setting is:
 ## Flex Attention + `torch.compile`
 
 We have been *unable to verify the correctness* of our Flex backend when compilation is enabled
-under all of our use cases. We believe the NATTEN implementation is correct, because:
+under all of our use cases. We believe this may be a PyTorch bug, because:
 
 1. everything works as expected without `torch.compile`,
-2. the issues are intermittent and different orderings of the tests sometimes pass,
-3. in some cases, forward pass is correct, but backward pass fails.
+2. some cases are intermittent and changing the order of the tests fixes it,
+3. in some cases, forward pass is correct, but backward pass fails, regardless of order.
 
-We are working on raising this issue with PyTorch directly, but until then we strongly
+We are working on raising this issue with PyTorch directly, but until it is resolved, we strongly
 recommend exercising caution when using this feature.
 
-Until then, Flex + compilation is guarded with global context variables, which you can control
+Due to this, Flex + compilation is guarded with global context variables, which you can control
 using the following functions.
 
 

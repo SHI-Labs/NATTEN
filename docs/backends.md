@@ -20,13 +20,14 @@ Based on
 [xFormers FMHA](https://github.com/NVIDIA/cutlass/tree/main/examples/41_fused_multi_head_attention)
 (a.k.a. _memory-efficient attention_), this kernel is based on the CUTLASS 2.X API, and targets
 multiple architectures: SM50 (Maxwell), SM70 (Volta), SM75 (Turing), and SM80 (Ampere).
-Ampere RTX (SM86), and later architectures such as Ada (SM89), Hopper (SM90), and Blackwell (SM100)
-can also use these kernels, but the latter two have much more performant dedicated kernels.
-More generally, you can use these kernels on any NVIDIA GPU with compute capability >= 5.0, and
+You can use these kernels on any NVIDIA GPU with compute capability >= 5.0, and
 both for training and inference.
 
-This backend fuses multi-dimensional tiling directly into the kernel, but at the same time may
-suffer from additional overhead of software predication.
+Some newer architectures such as Hopper (SM90), and Blackwell (SM100) have much more performant
+dedicated kernels, but they are limited to inference for now.
+
+This implementation fuses multi-dimensional tiling directly into the kernel, but at the same time
+may suffer from additional overhead of software predication.
 To read more about this, we refer you to our
 [Generalized Neighborhood Attention](https://arxiv.org/abs/2504.16922) paper, in which we also
 proposed solutions such as Token Permutation, which we use to build our
