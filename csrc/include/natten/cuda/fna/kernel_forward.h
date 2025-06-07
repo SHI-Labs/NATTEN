@@ -111,9 +111,7 @@ template <
     int kQueriesPerBlock_,
     int kKeysPerBlock_,
     // upperbound on `max(value.shape[-1], query.shape[-1])`
-    int kMaxK_ = (int)cutlass::platform::numeric_limits<uint32_t>::max(),
-    bool kSupportsRPB_ = false,
-    bool kStoresLSE_ = false>
+    int kMaxK_ = (int)cutlass::platform::numeric_limits<uint32_t>::max()>
 struct FusedNeighborhoodAttentionKernel {
   static constexpr int NADim = NADim_;
   static_assert(NADim >= 1 && NADim < 4, "Only 1D-3D NA are implemented.");
@@ -128,11 +126,6 @@ struct FusedNeighborhoodAttentionKernel {
   // NADim>::value; static constexpr Dim KeyTileShape =
   // MapTileSizeToNd<kKeysPerBlock, NADim>::value;
   static constexpr bool kHasCausalDims = CausalMask::AnyCausalDims;
-  static constexpr bool kSupportsRPB = kSupportsRPB_;
-  static constexpr bool kStoresLSE = kStoresLSE_;
-  static_assert(
-      !kSupportsRPB || !kHasCausalDims,
-      "Causal NA does not support RPB yet.");
 
   using scalar_t = scalar_t_;
   using accum_t = float;
@@ -169,8 +162,6 @@ struct FusedNeighborhoodAttentionKernel {
     scalar_t* key_ptr = nullptr; // [..., num_heads, head_dim]
     scalar_t* value_ptr = nullptr; // [..., num_heads, head_dim_value]
 
-    scalar_t* rpb_ptr = nullptr; // [num_heads, *(kernel_size * 2 - 1)]
-
     // Output tensors
     output_t* output_ptr =
         nullptr; // [num_queries_post_partitioning, num_heads, head_dim_value]
@@ -181,6 +172,7 @@ struct FusedNeighborhoodAttentionKernel {
 
     // Sliding window. ignored if == 0
     Dim kernel_size;
+    Dim stride;
     Dim dilation;
     Dim cta_shape_x;
 
@@ -202,10 +194,11 @@ struct FusedNeighborhoodAttentionKernel {
     Dim v_strideM;
     Dim o_strideM;
 
-    Dim rpb_stride;
-
     int32_t num_heads = 0;
     int32_t num_batches = 0;
+
+    bool is_fully_block_sparse = false;
+    bool has_kv_padding = false;
 
     // Moves pointers to what we should process
     // Returns "false" if there is no work to do
@@ -244,8 +237,25 @@ struct FusedNeighborhoodAttentionKernel {
       auto v_strideB = num_queries.prod() * v_heads_dims;
       auto o_strideB = num_queries.prod() * o_heads_dims;
 
+      // This is where qkv shape is corrected:
       maybe_mask_qk_tiles(
           num_queries_post_partitioning, num_queries, dilation, dilation_idx);
+
+      // NOTE: causal mask is antithetical to being fully block sparse.
+      // While there are cases where a causal mask has mostly dense blocks, the
+      // last one (at least) will always be causally masked. Fast paths for
+      // block sparsity in FNA are limited to masks that are guaranteed to be
+      // fully block sparse only.
+      is_fully_block_sparse = not kHasCausalDims &&
+          fully_block_sparse(
+              num_queries_post_partitioning,
+              kernel_size,
+              stride,
+              query_tile_shape,
+              key_tile_shape);
+
+      has_kv_padding =
+          not evenly_divides(num_queries_post_partitioning, key_tile_shape);
 
       cta_shape_x =
           ceil_div_dim(num_queries_post_partitioning, query_tile_shape);
@@ -272,14 +282,6 @@ struct FusedNeighborhoodAttentionKernel {
       output_ptr += (first_query * o_strideM).sum() +
           (dilation_idx * o_stride_dilation).sum() + head_id * o_strideH;
 
-      if constexpr (kSupportsRPB) {
-        if (rpb_ptr != nullptr) {
-          auto head_rpb_shape = (kernel_size * 2) - 1;
-          rpb_ptr += head_id * head_rpb_shape.prod();
-          rpb_stride = compute_stride(head_rpb_shape, 1);
-        }
-      }
-
       if (output_accum_ptr != nullptr) {
         output_accum_ptr += (first_query * o_strideM).sum() +
             (dilation_idx * o_stride_dilation).sum() + head_id * o_strideH;
@@ -288,22 +290,20 @@ struct FusedNeighborhoodAttentionKernel {
         output_accum_ptr = (accum_t*)output_ptr;
       }
 
-      if constexpr (kStoresLSE) {
-        if (logsumexp_ptr != nullptr) {
-          auto lse_stride_dilation = compute_stride(num_queries, num_heads);
-          lse_strideM = lse_stride_dilation * dilation;
+      if (logsumexp_ptr != nullptr) {
+        auto lse_stride_dilation = compute_stride(num_queries, num_heads);
+        lse_strideM = lse_stride_dilation * dilation;
 
-          // NOTE(alih): we don't pad for 128-bit alignment like in xFormers,
-          // because we have to rewrite the vector iterator in the backward
-          // kernel into a gather op.
-          // auto lse_dim = cutlass::ceil_div((int32_t)num_queries.prod32(),
-          // kAlignLSE) * kAlignLSE;
-          // lse[batch_id, query_start, head_id]
-          logsumexp_ptr += batch_id * num_queries.prod32() * num_heads +
-              ((first_query * lse_strideM).sum() +
-               (dilation_idx * lse_stride_dilation).sum()) +
-              head_id;
-        }
+        // NOTE(alih): we don't pad for 128-bit alignment like in xFormers,
+        // because we have to rewrite the vector iterator in the backward
+        // kernel into a gather op.
+        // auto lse_dim = cutlass::ceil_div((int32_t)num_queries.prod32(),
+        // kAlignLSE) * kAlignLSE;
+        // lse[batch_id, query_start, head_id]
+        logsumexp_ptr += batch_id * num_queries.prod32() * num_heads +
+            ((first_query * lse_strideM).sum() +
+             (dilation_idx * lse_stride_dilation).sum()) +
+            head_id;
       }
 
       num_batches = 0; // no longer used after
@@ -634,7 +634,8 @@ struct FusedNeighborhoodAttentionKernel {
               (int64_t)problem_size_1_n_int,
               int64_t(MM1::ThreadblockShape::kN));
 
-    auto na_mask = NAMask(p.kernel_size, p.num_queries_post_partitioning);
+    auto na_mask =
+        NAMask(p.kernel_size, p.stride, p.num_queries_post_partitioning);
 
     auto first_key = na_mask.get_window_start(first_query);
     auto last_key = na_mask.get_window_end_(last_query);
@@ -656,33 +657,6 @@ struct FusedNeighborhoodAttentionKernel {
     auto output_tile_coords = cutlass::MatrixCoord{
         warp_idx_mn_0 % MM0::Mma::Base::WarpCount::kM,
         warp_idx_mn_0 / MM0::Mma::Base::WarpCount::kM};
-
-#ifdef CACHE_NEIGHBORHOOD_COORDINATES
-    // NA mask info
-    static constexpr auto kNumRows = MM0::AccumLambdaIterator::kRowIters;
-    Dim first_cols[kNumRows];
-    // Dim last_cols[kNumRows];
-    Dim key_bounds[kNumRows];
-    Dim rpb_starts[kNumRows];
-    MM0::AccumLambdaIterator::iterateRows(
-        lane_offset,
-        [&](int accum_m) {
-          auto row_idx =
-              map_index_to_coord((int32_t)accum_m, problem_size_0_m) +
-              first_query;
-          first_cols[accum_m] = na_mask.get_window_start(row_idx);
-          // last_cols[accum_m] = na_mask.get_window_end(row_idx,
-          // first_cols[accum_m]);
-          key_bounds[accum_m] =
-              na_mask.get_window_end(row_idx, first_cols[accum_m]) -
-              first_cols[accum_m];
-          if constexpr (kSupportsRPB) {
-            rpb_starts[accum_m] = na_mask.get_rpb_start(row_idx);
-          }
-        },
-        [&](int accum_m, int accum_n, int idx) {},
-        [&](int accum_m) {});
-#endif
 
     // Iterate through keys
     for (auto iter_key_start = first_key;
@@ -760,48 +734,46 @@ struct FusedNeighborhoodAttentionKernel {
         MM1::Mma::drain_cp_asyncs();
       }
 
-      // Neighborhood Attention masking
-      Dim first_col, key_bound, row_idx;
-      Dim rpb_start;
-      MM0::AccumLambdaIterator::iterateRows(
-          lane_offset,
-          [&](int accum_m) {
-            row_idx = map_index_to_coord((int32_t)accum_m, problem_size_0_m) +
-                first_query;
-            first_col = na_mask.get_window_start(row_idx);
-            key_bound = na_mask.get_window_end(row_idx, first_col) - first_col;
-            if constexpr (kSupportsRPB) {
-              rpb_start = na_mask.get_rpb_start(row_idx);
-            }
-          },
-          [&](int accum_m, int accum_n, int idx) {
-            auto col = map_index_to_coord((int32_t)accum_n, problem_size_0_n) +
-                iter_key_start;
-            if constexpr (!kSupportsRPB) {
-              if (
-#ifdef _EXTRA_BOUND_CHECKS
-                  accum_m >= problem_size_0_m_int ||
-                  accum_n >= problem_size_0_n_int ||
-#endif
-                  !is_coord_within_bounds_nn(col - first_col, key_bound)) {
+      if (not p.is_fully_block_sparse) {
+        // Neighborhood Attention masking
+        Dim first_col, key_bound, row_idx;
+        MM0::AccumLambdaIterator::iterateRows(
+            lane_offset,
+            [&](int accum_m) {
+              row_idx = map_index_to_coord((int32_t)accum_m, problem_size_0_m) +
+                  first_query;
+              first_col = na_mask.get_window_start(row_idx);
+              key_bound =
+                  na_mask.get_window_end(row_idx, first_col) - first_col;
+            },
+            [&](int accum_m, int accum_n, int idx) {
+              auto col =
+                  map_index_to_coord((int32_t)accum_n, problem_size_0_n) +
+                  iter_key_start;
+              if (!is_coord_within_bounds_nn(col - first_col, key_bound)) {
                 accum[idx] =
                     -cutlass::platform::numeric_limits<accum_t>::infinity();
               }
-            } else {
-              // NOTE: Flipped the condition for kernels with RPB so we can
-              // avoid checking whether the rpb offset goes out of bounds.
-              col = col - first_col;
-              auto rpb_idx = rpb_start + col;
-              if (is_coord_within_bounds_nn(col, key_bound)) {
-                accum[idx] = p.scale * accum[idx] +
-                    (accum_t)(p.rpb_ptr[(rpb_idx * p.rpb_stride).sum()]);
-              } else {
+            },
+            [&](int accum_m) {});
+      } else if (p.has_kv_padding) {
+        // Residual masking
+        Dim first_col, key_bound, row_idx;
+        MM0::AccumLambdaIterator::iterateRows(
+            lane_offset,
+            [&](int accum_m) {},
+            [&](int accum_m, int accum_n, int idx) {
+              auto col =
+                  map_index_to_coord((int32_t)accum_n, problem_size_0_n) +
+                  iter_key_start;
+              if (!is_coord_less_than_or_equal_to(
+                      col, p.num_queries_post_partitioning)) {
                 accum[idx] =
                     -cutlass::platform::numeric_limits<accum_t>::infinity();
               }
-            }
-          },
-          [&](int accum_m) {});
+            },
+            [&](int accum_m) {});
+      }
 
       // Update `mi` from accum stored in registers
       // Also does accum[i] <- exp(accum[i] - mi)
@@ -819,7 +791,7 @@ struct FusedNeighborhoodAttentionKernel {
           last_kv_col,
           is_first_kv_iter,
           iteratorC_tile_offset,
-          kSupportsRPB ? 1.0 : p.scale);
+          p.scale);
 
       // Output results to shared-memory
 
@@ -983,25 +955,23 @@ struct FusedNeighborhoodAttentionKernel {
       epilogue(rescale, dest_iter, accum_o);
     }
 
-    if constexpr (kStoresLSE) {
-      // 7. Calculate logsumexp
-      // To make the backward easier, we pad logsumexp with `inf`
-      // this avoids a few bound checks, and is not more expensive during fwd
-      static_assert(kQueriesPerBlock < kNumWarpsPerBlock * kWarpSize, "");
-      if (p.logsumexp_ptr && thread_id() < kQueriesPerBlock) {
-        // auto lse_dim = cutlass::ceil_div((int32_t)p.num_queries.prod32(),
-        // kAlignLSE) * kAlignLSE;
-        constexpr float kLog2e = 1.4426950408889634074; // log_2(e) = M_LOG2E
-        auto query_idx =
-            map_index_to_coord((int32_t)thread_id(), problem_size_0_m);
-        auto query_offset = (query_idx * p.lse_strideM).sum();
-        if (is_coord_within_upper_bound(query_idx, problem_size_0_m)) {
-          p.logsumexp_ptr[query_offset] = accum_t(mi[thread_id()] / kLog2e) +
-              cutlass::fast_log(accum_t(s_prime[thread_id()]));
-          //} else if (query_offset < lse_dim) {
-          //  p.logsumexp_ptr[query_offset] =
-          //      cutlass::platform::numeric_limits<accum_t>::infinity();
-        }
+    // 7. Calculate logsumexp
+    // To make the backward easier, we pad logsumexp with `inf`
+    // this avoids a few bound checks, and is not more expensive during fwd
+    static_assert(kQueriesPerBlock < kNumWarpsPerBlock * kWarpSize, "");
+    if (p.logsumexp_ptr && thread_id() < kQueriesPerBlock) {
+      // auto lse_dim = cutlass::ceil_div((int32_t)p.num_queries.prod32(),
+      // kAlignLSE) * kAlignLSE;
+      constexpr float kLog2e = 1.4426950408889634074; // log_2(e) = M_LOG2E
+      auto query_idx =
+          map_index_to_coord((int32_t)thread_id(), problem_size_0_m);
+      auto query_offset = (query_idx * p.lse_strideM).sum();
+      if (is_coord_within_upper_bound(query_idx, problem_size_0_m)) {
+        p.logsumexp_ptr[query_offset] = accum_t(mi[thread_id()] / kLog2e) +
+            cutlass::fast_log(accum_t(s_prime[thread_id()]));
+        //} else if (query_offset < lse_dim) {
+        //  p.logsumexp_ptr[query_offset] =
+        //      cutlass::platform::numeric_limits<accum_t>::infinity();
       }
     }
   }
@@ -1103,12 +1073,18 @@ struct FusedNeighborhoodAttentionKernel {
     // Update accum_m, accum_n, ...
     {
       accum_t mi_row, total_row;
+      bool mask;
       LambdaIterator::iterateRows(
           lane_offset,
-          [&](int accum_m) { mi_row = mi[accum_m]; },
+          [&](int accum_m) {
+            mi_row = mi[accum_m];
+            mask = mi_row ==
+                -cutlass::platform::numeric_limits<accum_t>::infinity();
+          },
           [&](int accum_m, int accum_n, int idx) {
-            frag[idx] =
-                (accum_n < max_col) ? exp2f(frag[idx] - mi_row) : accum_t(0.0);
+            frag[idx] = ((!mask) && (accum_n < max_col))
+                ? exp2f(frag[idx] - mi_row)
+                : accum_t(0.0);
           },
           [&](int accum_m) {});
       LambdaIterator::iterateRows(

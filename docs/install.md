@@ -1,213 +1,381 @@
-## Installing NATTEN
+# Install NATTEN
 
-If you are a Linux, your best option is installing via PyPI with wheels.
-Just refer to our website, [shi-labs.com/natten](https://www.shi-labs.com/natten/), 
-select your PyTorch version and backend (CUDA + version or CPU),
-copy-paste the command and install in seconds (subject to your network bandwidth :D )!
+Starting version `0.20.0`, NATTEN only supports PyTorch 2.7 and newer.
+However, you can still attempt to install NATTEN with PyTorch >= 2.5 at your own risk.
+For earlier NATTEN releases, please refer to [Older NATTEN builds](#older-natten-builds).
 
-For example, if you're on PyTorch 2.2 with CUDA, and it was tagged with `cu121`, the command would look like:
+We strongly recommend NVIDIA GPU users to install NATTEN with our CUDA kernel library, `libnatten`.
+`libnatten` packs our FNA kernels built with [CUTLASS](https://github.com/NVIDIA/cutlass/), which
+are specifically designed for delivering all the functionality available in NATTEN, and the best
+possible performance.
 
-```bash
-pip3 install natten==0.15.1+torch220cu121 -f https://shi-labs.com/natten/wheels/
+If you're a Linux user (or WSL), and you have NVIDIA GPUs, refer to
+[NATTEN + `libnatten` via PyPI](#natten-libnatten-via-pypi) for instructions on installing NATTEN
+with wheels (fastest option).
+
+If you're using a PyTorch version we don't support, or you need to use NATTEN with
+non-official PyTorch builds (nightly builds, NGC images, etc), you have to
+[build NATTEN + `libnatten`](#build-natten-libnatten).
+
+If you're a Windows user with NVIDIA GPUs, you can try to
+[build NATTEN from source with MSVC](#build-with-msvc). However, we note that we are unable to
+regularly test and support Windows builds. Pull requests and patches are strongly encouraged.
+
+All non-NVIDIA GPU users can only use our PyTorch (Flex Attention) backend, and not `libnatten`.
+Refer to [NATTEN via PyPI](#natten-via-pypi) for more information.
+
+
+## NATTEN + `libnatten` via PyPI
+We offer pre-built wheels (binaries) for the most recent official PyTorch builds.
+To install NATTEN using wheels, please first check your PyTorch version, and select it below.
+
+???+ pip-install "`torch==2.7.0+cu128`"
+
+    ```python
+    pip install natten==0.20.0+torch270cu128 -f https://whl.natten.org
+    ```
+
+??? pip-install "`torch==2.7.0+cu126`"
+    ```python
+    pip install natten==0.20.0+torch270cu126 -f https://whl.natten.org
+    ```
+
+    !!! warning 
+        Blackwell FNA/FMHA kernels are not available in this build. Blackwell support was
+        introduced in CUDA Toolkit 12.8.
+
+??? question "Don't know your PyTorch build? Other questions?"
+    If you don't know your PyTorch build, simply run this command:
+
+    ```shell
+    python -c "import torch; print(torch.__version__)"
+    ```
+    <div class="result" markdown>
+
+        2.7.0+cu126
+
+    </div>
+
+    In the above example, we're seeing PyTorch 2.7.0, built with CUDA Toolkit 12.6.
+
+    If you see a different version tag pattern, you might be using a nightly build, or your
+    environment/container built PyTorch from source.
+    If you see an older PyTorch version, sadly we don't support it and therefore don't
+    ship wheels for it.
+
+    In either case, your only option is to
+    [build NATTEN + `libnatten`](#build-natten-libnatten) locally.
+
+    If you see a CUDA Toolkit build older than 12.0, we unfortunately don't support those moving
+    forward.
+
+    If you see something else, or have further questions, feel free to
+    [open an issue](https://github.com/SHI-Labs/NATTEN/issues).
+
+## NATTEN via PyPI
+
+If you can't install NATTEN with `libnatten`, you can still use our
+[Flex Attention](https://docs.pytorch.org/docs/stable/nn.attention.flex_attention.html#module-torch.nn.attention.flex_attention)
+backend.
+However, note that you can only use this backend as long as Flex Attention is supported on your
+device.
+Also note that Flex Attention with `torch.compile` is not allowed by default for safety.
+For more information refer to
+[Flex Attention + `torch.compile`](context.md#flex-attention-torchcompile).
+
+???+ pip-install "`torch>=2.7.0`"
+
+    ```python
+    pip install natten==0.20.0
+    ```
+
+## Build NATTEN + `libnatten`
+
+First make sure that you have your preferred PyTorch build installed, since NATTEN's setup
+script requires PyTorch to even run.
+
+??? question "Dependencies & Requirements"
+    Obviously, Python and [PyTorch](https://pytorch.org/).
+
+    Builds with `libnatten` require `cmake` (1), CUDA runtime (2), and CUDA Toolkit (3).
+    { .annotate }
+    
+    1. Ideally install system-wide, but you can also install via PyPI:
+
+        ```shell
+        pip install cmake==3.20.3
+        ```
+
+    2. Usually ships with the CUDA driver. As long as you can run SMI successfully, you should be
+        good:
+
+        ```shell
+        nvidia-smi
+        ```
+    
+    3. Mainly for the CUDA compiler. Confirm you have it by running:
+
+        ```shell
+        which nvcc
+        ```
+        <div class="result" markdown>
+
+            /usr/bin/nvcc
+
+        </div>
+
+        to make sure it exists, and then confirming the CUDA toolkit version reported is 12.0 or
+        higher:
+
+        ```
+        nvcc --version
+        ```
+        <div class="result" markdown>
+
+            nvcc: NVIDIA (R) Cuda compiler driver
+            Copyright (c) 2005-2023 NVIDIA Corporation
+            Built on Tue_Aug_15_22:02:13_PDT_2023
+            Cuda compilation tools, release 12.2, V12.2.140
+            Build cuda_12.2.r12.2/compiler.33191640_0
+
+        </div>
+
+    `libnatten` depends heavily on [CUTLASS](https://github.com/NVIDIA/cutlass/), which is a header
+    only open source library that gets fetched as a submodule, so you don't need to install anything
+    for that.
+
+
+To build NATTEN with `libnatten`, you can still use PyPI, or [build from source](#build-from-source).
+
+???+ pip-install "Build NATTEN with `libnatten` on CUDA-supported devices"
+    ```python
+    pip install natten==0.20.0
+    ```
+
+By default, NATTEN will detect your GPU architecture and build `libnatten` specifically for that
+architecture.
+However, note that this **will not work** in container image builders (i.e. Dockerfile), as they do
+not typically expose the CUDA driver.
+If the setup does not detect a CUDA device, it will **skip building `libnatten`**.
+
+If you want to specify your target GPU architecture(s) manually, which will allow building without
+the CUDA driver present (still requires the compiler in CUDA Toolkit), set the `NATTEN_CUDA_ARCH`
+environment variable to a semicolon-separated list of the compute capabilities corresponding to
+your desired architectures.
+
+```python
+NATTEN_CUDA_ARCH="8.9" pip install natten==0.20.0 # (1)!
+
+NATTEN_CUDA_ARCH="9.0" pip install natten==0.20.0 # (2)!
+
+NATTEN_CUDA_ARCH="10.0" pip install natten==0.20.0 # (3)!
+
+NATTEN_CUDA_ARCH="8.0;8.6;9.0;10.0" pip install natten==0.20.0 # (4)!
 ```
 
-### Mac
-NATTEN can be installed via PyPI, but we're not able to build Mac wheels at this time.
+1. Build targeting SM89 (Ada Lovelace)
+2. Build targeting SM90 (Hopper)
+3. Build targeting SM100 (Blackwell)
+4. Multi-arch build targeting SM80, SM86, SM90 and SM100
 
-You can simply do `pip3 install natten`, and the CPU build will be compiled and installed.
+By default the setup will attempt to use 1/4th of the number of processor threads available in your
+system. If possible, we recommend using more to maximize build parallelism, and minimize build time.
+Using more than 64 workers (if available) should generally not make a difference, since we usually
+generate around 60 build targets.
 
-#### MPS Support
-NATTEN does not come with any metal kernels for now, and therefore the only usable backend on Apple Silicon is still CPU.
-We plan to port our naive kernels to metal soon, but we certainly welcome contributions!
+You can customize the number of workers by setting the `NATTEN_N_WORKERS` environment variable:
 
-### Windows
+```python
+NATTEN_N_WORKERS=16 pip install natten==0.20.0 # (1)!
 
-NATTEN does not come with Windows wheels yet, but you can build it from source.
-If you're using WSL, please follow the same steps as building for Linux below.
+NATTEN_N_WORKERS=64 pip install natten==0.20.0 # (2)!
+```
 
-If you're building with MSVC, please refer to [Build with MSVC](#Build-with-MSVC).
+1. Build with 16 parallel workers
+2. Build with 64 parallel workers
 
-### Building from source
-In order to build from source, please make sure that you have your preferred PyTorch build installed,
-since the NATTEN setup script depends heavily on PyTorch.
-Once set up, simply clone and build:
+You can also use the `--verbose` option in `pip` to monitor the compilation, and set the
+`NATTEN_VERBOSE` environment variable to toggle `cmake`'s verbose mode, which prints out all
+compilation targets and compile flags.
+
+### Build from source
+Just clone, optionally checkout to your desired version or commit, and run `make`:
 
 ```bash
 git clone --recursive https://github.com/SHI-Labs/NATTEN
 cd NATTEN
 
-pip install -r requirements.txt
-
 make
 ```
 
-NOTE: NATTEN will use the PyTorch API to detect your GPU architecture (if you have an NVIDIA GPU with CUDA set up).
-If you want to specify your architecture(s) manually:
-```bash
-# Build targeting SM89 (Ada Lovelace)
-make CUDA_ARCH="8.9"
+The setup script is identical to the one we ship [with PyPI](#build-natten-libnatten), therefore
+you have the same options and the same behavior.
 
-# Build targeting SM90 (Hopper)
-make CUDA_ARCH="9.0"
+If you want to specify your target GPU architecture(s) manually, instead of letting them get
+detected via PyTorch talking to the CUDA driver:
+
+```python
+make CUDA_ARCH="8.9" # (1)!
+
+make CUDA_ARCH="9.0" # (2)!
+
+make CUDA_ARCH="10.0" # (3)!
+
+make CUDA_ARCH="8.0;8.6;9.0;10.0" # (4)!
 ```
 
-It will by default attempt to use 1/4th of the number of processor threads on your system, but if you can, we recommend using
-up to 64 in order to maximize parallelization.
-You can do so by passing in the following arguments:
-```bash
-# Build with 64 workers
-make WORKERS=64
+1. Build targeting SM89 (Ada Lovelace)
+2. Build targeting SM90 (Hopper)
+3. Build targeting SM100 (Blackwell)
+4. Multi-arch build targeting SM80, SM86, SM90 and SM100
+
+Customizing the number of workers again works similarly.
+Using more than 64 workers should generally not make a difference, unless your use case demands it,
+and you use our autogen scripts (under `scripts/autogen*.py` in
+[our repository](https://github.com/SHI-Labs/NATTEN/tree/main/scripts)) and increase the number of
+targets.
+
+```python
+make WORKERS=16 # (1)!
+
+make WORKERS=64 # (2)!
 ```
 
-It is highly recommended to run all unit tests when you build from source:
-```bash
+1. Build with 16 parallel workers
+2. Build with 64 parallel workers
+
+You can enable verbose mode to view more details, and compilation progress:
+
+```python
+make VERBOSE=1
+```
+
+It is recommended to run all unit tests when you build from source. It may take up to 30 minutes:
+
+```python
 make test
 ```
 
-#### Build with MSVC
-**NOTE: Windows builds are experimental and not regularly tested.**
+If you want to do an editable (development) install, use `make dev` instead of `make`.
+
+??? question "Build from source on Windows"
+    ### Build with MSVC
+    **NOTE: Windows builds are experimental and not regularly tested.**
 
 
-First clone NATTEN, and make sure to fetch all submodules. If you're cloning with Visual Studio,
-it might clone submodules by default. If you're using a command line tool like git bash (MinGW) or WSL,
-it should be the same as linux:
+    First clone NATTEN, and make sure to fetch all submodules. If you're cloning with Visual Studio,
+    it might clone submodules by default. If you're using a command line tool like git bash (MinGW) or
+    WSL, it should be the same as linux.
 
-```bash
-git clone --recursive https://github.com/SHI-Labs/NATTEN
+    To build with MSVC, please open the "Native Tools Command Prompt for Visual Studio".
+    The exact name may depend on your version of Windows, Visual Studio, and cpu architecture (in our
+    case it was "x64 Native Tools Command Prompt for VS".)
+
+    Once in the command prompt, make sure your correct Python environment is in the system path. If
+    you're using anaconda, you should be able to do `conda activate $YOUR_ENV_NAME`.
+
+    Then simply confirm you have PyTorch installed, and use our Windows batch script to build:
+
+    ```python
+    WindowsBuilder.bat install
+
+    WindowsBuilder.bat install WORKERS=8 # (1)!
+
+    WindowsBuilder.bat install CUDA_ARCH=8.9 # (2)!
+    ```
+
+    1. Build with 8 parallel workers
+    2. Build targeting SM89 (Ada)
+
+    Note that depending on how many workers you end up using, build time may vary, and the MSVC
+    compiler tends to throw plenty of warnings at you, but as long as it does not fail and give you
+    back the command prompt, just let it keep building.
+
+    Once it's done building, it is highly recommended to run the unit tests to make sure everything
+    went as expected:
+    ```
+    WindowsBuilder.bat test
+    ```
+
+    ??? warning "PyTorch issue: nvToolsExt not found"
+
+        Windows users may come across this issue when building NATTEN from source with CUDA 12.0
+        and newer. The build process fails with an error indicating "nvtoolsext" cannot be found on
+        your system.  This is because nvtoolsext binaries are no longer part of the CUDA toolkit
+        for Windows starting CUDA 12.0, but the PyTorch cmake still looks for it
+        (as of torch==2.2.1).
+
+        The only workaround is to modify the following files:
+        ```
+        $PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Torch\TorchConfig.cmake
+        $PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\Caffe2Targets.cmake
+        $PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\public\cuda.cmake
+        ```
+
+        find all mentions of nvtoolsext (or nvToolsExt), and comment them out, to get past it.
+
+        More information on the issue:
+        [pytorch/pytorch#116926](https://github.com/pytorch/pytorch/pull/116926)
+
+## Checking whether you have `libnatten`
+
+If you installed NATTEN, and want to check whether you have `libnatten`, or your device supports it,
+run the following:
+
+```shell
+python -c "import natten; print(natten.HAS_LIBNATTEN)"
 ```
 
-If you've already cloned, you can manually fetch submodules:
+If `True`, you're good to go. If `False`, it could mean either you didn't install NATTEN with
+`libnatten`, or that your current device doesn't support it. Feel free to
+[open an issue](https://github.com/SHI-Labs/NATTEN/issues) if you have questions.
 
-```bash
-git submodule update --init --recursive
-```
+## Older NATTEN builds
+We highly recommend using the latest NATTEN builds, but if you need to install older NATTEN
+versions, you can install them via PyPI. We only offer wheels for the `0.17.5` release, and earlier
+releases will have to [compile locally](#natten-via-pypi).
 
-To build with MSVC, please open the "Native Tools Command Prompt for Visual Studio".
-The exact name may depend on your version of Windows, Visual Studio, and cpu architecture (in our case it was 
-"x64 Native Tools Command Prompt for VS".)
+#### `0.17.5`
 
-Once in the command prompt, make sure your correct Python environment is in the system path. If you're using anaconda, you
-should be able to do `conda activate $YOUR_ENV_NAME`.
+!!! warning 
+    Wheels will be phased out and removed in the coming months. We strongly recommend upgrading to
+    NATTEN `0.20.0`.
 
-Then simply confirm you have PyTorch installed, and use our Windows batch script to build:
+??? pip-install "`torch==2.6.0+cu126`"
 
-```
-WindowsBuilder.bat install 
+    ```python
+    pip install natten==0.17.5+torch260cu126 -f https://whl.natten.org
+    ```
 
-# Build with 8 parallel workers
-WindowsBuilder.bat install WORKERS=8
+??? pip-install "`torch==2.6.0+cu124`"
 
-# Build targeting SM89 (Ada Lovelace)
-WindowsBuilder.bat install CUDA_ARCH=8.9
-```
+    ```python
+    pip install natten==0.17.5+torch260cu124 -f https://whl.natten.org
+    ```
 
-Note that depending on how many workers you end up using, build time may vary, and the MSVC compiler tends to throw plenty of
-warnings at you, but as long as it does not fail and give you back the command prompt, just let it keep building.
+??? pip-install "`torch==2.6.0+cpu`"
 
-Once it's done building, it is highly recommended to run the unit tests to make sure everything went as expected:
-```
-WindowsBuilder.bat test
-```
+    ```python
+    pip install natten==0.17.5+torch260cpu -f https://whl.natten.org
+    ```
 
-##### PyTorch issue: nvToolsExt not found
-Windows users may come across this issue when building NATTEN from source with CUDA 12.0 and newer.
-The build process fails with an error indicating "nvtoolsext" cannot be found on your system.
-This is because nvtoolsext binaries are no longer part of the CUDA toolkit for Windows starting CUDA 12.0, but the PyTorch
-cmake still looks for it (as of torch==2.2.1).
+??? pip-install "`torch==2.5.0+cu124`"
 
-The only workaround is to modify the following files:
-```
-$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Torch\TorchConfig.cmake
-$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\Caffe2Targets.cmake
-$PATH_TO_YOUR_PYTHON_ENV\Lib\site-packages\torch\share\cmake\Caffe2\public\cuda.cmake
-```
+    ```python
+    pip install natten==0.17.5+torch260cu124 -f https://whl.natten.org
+    ```
 
-find all mentions of nvtoolsext (or nvToolsExt), and comment them out, to get past it.
+??? pip-install "`torch==2.5.0+cu121`"
 
-More information on the issue: [pytorch/pytorch#116926](https://github.com/pytorch/pytorch/pull/116926)
+    ```python
+    pip install natten==0.17.5+torch260cu121 -f https://whl.natten.org
+    ```
 
-### NGC docker images
-NATTEN supports PyTorch builds that are built from source, an example of which is the builds that ship with
-NVIDIA's [NGC container images](https://catalog.ngc.nvidia.com/orgs/nvidia/containers/pytorch).
+??? pip-install "`torch==2.5.0+cpu`"
 
-If you're building NATTEN within a `Dockerfile`, be sure to specify the `CUDA_ARCH` and
-`WITH_CUDA` flags to make:
+    ```python
+    pip install natten==0.17.5+torch260cpu -f https://whl.natten.org
+    ```
 
-```dockerfile
-RUN make \
-  WITH_CUDA=1 \
-  CUDA_ARCH="8.0;8.6"
-```
-
-For a minimal example you can refer to [dev/docker](../dev/docker).
-
-Note that our PyPI wheels are only compatible with PyPI releases of PyTorch, which means you will have to build NATTEN
-from source if you built PyTorch from source (assuming you're on linux.)
-
-### FAQ
-
-1. Why not just `pip install natten`?
-  * When you don't specify a wheel link, pip only downloads NATTEN's packaged source, and attempts to compile it on your
-  system. This means you'll not only have to wait longer, you also will be occupying your own processor for the duration of
-  that time. Depending on what your hardware is, the build configuration and targets will vary, meaning the number of objects
-  that need to be compiled is dependent on your hardware, and the more implementations and kernels available for your hardware,
-  the longer your compile time.
-  Because of this, we highly recommend installing using wheels instead, because wheels are simply a compressed file containing
-  the python source, and a pre-built binary compatible with your hardware and software.
-  
-2. What if my CUDA version is different?
-  * The CUDA version you choose should be the same as the version of CUDA your PyTorch install was built with.
-  This version is not necessarily (and very rarely) identical to the version you have installed locally.
-  It is however important to use the same major CUDA release (i.e. if your local CUDA is 11.X, make sure to install an 11.X
-  pytorch build.)
-  * If the version of NATTEN you install was not built for the your PyTorch build (mismatched major version or mismatched CUDA
-  version), you will likely run into an ABI mismatch.
-
-3. What's the difference between naive, GEMM, and fused neighborhood attention?
-  These refer to the implementation of neighborhood attention that NATTEN can target. Generally, GEMM and fused kernels are
-  expected to outperform naive implementations, but depending on your problem size, that may not be the case.
-  Naive and GEMM have an identical memory footprint, but fused will use less memory than both in most cases.
-  For more information, please refer to our [backend documentation](backend.md).
-
-4. Can I use Fused Neighborhood Attention?
-  * It depends on 1. whether you have an NVIDIA GPU, 2. whether it's SM50 or later. We'll trust users with figuring out 1. As
-  for 2, you can either look up your GPU model and check the architecture or compute capability. Additionally, if you have
-  PyTorch set up, you can run the following:
-  ```python3
-  import torch
-  major, minor = torch.cuda.get_device_capability(device_index)
-  sm = major * 10 + minor
-  print(sm)
-  ```
-  If the number you see is equal to or greater than 50, you can use Fused Neighborhood Attention kernels with both FP16 and
-  FP32 data types. If it's 80 or above, you can also do BF16.
-
-5. Can I use GEMM-based Neighborhood Attention?
-  Our GEMM kernels are very limited at the moment. We've only implemented it for 1D and 2D Neighborhood Attention, and it can
-  only target Tensor Cores. This means that if you're running on Ampere (SM80) or later, you will be able to use our GEMM-based
-  kernels with full precision (where they're the strongest). If you're on Volta (SM70) or Turing (SM75), you can only run those
-  kernels in FP16, since their Tensor Cores can only do FP16 math.
-
-6. Is Windows supported?
-  * You can build NATTEN on Windows, but note Windows support is limited, and we don't have the ability to release wheels for
-  Windows yet. This is in part because we just don't happen to have the time to figure out setting up automated and detailed 
-  tests on Windows. Building on Windows itself is only possible thanks to users contributing fixes for our build system. 
-  If you've had experience with setting up automated testing and CI/CD on Windows, we welcome your feedback.
- 
-7. When will there be an MPS/ROCm backend?
-  * Our top priority is feature completeness in our CUDA backend, and full compatibility with more recent PyTorch features such
-  as nested tensors, torch.compile, and the like. Once the project is past those milestones, we will try to improve our CPU
-  backend and possibly attempt to port some of our kernels to Metal and ROCm.
-  
-8. When should I build from source?
-  * Only when you're interested in the latest available features! If there haven't been any commits on the main branch since
-  the last release, building from source will be the same as building via pip (as long as you don't use wheels.)
-  * Installing via wheels is almost identical pip installing without wheels. The only exception is that the latter builds
-  libnatten for your GPU architecture only, whereas wheels are multi-architecture (a.k.a. fat binaries).
-
-9. What are NATTEN's dependencies?
-   NATTEN requires to be linked with libtorch in order to use torch's C++ API since inputs to the C++ functions are torch
-   tensors. In addition, NATTEN currently binds to PyTorch using torch's pybind headers, and some of our naive kernels still
-   depend on torch routines, but we expect to eliminate that dependency in order to allow linking with other frameworks.
-   If you use either GEMM or Fused Neighborhood Attention kernels, NATTEN will also depend on 
-   [CUTLASS](https://github.com/NVIDIA/cutlass/).
+#### < `0.17.5`
+Refer to our release index on [PyPI](https://pypi.org/project/natten/#history).

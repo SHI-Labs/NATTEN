@@ -38,12 +38,12 @@
  */
 #pragma once
 
-//#include <cmath>
-//#include <type_traits>
-//#include <vector>
+// #include <cmath>
+// #include <type_traits>
+// #include <vector>
 
-//#include <cuda_fp16.h>
-//#include <curand_kernel.h>
+// #include <cuda_fp16.h>
+// #include <curand_kernel.h>
 
 #include <cutlass/cutlass.h>
 #include <cutlass/epilogue/thread/linear_combination.h>
@@ -57,7 +57,6 @@
 #include <cutlass/numeric_types.h>
 #include <cutlass/tensor_ref.h>
 
-//#include "debug_utils.h"
 #include <natten/cuda/fna/gemm_kernel_utils.h>
 
 #include <cutlass/epilogue/thread/linear_combination_relu.h>
@@ -85,14 +84,9 @@
 #include <natten/cuda/fna/gemm/mma_accum_lambda_iterator.h>
 #include <natten/cuda/fna/gemm/mma_from_smem.h>
 
-//#include <natten/cuda/fna/clear_workspace.cuh>
 #include <natten/cuda/fna/na_utils.cuh>
 
 #include <inttypes.h>
-
-// using namespace gemm_kernel_utils;
-
-//#define NATTEN_ENABLE_DEVICE_SIDE_ASSERTIONS 1
 
 namespace natten {
 namespace cuda {
@@ -181,22 +175,6 @@ struct GmemTile {
           sub_fragment, gmem_ptr, true);
     }
   }
-
-  // NOTE(alih): not used anywhere
-  // CUTLASS_DEVICE void storeAtomicAdd(
-  //     FragmentType const& fragment,
-  //     int thread_id) {
-  //   CUTLASS_PRAGMA_UNROLL
-  //   for (int i = 0; i < kNumIters; ++i) {
-  //     float* gmem_ptr = ptr + thread_id * AccessType::kElements + i *
-  //     kStride; CUTLASS_PRAGMA_UNROLL for (int j = 0; j <
-  //     AccessType::kElements; ++j) {
-  //       float val = fragment[i * AccessType::kElements + j];
-  //       float* ptr = gmem_ptr + j;
-  //       atomicAdd(ptr, val);
-  //     }
-  //   }
-  // }
 };
 
 struct AtomicLock {
@@ -262,6 +240,7 @@ struct FusedNeighborhoodAttentionBackwardKernel {
   static_assert(NADim >= 1 && NADim < 4, "Only 1D-3D NA are implemented.");
   using Dim = typename GetDim<NADim>::type;
   using NAMask = NeighborhoodAttentionMask<NADim, CausalMask>;
+  static constexpr bool kHasCausalDims = CausalMask::AnyCausalDims;
 
   using scalar_t = scalar_t_;
   using output_t = scalar_t;
@@ -682,19 +661,15 @@ struct FusedNeighborhoodAttentionBackwardKernel {
     scalar_t* query_ptr = nullptr; // [Mq, nH, K]
     scalar_t* key_ptr = nullptr; // [Mk, nH, K]
     scalar_t* value_ptr = nullptr; // [Mk, nH, Kv]
-    // scalar_t* bias_ptr = nullptr;
     lse_scalar_t* logsumexp_ptr = nullptr; // [nH, Mq]
     scalar_t* output_ptr = nullptr; // [Mq, nH, Kv]
     scalar_t* grad_output_ptr = nullptr; // [Mq, nH, Kv]
     accum_t* delta_ptr = nullptr; // [nH, Mq]
-    // int32_t* cu_seqlens_q_ptr = nullptr;
-    // int32_t* cu_seqlens_k_ptr = nullptr;
 
     // Output tensors
     output_t* grad_query_ptr = nullptr; //  [Mq, nH, K]
     output_t* grad_key_ptr = nullptr; //    [Mk, nH, K]
     output_t* grad_value_ptr = nullptr; //  [Mk, nH, Kv]
-    // output_t* grad_bias_ptr = nullptr;
 
     // Accumulators
     output_accum_t* workspace = nullptr; // [Mq, Kq] + [Mkv, Kq] + [Mkv, Kv]
@@ -706,12 +681,16 @@ struct FusedNeighborhoodAttentionBackwardKernel {
     // Scale
     accum_t scale = 1.0f;
 
-    // Sliding window. ignored if == 0
+    // NA parameters
     Dim kernel_size;
+    Dim stride;
     Dim dilation;
 
     Dim query_tile_shape;
     Dim key_tile_shape;
+
+    bool is_fully_block_sparse = false;
+    bool has_q_padding = false;
 
     // Dimensions/strides
     int32_t head_dim = -1;
@@ -794,14 +773,21 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       maybe_mask_qk_tiles(
           num_queries_post_partitioning, num_queries, dilation, dilation_idx);
 
-      // cta_shape_x = ceil_div_dim(num_queries_post_partitioning,
-      // query_tile_shape);
+      // NOTE: causal mask is antithetical to being fully block sparse.
+      // While there are cases where a causal mask has mostly dense blocks, the
+      // last one (at least) will always be causally masked. Fast paths for
+      // block sparsity in FNA are limited to masks that are guaranteed to be
+      // fully block sparse only.
+      is_fully_block_sparse = not kHasCausalDims &&
+          fully_block_sparse(
+              num_queries_post_partitioning,
+              kernel_size,
+              stride,
+              query_tile_shape,
+              key_tile_shape);
 
-      // last_possible_key_tile = align_dim_up(num_queries_post_partitioning,
-      // key_tile_shape) - key_tile_shape;
-
-      // int64_t batch_id = blockIdx.z;
-      // int32_t head_id = blockIdx.y;
+      has_q_padding =
+          not evenly_divides(num_queries_post_partitioning, query_tile_shape);
 
       if constexpr (kNeedsAccumGradQ || kNeedsAccumGradK || kNeedsAccumGradV) {
 #ifdef NATTEN_ENABLE_DEVICE_SIDE_ASSERTIONS
@@ -843,57 +829,18 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       delta_ptr += batch_id * num_queries.prod32() * num_heads +
           (dilation_idx * lse_stride_dilation).sum() + head_id;
 
-      // if (cu_seqlens_q_ptr != nullptr) {
-      //   assert(cu_seqlens_k_ptr != nullptr);
-      //   cu_seqlens_q_ptr += batch_id;
-      //   cu_seqlens_k_ptr += batch_id;
-      //   int32_t q_start = cu_seqlens_q_ptr[0];
-      //   int32_t k_start = cu_seqlens_k_ptr[0];
-      //   int64_t q_next_start = cu_seqlens_q_ptr[1];
-      //   int64_t k_next_start = cu_seqlens_k_ptr[1];
-      //   assert(q_next_start - q_start <= num_queries);
-      //   assert(k_next_start - k_start <= num_keys);
-      //   num_queries = q_next_start - q_start;
-      //   num_keys = k_next_start - k_start;
-
-      //   // Jump manually
-      //   batch_id = 0;
-
-      //   query_ptr += q_start * q_strideM;
-      //   key_ptr += k_start * k_strideM;
-      //   value_ptr += k_start * v_strideM;
-      //   // assert(bias_ptr == nullptr);
-      //   // assert(grad_bias_ptr == nullptr);
-      //   output_ptr += q_start * o_strideM();
-      //   grad_output_ptr += q_start * gO_strideM;
-      //   delta_ptr += q_start;
-
-      //   grad_query_ptr += q_start * gQ_strideM();
-      //   grad_key_ptr += k_start * gK_strideM();
-      //   grad_value_ptr += k_start * gV_strideM();
-      // }
-
       query_ptr += batch_id * q_strideB + head_id * q_strideH +
           (dilation_idx * q_stride_dilation).sum();
       key_ptr += batch_id * k_strideB + head_id * k_strideH +
           (dilation_idx * k_stride_dilation).sum();
       value_ptr += batch_id * v_strideB + head_id * v_strideH +
           (dilation_idx * v_stride_dilation).sum();
-      // if (bias_ptr != nullptr) {
-      //   bias_ptr += batch_id * bias_strideB + head_id * bias_strideH;
-      // }
+
       output_ptr += batch_id * o_strideB + head_id * o_strideH +
           (dilation_idx * o_stride_dilation).sum();
       // NOTE(alih): assumes gradient tensors match the layout of the original
       // tensors, and are contiguous
       // grad_output_ptr += batch_id * gO_strideB + head_id * gO_strideH;
-
-      // grad_query_ptr += batch_id * gQ_strideB + head_id * gQ_strideH;
-      // grad_key_ptr += batch_id * gK_strideB + head_id * gK_strideH;
-      // grad_value_ptr += batch_id * gV_strideB + head_id * gV_strideH;
-      //  if (grad_bias_ptr != nullptr) {
-      //    grad_bias_ptr += batch_id * gB_strideB + head_id * gB_strideH;
-      //  }
 
       grad_query_ptr += batch_id * q_strideB + head_id * q_strideH +
           (dilation_idx * q_stride_dilation).sum();
@@ -982,42 +929,6 @@ struct FusedNeighborhoodAttentionBackwardKernel {
           sizeof(float);
     }
 
-    // CUTLASS_HOST_DEVICE int64_t workspace_gq_offset() const {
-    //   // Returns the float pointer offset to workspace until the
-    //   // first GradQTempStorage element.
-    //   return workspace_elements_gk() + workspace_elements_gv();
-    // }
-
-    // CUTLASS_HOST_DEVICE int32_t workspace_gq_size_batch() const {
-    //   return num_batches * num_heads * dilation.prod32();
-    // }
-
-    // CUTLASS_HOST_DEVICE int32_t workspace_gq_size_row() const {
-    //   // Number of GradQTempStorage instances per (batch, head,
-    //   dilation_idx). return workspace_elements_gq() /
-    //       (sizeof(GradQTempStorage) / sizeof(output_accum_t));
-    // }
-
-    // CUTLASS_HOST_DEVICE int32_t workspace_gq_size_col() const {
-    //   // We're only interested in zeroing out the first 128 bits of each
-    //   // GradQTempStorage, which corresponds to the mutex counter and lock,
-    //   // and their padding cells.
-    //   return 4;
-    // }
-
-    // CUTLASS_HOST_DEVICE int64_t workspace_gq_stride_batch() const {
-    //   return workspace_strideBH();
-    // }
-
-    // CUTLASS_HOST_DEVICE int64_t workspace_gq_stride_row() const {
-    //   // Returns the float pointer stride between GradQTempStorage locks.
-    //   return sizeof(GradQTempStorage) / sizeof(output_accum_t);
-    // }
-
-    // CUTLASS_HOST_DEVICE int64_t workspace_gq_stride_col() const {
-    //   return 1;
-    // }
-
     // NOTE(alih): we check whether a CTA-scope GEMM should load from workspace
     // or not, therefore there's no need to zero out the workspace; unless we're
     // using split keys, which means the Q gmem tile counters will have to start
@@ -1031,25 +942,6 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       }
       return false;
     }
-
-    // void clear_workspace(cudaStream_t stream) {
-    //   if constexpr (kNeedsAccumGradQ) {
-    //     if (num_splits_key.prod32() > 1) {
-    //       static_assert(
-    //           cutlass::sizeof_bits<output_accum_t>::value ==
-    //           cutlass::sizeof_bits<float>::value);
-    //       natten::cuda::fna::utils::clear_workspace(
-    //           stream,
-    //           workspace + workspace_gq_offset(),
-    //           workspace_gq_stride_batch(),
-    //           workspace_gq_stride_row(),
-    //           workspace_gq_stride_col(),
-    //           workspace_gq_size_batch(),
-    //           workspace_gq_size_row(),
-    //           workspace_gq_size_col());
-    //     }
-    //   }
-    // }
   };
 
   struct SharedStoragePrologue {
@@ -1062,8 +954,6 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       struct {
         // part1 - after Q.K / dV / dO.V
         union {
-          // // 1. efficient load of bias tile Bij, which is then applied to Pij
-          // typename MatmulQK::BiasLoader::SmemTile bias;
           // 4. store Pij. it is needed:
           // - in dVj += (Pij.T * Zij) @ dOi
           // - in dSij = Pij * (dPij - Di)
@@ -1198,8 +1088,6 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       struct {
         // part2 - compute gradV
         union {
-          // // 1. efficient load of bias tile Bij, which is then applied to Pij
-          // typename MatmulQK::BiasLoader::SmemTile bias;
           // 2. store Pij to shared memory. it is needed:
           // - in this step, where it is used in dVj += (Pij.T * Zij) @ dOi
           // - in next step where it is used in dSij = Pij * (dPij - Di)
@@ -1738,75 +1626,98 @@ struct FusedNeighborhoodAttentionBackwardKernel {
           warp_idx_mn_0 % Mma::Base::WarpCount::kM,
           warp_idx_mn_0 / Mma::Base::WarpCount::kM};
 
-      // FNA will not support bias at this time.
-
-      // // Apply mask
-      // if (p.custom_mask_type == CausalFromTopLeft ||
-      //     p.custom_mask_type == CausalFromBottomRight) {
-      //   auto lane_offset = MatmulQK::AccumLambdaIterator::get_lane_offset(
-      //       lane_id, warp_id, output_tile_coords);
-      //   int shift = query_start - key_start;
-      //   if (p.custom_mask_type == CausalFromBottomRight) {
-      //     shift += p.num_keys - p.num_queries;
-      //   }
-      //   // current_key = key_start + accum_m
-      //   // current_query = query_start + accum_n
-      //   // mask if: `current_key > current_query`
-      //   MatmulQK::AccumLambdaIterator::iterateRows(
-      //       lane_offset,
-      //       [&](int accum_m) {},
-      //       [&](int accum_m, int accum_n, int idx) {
-      //         if (accum_m > accum_n + shift) {
-      //           accum[idx] =
-      //               -cutlass::platform::numeric_limits<accum_t>::infinity();
-      //         }
-      //       },
-      //       [&](int accum_m) {});
-      // }
-
-      // Neighborhood Attention masking
-      // if (p.kernel_size.prod32() > 0) {
       auto lane_offset = MatmulQK::AccumLambdaIterator::get_lane_offset(
           lane_id, warp_id, output_tile_coords);
-      Dim first_col, query_bound, row_idx;
-      // int shift = query_start - key_start - p.window_size;
-      // // current_key = key_start + accum_m
-      // // current_query = query_start + accum_n
-      // // mask if: `current_key < current_query - window_size`
-      // // if accum_m < accum_n + query_start - window_size - key_start
 
-      auto na_mask = NAMask(p.kernel_size, p.num_queries_post_partitioning);
+      if (not p.is_fully_block_sparse) {
+        // Neighborhood Attention masking
+        Dim first_col, query_bound, row_idx;
 
-      MatmulQK::AccumLambdaIterator::iterateRows(
-          lane_offset,
-          [&](int accum_m) {
-            row_idx = map_index_to_coord((int32_t)accum_m, num_keys_in_block) +
-                key_start;
-            first_col = na_mask.get_backward_window_start(row_idx);
-            query_bound = na_mask.get_backward_window_end(row_idx) - first_col;
-          },
-          [&](int accum_m, int accum_n, int idx) {
-            auto col =
-                map_index_to_coord((int32_t)accum_n, num_queries_in_block) +
-                query_start;
-            // NOTE(alih): Checking whether the current q coordinate is out of
-            // bounds is something I had to do for SM70 and SM50 kernels.
-            // Without it, a lot of query tile configurations but the default
-            // failed. I guess their GEMMs align the number of iters up to the
-            // thread-level K shape. While we can avoid this condition on SM80
-            // kernels, I don't know how safe that is, so I'll just keep it for
-            // all of them.
-            if (accum_m >= num_keys_in_block_int ||
-                accum_n >= num_queries_in_block_int ||
-                !is_coord_within_bounds_nn(col - first_col, query_bound)) {
-              accum[idx] =
-                  -cutlass::platform::numeric_limits<accum_t>::infinity();
-            } else {
-              accum[idx] -= shared_storage.lse_i()[accum_n];
-            }
-          },
-          [&](int accum_m) {});
-      //}
+        auto na_mask =
+            NAMask(p.kernel_size, p.stride, p.num_queries_post_partitioning);
+
+        MatmulQK::AccumLambdaIterator::iterateRows(
+            lane_offset,
+            [&](int accum_m) {
+              row_idx =
+                  map_index_to_coord((int32_t)accum_m, num_keys_in_block) +
+                  key_start;
+              first_col = na_mask.get_backward_window_start(row_idx);
+              query_bound =
+                  na_mask.get_backward_window_end(row_idx) - first_col;
+            },
+            [&](int accum_m, int accum_n, int idx) {
+              auto col =
+                  map_index_to_coord((int32_t)accum_n, num_queries_in_block) +
+                  query_start;
+              // NOTE(alih): Checking whether the current q coordinate is out of
+              // bounds is something I had to do for SM70 and SM50 kernels.
+              // Without it, a lot of query tile configurations but the default
+              // failed. I guess their GEMMs align the number of iters up to the
+              // thread-level K shape. While we can avoid this condition on SM80
+              // kernels, I don't know how safe that is, so I'll just keep it
+              // for all of them.
+              if (accum_m >= num_keys_in_block_int ||
+#if __CUDA_ARCH__ < 800
+                  accum_n >= num_queries_in_block_int ||
+#endif
+                  !is_coord_within_bounds_nn(col - first_col, query_bound)) {
+                accum[idx] =
+                    -cutlass::platform::numeric_limits<accum_t>::infinity();
+              } else {
+                accum[idx] -= shared_storage.lse_i()[accum_n];
+              }
+            },
+            [&](int accum_m) {});
+
+      } else if (p.has_q_padding) {
+        // Residual masking
+
+        MatmulQK::AccumLambdaIterator::iterateRows(
+            lane_offset,
+            [&](int accum_m) {},
+            [&](int accum_m, int accum_n, int idx) {
+              auto query_coord =
+                  map_index_to_coord((int32_t)accum_n, num_queries_in_block) +
+                  query_start;
+
+#if __CUDA_ARCH__ < 800
+              if (accum_m >= num_keys_in_block_int ||
+                  accum_n >= num_queries_in_block_int ||
+                  !is_coord_less_than_or_equal_to(
+                      query_coord, p.num_queries_post_partitioning)) {
+#else
+              if (!is_coord_less_than_or_equal_to(
+                      query_coord, p.num_queries_post_partitioning)) {
+#endif
+                accum[idx] =
+                    -cutlass::platform::numeric_limits<accum_t>::infinity();
+              } else {
+                accum[idx] -= shared_storage.lse_i()[accum_n];
+              }
+            },
+            [&](int accum_m) {});
+      } else {
+        // No masking; just subtract LSE
+
+        MatmulQK::AccumLambdaIterator::iterateRows(
+            lane_offset,
+            [&](int accum_m) {},
+            [&](int accum_m, int accum_n, int idx) {
+#if __CUDA_ARCH__ < 800
+              if (accum_m >= num_keys_in_block_int ||
+                  accum_n >= num_queries_in_block_int) {
+                accum[idx] =
+                    -cutlass::platform::numeric_limits<accum_t>::infinity();
+              } else {
+#endif
+                accum[idx] -= shared_storage.lse_i()[accum_n];
+#if __CUDA_ARCH__ < 800
+              }
+#endif
+            },
+            [&](int accum_m) {});
+      }
 
       __syncthreads();
       if (kPrologueGV) {
@@ -2194,7 +2105,8 @@ struct FusedNeighborhoodAttentionBackwardKernel {
         //  this query tile in either direction (2D and 3D).
         auto next_key = key_start + p.key_tile_shape * p.num_splits_key;
 
-        auto na_mask = NAMask(p.kernel_size, p.num_queries_post_partitioning);
+        auto na_mask =
+            NAMask(p.kernel_size, p.stride, p.num_queries_post_partitioning);
         auto last_query_for_block = fast_min(
                                         query_start + p.query_tile_shape,
                                         p.num_queries_post_partitioning) -
@@ -2450,7 +2362,8 @@ struct FusedNeighborhoodAttentionBackwardKernel {
     // auto last_key_for_block = fast_min(
     //     key_start + p.key_tile_shape,
     //     p.num_queries_post_partitioning) - 1;
-    auto na_mask = NAMask(p.kernel_size, p.num_queries_post_partitioning);
+    auto na_mask =
+        NAMask(p.kernel_size, p.stride, p.num_queries_post_partitioning);
 
     auto first_query = na_mask.get_backward_window_start(key_start);
     // auto last_query = na_mask.get_backward_window_end(last_key_for_block);
@@ -2471,7 +2384,8 @@ struct FusedNeighborhoodAttentionBackwardKernel {
   // for instance in the causal case, or varying seqlen
   static CUTLASS_HOST_DEVICE int32_t
   getNumParallelBlocksForQuery(Params const& p, Dim query_start) {
-    auto na_mask = NAMask(p.kernel_size, p.num_queries_post_partitioning);
+    auto na_mask =
+        NAMask(p.kernel_size, p.stride, p.num_queries_post_partitioning);
 
     // int16_t num_key_blocks = gemm_kernel_utils::ceil_div(p.num_keys,
     // kBlockSizeJ); if (p.custom_mask_type != NoCustomMask) {
@@ -2519,7 +2433,8 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       Dim& next_query,
       Dim& next_key) {
     auto first_query_tile = getSmallestQueryForKey(p, key_start);
-    auto na_mask = NAMask(p.kernel_size, p.num_queries_post_partitioning);
+    auto na_mask =
+        NAMask(p.kernel_size, p.stride, p.num_queries_post_partitioning);
 
     auto last_key_for_block =
         fast_min(

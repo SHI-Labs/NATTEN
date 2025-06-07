@@ -1,0 +1,131 @@
+:root  > * {
+  --md-primary-fg-color:        #B31942;
+  --md-primary-fg-color--light: #B31942;
+  --md-primary-fg-color--dark:  #B31942;
+  --md-accent-fg-color:         #0A3161;
+  --md-accent-fg-color--light:  #0A3161;
+  --md-accent-fg-color--dark:   #0A3161;
+}
+
+:root {
+	--md-admonition-icon--pip-install: url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M23.922%2013.58v3.912L20.55%2018.72l-.078.055.052.037%203.45-1.256.026-.036v-3.997l-.053-.036-.025.092zm-.301-7.962-3.04%201.107v3.912l3.339-1.215V5.509zm.299%207.839V9.544l-3.336%201.215v3.913zm-3.45%201.253V10.8l-3.3%201.2v3.913zm-3.436%205.286v-3.912l-3.313%201.206v3.912zm.136-3.939v3.868l3.314-1.206V14.85zm2.093%201.882c-.367.134-.663-.074-.663-.463s.296-.814.663-.947c.365-.133.662.075.662.464s-.297.814-.662.946m-6.038-8.624.365-.132-3.285-1.197-3.323%201.21.102.037%203.184%201.16zm7.282%201.349V6.751L17.17%207.965v3.913zm-3.449%201.254V8.005l-3.302%201.202v3.912zm-3.415-2.672-3.336%201.215v3.913l3.336-1.215zm-6.736%203.919%203.322%201.209v-3.913L6.907%209.252zm3.433-5.292%203.281%201.193V5.198l-3.28-1.193zm10.167-5.158L17.19%203.922v3.913l3.317-1.207zM16.95%203.903%2013.724%202.73l-3.269%201.19%203.225%201.174zm-1.585.703-1.624.592v3.868l3.317-1.207V3.991zm-.391%202.778c-.367.134-.662-.074-.662-.464s.295-.813.662-.946c.366-.133.663.074.663.464s-.297.813-.663.946M10.229%2018.41v-3.914l-3.322-1.209V17.2zm3.449-1.228v-3.913l-3.371%201.227v3.913zm.078-.028%203.3-1.2V12.04l-3.3%201.2zm-.078%204.063-3.371%201.227v-3.912h-.078v3.912l-3.322-1.209v-3.913l-.053-.058-.025-.06-3.336-1.21v-3.948l.034.013%203.287%201.196.015-.078-3.261-1.187%203.26-1.187v-.109L3.876%209.62l-.307-.112%203.26-1.188v.877l.079-.055V6.769l3.257%201.185.058-.061L7.084%206.75l-.102-.037%203.24-1.179v-.083L6.854%206.677v.018l-.025.018v1.523L3.44%209.47v.02l-.025.017v4.007l-3.39%201.233v.019L0%2014.784v3.995l.025.037%203.4%201.237.008-.006.007.01%203.4%201.238.008-.006.006.01%203.4%201.237.014-.009.012.01%203.45-1.256.026-.037zM3.493%209.563l3.257%201.185-3.257%201.187V9.562zM3.4%2019.96.078%2018.752v-3.913l2.361.86.96.349zm.015-3.99-3.08-1.12-.182-.066%203.262-1.187zm3.399%205.231-3.321-1.209V16.08l3.321%201.209zM23.791%205.434l-3.21-1.17v2.338zm-3.404-2.791-3.24-1.18-3.27%201.19%203.247%201.182z%22/%3E%3C/svg%3E');
+	--md-admonition-icon--run-result: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2016%2016%22%3E%3Cpath%20d%3D%22m6.354%208.04-4.773%204.773a.75.75%200%201%200%201.061%201.06L7.945%208.57a.75.75%200%200%200%200-1.06L2.642%202.206a.75.75%200%200%200-1.06%201.061L6.353%208.04ZM8.75%2011.5a.75.75%200%200%200%200%201.5h5.5a.75.75%200%200%200%200-1.5z%22%2F%3E%3C%2Fsvg%3E');
+}
+
+.md-header {
+  background-color: var(--md-accent-fg-color);
+}
+
+@media screen and (max-width: 76.2344em) {
+  .md-nav--primary .md-nav__title[for="__drawer"] {
+    background-color: var(--md-accent-fg-color);
+  }
+}
+
+.md-tabs {
+  background-color: rgba(10, 49, 97, 0.8);
+  font-weight: bold;
+}
+
+@media screen and (max-width: 59.9844em) {
+  .md-nav__source {
+    background-color: rgba(10, 49, 97, 0.8);
+  }
+}
+
+.md-header__button.md-logo {
+  padding-top: 0.21rem;
+}
+
+@media screen and (max-width: 76.1875em) {
+  .md-header__button.md-logo {
+    display: block;
+  }
+}
+
+label[for="__drawer"].md-header__button.md-icon {
+  order: -1;
+}
+
+[dir="ltr"] .md-header__title {
+  margin-left: .2rem;
+}
+
+.image-box {
+}
+
+@media (min-width: 512px) {
+  .image-box {
+    display: flex;
+  }
+}
+
+.code-caption {
+  text-align: left !important;
+  font-style: normal !important;
+  font-weight: bold;
+}
+
+/* pip install admonition */
+.md-typeset .admonition.pip-install,
+.md-typeset details.pip-install {
+  border-color: rgb(10, 49, 97);
+}
+.md-typeset .pip-install > .admonition-title,
+.md-typeset .pip-install > summary {
+  background-color: rgba(10, 49, 97, 0.1);
+}
+.md-typeset .pip-install > .admonition-title::before,
+.md-typeset .pip-install > summary::before {
+  background-color: rgb(10, 49, 97);
+  -webkit-mask-image: var(--md-admonition-icon--pip-install);
+          mask-image: var(--md-admonition-icon--pip-install);
+}
+
+/* ampere example admonition */
+.md-typeset .admonition.ampere-example,
+.md-typeset details.ampere-example {
+  border-color: rgba(118, 185, 0, 0.8);
+}
+.md-typeset .ampere-example > .admonition-title,
+.md-typeset .ampere-example > summary {
+  background-color: rgba(118, 185, 0, 0.2);
+}
+.md-typeset .ampere-example > .admonition-title::before,
+.md-typeset .ampere-example > summary::before {
+  background-color: rgba(118, 185, 0.8);
+  -webkit-mask-image: var(--md-admonition-icon--run-result);
+          mask-image: var(--md-admonition-icon--run-result);
+}
+
+/* hopper example admonition */
+.md-typeset .admonition.hopper-example,
+.md-typeset details.hopper-example {
+  border-color: rgba(118, 185, 0, 0.9);
+}
+.md-typeset .hopper-example > .admonition-title,
+.md-typeset .hopper-example > summary {
+  background-color: rgba(118, 185, 0, 0.3);
+}
+.md-typeset .hopper-example > .admonition-title::before,
+.md-typeset .hopper-example > summary::before {
+  background-color: rgba(118, 185, 0.9);
+  -webkit-mask-image: var(--md-admonition-icon--run-result);
+          mask-image: var(--md-admonition-icon--run-result);
+}
+
+/* blackwell example admonition */
+.md-typeset .admonition.blackwell-example,
+.md-typeset details.blackwell-example {
+  border-color: rgba(118, 185, 0, 1.0);
+}
+.md-typeset .blackwell-example > .admonition-title,
+.md-typeset .blackwell-example > summary {
+  background-color: rgba(118, 185, 0, 0.6);
+}
+.md-typeset .blackwell-example > .admonition-title::before,
+.md-typeset .blackwell-example > summary::before {
+  background-color: rgba(118, 185, 0, 1.0);
+  -webkit-mask-image: var(--md-admonition-icon--run-result);
+          mask-image: var(--md-admonition-icon--run-result);
+}

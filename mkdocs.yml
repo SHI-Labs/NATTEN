@@ -1,0 +1,101 @@
+site_name: NATTEN
+site_author: Ali Hassani
+site_description: "NATTEN: Neighborhood Attention Extension."
+copyright: "Copyright &copy; 2022 - 2025 Ali Hassani"
+site_url: https://natten.org/
+
+docs_dir: docs
+site_dir: site
+
+exclude_docs: |
+  README.md
+  README_pypi.md
+  simulator.md
+
+nav:
+  - Home: index.md
+  - Install: install.md
+  - Operations: operations.md
+  - Modules: modules.md
+  - Backends: backends.md
+  - Global context: context.md
+  - Profiler: profiler.md
+#  - Simulator: simulator.md
+
+repo_name: NATTEN
+repo_url: https://github.com/SHI-Labs/NATTEN
+
+theme:
+  name: material
+  logo: assets/natten_dark.png
+  favicon: assets/favicon.ico
+  custom_dir: docs/overrides
+  palette:
+    primary: custom
+  font:
+    text: Varta
+    code: Cascadia Mono
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - content.code.copy
+    - content.code.annotate
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.instant.progress
+    - navigation.top
+    - toc.integrate
+    - content.tabs.link
+
+extra_css:
+  - assets/style.css
+
+plugins:
+- privacy
+- search
+- autorefs
+- glightbox
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          show_root_heading: false
+          show_root_toc_entry: false
+          show_signature: true
+          parameter_headings: false
+          docstring_style: google
+          docstring_section_style: table
+          show_source: false
+          annotations_path: brief
+          separate_signature: true
+          line_length: 60
+          show_symbol_type_toc: true
+          show_symbol_type_heading: true
+
+markdown_extensions:
+  - md_in_html
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      use_pygments: true
+      pygments_lang_class: true
+  - pymdownx.inlinehilite:
+      style_plain_text: python
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - admonition
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - toc:
+      toc_depth: 4
+  - markdown_grid_tables
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.blocks.caption

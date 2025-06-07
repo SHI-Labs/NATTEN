@@ -1029,6 +1029,24 @@ struct NeighborhoodAttentionMaskBase {
 };
 
 // Standard NA
+
+// TODO: duplicated for fully block sparse check
+CUTLASS_DEVICE
+int neighborhood_atten_get_window_start(
+    int index,
+    int window_radius_left,
+    int window_radius_right,
+    int stride,
+    int spatial_extent) {
+  // Stride group leader is the center-most query in the stride group.
+  // If stride is even, choose the right hand side center query.
+  int stride_group_leader_idx = cutlass::fast_min(
+      ((index / stride) * stride) + (stride / 2), spatial_extent - 1);
+  return cutlass::fast_max(stride_group_leader_idx - window_radius_left, 0) +
+      ((stride_group_leader_idx + window_radius_right >= spatial_extent) *
+       (spatial_extent - window_radius_right - stride_group_leader_idx - 1));
+}
+
 template <>
 struct NeighborhoodAttentionMaskBase<false> {
   static constexpr bool DoCausalMasking = false;
@@ -1036,35 +1054,29 @@ struct NeighborhoodAttentionMaskBase<false> {
   int32_t window_size;
   int32_t window_radius_left;
   int32_t window_radius_right;
+  int32_t stride;
+  int32_t stride_group_center_offset;
   int32_t spatial_extent;
-#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
-  int32_t last_start;
-#endif
 
   CUTLASS_DEVICE NeighborhoodAttentionMaskBase(
       int32_t kernel_size,
+      int32_t stride_,
       int32_t spatial_extent_)
       : window_size(kernel_size),
+        stride(stride_),
         window_radius_left(kernel_size / 2),
         window_radius_right((kernel_size / 2) + ((kernel_size % 2) - 1)),
-#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
-        spatial_extent(spatial_extent_),
-        last_start(spatial_extent_ - window_radius_right - 1) {
-  }
-#else
-        spatial_extent(spatial_extent_) {
-  }
-#endif
+        stride_group_center_offset(stride_ - (stride_ / 2) - 1),
+        spatial_extent(spatial_extent_) {}
 
   CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
-#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
-    return cutlass::fast_max(index - window_radius_left, 0) +
-        cutlass::fast_min(last_start - index, 0);
-#else
-    return cutlass::fast_max(index - window_radius_left, 0) +
-        (index + window_radius_right >= spatial_extent) *
-        (spatial_extent - index - window_radius_right - 1);
-#endif
+    // Stride group leader is the center-most query in the stride group.
+    // If stride is even, choose the right hand side center query.
+    int32_t stride_group_leader_idx = cutlass::fast_min(
+        ((index / stride) * stride) + (stride / 2), spatial_extent - 1);
+    return cutlass::fast_max(stride_group_leader_idx - window_radius_left, 0) +
+        ((stride_group_leader_idx + window_radius_right >= spatial_extent) *
+         (spatial_extent - window_radius_right - stride_group_leader_idx - 1));
   }
 
   CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) const {
@@ -1072,35 +1084,25 @@ struct NeighborhoodAttentionMaskBase<false> {
   }
 
   CUTLASS_DEVICE int32_t get_window_end_(int32_t index) const {
-#ifdef _NATTEN_FNA_MASK_CACHE_LAST_START
-    return cutlass::fast_max(index - window_radius_left, 0) +
-        cutlass::fast_min(last_start - index, 0) + window_size;
-#else
-    return cutlass::fast_max(index - window_radius_left, 0) +
-        (index + window_radius_right >= spatial_extent) *
-        (spatial_extent - index - window_radius_right - 1) +
-        window_size;
-#endif
+    return get_window_end(index, get_window_start(index));
   }
 
   CUTLASS_DEVICE int32_t get_backward_window_start(int32_t index) const {
-    return (index >= window_size) * (index - window_radius_right);
+    int32_t window_start_pre_trunc =
+        (index >= (window_radius_left + window_radius_right + 1)) *
+        (index - window_radius_right + stride_group_center_offset);
+    return (window_start_pre_trunc / stride) * stride;
   }
 
   CUTLASS_DEVICE int32_t get_backward_window_end(int32_t index) const {
-    return (index >= spatial_extent - window_size)
-        ? (spatial_extent)
-        : (index + (window_radius_left + 1));
-  }
-
-  CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) const {
-    // NOTE: RPB does not support window_radius_left != window_radius_right
-    // This will be checked in the host-side API
-    return cutlass::fast_max(
-        window_radius_left + cutlass::fast_max(window_radius_left - index, 0) -
-            cutlass::fast_max(
-                index - spatial_extent + window_radius_left + 1, 0),
-        0);
+    int32_t extent_check =
+        (index >=
+         (spatial_extent - window_radius_left - window_radius_right - 1));
+    int32_t window_end =
+        ((index + window_radius_left + stride_group_center_offset + 1) /
+         stride) *
+        stride;
+    return (extent_check * spatial_extent) + ((1 - extent_check) * window_end);
   }
 };
 
@@ -1110,15 +1112,23 @@ struct NeighborhoodAttentionMaskBase<true> {
   static constexpr bool DoCausalMasking = true;
 
   int32_t window_size;
+  int32_t stride;
   int32_t spatial_extent;
 
+  // NOTE: Causal only supports stride=1
   CUTLASS_DEVICE NeighborhoodAttentionMaskBase(
       int32_t kernel_size,
+      int32_t stride_,
       int32_t spatial_extent_)
-      : window_size(kernel_size), spatial_extent(spatial_extent_) {}
+      : window_size(kernel_size),
+        stride(stride_),
+        spatial_extent(spatial_extent_) {}
 
   CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
-    return cutlass::fast_max(index - window_size + 1, 0);
+    // Stride group leader is the last (right-most) query in the stride group.
+    int32_t stride_group_leader_idx = cutlass::fast_min(
+        (index / stride) * stride + stride - 1, spatial_extent - 1);
+    return cutlass::fast_max(stride_group_leader_idx - window_size + 1, 0);
   }
 
   CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) const {
@@ -1134,14 +1144,16 @@ struct NeighborhoodAttentionMaskBase<true> {
   }
 
   CUTLASS_DEVICE int32_t get_backward_window_end(int32_t index) const {
-    return cutlass::fast_min(index + window_size, spatial_extent);
-  }
-
-  CUTLASS_DEVICE int32_t get_rpb_start(int32_t index) const {
-    printf(
-        "FATAL: RPB kernels do not support causal masking. Please open an issue.");
-    asm volatile("brkpt;\n");
-    return 0;
+    // Window end is always the last query that attends to this key/value + 1
+    // In the strided case, it will always be the last query in a stride
+    // group + 1, which means it will always be a multiple of stride.
+    // In the case of incomplete stridegroups (input size % stride != 0),
+    // we must correct backward window end by incrementing first non-attending
+    // stridegroup by 1.
+    auto first_non_attending_stride_group_idx = (index + window_size) / stride +
+        (index + window_size >= spatial_extent);
+    return cutlass::fast_min(
+        first_non_attending_stride_group_idx * stride, spatial_extent);
   }
 };
 
@@ -1174,8 +1186,11 @@ struct NeighborhoodAttentionMask<1, CausalMask_> {
 
   MaskType0 mask_0;
 
-  CUTLASS_DEVICE NeighborhoodAttentionMask(Dim kernel_size, Dim spatial_extent_)
-      : mask_0(kernel_size.x, spatial_extent_.x) {}
+  CUTLASS_DEVICE NeighborhoodAttentionMask(
+      Dim kernel_size,
+      Dim stride,
+      Dim spatial_extent_)
+      : mask_0(kernel_size.x, stride.x, spatial_extent_.x) {}
 
   CUTLASS_DEVICE Dim get_window_start(Dim index) const {
     return Dim(mask_0.get_window_start(index.x));
@@ -1205,10 +1220,6 @@ struct NeighborhoodAttentionMask<1, CausalMask_> {
   CUTLASS_DEVICE Dim get_backward_window_end(Dim index) const {
     return Dim(mask_0.get_backward_window_end(index.x));
   }
-
-  CUTLASS_DEVICE Dim get_rpb_start(Dim index) const {
-    return Dim(mask_0.get_rpb_start(index.x));
-  }
 };
 
 template <typename CausalMask_>
@@ -1222,9 +1233,12 @@ struct NeighborhoodAttentionMask<2, CausalMask_> {
   MaskType0 mask_0;
   MaskType1 mask_1;
 
-  CUTLASS_DEVICE NeighborhoodAttentionMask(Dim kernel_size, Dim spatial_extent_)
-      : mask_0(kernel_size.x, spatial_extent_.x),
-        mask_1(kernel_size.y, spatial_extent_.y) {}
+  CUTLASS_DEVICE NeighborhoodAttentionMask(
+      Dim kernel_size,
+      Dim stride,
+      Dim spatial_extent_)
+      : mask_0(kernel_size.x, stride.x, spatial_extent_.x),
+        mask_1(kernel_size.y, stride.y, spatial_extent_.y) {}
 
   CUTLASS_DEVICE Dim get_window_start(Dim index) const {
     return Dim(
@@ -1266,10 +1280,6 @@ struct NeighborhoodAttentionMask<2, CausalMask_> {
         mask_0.get_backward_window_end(index.x),
         mask_1.get_backward_window_end(index.y));
   }
-
-  CUTLASS_DEVICE Dim get_rpb_start(Dim index) const {
-    return Dim(mask_0.get_rpb_start(index.x), mask_1.get_rpb_start(index.y));
-  }
 };
 
 template <typename CausalMask_>
@@ -1285,10 +1295,13 @@ struct NeighborhoodAttentionMask<3, CausalMask_> {
   MaskType1 mask_1;
   MaskType2 mask_2;
 
-  CUTLASS_DEVICE NeighborhoodAttentionMask(Dim kernel_size, Dim spatial_extent_)
-      : mask_0(kernel_size.x, spatial_extent_.x),
-        mask_1(kernel_size.y, spatial_extent_.y),
-        mask_2(kernel_size.z, spatial_extent_.z) {}
+  CUTLASS_DEVICE NeighborhoodAttentionMask(
+      Dim kernel_size,
+      Dim stride,
+      Dim spatial_extent_)
+      : mask_0(kernel_size.x, stride.x, spatial_extent_.x),
+        mask_1(kernel_size.y, stride.y, spatial_extent_.y),
+        mask_2(kernel_size.z, stride.z, spatial_extent_.z) {}
 
   CUTLASS_DEVICE Dim get_window_start(Dim index) const {
     return Dim(
@@ -1339,13 +1352,6 @@ struct NeighborhoodAttentionMask<3, CausalMask_> {
         mask_0.get_backward_window_end(index.x),
         mask_1.get_backward_window_end(index.y),
         mask_2.get_backward_window_end(index.z));
-  }
-
-  CUTLASS_DEVICE Dim get_rpb_start(Dim index) const {
-    return Dim(
-        mask_0.get_rpb_start(index.x),
-        mask_1.get_rpb_start(index.y),
-        mask_2.get_rpb_start(index.z));
   }
 };
 
@@ -1586,6 +1592,132 @@ count_tiles(NA3dDim first, NA3dDim last, NA3dDim tile_shape) {
       ((last.x / tile_shape.x) - (first.x / tile_shape.x) + 1),
       ((last.y / tile_shape.y) - (first.y / tile_shape.y) + 1),
       ((last.z / tile_shape.z) - (first.z / tile_shape.z) + 1));
+}
+
+//// Block sparse fast path
+
+template <typename Dim>
+CUTLASS_DEVICE bool evenly_divides(Dim a, Dim b);
+
+template <>
+CUTLASS_DEVICE bool evenly_divides(NA1dDim a, NA1dDim b) {
+  return a.x % b.x == 0;
+}
+
+template <>
+CUTLASS_DEVICE bool evenly_divides(NA2dDim a, NA2dDim b) {
+  return a.x % b.x == 0 && a.y % b.y == 0;
+}
+
+template <>
+CUTLASS_DEVICE bool evenly_divides(NA3dDim a, NA3dDim b) {
+  return a.x % b.x == 0 && a.y % b.y == 0;
+}
+
+// NOTE: this is for bi-directional ONLY!
+CUTLASS_DEVICE
+bool is_fully_block_sparse_int(
+    int input_size,
+    int window_size,
+    int stride,
+    int q_tile_size,
+    int kv_tile_size) {
+  int num_stride_groups = gemm_kernel_utils::ceil_div(input_size, stride);
+  int window_left = window_size / 2;
+  int window_right = (window_size / 2) + ((window_size % 2) - 1);
+  int stride_group_center = stride / 2;
+
+  int last_stride_group_center =
+      min((input_size / stride) * stride + stride_group_center, input_size - 1);
+  int last_stride_group_window_start =
+      neighborhood_atten_get_window_start /*<false>*/ ( // BI-DIRECTIONAL
+                                                        // MASK
+          last_stride_group_center,
+          window_left,
+          window_right,
+          stride,
+          input_size);
+
+  return input_size == window_size ||
+      (stride % q_tile_size == 0 && window_size % kv_tile_size == 0 &&
+       (input_size % stride == 0 ||
+        last_stride_group_window_start % kv_tile_size == 0) &&
+       (((window_left - stride_group_center) % kv_tile_size == 0) ||
+        (
+            // input_size % stride == 0 &&
+            input_size % kv_tile_size == 0 && num_stride_groups == 2 &&
+            stride + stride_group_center >= input_size - window_size)));
+}
+
+// NOTE: this is for bi-directional ONLY!
+// Causal masking along any dim will never be fully block sparse.
+// In Hopper and Blackwell FNA, we check that within this function.
+// Here it is assumed it's already checked.
+template <typename Dim>
+CUTLASS_DEVICE bool fully_block_sparse(
+    Dim qkv_shape,
+    Dim window_size,
+    Dim stride,
+    Dim q_tile_shape,
+    Dim kv_tile_shape);
+
+template <>
+CUTLASS_DEVICE bool fully_block_sparse(
+    NA1dDim qkv_shape,
+    NA1dDim window_size,
+    NA1dDim stride,
+    NA1dDim q_tile_shape,
+    NA1dDim kv_tile_shape) {
+  return is_fully_block_sparse_int(
+      qkv_shape.x, window_size.x, stride.x, q_tile_shape.x, kv_tile_shape.x);
+}
+
+template <>
+CUTLASS_DEVICE bool fully_block_sparse(
+    NA2dDim qkv_shape,
+    NA2dDim window_size,
+    NA2dDim stride,
+    NA2dDim q_tile_shape,
+    NA2dDim kv_tile_shape) {
+  return is_fully_block_sparse_int(
+             qkv_shape.x,
+             window_size.x,
+             stride.x,
+             q_tile_shape.x,
+             kv_tile_shape.x) &&
+      is_fully_block_sparse_int(
+             qkv_shape.y,
+             window_size.y,
+             stride.y,
+             q_tile_shape.y,
+             kv_tile_shape.y);
+}
+
+template <>
+CUTLASS_DEVICE bool fully_block_sparse(
+    NA3dDim qkv_shape,
+    NA3dDim window_size,
+    NA3dDim stride,
+    NA3dDim q_tile_shape,
+    NA3dDim kv_tile_shape) {
+  return is_fully_block_sparse_int(
+             qkv_shape.x,
+             window_size.x,
+             stride.x,
+             q_tile_shape.x,
+             kv_tile_shape.x) &&
+      is_fully_block_sparse_int(
+             qkv_shape.y,
+             window_size.y,
+             stride.y,
+             q_tile_shape.y,
+             kv_tile_shape.y) &&
+      is_fully_block_sparse_int(
+             qkv_shape.z,
+             window_size.z,
+             stride.z,
+             q_tile_shape.z,
+             kv_tile_shape.z);
 }
 
 } // namespace fna
