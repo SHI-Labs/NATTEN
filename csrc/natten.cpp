@@ -24,112 +24,96 @@
 #include <torch/extension.h>
 #include <vector>
 
-#include "natten/config.h"
-#include "natten/pytorch/compute_delta.h"
-#include "natten/pytorch/na1d.h"
-#include "natten/pytorch/na2d.h"
-#include "natten/pytorch/na3d.h"
+#include "natten/compute_delta.h"
+#include "natten/reference.h"
+#include "natten/fna.h"
+#include "natten/blackwell_fna.h"
+#include "natten/hopper_fna.h"
+#include "natten/fmha.h"
+#include "natten/blackwell_fmha.h"
+#include "natten/hopper_fmha.h"
 
 namespace natten {
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+  // CUTLASS 3.X kernels
+  //// SM100 - Blackwell FNA
   m.def(
-      "na1d_forward", &natten::pytorch::na1d_forward, "NA1D forward (fused)");
+      "blackwell_na1d_forward", &natten::blackwell_na1d_forward, "NA2D forward (fused, SM100)");
 
   m.def(
-      "na2d_forward", &natten::pytorch::na2d_forward, "NA2D forward (fused)");
+      "blackwell_na2d_forward", &natten::blackwell_na2d_forward, "NA2D forward (fused, SM100)");
+                                                                 
+  m.def(                                                         
+      "blackwell_na3d_forward", &natten::blackwell_na3d_forward, "NA3D forward (fused, SM100)");
+
+  ////// SM100 - FMHA
+  m.def(
+      "blackwell_fmha_forward", &natten::blackwell_fmha_forward, "FMHA forward (fused, SM100)");
+
+  //// SM90 - Hopper FNA
+  m.def(
+      "hopper_na1d_forward", &natten::hopper_na1d_forward, "NA2D forward (fused, SM90)");
 
   m.def(
-      "na3d_forward", &natten::pytorch::na3d_forward, "NA3D forward (fused)");
+      "hopper_na2d_forward", &natten::hopper_na2d_forward, "NA2D forward (fused, SM90)");
+                                                                 
+  m.def(                                                         
+      "hopper_na3d_forward", &natten::hopper_na3d_forward, "NA3D forward (fused, SM90)");
+
+  ////// SM90 - FMHA
+  m.def(
+      "hopper_fmha_forward", &natten::hopper_fmha_forward, "FMHA forward (fused, SM90)");
+
+  // CUTLASS 2.X kernels
+  //// SM50/SM70/SM75/SM80 - Original FNA
+  m.def(
+      "na1d_forward", &natten::na1d_forward, "NA1D forward (fused)");
 
   m.def(
-      "na1d_backward", &natten::pytorch::na1d_backward, "NA1D backward (fused)");
+      "na2d_forward", &natten::na2d_forward, "NA2D forward (fused)");
 
   m.def(
-      "na2d_backward", &natten::pytorch::na2d_backward, "NA2D backward (fused)");
+      "na3d_forward", &natten::na3d_forward, "NA3D forward (fused)");
 
   m.def(
-      "na3d_backward", &natten::pytorch::na3d_backward, "NA3D backward (fused)");
+      "na1d_backward", &natten::na1d_backward, "NA1D backward (fused)");
 
   m.def(
-      "na1d_qk_forward", &natten::pytorch::na1d_qk_forward, "NA1D QK forward");
-  m.def(
-      "na1d_qk_backward",
-      &natten::pytorch::na1d_qk_backward,
-      "NA1D QK backward");
-  m.def(
-      "na1d_av_forward", &natten::pytorch::na1d_av_forward, "NA1D AV forward");
-  m.def(
-      "na1d_av_backward",
-      &natten::pytorch::na1d_av_backward,
-      "NA1D AV backward");
+      "na2d_backward", &natten::na2d_backward, "NA2D backward (fused)");
 
   m.def(
-      "na2d_qk_forward", &natten::pytorch::na2d_qk_forward, "NA2D QK forward");
+      "na3d_backward", &natten::na3d_backward, "NA3D backward (fused)");
+
+  ////// SM50/SM70/SM75/SM80 - FMHA
   m.def(
-      "na2d_qk_backward",
-      &natten::pytorch::na2d_qk_backward,
-      "NA2D QK backward");
-  m.def(
-      "na2d_av_forward", &natten::pytorch::na2d_av_forward, "NA2D AV forward");
-  m.def(
-      "na2d_av_backward",
-      &natten::pytorch::na2d_av_backward,
-      "NA2D AV backward");
+      "fmha_forward", &natten::fmha_forward, "FMHA forward (fused)");
 
   m.def(
-      "na3d_qk_forward", &natten::pytorch::na3d_qk_forward, "NA3D QK forward");
+      "fmha_backward", &natten::fmha_backward, "FMHA backward (fused)");
+
+  // Reference kernels
   m.def(
-      "na3d_qk_backward",
-      &natten::pytorch::na3d_qk_backward,
-      "NA3D QK backward");
-  m.def(
-      "na3d_av_forward", &natten::pytorch::na3d_av_forward, "NA3D AV forward");
-  m.def(
-      "na3d_av_backward",
-      &natten::pytorch::na3d_av_backward,
-      "NA3D AV backward");
+      "reference_na1d_forward", &natten::reference_na1d_forward, "Reference NA1D forward");
 
   m.def(
-      "has_cuda", &natten::has_cuda, "Whether NATTEN was compiled with CUDA.");
-  m.def(
-      "has_gemm",
-      &natten::has_gemm,
-      "Whether NATTEN was compiled with GEMM kernels.");
+      "reference_na2d_forward", &natten::reference_na2d_forward, "Reference NA2D forward");
 
-  // Only implemented for 2D NA's PN operator when dim_per_head == 32.
   m.def(
-      "get_tiled_na",
-      &natten::get_tiled_na,
-      "Use tiled NA implementations when available.");
-  m.def(
-      "set_tiled_na",
-      &natten::set_tiled_na,
-      "Use tiled NA implementations when available.");
+      "reference_na3d_forward", &natten::reference_na3d_forward, "Reference NA3D forward");
 
-  // Only supports NA1D and NA2D, requires SM80 and above.
   m.def(
-      "get_gemm_na",
-      &natten::get_gemm_na,
-      "Use GEMM-based NA implementations when available.");
-  m.def(
-      "set_gemm_na",
-      &natten::set_gemm_na,
-      "Use GEMM-based NA implementations when available.");
+      "reference_na1d_backward", &natten::reference_na1d_backward, "Reference NA1D backward");
 
-  // Only applies to Gemm NA kernels.
   m.def(
-      "get_gemm_tf32",
-      &natten::get_gemm_tf32,
-      "Use tiled NA implementations when available.");
-  m.def(
-      "set_gemm_tf32",
-      &natten::set_gemm_tf32,
-      "Use tiled NA implementations when available.");
+      "reference_na2d_backward", &natten::reference_na2d_backward, "Reference NA2D backward");
 
-  // Bindings to test misc kernels
   m.def(
-      "compute_delta", &natten::pytorch::compute_delta, "Compute delta");
+      "reference_na3d_backward", &natten::reference_na3d_backward, "Reference NA3D backward");
+
+  // Misc kernels
+  m.def(
+      "compute_delta", &natten::compute_delta, "Compute delta");
 }
 
 } // namespace natten

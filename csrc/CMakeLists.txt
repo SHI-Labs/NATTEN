@@ -1,16 +1,9 @@
 # Copyright (c) 2022-2025 Ali Hassani.
 
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
-if(${NATTEN_WITH_CUDA})
 project(natten LANGUAGES CXX CUDA)
-else()
-project(natten LANGUAGES CXX)
-endif()
 
-if(${NATTEN_WITH_CUDA})
-find_package(CUDA 11.0 REQUIRED)
-message("Building NATTEN with CUDA.")
-endif()
+find_package(CUDA 12.0 REQUIRED)
 set(CXX_STD "17" CACHE STRING "C++ standard")
 
 
@@ -63,23 +56,11 @@ set(TORCH_INCLUDE_DIRS "${TORCH_DIR}/include" "${TORCH_DIR}/include/torch/csrc/a
 message("Torch dir: " ${TORCH_DIR})
 message("Torch include dir: " ${TORCH_INCLUDE_DIRS})
 
-list(APPEND COMMON_HEADER_DIRS ${TORCH_INCLUDE_DIRS})
-
 # CUTLASS
-if(${NATTEN_WITH_CUDA})
-  if(${NATTEN_WITH_CUTLASS})
-    message("Building NATTEN with CUTLASS-based kernels.")
-    list(APPEND COMMON_HEADER_DIRS ../third_party/cutlass/include)
-  endif()
-endif()
+list(APPEND COMMON_HEADER_DIRS ../third_party/cutlass/include)
 
 # Compiler flags
-if(${NATTEN_IS_MAC})
-  message("Building NATTEN on MacOS.")
-  set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
-  set(CMAKE_SHARED_LIBRARY_SUFFIX_C ".so")
-  set(CMAKE_SHARED_LIBRARY_SUFFIX_CXX ".so")
-elseif(${NATTEN_IS_WINDOWS})
+if(${NATTEN_IS_WINDOWS})
   message("Building NATTEN on Windows.")
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".pyd")
   set(CMAKE_SHARED_LIBRARY_SUFFIX_C ".pyd")
@@ -97,12 +78,16 @@ set(CMAKE_CUDA_FLAGS_DEBUG "-O0 -G -Xcompiler -Wall")
 
 set(CMAKE_CXX_STANDARD "${CXX_STD}")
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-extended-lambda")
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --expt-relaxed-constexpr")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-Wconversion")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler=-fno-strict-aliasing")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --ptxas-options=-O2")
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --ptxas-options=-allow-expensive-optimizations=true")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -ftemplate-backtrace-limit=0")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
+# Huuuuuge regression from device-side asserts (funny it happened to Ampere FNA and now Blackwell
+# FNA)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DNDEBUG")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std=c++${CXX_STD}")
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
@@ -127,10 +112,8 @@ if(${NATTEN_IS_WINDOWS})
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /bigobj")
 endif()
 
-if(${NATTEN_WITH_CUDA})
-  message("CUDA compiler: " ${CMAKE_CUDA_COMPILER})
-  message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
-endif()
+message("CUDA compiler: " ${CMAKE_CUDA_COMPILER})
+message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
 
 if(${IS_LIBTORCH_BUILT_WITH_CXX11_ABI})
   message("Building with -D_GLIBCXX_USE_CXX11_ABI=1")
@@ -140,29 +123,30 @@ else()
   add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
 
-if(${NATTEN_WITH_CUDA})
-  # CUDA flags
-  add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
-  add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
-  add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
-  add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
-endif()
+# CUDA flags
+add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
+add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
+add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
+add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
 
 # Torch/pybind flags
 # Pybind specifically needs these to recognize the module being initialized.
 add_definitions("-DTORCH_API_INCLUDE_EXTENSION_H")
 add_definitions("-DTORCH_EXTENSION_NAME=libnatten")
 
-if(${NATTEN_WITH_AVX})
-  add_definitions("-DAVX_INT")
+
+# TODO: do we even use `WITH_CUDA` anymore?
+add_definitions("-DWITH_CUDA")
+# TODO: does it even make sense to have this anymore? Everything in libnatten is with CUTLASS.
+add_definitions("-DNATTEN_WITH_CUTLASS")
+add_definitions("-DCUTLASS_ENABLE_TENSOR_CORE_MMA=1")
+
+if(${NATTEN_WITH_HOPPER_FNA})
+  add_definitions("-DNATTEN_WITH_HOPPER_FNA=1")
 endif()
 
-if(${NATTEN_WITH_CUDA})
-  add_definitions("-DWITH_CUDA")
-  add_definitions("-DNATTEN_WITH_CUDA")
-  if(${NATTEN_WITH_CUTLASS})
-    add_definitions("-DNATTEN_WITH_CUTLASS")
-  endif()
+if(${NATTEN_WITH_BLACKWELL_FNA})
+  add_definitions("-DNATTEN_WITH_BLACKWELL_FNA=1")
 endif()
 
 # Add local headers
@@ -171,34 +155,28 @@ list(APPEND COMMON_HEADER_DIRS ./autogen/include)
 
 # Add source files
 file(GLOB MAIN_SOURCE  ./natten.cpp)
-file(GLOB MISC_SOURCES  ./src/*.cpp ./src/*.cu)
-file(GLOB TORCH_INTERFACE ./src/pytorch/*.cpp)
-file(GLOB TORCH_CPU_SOURCES  ./src/pytorch/cpu/*.cpp)
-file(GLOB AUTOGEN_CPU  ./autogen/src/cpu/naive/*.cpp)
-if(${NATTEN_WITH_CUDA})
-  file(GLOB MISC_SOURCES_CUDA  ./src/*.cpp ./src/*.cu)
-  file(GLOB AUTOGEN_CUDA ./autogen/src/cuda/naive/*.cu)
-  file(GLOB TORCH_CUDA_SOURCES ./src/pytorch/cuda/*.cu)
-  if(${NATTEN_WITH_CUTLASS})
-    file(GLOB AUTOGEN_CUDA_GEMM_SM70 ./autogen/src/cuda/gemm/1d/sm70/*.cu ./autogen/src/cuda/gemm/2d/sm70/*.cu)
-    file(GLOB AUTOGEN_CUDA_GEMM_SM75 ./autogen/src/cuda/gemm/1d/sm75/*.cu ./autogen/src/cuda/gemm/2d/sm75/*.cu)
-    file(GLOB AUTOGEN_CUDA_GEMM_SM80 ./autogen/src/cuda/gemm/1d/sm80/*.cu ./autogen/src/cuda/gemm/2d/sm80/*.cu)
-    file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu ./src/cuda/fna/*.cu)
-  endif()
+file(GLOB TORCH_APIS  ./src/*.cpp ./src/*.cu)
+file(GLOB AUTOGEN_REFERENCE ./autogen/src/cuda/reference/*.cu)
+file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu ./src/cuda/fna/*.cu)
+file(GLOB AUTOGEN_FMHA ./autogen/src/cuda/fmha/*.cu ./src/cuda/fmha/*.cu)
+if(${NATTEN_WITH_HOPPER_FNA})
+  file(GLOB AUTOGEN_HOPPER_FNA ./autogen/src/cuda/hopper_fna/*.cu ./src/cuda/hopper_fna/*.cu)
+  file(GLOB AUTOGEN_HOPPER_FMHA ./autogen/src/cuda/hopper_fmha/*.cu ./src/cuda/hopper_fmha/*.cu)
+endif()
+if(${NATTEN_WITH_BLACKWELL_FNA})
+  file(GLOB AUTOGEN_BLACKWELL_FNA ./autogen/src/cuda/blackwell_fna/*.cu ./src/cuda/blackwell_fna/*.cu)
+  file(GLOB AUTOGEN_BLACKWELL_FMHA ./autogen/src/cuda/blackwell_fmha/*.cu ./src/cuda/blackwell_fmha/*.cu)
 endif()
 
 file(GLOB ALL_SOURCES 
-  ${TORCH_INTERFACE} 
-  ${TORCH_CPU_SOURCES} 
-  ${TORCH_CUDA_SOURCES} 
-  ${AUTOGEN_CPU} 
-  ${AUTOGEN_CUDA} 
-  ${AUTOGEN_CUDA_GEMM_SM70} 
-  ${AUTOGEN_CUDA_GEMM_SM75} 
-  ${AUTOGEN_CUDA_GEMM_SM80} 
+  ${AUTOGEN_REFERENCE} 
   ${AUTOGEN_FNA} 
-  ${MISC_SOURCES} 
-  ${MISC_SOURCES_CUDA} 
+  ${AUTOGEN_FMHA} 
+  ${AUTOGEN_BLACKWELL_FNA} 
+  ${AUTOGEN_BLACKWELL_FMHA} 
+  ${AUTOGEN_HOPPER_FNA} 
+  ${AUTOGEN_HOPPER_FMHA} 
+  ${TORCH_APIS} 
   ${MAIN_SOURCE} 
   )
 
@@ -217,17 +195,8 @@ add_library(natten SHARED ${ALL_SOURCES})
 
 set_target_properties(natten PROPERTIES PREFIX "" OUTPUT_NAME ${OUTPUT_FILE_NAME})
 set_target_properties(natten PROPERTIES LINKER_LANGUAGE CXX)
-if(${NATTEN_WITH_CUDA})
-  message("Building NATTEN for the following architectures: ${NATTEN_CUDA_ARCH_LIST}")
-  set_target_properties(natten PROPERTIES CUDA_ARCHITECTURES "${NATTEN_CUDA_ARCH_LIST}")
-endif()
+message("Building NATTEN for the following architectures: ${NATTEN_CUDA_ARCH_LIST}")
+set_target_properties(natten PROPERTIES CUDA_ARCHITECTURES "${NATTEN_CUDA_ARCH_LIST}")
 
-if(${NATTEN_IS_MAC})
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,dynamic_lookup")
-endif()
-
-if(${NATTEN_WITH_CUDA})
-  target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python cudart c10_cuda torch_cuda)
-else()
-  target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python)
-endif()
+target_include_directories(natten SYSTEM PUBLIC ${TORCH_INCLUDE_DIRS})
+target_link_libraries(natten PUBLIC c10 torch torch_cpu torch_python cudart c10_cuda torch_cuda)

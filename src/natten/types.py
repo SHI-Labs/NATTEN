@@ -21,9 +21,8 @@
 #
 #################################################################################################
 
-from typing import List, Tuple, Union
-
-from torch import Tensor
+from enum import Enum
+from typing import Tuple, Union
 
 NoneType = type(None)
 
@@ -47,40 +46,42 @@ CausalArg3DTypeOrDed = Union[bool, CausalArg3DType]
 DimensionType = Union[Dimension1DType, Dimension2DType, Dimension3DType]
 CausalArgType = Union[CausalArg1DType, CausalArg2DType, CausalArg3DType]
 
+DimensionTypeOrDed = Union[int, DimensionType]
+CausalArgTypeOrDed = Union[bool, CausalArgType]
+
 # (query_tile_shape, kv_tile_shape)
-FnaTileShapeType = Union[
+QKTileShapeType = Union[
     Tuple[Dimension1DType, Dimension1DType],
     Tuple[Dimension2DType, Dimension2DType],
     Tuple[Dimension3DType, Dimension3DType],
 ]
 
-# (query_tile_shape, kv_tile_shape)
-FnaForwardConfigType = FnaTileShapeType
+
+# TODO: Only applies to Hopper FMHA/FNA for now -- extend to other applicable kernels
+class KernelSchedule(Enum):
+    NonPersistent = 0
+    WarpSpecializedCooperative = 1
+    WarpSpecializedPingpong = 2
+
+
+CutlassFnaForwardConfigType = QKTileShapeType
+CutlassBlackwellFnaForwardConfigType = QKTileShapeType
+CutlassHopperFnaForwardConfigType = Tuple[QKTileShapeType, KernelSchedule]
+FlexFnaForwardConfigType = QKTileShapeType
 
 # (query_tile_shape, kv_tile_shape, num_kv_splits, use_torch_to_compute_delta)
-FnaBackwardConfigType = Union[
+CutlassFnaBackwardConfigType = Union[
     Tuple[Dimension1DType, Dimension1DType, Dimension1DType, bool],
     Tuple[Dimension2DType, Dimension2DType, Dimension2DType, bool],
     Tuple[Dimension3DType, Dimension3DType, Dimension3DType, bool],
 ]
 
-ListOrNestedTensor = Union[List, Tensor]
+# FMHA configs
+FmhaForwardConfigType = Tuple[int, int]
 
+CutlassFmhaForwardConfigType = FmhaForwardConfigType
+CutlassFmhaBackwardConfigType = Tuple[int, int, int, bool]
 
-# Redundant, but here to accommodate the type checker.
-def create_dim_from_int(na_dim: int, value: int) -> DimensionType:
-    assert 0 < na_dim < 4
-    if na_dim == 2:
-        return (value, value)
-    if na_dim == 3:
-        return (value, value, value)
-    return (value,)
-
-
-def create_causal_arg_from_bool(na_dim: int, value: bool) -> CausalArgType:
-    assert 0 < na_dim < 4
-    if na_dim == 2:
-        return (value, value)
-    if na_dim == 3:
-        return (value, value, value)
-    return (value,)
+FlexFmhaForwardConfigType = FmhaForwardConfigType
+CutlassBlackwellFmhaForwardConfigType = FmhaForwardConfigType
+CutlassHopperFmhaForwardConfigType = Tuple[FmhaForwardConfigType, KernelSchedule]

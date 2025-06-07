@@ -1,0 +1,56 @@
+Use case is compatible with backend hopper-fna.
+                            Backend: hopper-fna
+                        Forward pass configurations
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ q_tile_shape ┃ kv_tile_shape ┃              kernel_schedule              ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│  (4, 4, 8)   │   (4, 4, 8)   │ KernelSchedule.WarpSpecializedCooperative │
+│  (4, 4, 8)   │   (4, 4, 8)   │  KernelSchedule.WarpSpecializedPingpong   │
+│  (2, 8, 8)   │   (2, 8, 8)   │ KernelSchedule.WarpSpecializedCooperative │
+│  (2, 8, 8)   │   (2, 8, 8)   │  KernelSchedule.WarpSpecializedPingpong   │
+└──────────────┴───────────────┴───────────────────────────────────────────┘
+Use case is compatible with backend cutlass-fna.
+      Backend: cutlass-fna
+  Forward pass configurations
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ q_tile_shape ┃ kv_tile_shape ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│  (8, 2, 2)   │  (32, 2, 2)   │
+│  (8, 2, 2)   │  (16, 4, 2)   │
+│  (8, 2, 2)   │  (16, 2, 4)   │
+│  (8, 2, 2)   │   (8, 8, 2)   │
+│  (8, 2, 2)   │   (8, 4, 4)   │
+│  (8, 2, 2)   │   (8, 2, 8)   │
+│  (4, 4, 2)   │  (16, 4, 2)   │
+│  (4, 4, 2)   │   (8, 8, 2)   │
+│  (4, 4, 2)   │   (8, 4, 4)   │
+│  (4, 4, 2)   │  (4, 16, 2)   │
+│     ...      │      ...      │
+└──────────────┴───────────────┘
+      Backend: cutlass-fna
+  Backward pass configurations
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ q_tile_shape ┃ kv_tile_shape ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│  (16, 2, 2)  │  (16, 2, 2)   │
+│  (16, 2, 2)  │   (8, 4, 2)   │
+│  (16, 2, 2)  │   (8, 2, 4)   │
+│  (16, 2, 2)  │   (4, 8, 2)   │
+│  (16, 2, 2)  │   (4, 4, 4)   │
+│  (16, 2, 2)  │   (4, 2, 8)   │
+│  (16, 2, 2)  │  (2, 16, 2)   │
+│  (16, 2, 2)  │   (2, 8, 4)   │
+│  (16, 2, 2)  │   (2, 4, 8)   │
+│  (16, 2, 2)  │  (2, 2, 16)   │
+│     ...      │      ...      │
+└──────────────┴───────────────┘
+Use case is compatible with backend flex-fna.
+       Backend: flex-fna
+  Forward pass configurations
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━┓
+┃ q_tile_shape ┃ kv_tile_shape ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━┩
+│  (4, 4, 4)   │   (4, 4, 4)   │
+│  (2, 4, 8)   │   (2, 4, 8)   │
+│  (2, 4, 8)   │   (4, 4, 4)   │
+└──────────────┴───────────────┘

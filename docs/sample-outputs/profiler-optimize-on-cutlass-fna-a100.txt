@@ -1,0 +1,22 @@
+           Best configuration
+┏━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃       Parameter        ┃    Value     ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━┩
+│        backend         │ cutlass-fna  │
+│      fmha_backend      │ cutlass-fmha │
+│      q_tile_shape      │  (2, 8, 4)   │
+│     kv_tile_shape      │  (2, 8, 8)   │
+│ backward_q_tile_shape  │  (2, 8, 8)   │
+│ backward_kv_tile_shape │  (2, 8, 8)   │
+└────────────────────────┴──────────────┘
+
+                                      Profiler results
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━┓
+┃ Framework ┃ Kernel category ┃ Arch ┃           Operation           ┃ # calls ┃  Runtime  ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━┩
+│  CUTLASS  │    attention    │ Sm80 │          FnaForward           │    1    │ 221.512ms │
+│  CUTLASS  │    attention    │ Sm80 │          FnaBackward          │    1    │  1.158s   │
+│  CUTLASS  │    reduction    │  -   │           Reduction           │    1    │  1.464ms  │
+│  PyTorch  │   elementwise   │  -   │ vectorized_elementwise_kernel │    2    │ 737.376us │
+│           │                 │      │             Total             │         │  1.382s   │
+└───────────┴─────────────────┴──────┴───────────────────────────────┴─────────┴───────────┘

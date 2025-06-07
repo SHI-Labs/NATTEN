@@ -1,7 +1,57 @@
 # Changelog
 
 ## [Main branch]
-* Minor bug fix in CPU tests.
+
+
+## [0.20.0] - 2025-06-07
+This release includes the new kernels and features discussed in
+[Generalized Neighborhood Attention](https://arxiv.org/abs/2504.16922), and more.
+
+* New documentations and website: [natten.org](https://natten.org/)
+* New kernels: [Hopper FNA](https://natten.org/backends/#hopper-fna-fmha),
+    [Blackwell FNA](https://natten.org/backends/#blackwell-fna-fmha), and
+    [Flex FNA](https://natten.org/backends/#flex-fna-fmha) with multi-dimensional tiling.
+    * Optional compilation of Flex Attention, and [guards](https://natten.org/context) against it
+        due to instability. Read more
+        [here](https://natten.org/context/#flex-attention-torchcompile).
+* Add support for [Strided Neighborhood Attention](https://arxiv.org/abs/2504.16922):
+  * You can now implement Neighborhood Attention with a delay step in the sliding window.
+  * This feature can implement many sparse attention patterns, such as
+        [HaloNet](https://arxiv.org/abs/2103.12731), Blocked Attention, and combinations in
+        between.
+  * All fused neighborhood attention APIs in NATTEN (`na1d`, `na2d`, `na3d`), and torch modules
+        (`NeighborhoodAttention{1,2,3}d` now allow a `stride` argument, which has identical profile
+        to `kernel_size` and `dilation`: either an integer, or a tuple with the same profile as the
+        token layout.
+  * This is feature supported by all of our existing and new backends.
+  * When `stride == kernel_size`, the operation will implement Blocked Attention (a.k.a Window Self
+        Attention in [Swin Transformer](https://arxiv.org/abs/2103.14030)).
+* [Profiling toolkit](https://natten.org/profiler) now ships with NATTEN:
+        `python -m natten.profiler`.
+    * Removed Autotuner -- in favor of eventually replacing with profiling toolkit,
+        [NATTEN Simulator](https://arxiv.org/abs/2504.16922), and:
+    * Direct exposure of kernel configurations.
+    * Interfaces for finding valid configurations for your use case
+    * [Profiler dry runs](https://natten.org/profiler/#dry-run) can also help you navigate
+        available backends, and their configurations that are suitable for your use case.
+    * [Profiler optimize mode](https://natten.org/profiler/#optimize) can search through their
+        configurations, and find the fastest one for your use case
+* Dropped unfused / CPU backends in libnatten.
+    * `na{1,2,3}d_{qk,qkrpb,av}` APIs and respective backends have been dropped. It was difficult
+        to continue maintaining them, as they mostly ran with very outdated and naive kernels, and
+        the exceptions to that were not at all flexible with respect to user parameters. Moving
+        forward, we will only provide
+        [Fused Neighborhood Attention](https://arxiv.org/abs/2403.04690) kernels, but unfused
+        kernels may be revisited depending on demand and use case.
+    * CPU implementations were all unfused, and were very limited as well, and are likewise removed.
+    * Our new [Flex FNA](https://natten.org/backends/#flex-fna-fmha) backend will serve as the
+        default option for non-NVIDIA GPU users.
+* Dropped support for RPB.
+* Dropped support for experimental torch ops.
+* Massively improved error messages, type checking.
+* Considerable refactor of libnatten, and reduced binary size.
+* Unified interfaces for 1D/2D/3D forms, while still offering rank-specific interfaces.
+* `torch < 2.7` is no longer officially supported.
 
 ## [0.17.5] - 2025-03-20
 * Added support for even-sized kernels!
@@ -18,7 +68,7 @@
     try to raise the issue with the PyTorch team, but please proceed with caution.
 * Better precision on fused ops with additional KV.
 * Torch 2.6 support.
-* Dropped support for CTK < 12.0, and torch < 2.5
+* Dropped support for CTK 11.X, and `torch < 2.5`
 * Dropped deprecated ops (`natten.functional.natten*d{qk,qkrpb,av}`)
 
 ## [0.17.4] - 2025-01-28
@@ -41,7 +91,7 @@
   * Better documentation
 
 ## [0.17.3] - 2024-11-01
-* Bug fix for torch < 2.4
+* Bug fix for `torch < 2.4`
 * 0.17.2 release will be directly replaced with 0.17.3.
 
 ## [0.17.2] - 2024-10-29 (REMOVED)

@@ -1,0 +1,19 @@
+# Copyright (c) 2022-2025 Ali Hassani.
+# This dockerfile builds on top of the March 2024 NGC PyTorch
+# image, and builds NATTEN for SM60-SM90 with 16 workers.
+
+FROM nvcr.io/nvidia/pytorch:25.05-py3
+
+RUN mkdir /natten
+
+RUN cd /natten && \
+      git clone --recursive https://github.com/SHI-Labs/NATTEN
+
+# NOTE: set CUDA_ARCH explicitly to prevent
+# setuptools from looking for cuda driver.
+RUN cd /natten/NATTEN && \
+      make \
+      CUDA_ARCH="5.0;6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0;10.0" \
+      VERBOSE=1
+
+RUN rmdir /natten

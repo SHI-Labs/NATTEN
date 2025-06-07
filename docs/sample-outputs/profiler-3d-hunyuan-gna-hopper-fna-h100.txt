@@ -1,0 +1,8 @@
+                                Profiler results                                
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┓
+┃ Framework ┃ Kernel category ┃ Arch ┃     Operation      ┃ # calls ┃ Runtime  ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━┩
+│  CUTLASS  │    attention    │ Sm90 │     FnaForward     │    1    │ 23.359ms │
+│  PyTorch  │   elementwise   │  -   │ elementwise_kernel │    4    │ 5.750ms  │
+│           │                 │      │       Total        │         │ 29.109ms │
+└───────────┴─────────────────┴──────┴────────────────────┴─────────┴──────────┘

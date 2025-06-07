@@ -52,13 +52,13 @@ namespace cuda {
 namespace fna {
 
 template <
-    typename T,
     typename IntTuple,
     typename BooleanTuple,
     typename MemoryAllocator // In lieu of a caching allocator, and while we
                              // only bind with torch
     >
 void fna_backward_generic(
+    at::ScalarType dtype,
     const int cc,
     const size_t max_smem,
     cudaStream_t stream,
@@ -83,6 +83,7 @@ void fna_backward_generic(
     int32_t dim,
     int32_t dim_value,
     IntTuple kernel_size,
+    IntTuple stride,
     IntTuple dilation,
     BooleanTuple is_causal,
     float attn_scale,
@@ -148,59 +149,20 @@ void fna_backward_generic(
     p.num_batches = batch_size;
 
     p.kernel_size = tuple_to_na_dim<Dim>(kernel_size);
+    p.stride = tuple_to_na_dim<Dim>(stride);
     p.dilation = tuple_to_na_dim<Dim>(dilation);
 
     p.query_tile_shape = tuple_to_na_dim<Dim>(query_tile_shape);
     p.key_tile_shape = tuple_to_na_dim<Dim>(key_tile_shape);
 
     p.num_splits_key = tuple_to_na_dim<Dim>(num_splits_key);
-    // TODO(alih): enable this -- and adapt for 2D and 3D?
-    //// Heuristic for finding optimal number of splits
-    // auto parallelism_without_split_key =
-    //     p.getBlocksGrid().x * p.getBlocksGrid().y * p.getBlocksGrid().z;
-    // p.num_splits_key = cutlass::ceil_div(p.num_keys, Kernel::kBlockSizeJ);
-    // if (num_splits_key > 0) {
-    //   p.num_splits_key = std::min<int64_t>(p.num_splits_key, num_splits_key);
-    // } else {
-    //   // Keys splitting heuristic
-
-    //  // If we already have enough parallelism, split-keys can help
-    //  // better use L2 cache.
-    //  // This is negligible when the seqlen is too small tho
-    //  if (parallelism_without_split_key >= 256 &&
-    //      p.num_keys <= 2 * Kernel::kBlockSizeJ) {
-    //    p.num_splits_key = 1;
-    //  }
-    //  // Increasing `split_keys` leads to using more gmem for temporary
-    //  storage
-    //  // when we need a staging area for gK/gV. let's avoid that
-    //  if (Kernel::kNeedsAccumGradK || Kernel::kNeedsAccumGradV) {
-    //    p.num_splits_key = std::min(
-    //        int(p.num_splits_key), 200 / (p.num_batches * p.num_heads));
-    //  }
-    //}
-    // if (!Kernel::kEnableSplitKeys || p.num_splits_key < 1) {
-    //  p.num_splits_key = 1;
-    //}
 
     int64_t size_bytes = p.workspace_size();
-    // void* workspace_ptr = nullptr;
     if (size_bytes) {
-      // workspace =
-      //     at::empty({size_bytes},
-      //     query.options().dtype(at::ScalarType::Byte));
-      // NATTEN_CUDA_CHECK(cudaMallocAsync(&workspace_ptr, size_bytes, stream));
       void* workspace_ptr = nullptr;
       alloc_bytes(
           &workspace_ptr, size_bytes, true /*p.should_zero_workspace()*/);
       p.workspace = (float*)workspace_ptr;
-      // if (p.should_zero_workspace()) {
-      //   // workspace.zero_();
-      //   // cudaMemset(workspace_ptr, 0, size_bytes);
-      //   // NATTEN_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, size_bytes,
-      //   // stream));
-      //   p.clear_workspace(stream);
-      // }
     }
 
     Kernel::check_supported(p);
@@ -245,7 +207,7 @@ void fna_backward_generic(
     // }
   };
 
-  DISPATCH_FNA_BACKWARD_KERNEL(kRank, cc, T, is_causal, launchKernel);
+  DISPATCH_FNA_BACKWARD_KERNEL(kRank, cc, dtype, is_causal, launchKernel);
   NATTEN_CHECK(
       kernel_launched,
       "Could not find a compatible fused neighborhood attention backward kernel.");

@@ -52,13 +52,13 @@ namespace cuda {
 namespace fna {
 
 template <
-    typename T,
     typename IntTuple,
     typename BooleanTuple,
     typename MemoryAllocator // In lieu of a caching allocator, and while we
                              // only bind with torch
     >
 void fna_forward_generic(
+    at::ScalarType dtype,
     const int cc,
     const size_t max_smem,
     cudaStream_t stream,
@@ -67,13 +67,13 @@ void fna_forward_generic(
     void* key_ptr,
     void* value_ptr,
     void* out_ptr,
-    void* rpb_ptr,
     int32_t batch_size,
     IntTuple spatial_extent,
     int32_t heads,
     int32_t dim,
     int32_t dim_value,
     IntTuple kernel_size,
+    IntTuple stride,
     IntTuple dilation,
     BooleanTuple is_causal,
     float attn_scale,
@@ -84,7 +84,6 @@ void fna_forward_generic(
       std::tuple_size<decltype(spatial_extent)>::value;
   using Dim = typename GetDim<kRank>::type;
 
-  bool has_rpb = rpb_ptr != nullptr;
   bool compute_logsumexp = logsumexp_ptr != nullptr;
   bool kernel_launched = false;
   auto launchKernel = [&](auto _k, auto kernel_fn) {
@@ -122,7 +121,6 @@ void fna_forward_generic(
     p.query_ptr = (scalar_t*)query_ptr;
     p.key_ptr = (scalar_t*)key_ptr;
     p.value_ptr = (scalar_t*)value_ptr;
-    p.rpb_ptr = (scalar_t*)rpb_ptr;
     p.logsumexp_ptr = compute_logsumexp
         ? (typename Kernel::lse_scalar_t*)logsumexp_ptr
         : nullptr;
@@ -163,6 +161,7 @@ void fna_forward_generic(
     p.scale = attn_scale;
 
     p.kernel_size = tuple_to_na_dim<Dim>(kernel_size);
+    p.stride = tuple_to_na_dim<Dim>(stride);
     p.dilation = tuple_to_na_dim<Dim>(dilation);
 
     p.query_tile_shape = tuple_to_na_dim<Dim>(query_tile_shape);
@@ -179,16 +178,9 @@ void fna_forward_generic(
     auto blocks = p.getBlocksGrid();
     Kernel::check_supported(p);
     kernel_fn<<<blocks, p.getThreadsGrid(), smem_bytes, stream>>>(p);
-    // if (Kernel::kNeedsOutputAccumulatorBuffer) {
-    //   // NATTEN_CHECK(
-    //   //     accum_ptr != nullptr, "Expected accum_ptr to be set, got
-    //   //     nullptr.");
-    //   NATTEN_CUDA_CHECK(cudaFreeAsync(accum_ptr, stream));
-    // }
   };
 
-  DISPATCH_FNA_FORWARD_KERNEL(
-      kRank, cc, T, is_causal, has_rpb, compute_logsumexp, launchKernel);
+  DISPATCH_FNA_FORWARD_KERNEL(kRank, cc, dtype, is_causal, launchKernel);
   NATTEN_CHECK(
       kernel_launched,
       "Could not find a compatible fused neighborhood attention kernel.");

@@ -4,7 +4,6 @@
 #include <iostream> 
 #include <type_traits> 
 #include <natten/natten.h> 
-#include <natten/dtypes.cuh> 
 #include <natten/cuda/fna/na_utils.cuh> 
 #include <natten/cuda/fna/kernel_forward.h> 
 #include <natten/cuda/fna/kernel_backward.h> 
@@ -12,13 +11,13 @@
 namespace natten { 
 namespace cuda { 
 namespace fna { 
-#define DISPATCH_FNA_FORWARD_1D_SM50(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_1D_SM50(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM50_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_1D_SM50_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM50_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_1D_SM50_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -28,13 +27,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_1D_SM70(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_1D_SM70(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM70_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_1D_SM70_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM70_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_1D_SM70_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -44,13 +43,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_1D_SM75(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_1D_SM75(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM75_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_1D_SM75_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM75_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_1D_SM75_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -60,16 +59,16 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_1D_SM80(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_1D_SM80(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM80_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_1D_SM80_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM80_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_1D_SM80_float16(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::bfloat16>::value) { \
-      DISPATCH_FNA_FORWARD_1D_SM80_bfloat16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kBFloat16) { \
+      DISPATCH_FNA_FORWARD_1D_SM80_bfloat16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -79,13 +78,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_2D_SM50(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_2D_SM50(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM50_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_2D_SM50_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM50_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_2D_SM50_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -95,13 +94,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_2D_SM70(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_2D_SM70(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM70_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_2D_SM70_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM70_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_2D_SM70_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -111,13 +110,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_2D_SM75(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_2D_SM75(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM75_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_2D_SM75_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM75_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_2D_SM75_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -127,16 +126,16 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_2D_SM80(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_2D_SM80(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM80_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_2D_SM80_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM80_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_2D_SM80_float16(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::bfloat16>::value) { \
-      DISPATCH_FNA_FORWARD_2D_SM80_bfloat16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kBFloat16) { \
+      DISPATCH_FNA_FORWARD_2D_SM80_bfloat16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -146,13 +145,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_3D_SM50(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_3D_SM50(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM50_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_3D_SM50_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM50_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_3D_SM50_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -162,13 +161,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_3D_SM70(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_3D_SM70(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM70_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_3D_SM70_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM70_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_3D_SM70_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -178,13 +177,13 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_3D_SM75(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_3D_SM75(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM75_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_3D_SM75_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM75_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_3D_SM75_float16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -194,16 +193,16 @@ namespace fna {
     } \
 }();
 
-#define DISPATCH_FNA_FORWARD_3D_SM80(dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_3D_SM80(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM80_float32(is_causal, has_rpb, computes_lse, cb); \
+    if (dtype == torch::kFloat32) { \
+      DISPATCH_FNA_FORWARD_3D_SM80_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM80_float16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kFloat16) { \
+      DISPATCH_FNA_FORWARD_3D_SM80_float16(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::bfloat16>::value) { \
-      DISPATCH_FNA_FORWARD_3D_SM80_bfloat16(is_causal, has_rpb, computes_lse, cb); \
+    else if (dtype == torch::kBFloat16) { \
+      DISPATCH_FNA_FORWARD_3D_SM80_bfloat16(is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN kernel launch failed!" \
@@ -215,10 +214,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_1D_SM50(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_1D_SM50_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_1D_SM50_float16(is_causal, cb); \
     } \
     else { \
@@ -231,10 +230,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_1D_SM70(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_1D_SM70_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_1D_SM70_float16(is_causal, cb); \
     } \
     else { \
@@ -247,10 +246,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_1D_SM75(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_1D_SM75_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_1D_SM75_float16(is_causal, cb); \
     } \
     else { \
@@ -263,13 +262,13 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_1D_SM80(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_1D_SM80_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_1D_SM80_float16(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::bfloat16>::value) { \
+    else if (dtype == torch::kBFloat16) { \
       DISPATCH_FNA_BACKWARD_1D_SM80_bfloat16(is_causal, cb); \
     } \
     else { \
@@ -282,10 +281,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_2D_SM50(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_2D_SM50_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_2D_SM50_float16(is_causal, cb); \
     } \
     else { \
@@ -298,10 +297,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_2D_SM70(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_2D_SM70_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_2D_SM70_float16(is_causal, cb); \
     } \
     else { \
@@ -314,10 +313,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_2D_SM75(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_2D_SM75_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_2D_SM75_float16(is_causal, cb); \
     } \
     else { \
@@ -330,13 +329,13 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_2D_SM80(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_2D_SM80_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_2D_SM80_float16(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::bfloat16>::value) { \
+    else if (dtype == torch::kBFloat16) { \
       DISPATCH_FNA_BACKWARD_2D_SM80_bfloat16(is_causal, cb); \
     } \
     else { \
@@ -349,10 +348,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_3D_SM50(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_3D_SM50_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_3D_SM50_float16(is_causal, cb); \
     } \
     else { \
@@ -365,10 +364,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_3D_SM70(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_3D_SM70_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_3D_SM70_float16(is_causal, cb); \
     } \
     else { \
@@ -381,10 +380,10 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_3D_SM75(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_3D_SM75_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_3D_SM75_float16(is_causal, cb); \
     } \
     else { \
@@ -397,13 +396,13 @@ namespace fna {
 
 #define DISPATCH_FNA_BACKWARD_3D_SM80(dtype, is_causal, cb) \
   [&] { \
-    if constexpr (std::is_same<dtype, natten::float32>::value) { \
+    if (dtype == torch::kFloat32) { \
       DISPATCH_FNA_BACKWARD_3D_SM80_float32(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::float16>::value) { \
+    else if (dtype == torch::kFloat16) { \
       DISPATCH_FNA_BACKWARD_3D_SM80_float16(is_causal, cb); \
     } \
-    else if constexpr (std::is_same<dtype, natten::bfloat16>::value) { \
+    else if (dtype == torch::kBFloat16) { \
       DISPATCH_FNA_BACKWARD_3D_SM80_bfloat16(is_causal, cb); \
     } \
     else { \

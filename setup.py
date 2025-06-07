@@ -34,81 +34,79 @@ from typing import Any, List
 import torch
 from setuptools import Extension, setup  # type: ignore
 from setuptools.command.build_ext import build_ext  # type: ignore
-from torch.utils.cpp_extension import CUDA_HOME, LIB_EXT
+from torch.utils.cpp_extension import LIB_EXT
 
 IS_WINDOWS = sys.platform == "win32"
-IS_MACOS = sys.platform.startswith("darwin")
 IS_LINUX = sys.platform.startswith("linux")
 IS_LIBTORCH_BUILT_WITH_CXX11_ABI = torch._C._GLIBCXX_USE_CXX11_ABI
 
 this_directory = Path(__file__).parent
 try:
-    long_description = (this_directory / "assets/README_pypi.md").read_text()
+    long_description = (this_directory / "docs/README_pypi.md").read_text()
 except:
     long_description = "Neighborhood Attention Extension."
 
 torch_ver = [int(x) for x in torch.__version__.split(".")[:2]]
-assert torch_ver >= [2, 0], "NATTEN requires PyTorch >= 2.0"
-AVX_INT = torch_ver >= [1, 10]
-FORCE_CUDA = (
-    os.getenv("FORCE_CUDA", "0") == "1" or os.getenv("NATTEN_WITH_CUDA", "0") == "1"
-)
-HAS_CUDA = FORCE_CUDA or (torch.cuda.is_available() and (CUDA_HOME is not None))
+
+assert torch_ver >= [2, 5], "NATTEN only supports PyTorch >= 2.5"
+
+CUDA_ARCH = os.getenv("NATTEN_CUDA_ARCH", "")
+HAS_CUDA_ARCH = CUDA_ARCH != ""
 NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", 0))
+
+NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", None)
+
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
+N_WORKERS = str(os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)).strip()
+# In case the env variable is set, but to an empty string
+if N_WORKERS == "":
+    N_WORKERS = str(DEFAULT_N_WORKERS)
 
-cuda_arch = os.getenv("NATTEN_CUDA_ARCH", "")
-if FORCE_CUDA and not cuda_arch:
-    raise RuntimeError(
-        "Target architecture tags must be specified when "
-        "forcing CUDA builds; but environment variable "
-        f"NATTEN_CUDA_ARCH={cuda_arch} . "
-        "If you're using NATTEN's Makefile, you can "
-        "pass archtags with the `CUDA_ARCH` flag; i.e. "
-        'make WITH_CUDA=1 CUDA_ARCH="8.0;8.6"'
-    )
+VERBOSE = os.environ.get("NATTEN_VERBOSE", 0)
 
-if HAS_CUDA:
-    if not cuda_arch:
+if not HAS_CUDA_ARCH:
+    HAS_CUDA = torch.cuda.is_available()
+
+    if HAS_CUDA:
         cuda_device = torch.cuda.get_device_properties(torch.cuda.current_device())
         sm = cuda_device.major + cuda_device.minor * 0.1
-        cuda_arch = f"{sm}"
-
-    # TODO: raise an error or at least a warning when torch cuda doesn't match
-    # system.
-    assert torch.version.cuda is not None
-    TORCH_CUDA_VERSION = [x for x in torch.version.cuda.split(".")[:2]]
-    CUDA_TAG = "".join([x for x in TORCH_CUDA_VERSION])
-    CUDA_VERSION = [int(x) for x in TORCH_CUDA_VERSION]
-
-    assert CUDA_VERSION >= [11, 0], "NATTEN only supports CUDA 11.0 and above."
-    if CUDA_VERSION >= [12, 0] and IS_WINDOWS:
+        CUDA_ARCH = f"{sm}"
         print(
-            "WARNING: Torch cmake will likely fail on Windows with CUDA 12.X. "
-            "Please refer to NATTEN documentation to read more about the issue "
-            "and how to get around it until the issue is fixed in torch."
+            "`NATTEN_CUDA_ARCH` not set, but detected CUDA driver with PyTorch. "
+            f"Building for {CUDA_ARCH=}."
+        )
+
+        assert torch.version.cuda is not None
+        TORCH_CUDA_VERSION = [x for x in torch.version.cuda.split(".")[:2]]
+        CUDA_TAG = "".join([x for x in TORCH_CUDA_VERSION])
+        CUDA_VERSION = [int(x) for x in TORCH_CUDA_VERSION]
+
+        assert CUDA_VERSION >= [12, 0], "NATTEN only supports CUDA 12.0 and above."
+        if CUDA_VERSION >= [12, 0] and IS_WINDOWS:
+            print(
+                "WARNING: Torch cmake will likely fail on Windows with CUDA 12.X. "
+                "Please refer to NATTEN documentation to read more about the issue "
+                "and how to get around it until the issue is fixed in torch."
+            )
+
+        print(f"PyTorch was built with CUDA Toolkit {CUDA_TAG}")
+        print(f"Building NATTEN for the following architecture(s): {CUDA_ARCH}")
+
+        print(f"Number of workers: {N_WORKERS}")
+
+    else:
+        print(
+            "Building WITHOUT libnatten. `NATTEN_CUDA_ARCH` is not set, and did not detect CUDA "
+            "driver with PyTorch."
         )
 
 
-n_workers = str(os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)).strip()
-# In case the env variable is set, but to an empty string
-if n_workers == "":
-    n_workers = str(DEFAULT_N_WORKERS)
-
-if HAS_CUDA:
-    print(f"Building NATTEN with CUDA {CUDA_TAG}")
-    print(f"Building NATTEN for SM: {cuda_arch}")
-else:
-    print("Building NATTEN for CPU ONLY.")
-
-print(f"Number of workers: {n_workers}")
-
-verbose = os.environ.get("NATTEN_VERBOSE", 0)
+BUILD_WITH_CUDA = CUDA_ARCH != ""
 
 
 def get_version() -> str:
     init_py_path = path.join(
-        path.abspath(path.dirname(__file__)), "src/natten", "__init__.py"
+        path.abspath(path.dirname(__file__)), "src/natten", "version.py"
     )
     init_py = open(init_py_path, "r").readlines()
     version_line = [ln.strip() for ln in init_py if ln.startswith("__version__")][0]
@@ -117,11 +115,17 @@ def get_version() -> str:
         return version
     PYTORCH_VERSION = "".join(torch.__version__.split("+")[0].split("."))
 
-    if HAS_CUDA:
+    if BUILD_WITH_CUDA:
+        if torch.version.cuda is None:
+            raise ValueError(
+                "Attempted to build NATTEN with libnatten, which requires PyTorch be "
+                f"built with CUDA, but {torch.version.cuda=}."
+            )
+
+        TORCH_CUDA_VERSION = [x for x in torch.version.cuda.split(".")[:2]]
+        CUDA_TAG = "".join([x for x in TORCH_CUDA_VERSION])
         CU = f"cu{CUDA_TAG}"
-    else:
-        CU = "cpu"
-    version = f"{version}+torch{PYTORCH_VERSION}{CU}"
+        version = f"{version}+torch{PYTORCH_VERSION}{CU}"
 
     return version
 
@@ -131,7 +135,7 @@ def _check_cuda_arch(arch: Any) -> int:
         arch = float(arch)
         arch = arch * 10  # 8.6 => 86
         assert (
-            arch >= 30 and arch < 100
+            arch >= 30
         ), f"Only SM30 and above are supported at this time, got {arch}."
         return int(arch)
     except ValueError:
@@ -151,123 +155,151 @@ def get_cuda_arch_list(cuda_arch_list: str) -> List[int]:
 
 
 def arch_list_to_cmake_tags(arch_list: List[int]) -> str:
-    return "-real;".join([str(x) for x in arch_list]) + "-real"
+    return (
+        "-real;".join([str(x) if x not in [90, 100] else f"{x}a" for x in arch_list])
+        + "-real"
+    )
 
 
 class BuildExtension(build_ext):
     def build_extension(self, ext):
-        this_dir = path.dirname(path.abspath(__file__))
-        cmake_lists_dir = path.join(this_dir, "csrc")
-        try:
-            subprocess.check_output(["cmake", "--version"])
-        except OSError:
-            raise RuntimeError("Cannot find CMake executable")
+        if BUILD_WITH_CUDA:
+            # Hack so that we can build somewhere other than /tmp in development mode.
+            build_dir = self.build_lib if NATTEN_BUILD_DIR is None else NATTEN_BUILD_DIR
 
-        output_so_name = self.get_ext_filename(
-            ext.name
-        )  # i.e. libnatten.cpython-VERSION-ARCH-OS.so
-        output_so_name = output_so_name.replace(LIB_EXT, "")
+            this_dir = path.dirname(path.abspath(__file__))
+            cmake_lists_dir = path.join(this_dir, "csrc")
+            try:
+                subprocess.check_output(["cmake", "--version"])
+            except OSError:
+                raise RuntimeError("Cannot find CMake executable")
 
-        # extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+            output_binary_name = self.get_ext_filename(
+                ext.name
+            )  # i.e. libnatten.cpython-VERSION-ARCH-OS.so
+            output_so_name = output_binary_name.replace(LIB_EXT, "")
 
-        max_sm = 0
-        cuda_arch_list = []
-        cuda_arch_list_str = ""
-        if HAS_CUDA:
-            cuda_arch_list = get_cuda_arch_list(cuda_arch)  # Expects xx -- i.e. 86
+            # extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+
+            max_sm = 0
+            cuda_arch_list = []
+            cuda_arch_list_str = ""
+
+            cuda_arch_list = get_cuda_arch_list(CUDA_ARCH)  # Expects xx -- i.e. 86
             cuda_arch_list_str = arch_list_to_cmake_tags(cuda_arch_list)
             max_sm = max(cuda_arch_list)
 
             print(f"Current arch list: {cuda_arch_list} (max: {max_sm})")
 
-        cmake_args = [
-            f"-DPYTHON_PATH={sys.executable}",
-            f"-DOUTPUT_FILE_NAME={output_so_name}",
-            f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list_str}",
-            f"-DNATTEN_IS_WINDOWS={int(IS_WINDOWS)}",
-            f"-DNATTEN_IS_MAC={int(IS_MACOS)}",
-            f"-DIS_LIBTORCH_BUILT_WITH_CXX11_ABI={int(IS_LIBTORCH_BUILT_WITH_CXX11_ABI)}",
-        ]
+            cmake_args = [
+                f"-DPYTHON_PATH={sys.executable}",
+                f"-DOUTPUT_FILE_NAME={output_so_name}",
+                f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list_str}",
+                f"-DNATTEN_IS_WINDOWS={int(IS_WINDOWS)}",
+                f"-DIS_LIBTORCH_BUILT_WITH_CXX11_ABI={int(IS_LIBTORCH_BUILT_WITH_CXX11_ABI)}",
+            ]
 
-        if AVX_INT:
-            cmake_args.append("-DNATTEN_WITH_AVX=1")
+            if max_sm < 50:
+                raise RuntimeError(
+                    "NATTEN's CUDA backend only supports SM50 and above, "
+                    f"saw SM{max_sm} in {CUDA_ARCH}."
+                )
 
-        if HAS_CUDA:
-            assert max_sm >= 30
-            cmake_args.append("-DNATTEN_WITH_CUDA=1")
-            if max_sm >= 50:
-                cmake_args.append("-DNATTEN_WITH_CUTLASS=1")
+            if 90 in cuda_arch_list:
+                cmake_args.append("-DNATTEN_WITH_HOPPER_FNA=1")
 
-        if IS_WINDOWS:
-            python_path = sys.executable
-            assert (
-                "python.exe" in python_path
-            ), f"Expected the python executable path to end with python.exe, got {python_path}"
-            python_lib_dir = python_path.replace("python.exe", "libs").strip()
-            cmake_args.append(f"-DPY_LIB_DIR={python_lib_dir}")
-            cmake_args.append("-G Ninja")
-            cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
+            if 100 in cuda_arch_list:
+                cmake_args.append("-DNATTEN_WITH_BLACKWELL_FNA=1")
 
-        if not os.path.exists(self.build_lib):
-            os.makedirs(self.build_lib)
+            if IS_WINDOWS:
+                python_path = sys.executable
+                assert (
+                    "python.exe" in python_path
+                ), f"Expected the python executable path to end with python.exe, got {python_path}"
+                python_lib_dir = python_path.replace("python.exe", "libs").strip()
+                cmake_args.append(f"-DPY_LIB_DIR={python_lib_dir}")
+                cmake_args.append("-G Ninja")
+                cmake_args.append("-DCMAKE_BUILD_TYPE=Release")
 
-        so_dir = os.path.join(self.build_lib, os.path.dirname(output_so_name))
-        if not os.path.exists(so_dir):
-            os.makedirs(so_dir)
+            if not os.path.exists(build_dir):
+                os.makedirs(build_dir)
 
-        # Config and build the extension
-        subprocess.check_call(
-            ["cmake", cmake_lists_dir] + cmake_args, cwd=self.build_lib
-        )
-        cmake_build_args = [
-            "--build",
-            self.build_lib,
-            "-j",
-            n_workers,
-        ]
-        if verbose:
-            cmake_build_args.append("--verbose")
-        subprocess.check_call(["cmake", *cmake_build_args])
+            if not os.path.exists(self.build_lib):
+                os.makedirs(self.build_lib)
 
-        # Clean up cmake files when building dist package;
-        # otherwise they will get packed into the wheel.
-        if NATTEN_IS_BUILDING_DIST:
-            for file in os.listdir(self.build_lib):
-                fn = os.path.join(self.build_lib, file)
-                if os.path.isfile(fn):
-                    os.remove(fn)
-                elif file != "natten":
-                    shutil.rmtree(fn)
+            so_dir_local = os.path.join(build_dir, os.path.dirname(output_binary_name))
+            so_path_local = f"{build_dir}/{output_binary_name}"
+            if not os.path.exists(so_dir_local):
+                os.makedirs(so_dir_local)
+
+            so_dir = os.path.join(self.build_lib, os.path.dirname(output_binary_name))
+            so_path_final = f"{self.build_lib}/{output_binary_name}"
+            if not os.path.exists(so_dir):
+                os.makedirs(so_dir)
+
+            # Config and build the extension
+            subprocess.check_call(
+                ["cmake", cmake_lists_dir] + cmake_args, cwd=build_dir
+            )
+            cmake_build_args = [
+                "--build",
+                build_dir,
+                "-j",
+                N_WORKERS,
+            ]
+            if VERBOSE:
+                cmake_build_args.append("--verbose")
+            subprocess.check_call(["cmake", *cmake_build_args])
+
+            assert os.path.isfile(
+                so_path_local
+            ), f"Expected libnatten binary in {so_path_local}."
+            if build_dir != self.build_lib:
+                shutil.copy(so_path_local, so_path_final)
+            assert os.path.isfile(so_path_final)
+
+            # Clean up cmake files when building dist package;
+            # otherwise they will get packed into the wheel.
+            if NATTEN_IS_BUILDING_DIST:
+                for file in os.listdir(build_dir):
+                    fn = os.path.join(build_dir, file)
+                    if os.path.isfile(fn):
+                        os.remove(fn)
+                    elif file != "natten":
+                        shutil.rmtree(fn)
+        else:
+            # Libnatten is CUDA only now.
+            pass
 
 
 setup(
     name="natten",
     version=get_version(),
     author="Ali Hassani",
-    url="https://github.com/SHI-Labs/NATTEN",
+    url="https://natten.org",
     description="Neighborhood Attention Extension.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     package_dir={"": "src"},
-    packages=["natten", "natten/utils", "natten/autotuner", "natten/autotuner/configs"],
+    packages=[
+        "natten",
+        "natten/profiling_utils",
+        "natten/utils",
+        "natten/backends",
+        "natten/backends/configs",
+        "natten/backends/configs/cutlass",
+        "natten/backends/configs/cutlass_blackwell",
+        "natten/backends/configs/cutlass_hopper",
+        "natten/backends/configs/flex",
+    ],
     package_data={
         "": ["csrc/**/*"],
     },
-    python_requires=">=3.8",
+    python_requires=">=3.9",
     install_requires=[
-        "packaging",
-        "torch>=2.0.0",
+        "torch",
     ],
-    extras_require={
-        # optional dependencies, required by some features
-        "all": [
-            "fvcore>=0.1.5,<0.1.6",  # required like this to make it pip installable
-        ],
-        # dev dependencies. Install them by `pip install 'natten[dev]'`
-        "dev": [
-            "fvcore>=0.1.5,<0.1.6",  # required like this to make it pip installable
-        ],
-    },
-    ext_modules=[Extension("natten.libnatten", [])],
-    cmdclass={"build_ext": BuildExtension},
+    extras_require={},
+    ext_modules=[Extension("natten.libnatten", [])] if BUILD_WITH_CUDA else [],
+    cmdclass={"build_ext": BuildExtension} if BUILD_WITH_CUDA else {},
 )

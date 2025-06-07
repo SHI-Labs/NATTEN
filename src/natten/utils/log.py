@@ -65,10 +65,11 @@ _map_log_level = {
 
 def get_logger(name):
     logger = logging.getLogger(name)
-    logger.setLevel(_map_log_level[_get_log_level()])
+    log_level = _map_log_level[_get_log_level()]
+    logger.setLevel(log_level)
     formatter = logging.Formatter(log_format)
     handler = logging.StreamHandler()
-    handler.setLevel(logging.INFO)
+    handler.setLevel(log_level)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger

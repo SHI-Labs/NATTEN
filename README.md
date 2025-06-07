@@ -1,125 +1,106 @@
-![NATTENLogo](assets/natten_dark.png#gh-dark-mode-only) ![NATTENLogo](assets/natten_light.png#gh-light-mode-only)
-
-<a href="https://www.shi-labs.com/natten/"><img src="https://img.shields.io/badge/pip%20install%20natten-read%20more-%23C209C1" /></a>
-| <a href="docs/"><img src="https://img.shields.io/badge/Documentation-B31942" /></a>
-| <a href="https://arxiv.org/abs/2403.04690"><img src="https://img.shields.io/badge/arXiv-2403.04690-orange" /></a>
+![NATTENLogo](docs/assets/natten_dark.png#gh-dark-mode-only) ![NATTENLogo](docs/assets/natten_light.png#gh-light-mode-only)
 
 *Neighborhood Attention Extension*
 
-Bringing attention to a neighborhood near you!
+<a href="https://natten.org/install/"><img src="https://img.shields.io/pypi/v/natten" /></a>
+&nbsp;&nbsp;
+<a href="https://natten.org/"><img src="https://img.shields.io/badge/Documentation-natten.org-%23B31942" /></a>
 
-<div align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/neighborhood_attn_2d_vis_dark.png">
-  <img alt="Visualization of neighborhood attention in 2D." src="docs/assets/neighborhood_attn_2d_vis_light.png" width="384" />
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/dilated_neighborhood_attn_2d_vis_dark.png">
-  <img alt="Visualization of dilated neighborhood attention in 2D." src="docs/assets/dilated_neighborhood_attn_2d_vis_light.png" width="384" />
-</picture>
-</div>
+NATTEN is an open-source project dedicated to providing infrastructure for
+[Neighborhood Attention (NA)](https://openaccess.thecvf.com/content/CVPR2023/html/Hassani_Neighborhood_Attention_Transformer_CVPR_2023_paper.html),
+a sliding window self-attention mechanism, and its extensions
+([dilated NA](https://arxiv.org/abs/2209.15001),
+[causal NA](https://arxiv.org/abs/2403.04690),
+[strided NA](https://arxiv.org/abs/2504.16922)).
+Specifically, we provide Fused Multi-Headed Attention (FMHA) and
+[Fused Neighborhood Attention (FNA)](https://arxiv.org/abs/2403.04690)
+training and inference kernels, for all NVIDIA architectures since Maxwell (SM50), as well fast 
+inference kernels for the
+[Hopper (SM90) and Blackwell (SM100)](https://arxiv.org/abs/2504.16922) architectures.
 
-NATTEN is an open-source project dedicated to providing fast implementations for
-[Neighborhood Attention](https://openaccess.thecvf.com/content/CVPR2023/html/Hassani_Neighborhood_Attention_Transformer_CVPR_2023_paper.html),
-a sliding window self-attention mechanism.
+Neighborhood Attention introduces locality and sparsity into self attention in a manner similar to
+convolution.
+This means for any self attention problem, you will be able to specify a `kernel_size`, `stride`,
+and `dilation`. Because it's attention, you can also toggle causal masking.
 
-If you're not familiar with neighborhood attention, please refer to 
-[our papers](https://github.com/SHI-Labs/Neighborhood-Attention-Transformer), or watch our 
-[YouTube video](https://www.youtube.com/watch?v=Ya4BfioxIHA) from CVPR 2023.
+NATTEN is dedicated to **multi-dimensional** layouts of tokens (i.e.
+[2-D](https://natten.org/operations/#natten.na2d) and
+[3-D](https://natten.org/operations/#natten.na3d) feature maps).
+Users have the freedom to explore the massive parameter space that NATTEN offers, in which the
+attention span in any dimension/axis of your input can be controlled with its respective
+`kernel_size`, `stride`, `dilation`, and `is_causal` parameters.
 
-To read more about our GEMM-based and fused neighborhood attention kernels, please refer to
-our new preprint, [Faster Neighborhood Attention](https://arxiv.org/abs/2403.04690).
 
-## New: Fused Neighborhood Attention now supports backpropagation!
+| <img src="docs/assets/viz/na.png" width="320" /> | <img src="docs/assets/viz/dina.png" width="320" /> |
+| ---                                              | ---                                                |
+| `kernel_size=(6,6)`                              | `kernel_size=(6,6)`                                |
+|                                                  | `dilation=(2,2)`                                   |
 
-We've released the Fused Neighborhood Attention (FNA) backward kernel and interface, which means you can now
-train models based on neighborhood attention faster and more efficiently.
 
-FNA can be seen as a generalization of methods such as [Flash Attention](https://github.com/Dao-AILab/flash-attention/) and
-[FMHA](https://github.com/facebookresearch/xformers/) from back-to-back matrix multiplication to
-back-to-back tensor-tensor contraction, and comes with neighborhood attention masking built in.
-This accelerates neighborhood attention, a multi-dimensional sliding window attention pattern,
-by never storing the attention tensor to global memory, which aside from reducing global memory footprint also reduces
-the memory bandwidth bottleneck.
+| <img src="docs/assets/viz/cna.png" width="320" /> | <img src="docs/assets/viz/gna.png" width="320" /> |
+| ---                                               | ---                                               |
+| `kernel_size=(6,6)`                               | `kernel_size=(6,6)`                               |
+| `is_causal=(True,True)`                           | `stride=(2,2)`                                    |
 
-<div align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/fna-chart-dark.png">
-  <img alt="Op-level average speedup." src="assets/fna-chart-light.png" />
-</picture>
-</div>
-
-We highly recommend referring to [FNA quick start](docs/fna/fna-quickstart.md) or 
-the [Fused vs unfused NA](docs/fna/fused-vs-unfused.md) guide before
-starting to use FNA, since the interface, memory layout, and feature set can differ from
-all unfused ops in NATTEN.
 
 ## Getting started
- 
-NATTEN supports PyTorch version 2.0 and later, and Python versions 3.8 and above. 
-Python 3.12 is only supported with torch >= 2.2.0.
 
-Older NATTEN releases supported python >= 3.7 and torch >= 1.8.
+NATTEN supports PyTorch >= 2.7, and Python >= 3.9 (everything PyTorch supports).
+Please refer to [install instructions](https://natten.org/install/) for details on how to install NATTEN.
 
-Please refer to [install instructions](docs/install.md) to find out whether your operating system and hardware accelerator is
-compatible with NATTEN.
+### :fire: Release `0.20.0`
 
-## Feature availability
+NATTEN has undergone major changes since the last release (`0.17.5`), so we strongly recommend
+reading our new updated documentation in this webpage before upgrading.
 
-| Problem space | CPU backend | CUDA backend     |
-| -----------   | ----------- | ---------------- |
-| 1D            | naive       | naive, gemm, fna |
-| 2D            | naive       | naive, gemm, fna |
-| 3D            | naive       | naive, fna       |
-
-### CPU
-
-| Problem space | CPU Backend | Causal masking     | Varying parameters | Relative positional bias | Autograd support         |
-| -----------   | ----------- | ------------------ | ------------------ | ------------------------ | ------------------------ |
-| 1D            | naive       | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode |
-| 2D            | naive       | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode |
-| 3D            | naive       | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode |
-
-Notes:
-* Forward mode autograd does not support relative positional biases and causal masking yet.
-* Relative positional biases are not yet supported when any axis has causal masking enabled.
-
-### CUDA
-
-| Problem space | CUDA Backend | Causal masking     | Varying parameters | Relative positional bias | Autograd support         | Min. Arch |
-| -----------   | -----------  | ------------------ | ------------------ | ------------------------ | ------------------------ | --------- |
-| 1D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 2D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 3D            | naive        | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Forward and reverse mode | SM35      |
-| 1D            | gemm         | -                  | -                  | :white_check_mark:       | Forward and reverse mode | SM70      |
-| 2D            | gemm         | -                  | -                  | :white_check_mark:       | Forward and reverse mode | SM70      |
-| 1D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
-| 2D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
-| 3D            | fna          | :white_check_mark: | :white_check_mark: | :white_check_mark:       | Reverse mode             | SM50      |
-
-Notes: 
-* FP16 kernels are only available on SM50 and above*, and BF16 requires SM80 and above.
-  * Naive FP16 kernels are only available on **SM60** and above.
-  * FNA FP16 kernels are only available on SM50 and above.
-* GEMM backend on SM70 and SM75 can only do FP16.
-* Tiled only implements 1/3 of the ops, is only implemented for 2D problems, and requires head dim = 32.
-* Forward mode autograd does not support relative positional biases and causal masking yet.
-* Relative positional biases are not yet supported when any axis has causal masking enabled.
-* Relative positional biases are not supported in FNA during backward pass.
-
-Features that will likely no longer be worked on or improved:
-* Relative positional biases
-  * There's just better alternatives that don't involve explicitly biasing the attention weight matrix, and they will be more
-  performant on top of providing similar or better accuracy levels.
-* GEMM-based kernels
-  * Since FNA covers more features than our unfused GEMM-based kernels, and we know it to be a better solution
-    (please refer to Faster Neighborhood Attention for details), we do not plan to extend or improve these kernels.
-  * This includes support for varying parameters, causal masking, and 3-D problems.
+The new release adds our [Hopper FNA](https://natten.org/backends/#hopper-fna-fmha) and
+[Blackwell FNA](https://natten.org/backends/#blackwell-fna-fmha) kernels, bringing you
+[massive speedups](https://natten.org/profiler/#hopper-and-blackwell-examples) on
+modern data center class NVIDIA GPUs such as the H100 and B200.
+It also speeds up inference in our existing
+[Ampere FNA](https://natten.org/backends/#cutlass-fna-fmha) kernels up to 1.47X in fully
+block-sparse cases, provides much cleaner error reporting, ships with our
+[profiling toolkit](https://natten.org/profiler/), and so much more!
 
 ## License
 NATTEN is released under the [MIT License](LICENSE).
 
 ## Citation
+If you found NATTEN, or neighborhood attention useful in your work, consider citing the appropriate
+papers:
+
+### Original neighborhood attention paper
+First work proposing neighborhood attention, and introducing NATTEN.
+
+```bibtex
+@inproceedings{hassani2023neighborhood,
+  title        = {Neighborhood Attention Transformer},
+  author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
+  year         = 2023,
+  booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
+}
+```
+
+### Dilated neighborhood attention
+Introduced `dilation` for introducing sparse global context.
+
+```bibtex
+@article{hassani2022dilated,
+  title        = {Dilated Neighborhood Attention Transformer},
+  author       = {Ali Hassani and Humphrey Shi},
+  year         = 2022,
+  journal      = {arXiv preprint arXiv:2209.15001}
+}
+```
+
+### GEMM-based and fused neighborhood attention
+
+Introduced the first multi-dimensional attention kernels: GEMM-based and fused neighborhood
+attention (FNA).
+
+Introduced causal neighborhood attention, and extended implementation to support varying parameters
+across different dimensions.
+
 ```bibtex
 @inproceedings{hassani2024faster,
   title        = {Faster Neighborhood Attention: Reducing the O(n^2) Cost of Self Attention at the Threadblock Level},
@@ -127,27 +108,26 @@ NATTEN is released under the [MIT License](LICENSE).
   year         = 2024,
   booktitle    = {Advances in Neural Information Processing Systems},
 }
-@inproceedings{hassani2023neighborhood,
-  title        = {Neighborhood Attention Transformer},
-  author       = {Ali Hassani and Steven Walton and Jiachen Li and Shen Li and Humphrey Shi},
-  year         = 2023,
-  booktitle    = {IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}
-}
-@misc{hassani2022dilated,
-  title        = {Dilated Neighborhood Attention Transformer},
-  author       = {Ali Hassani and Humphrey Shi},
-  year         = 2022,
-  url          = {https://arxiv.org/abs/2209.15001},
-  eprint       = {2209.15001},
-  archiveprefix = {arXiv},
-  primaryclass = {cs.CV}
+```
+
+### Generalized neighborhood attention: towards speed-of-light performance
+Introduced even-sized windows, strided neighborhood attention, block-sparse forms of neighborhood
+attention, NATTEN Simulator, and our new Hopper and Blackwell FNA kernels, implemented with
+out-of-kernel token permutation.
+
+```bibtex
+@article{hassani2025generalized,
+  title        = {Generalized Neighborhood Attention: Multi-dimensional Sparse Attention at the Speed of Light},
+  author       = {Hassani, Ali and Zhou, Fengzhe and Kane, Aditya and Huang, Jiannan and Chen, Chieh-Yun and Shi, Min and Walton, Steven and Hoehnerbach, Markus and Thakkar, Vijay and Isaev, Michael and others},
+  year         = 2025,
+  journal      = {arXiv preprint arXiv:2504.16922}
 }
 ```
 
 ## Acknowledgements
-We thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/) and team for their efforts in
-creating and open-sourcing CUTLASS. We would also like to thank Haicheng Wu for his valuable feedback and comments which led to
-the creation of GEMM-based NA.
+
+We thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/), without which this
+project would not have been possible.
+
 We also thank Meta and the [xFormers](https://github.com/facebookresearch/xformers/) team
-for their FMHA kernel, which is what our Fused Neighborhood Attention kernel is based on.
-We thank the [PyTorch](https://github.com/pytorch/pytorch/) project and team.
+for their FMHA kernel, and the [PyTorch](https://github.com/pytorch/pytorch/) project and team.

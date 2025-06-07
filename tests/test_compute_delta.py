@@ -21,45 +21,20 @@
 #
 #################################################################################################
 
-import os
 import unittest
 
 import torch
 
-from natten import has_bfloat, has_half
-from natten.libnatten import compute_delta  # type: ignore
-from natten.utils.testing import skip_if_cuda_is_not_supported
+from natten._libnatten import compute_delta  # type: ignore
+from natten.utils.testing import (
+    skip_if_libnatten_is_not_supported,
+    supports_bfloat16,
+    supports_float16,
+)
 
 
 def _reset_everything():
-    import natten
-    from natten.context import AutotunerContext, NattenContext
-
-    NattenContext.reset()
-    AutotunerContext.reset()
-    natten.use_tiled_na()
-    natten.use_gemm_na()
-    natten.use_tf32_in_gemm_na()
     torch.use_deterministic_algorithms(False)
-    os.environ["NATTEN_LOG_LEVEL"] = "CRITICAL"
-
-    # NOTE: It is important to ensure determinism in torch GEMMs since
-    # we don't write our own. Therefore we have to force determinism in
-    # CUBLAS, and turn off CUDNN benchmarking (in case that backend
-    # is built).
-    # PT's caching allocator should also be turned off in unit tests for
-    # when we run memcheck.
-    os.environ["PYTORCH_NO_CUDA_MEMORY_CACHING"] = "1"
-    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-    torch.use_deterministic_algorithms(True)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32 = False
-    torch.cuda.empty_cache()
-
-
-HAS_HALF = has_half()
-HAS_BFLOAT = has_bfloat()
 
 
 def compute_delta_pt(out: torch.Tensor, d_out: torch.Tensor, dtype) -> torch.Tensor:
@@ -91,13 +66,14 @@ class ComputeDeltaTests(unittest.TestCase):
             torch.testing.assert_close(delta, delta_ref, atol=eps, rtol=0)
 
     def _test_all_dtypes_against_reference(self, input_shape):
+        torch.set_default_device("cuda")
         self._test_against_reference(
             input_shape=input_shape,
             eps=1e-2,
             dtype=torch.float32,
             dtype_out=torch.float32,
         )
-        if HAS_HALF:
+        if supports_float16(torch.get_default_device()):
             self._test_against_reference(
                 input_shape=input_shape,
                 eps=1e-1,
@@ -105,7 +81,7 @@ class ComputeDeltaTests(unittest.TestCase):
                 dtype_out=torch.float32,
             )
 
-        if HAS_BFLOAT:
+        if supports_bfloat16(torch.get_default_device()):
             self._test_against_reference(
                 input_shape=input_shape,
                 eps=1e-1,
@@ -113,8 +89,8 @@ class ComputeDeltaTests(unittest.TestCase):
                 dtype_out=torch.float32,
             )
 
-    @skip_if_cuda_is_not_supported()
-    def test_against_bmm_style(self):
+    @skip_if_libnatten_is_not_supported()
+    def test_against_pt_reference(self):
         input_sizes = [
             (2, 4),
             (5, 4),

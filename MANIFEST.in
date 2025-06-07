@@ -1,8 +1,13 @@
-recursive-include csrc *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc
-recursive-include third_party/cutlass/include *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc
-prune webpage/
-prune tools/
+recursive-include csrc *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc *.inl
+recursive-include third_party/cutlass/include *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc *.inl
+include third_party/cutlass/LICENSE.txt third_party/cutlass/EULA.txt third_party/cutlass/README.md
+prune dev/
+prune site/
 prune scripts/
 prune tests/
-graft assets/
-graft docs/
+prune assets/
+prune docs/
+prune */__pycache__
+prune build/*
+prune build_dir/*
+prune CMakeFiles/*

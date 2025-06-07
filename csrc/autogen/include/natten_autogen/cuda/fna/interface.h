@@ -4,7 +4,6 @@
 #include <iostream> 
 #include <type_traits> 
 #include <natten/natten.h> 
-#include <natten/dtypes.cuh> 
 #include <natten/cuda/fna/na_utils.cuh> 
 #include <natten/cuda/fna/kernel_forward.h> 
 #include <natten/cuda/fna/kernel_backward.h> 
@@ -12,16 +11,16 @@
 namespace natten { 
 namespace cuda { 
 namespace fna { 
-#define DISPATCH_FNA_FORWARD_KERNEL(rank, cc, dtype, is_causal, has_rpb, computes_lse, cb) \
+#define DISPATCH_FNA_FORWARD_KERNEL(rank, cc, dtype, is_causal, cb) \
   [&] { \
     if constexpr (rank == 1) { \
-      DISPATCH_FNA_FORWARD_1D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \
+      DISPATCH_FNA_FORWARD_1D(cc, dtype, is_causal, cb); \
     } \
     else if constexpr (rank == 2) { \
-      DISPATCH_FNA_FORWARD_2D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \
+      DISPATCH_FNA_FORWARD_2D(cc, dtype, is_causal, cb); \
     } \
     else if constexpr (rank == 3) { \
-      DISPATCH_FNA_FORWARD_3D(cc, dtype, is_causal, has_rpb, computes_lse, cb); \
+      DISPATCH_FNA_FORWARD_3D(cc, dtype, is_causal, cb); \
     } \
     else { \
       std::cerr << "NATTEN FNA kernel launch failed!" \
