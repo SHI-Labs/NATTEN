@@ -1,7 +1,14 @@
 # Changelog
 
 ## [Main branch]
-* Bug in [modules](https://natten.org/modules) was fixed (see #228, #229).
+* Bug in [modules](https://natten.org/modules) was fixed (see
+    [#228](https://github.com/SHI-Labs/NATTEN/issues/228),
+    [#229](https://github.com/SHI-Labs/NATTEN/pull/229)).
+* Allow different head dim for value tensor in
+    [CUTLASS FNA/FMHA](https://natten.org/backends/#cutlass-fna-fmha).
+    * Will gradually add support to other backends if possible.
+    * Added support to [profiler](https://natten.org/profiler) as well: `--dim-value`.
+    * Related issue: [#227](https://github.com/SHI-Labs/NATTEN/issues/227).
 
 
 ## [0.20.0] - 2025-06-07

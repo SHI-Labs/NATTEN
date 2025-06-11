@@ -33,7 +33,6 @@ amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
 from .._libnatten import (
-    HAS_LIBNATTEN,
     na1d_backward,
     na1d_forward,
     na2d_backward,
@@ -60,67 +59,15 @@ from ..types import (
     NoneType,
 )
 from ..utils import log
-from ..utils.checks import (
-    check_all_args,
-    check_args_against_input,
-    log_or_raise_error,
-    na_tensor_checks,
-)
-from ..utils.device import get_device_cc, is_cuda
+from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
 
+from .configs.checks import can_run_cutlass_fna
 from .configs.cutlass import (
     check_cutlass_fna_backward_config,
     check_cutlass_fna_forward_config,
 )
 
 logger = log.get_logger(__name__)
-
-
-def can_run_cutlass_fna(input_tensor: Tensor, raise_error: bool = False) -> bool:
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
-
-    if input_tensor.dim() not in [4, 5, 6]:
-        target_fn(
-            "CUTLASS FNA expects 4-D, 5-D, or 6-D tensors as inputs (corresponding to NA1D, NA2D, and NA3D), "
-            f"got {input_tensor.dim()=}.",
-            exception=ValueError,
-        )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run CUTLASS FNA; NATTEN was not built with libnatten.")
-        return False
-
-    if not is_cuda(input_tensor.device):
-        target_fn("Can't run CUTLASS FNA; not a CUDA tensor.")
-        return False
-
-    device_cc = get_device_cc(input_tensor.device)
-
-    if device_cc < 60:
-        target_fn(
-            "CUTLASS FNA only supports CUDA devices with compute capability 60 or higher, "
-            f"got {device_cc}."
-        )
-        return False
-
-    head_dim = input_tensor.shape[-1]
-
-    if input_tensor.dtype not in [torch.float32, torch.float16, torch.bfloat16]:
-        target_fn(
-            "Can't run CUTLASS FMHA; it only supports FP32, FP16, and BF16.",
-            exception=ValueError,
-        )
-        return False
-
-    if head_dim % 8 != 0:
-        target_fn(
-            "Can't run CUTLASS FMHA; it only supports head dims that are multiples of 8.",
-            exception=ValueError,
-        )
-        return False
-
-    return True
 
 
 def make_cutlass_fna_autograd_fn(na_dim):
@@ -165,7 +112,13 @@ def make_cutlass_fna_autograd_fn(na_dim):
             query = query.contiguous()
             key = key.contiguous()
             value = value.contiguous()
-            output = torch.empty_like(value)
+
+            assert query.dim() == value.dim() == 3 + na_dim
+            assert query.shape[0] == value.shape[0]
+            assert query.shape[-2] == value.shape[-2]
+
+            output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
+            output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
             # TODO: logsumexp should be conditional
             logsumexp = torch.empty(
@@ -292,9 +245,9 @@ def cutlass_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value)
+    na_tensor_checks(query, key, value, must_match_head_dims=False)
 
-    assert can_run_cutlass_fna(query, raise_error=True)
+    assert can_run_cutlass_fna(query, key, value, raise_error=True)
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
 
@@ -313,14 +266,14 @@ def cutlass_fna_generic(
     )
 
     tiling_config_forward = check_cutlass_fna_forward_config(
-        input_tensor=query,
+        input_tensor=query if value.shape[-1] <= query.shape[-1] else value,
         dilation=dilation,
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
     )
 
     tiling_config_backward = check_cutlass_fna_backward_config(
-        input_tensor=query,
+        input_tensor=key if value.shape[-1] <= key.shape[-1] else value,
         dilation=dilation,
         q_tile_shape=backward_q_tile_shape,
         kv_tile_shape=backward_kv_tile_shape,

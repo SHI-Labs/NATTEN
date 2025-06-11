@@ -111,7 +111,7 @@ def attention(
             (`[batch, seqlen_kv, heads, head_dim]`)
 
         value (Tensor): 4-D value tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`)
+            (`[batch, seqlen_kv, heads, head_dim_v]`)
 
         scale (float): Attention scale. Defaults to `head_dim ** -0.5`.
 
@@ -160,7 +160,7 @@ def attention(
 
     Returns:
         output (Tensor): 4-D output tensor, with the heads last layout
-            (`[batch, seqlen, heads, head_dim]`).
+            (`[batch, seqlen, heads, head_dim_v]`).
 
         logsumexp (Tensor): only returned when `return_lse=True`. 3-D logsumexp tensor, with the
             heads last layout (`[batch, seqlen, heads]`).
@@ -172,7 +172,9 @@ def attention(
 
     kernel_schedule = check_kernel_schedule(kernel_schedule)
 
-    backend = backend or choose_fmha_backend(query, torch_compile=torch_compile)
+    backend = backend or choose_fmha_backend(
+        query, key, value, torch_compile=torch_compile
+    )
 
     if backend == "blackwell-fmha":
         return cutlass_blackwell_fmha(
@@ -331,7 +333,7 @@ def neighborhood_attention_generic(
 ) -> Tensor:
 
     na_tensor_checks(query, key, value)
-    additional_kv_tensor_checks(query, additional_keys, additional_values)
+    additional_kv_tensor_checks(query, key, value, additional_keys, additional_values)
     kernel_schedule = check_kernel_schedule(kernel_schedule)
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
@@ -374,11 +376,12 @@ def neighborhood_attention_generic(
             return_lse=False,
             **attn_kwargs,
         )
-        return out.reshape(query_shape)
+        output_shape = [s for s in query_shape[:-1]] + [value.shape[-1]]
+        return out.reshape(*output_shape)
 
     scale = scale or query.shape[-1] ** -0.5
 
-    backend = backend or choose_backend(query, torch_compile=torch_compile)
+    backend = backend or choose_backend(query, key, value, torch_compile=torch_compile)
 
     can_fuse_additional_kv = backend == "blackwell-fna"
     should_fuse_additional_kv = can_fuse_additional_kv and try_fuse_additional_kv

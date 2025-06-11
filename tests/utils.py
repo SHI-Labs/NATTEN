@@ -65,6 +65,7 @@ class NattenBackendTester:
         reference_backend: str,
         reference_fmha_backend: str,
         dtype: torch.dtype,
+        head_dim_v: Optional[int] = None,
     ):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)
@@ -73,6 +74,7 @@ class NattenBackendTester:
         self.batch = batch
         self.heads = heads
         self.head_dim = head_dim
+        self.head_dim_v = head_dim_v or head_dim
         self.input_shape = input_shape
         self.kernel_size, self.stride, self.dilation, self.is_causal = check_all_args(
             na_dim, kernel_size, stride, dilation, is_causal
@@ -86,16 +88,24 @@ class NattenBackendTester:
         with torch.no_grad():
             q_ref, k_ref, v_ref, d_out_ref = (
                 torch.randn(
-                    (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
+                    (self.batch, *self.input_shape, self.heads, self.head_dim),
+                    device="cuda",
+                    dtype=dtype,
                 ),
                 torch.randn(
-                    (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
+                    (self.batch, *self.input_shape, self.heads, self.head_dim),
+                    device="cuda",
+                    dtype=dtype,
                 ),
                 torch.randn(
-                    (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
+                    (self.batch, *self.input_shape, self.heads, self.head_dim_v),
+                    device="cuda",
+                    dtype=dtype,
                 ),
                 torch.randn(
-                    (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
+                    (self.batch, *self.input_shape, self.heads, self.head_dim_v),
+                    device="cuda",
+                    dtype=dtype,
                 )
                 * 0.05,
             )
@@ -109,14 +119,19 @@ class NattenBackendTester:
 
             self.additional_k, self.additional_v = None, None
             additional_k_ref, additional_v_ref = None, None
-            if additional_kv_length > 0:
+            if self.additional_kv_length > 0:
                 additional_k_ref = torch.randn(
-                    (batch, additional_kv_length, heads, head_dim),
+                    (self.batch, self.additional_kv_length, self.heads, self.head_dim),
                     device="cuda",
                     dtype=dtype,
                 )
                 additional_v_ref = torch.randn(
-                    (batch, additional_kv_length, heads, head_dim),
+                    (
+                        self.batch,
+                        self.additional_kv_length,
+                        self.heads,
+                        self.head_dim_v,
+                    ),
                     device="cuda",
                     dtype=dtype,
                 )
@@ -131,7 +146,7 @@ class NattenBackendTester:
         k_ref.requires_grad_(True)
         v_ref.requires_grad_(True)
         d_out_ref.requires_grad_(True)
-        if additional_kv_length > 0:
+        if self.additional_kv_length > 0:
             assert additional_k_ref is not None
             assert additional_v_ref is not None
             additional_k_ref = additional_k_ref.requires_grad_(True)
@@ -183,7 +198,7 @@ class NattenBackendTester:
                     k_ref.grad.clone().float(),
                     v_ref.grad.clone().float(),
                 )
-                if additional_kv_length > 0:
+                if self.additional_kv_length > 0:
                     assert additional_k_ref is not None
                     assert additional_v_ref is not None
                     assert additional_k_ref.grad is not None
@@ -217,6 +232,7 @@ class NattenBackendTester:
         batch = self.batch
         heads = self.heads
         head_dim = self.head_dim
+        head_dim_v = self.head_dim_v
         input_shape = self.input_shape
         kernel_size = self.kernel_size
         stride = self.stride
@@ -227,7 +243,7 @@ class NattenBackendTester:
 
         logger.debug(
             f"Testing {target_backend} against {reference_backend}:\n"
-            f"{batch=}, {heads=}, {head_dim=}, {input_shape=}, {dtype=}\n"
+            f"{batch=}, {heads=}, {head_dim=}, {head_dim_v=}, {input_shape=}, {dtype=}\n"
             f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=}, {additional_kv_length=},\n"
             f"{q_tile_shape=}, {kv_tile_shape=}, {run_persistent_kernel=}, {kernel_schedule=}, "
             f"{torch_compile=}, {try_fuse_additional_kv=}"

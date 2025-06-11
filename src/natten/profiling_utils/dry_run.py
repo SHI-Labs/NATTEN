@@ -98,15 +98,8 @@ def dry_run_for_backend(
     is_fmha = problem.is_self_attn
 
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
-    q = torch.randn(
-        (
-            problem.get_flattened_tensor_shape(False)
-            if is_fmha
-            else problem.get_tensor_shape(True)
-        ),
-        device=torch_device,
-        dtype=problem.dtype,
-        requires_grad=backprop,
+    q, k, v = problem.make_qkv_tensors(
+        device=torch_device, requires_grad=backprop, heads_last=False, flatten=is_fmha
     )
 
     fwd_configs, bwd_configs = None, None
@@ -119,19 +112,19 @@ def dry_run_for_backend(
         selected_backend = fmha_backend
 
         if fmha_backend == "blackwell-fmha":
-            assert can_run_cutlass_blackwell_fmha(q, raise_error=True)
-            fwd_configs = get_configs_for_cutlass_blackwell_fmha(q)  # type: ignore[assignment]
+            assert can_run_cutlass_blackwell_fmha(q, k, v, raise_error=True)
+            fwd_configs = get_configs_for_cutlass_blackwell_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
 
         elif fmha_backend == "hopper-fmha":
-            assert can_run_cutlass_hopper_fmha(q, raise_error=True)
-            fwd_configs = get_configs_for_cutlass_hopper_fmha(q)  # type: ignore[assignment]
+            assert can_run_cutlass_hopper_fmha(q, k, v, raise_error=True)
+            fwd_configs = get_configs_for_cutlass_hopper_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = (("q_tile_size", "kv_tile_size"), "kernel_schedule")  # type: ignore[assignment]
 
         elif fmha_backend == "cutlass-fmha":
-            assert can_run_cutlass_fmha(q, raise_error=True)
-            fwd_configs = get_configs_for_cutlass_fmha(q)  # type: ignore[assignment]
-            bwd_configs = get_bwd_configs_for_cutlass_fmha(q)  # type: ignore[assignment]
+            assert can_run_cutlass_fmha(q, k, v, raise_error=True)
+            fwd_configs = get_configs_for_cutlass_fmha(q, k, v)  # type: ignore[assignment]
+            bwd_configs = get_bwd_configs_for_cutlass_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
             bwd_config_keys = (
                 "backward_q_tile_size",
@@ -140,9 +133,9 @@ def dry_run_for_backend(
 
         elif fmha_backend == "flex-fmha":
             assert can_run_flex_attention(
-                q, torch_compile=torch_compile, raise_error=True
+                q, k, v, torch_compile=torch_compile, raise_error=True
             )
-            fwd_configs = get_configs_for_flex_fmha(q)  # type: ignore[assignment]
+            fwd_configs = get_configs_for_flex_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
 
         else:
@@ -154,19 +147,19 @@ def dry_run_for_backend(
         selected_backend = backend
 
         if backend == "blackwell-fna":
-            assert can_run_cutlass_blackwell_fna(q, raise_error=True)
-            fwd_configs = get_configs_for_cutlass_blackwell_fna(q)  # type: ignore[assignment]
+            assert can_run_cutlass_blackwell_fna(q, k, v, raise_error=True)
+            fwd_configs = get_configs_for_cutlass_blackwell_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
 
         elif backend == "hopper-fna":
-            assert can_run_cutlass_hopper_fna(q, raise_error=True)
-            fwd_configs = get_configs_for_cutlass_hopper_fna(q)  # type: ignore[assignment]
+            assert can_run_cutlass_hopper_fna(q, k, v, raise_error=True)
+            fwd_configs = get_configs_for_cutlass_hopper_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = (("q_tile_shape", "kv_tile_shape"), "kernel_schedule")  # type: ignore[assignment]
 
         elif backend == "cutlass-fna":
-            assert can_run_cutlass_fna(q, raise_error=True)
-            fwd_configs = get_configs_for_cutlass_fna(q)  # type: ignore[assignment]
-            bwd_configs = get_bwd_configs_for_cutlass_fna(q)  # type: ignore[assignment]
+            assert can_run_cutlass_fna(q, k, v, raise_error=True)
+            fwd_configs = get_configs_for_cutlass_fna(q, k, v)  # type: ignore[assignment]
+            bwd_configs = get_bwd_configs_for_cutlass_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
             bwd_config_keys = (  # type: ignore[assignment]
                 "backward_q_tile_shape",
@@ -175,9 +168,9 @@ def dry_run_for_backend(
 
         elif backend == "flex-fna":
             assert can_run_flex_attention(
-                q, torch_compile=torch_compile, raise_error=True
+                q, k, v, torch_compile=torch_compile, raise_error=True
             )
-            fwd_configs = get_configs_for_flex_fna(q)  # type: ignore[assignment]
+            fwd_configs = get_configs_for_flex_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
 
         else:
@@ -255,26 +248,21 @@ def dry_run(
     backends = None
     fmha_backends = None
     if backend is None:
-        q = torch.randn(
-            problem.get_tensor_shape(True),
-            device=torch_device,
-            dtype=problem.dtype,
-            requires_grad=backprop,
+        q, k, v = problem.make_qkv_tensors(
+            device=torch_device, requires_grad=backprop, heads_last=False, flatten=False
         )
 
-        backends = get_compatible_backends(q, torch_compile=torch_compile)
+        backends = get_compatible_backends(q, k, v, torch_compile=torch_compile)
     else:
         backends = [backend]
 
     if fmha_backend is None:
-        q_flat = torch.randn(
-            (problem.get_flattened_tensor_shape(False)),
-            device=torch_device,
-            dtype=problem.dtype,
-            requires_grad=backprop,
+        q_flat, k_flat, v_flat = problem.make_qkv_tensors(
+            device=torch_device, requires_grad=backprop, heads_last=False, flatten=True
         )
+
         fmha_backends = get_compatible_fmha_backends(
-            q_flat, torch_compile=torch_compile
+            q_flat, k_flat, v_flat, torch_compile=torch_compile
         )
     else:
         fmha_backends = [fmha_backend]
@@ -309,21 +297,16 @@ def find_configs(
     torch_compile: bool,
 ) -> Tuple[str, str, list, list]:
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
-    q = torch.randn(
-        problem.get_tensor_shape(True),
-        device=torch_device,
-        dtype=problem.dtype,
-        requires_grad=backprop,
+    q, k, v = problem.make_qkv_tensors(
+        device=torch_device, requires_grad=backprop, heads_last=False, flatten=False
     )
-    q_flat = torch.randn(
-        problem.get_flattened_tensor_shape(True),
-        device=torch_device,
-        dtype=problem.dtype,
-        requires_grad=backprop,
+    q_flat, k_flat, v_flat = problem.make_qkv_tensors(
+        device=torch_device, requires_grad=backprop, heads_last=False, flatten=True
     )
-    backend = backend or choose_backend(q, torch_compile=torch_compile)
+
+    backend = backend or choose_backend(q, k, v, torch_compile=torch_compile)
     fmha_backend = fmha_backend or choose_fmha_backend(
-        q_flat, torch_compile=torch_compile
+        q_flat, k_flat, v_flat, torch_compile=torch_compile
     )
 
     result, fwd_configs, bwd_configs = dry_run_for_backend(

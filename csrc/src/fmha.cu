@@ -67,8 +67,10 @@ void fmha_forward(
   at::cuda::OptionalCUDAGuard device_guard(query.device());
 
   CheckIfPropertiesMatch(query, key, value);
-  CheckIfTensorShapesMatch<1>(key, value);
-  CheckIfTensorShapesMatch<1>(query, out);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(key, value);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(query, out);
+  CheckIfBatchHeadsHeadDimMatch(query, key);
+  CheckIfHeadDimsMatch(out, value);
 
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
   TORCH_CHECK(key.dim() == 4, "Tensors must be 4-D.");
@@ -79,6 +81,7 @@ void fmha_forward(
   int seqlen_kv = key.size(1);
   int heads = query.size(2);
   int dim = query.size(3);
+  int dim_value = value.size(3);
 
   if (logsumexp.has_value()) {
     CheckLogSumExp<1>(out, logsumexp.value());
@@ -116,7 +119,7 @@ void fmha_forward(
         seqlen_kv,
         heads,
         dim,
-        dim, // dim_value
+        dim_value,
         attn_scale,
         logsumexp.has_value() ? static_cast<void*>(logsumexp.value().data_ptr())
                               : nullptr,
@@ -178,8 +181,10 @@ void fmha_backward(
   CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
   CheckIfPropertiesMatch(grad_query, query, value);
 
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(query, out);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(key, value);
+  CheckIfBatchHeadsHeadDimMatch(query, key);
+  CheckIfHeadDimsMatch(out, value);
   CheckIfTensorShapesMatch<1>(grad_query, query);
   CheckIfTensorShapesMatch<1>(grad_key, key);
   CheckIfTensorShapesMatch<1>(grad_value, value);
@@ -192,6 +197,7 @@ void fmha_backward(
   int seqlen_kv = key.size(1);
   int heads = query.size(2);
   int dim = query.size(3);
+  int dim_value = value.size(3);
 
   at::Tensor workspace;
   auto alloc_bytes = [&workspace, &query](
@@ -208,7 +214,7 @@ void fmha_backward(
   } else {
     delta = torch::empty(
         {batch_size, seqlen_q, heads}, query.options().dtype(at::kFloat));
-    compute_delta_(out, grad_out, delta, (int32_t)delta.numel(), dim);
+    compute_delta_(out, grad_out, delta, (int32_t)delta.numel(), dim_value);
   }
   TORCH_CHECK(delta.size(0) == batch_size);
   TORCH_CHECK(delta.size(1) == seqlen_q);
@@ -250,7 +256,7 @@ void fmha_backward(
         seqlen_kv,
         heads,
         dim,
-        dim, // dim_value
+        dim_value,
         attn_scale,
         query_tile_size,
         key_tile_size,

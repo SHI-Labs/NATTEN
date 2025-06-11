@@ -254,6 +254,63 @@ void CheckIfTensorShapesMatch(const at::Tensor& a, const at::Tensor& b) {
 }
 
 template <size_t NaDim>
+void CheckIfTensorShapesMatchExceptHeadDim(
+    const at::Tensor& a,
+    const at::Tensor& b) {
+  static_assert(NaDim >= 1 && NaDim < 4);
+  static constexpr size_t Rank = NaDim + 3;
+  TORCH_CHECK(
+      a.dim() == b.dim() && a.dim() == Rank, "Expected ", Rank, "-D tensors.");
+  for (size_t i = 0; i < Rank - 1; ++i) {
+    TORCH_CHECK(
+        a.size(i) == b.size(i),
+        "Tensor shape mismatch at dimension ",
+        i,
+        ": ",
+        a.size(i),
+        " != ",
+        b.size(i));
+  }
+}
+
+inline void CheckIfBatchHeadsMatch(const at::Tensor& a, const at::Tensor& b) {
+  TORCH_CHECK(a.dim() == b.dim(), "Expected tensors to match in rank.");
+  auto tensor_rank = a.dim();
+  TORCH_CHECK(
+      a.size(0) == b.size(0),
+      "Tensors don't match in batch size; ",
+      a.size(0),
+      " != ",
+      b.size(0));
+  TORCH_CHECK(
+      a.size(tensor_rank - 2) == b.size(tensor_rank - 2),
+      "Tensors don't match in number of heads; ",
+      a.size(tensor_rank - 2),
+      " != ",
+      b.size(tensor_rank - 2));
+}
+
+inline void CheckIfHeadDimsMatch(const at::Tensor& a, const at::Tensor& b) {
+  TORCH_CHECK(a.dim() == b.dim(), "Expected tensors to match in rank.");
+  auto tensor_rank = a.dim();
+  TORCH_CHECK(
+      a.size(tensor_rank - 1) == b.size(tensor_rank - 1),
+      "Tensors don't match in head dim; ",
+      a.size(tensor_rank - 1),
+      " != ",
+      b.size(tensor_rank - 1));
+}
+
+inline void CheckIfBatchHeadsHeadDimMatch(
+    const at::Tensor& a,
+    const at::Tensor& b) {
+  TORCH_CHECK(a.dim() == b.dim(), "Expected tensors to match in rank.");
+  auto tensor_rank = a.dim();
+  CheckIfBatchHeadsMatch(a, b);
+  CheckIfHeadDimsMatch(a, b);
+}
+
+template <size_t NaDim>
 void CheckLogSumExp(const at::Tensor& output, const at::Tensor& logsumexp) {
   // Output: [batch, *, heads, dim]
   // Logsumexp: [batch, *, heads]

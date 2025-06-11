@@ -54,7 +54,12 @@ from ..types import (
     NoneType,
 )
 from ..utils import log
-from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
+from ..utils.checks import (
+    additional_kv_tensor_checks,
+    check_all_args,
+    check_args_against_input,
+    na_tensor_checks,
+)
 
 logger = log.get_logger(__name__)
 
@@ -101,7 +106,13 @@ def make_reference_fna_autograd_fn(na_dim):
             query = query.contiguous()
             key = key.contiguous()
             value = value.contiguous()
-            output = torch.empty_like(query)
+
+            assert query.dim() == value.dim() == 4
+            assert query.shape[0] == value.shape[0]
+            assert query.shape[-2] == value.shape[-2]
+
+            output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
+            output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
             logsumexp = torch.empty(
                 query.shape[:-1], dtype=torch.float32, device=query.device
@@ -203,7 +214,15 @@ def reference_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value)
+    na_tensor_checks(query, key, value, must_match_head_dims=False)
+    additional_kv_tensor_checks(
+        query,
+        key,
+        value,
+        additional_keys,
+        additional_values,
+        must_match_head_dims=False,
+    )
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
 
@@ -231,18 +250,6 @@ def reference_fna_generic(
 
     num_extra_kv = 0
     if additional_keys is not None and additional_values is not None:
-        if additional_keys is None or additional_values is None:
-            raise ValueError(
-                "Both `additional_keys` and `additional_values` must be "
-                "either Tensors or NoneTypes."
-            )
-
-        if additional_keys.shape != additional_values.shape:
-            raise ValueError(
-                "`additional_keys` and `additional_values` must match in "
-                f"shape, got {additional_keys.shape=}, {additional_values.shape=}."
-            )
-
         num_extra_kv = additional_keys.shape[1]
         key = torch.cat([key, additional_keys], dim=1)
         value = torch.cat([value, additional_values], dim=1)
@@ -260,7 +267,7 @@ def reference_fna_generic(
         num_extra_kv,
     )
     output = output.reshape(
-        query.shape[0], *qkv_shape, query.shape[-2], query.shape[-1]
+        query.shape[0], *qkv_shape, query.shape[-2], value.shape[-1]
     )
     lse = lse.reshape(query.shape[0], *qkv_shape, query.shape[-2])
 

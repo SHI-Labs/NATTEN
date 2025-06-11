@@ -87,7 +87,10 @@ new Hopper FNA and Blackwell FNA kernels.
 | `-n`, `--heads`             | QKV number of heads (GQA/MQA are not supported in NATTEN at this   |
 |                             | time). Default: `1`.                                               |
 +-----------------------------+--------------------------------------------------------------------+
-| `-d`, `--dim`               | QKV head dim. Default: `64`.                                       |
+| `-d`, `--dim`               | QK (and optionally V) head dim. Default: `64`.                     |
++-----------------------------+--------------------------------------------------------------------+
+| `#!bash --dim-value`        | Head dim for the V tensor, if different from Q and K.              |
+|                             | Defaults to the value of `-d`/`--dim`.                             |
 +-----------------------------+--------------------------------------------------------------------+
 | `-w`,                       | Neighborhood attention window size (shape), also referred to as    |
 | `#!bash --window-size`      | `#!bash kernel_size`. This must be a tuple with the same number of |

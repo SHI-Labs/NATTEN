@@ -48,28 +48,19 @@ profiler_activity_tag = (
 def init_tensors(
     problem: Problem, flatten_sequence: bool, heads_last: bool
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Optional[Tuple[Tensor, Tensor]]]:
-    q = torch.randn(
-        (
-            problem.get_flattened_tensor_shape(heads_last)
-            if flatten_sequence
-            else problem.get_tensor_shape(heads_last)
-        ),
+    q, k, v, d_out = problem.make_qkvo_tensors(
         device=torch_device,
-        dtype=problem.dtype,
         requires_grad=False,
+        heads_last=heads_last,
+        flatten=flatten_sequence,
     )
-    k, v, d_out = torch.randn_like(q), torch.randn_like(q), torch.randn_like(q)
 
     add_kv = None
     if problem.has_additional_kv:
         assert not flatten_sequence
-        add_k = torch.randn(
-            (problem.get_additional_kv_shape(heads_last)),
-            device=torch_device,
-            dtype=problem.dtype,
-            requires_grad=False,
+        add_k, add_v = problem.make_additional_kv_tensors(
+            device=torch_device, requires_grad=False, heads_last=heads_last
         )
-        add_v = torch.randn_like(add_k)
         add_kv = (add_k, add_v)
 
     return q, k, v, d_out, add_kv

@@ -37,7 +37,6 @@ from .._libnatten import (
     blackwell_na1d_forward,
     blackwell_na2d_forward,
     blackwell_na3d_forward,
-    HAS_LIBNATTEN,
 )
 from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
 from ..types import (
@@ -61,68 +60,11 @@ from ..utils.checks import (
     additional_kv_tensor_checks,
     check_all_args,
     check_args_against_input,
-    log_or_raise_error,
     na_tensor_checks,
 )
-from ..utils.device import get_device_cc, is_cuda
 
+from .configs.checks import can_run_cutlass_blackwell_fna
 from .configs.cutlass_blackwell import check_cutlass_blackwell_fna_forward_config
-
-
-def can_run_cutlass_blackwell_fna(
-    input_tensor: Tensor, raise_error: bool = False
-) -> bool:
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
-
-    if input_tensor.dim() not in [4, 5, 6]:
-        target_fn(
-            "Blackwell FNA expects 4-D, 5-D, or 6-D tensors as inputs (corresponding to NA1D, NA2D, and NA3D), "
-            f"got {input_tensor.dim()=}.",
-            exception=ValueError,
-        )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Blackwell FNA; NATTEN was not built with libnatten.")
-        return False
-
-    if not is_cuda(input_tensor.device):
-        target_fn("Can't run Blackwell FNA; not a CUDA tensor.")
-        return False
-
-    device_cc = get_device_cc(input_tensor.device)
-
-    if device_cc != 100:
-        target_fn(
-            "Can't run Blackwell FNA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 100."
-        )
-        return False
-
-    if input_tensor.requires_grad:
-        target_fn(
-            "Can't run Blackwell FNA; it does not support backpropagation yet.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    head_dim = input_tensor.shape[-1]
-
-    if input_tensor.dtype not in [torch.float16, torch.bfloat16]:
-        target_fn(
-            "Can't run Blackwell FNA; it only supports FP16 and BF16 for now.",
-            exception=ValueError,
-        )
-        return False
-
-    if head_dim not in [32, 64, 128]:
-        target_fn(
-            "Can't run Blackwell FNA; it only supports head dims 32, 64, and 128 for now.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    return True
 
 
 def make_cutlass_blackwell_fna_autograd_fn(na_dim):
@@ -285,10 +227,12 @@ def cutlass_blackwell_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value)
-    additional_kv_tensor_checks(query, additional_keys, additional_values)
+    na_tensor_checks(query, key, value, must_match_head_dims=True)
+    additional_kv_tensor_checks(
+        query, key, value, additional_keys, additional_values, must_match_head_dims=True
+    )
 
-    assert can_run_cutlass_blackwell_fna(query, raise_error=True)
+    assert can_run_cutlass_blackwell_fna(query, key, value, raise_error=True)
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
 

@@ -78,6 +78,7 @@ void reference_na_generic_forward(
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
   CHECK_CONTIGUOUS(value);
+  CHECK_CONTIGUOUS(out);
   CHECK_CONTIGUOUS(logsumexp);
 
   CHECK_CUDA(query);
@@ -92,8 +93,9 @@ void reference_na_generic_forward(
   CheckIfPropertiesMatch(query, key, value);
 
   // Everything's flattened to 1D, because we concat additional kvs
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(query, out);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(key, value);
+  CheckIfBatchHeadsHeadDimMatch(query, key);
   CheckLogSumExp<1>(out, logsumexp);
 
   int batch_size = query.size(0);
@@ -102,6 +104,7 @@ void reference_na_generic_forward(
 
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
+  int dim_value = value.size(3);
 
   CheckArgsAgainstDim(qkv_shape, kernel_size, dilation);
 
@@ -142,6 +145,7 @@ void reference_na_generic_forward(
       seqlen,
       heads,
       dim,
+      dim_value,
       num_extra_kv,
       qkv_shape_,
       window_size,
