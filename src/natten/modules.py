@@ -116,7 +116,7 @@ class NeighborhoodAttentionGeneric(nn.Module):
         )
 
 
-class NeighborhoodAttention1D(nn.Module):
+class NeighborhoodAttention1D(NeighborhoodAttentionGeneric):
     """
     1-D Neighborhood Attention torch module.
 
@@ -185,7 +185,7 @@ class NeighborhoodAttention1D(nn.Module):
         )
 
 
-class NeighborhoodAttention2D(nn.Module):
+class NeighborhoodAttention2D(NeighborhoodAttentionGeneric):
     """
     2-D Neighborhood Attention torch module.
 
@@ -261,7 +261,7 @@ class NeighborhoodAttention2D(nn.Module):
         )
 
 
-class NeighborhoodAttention3D(nn.Module):
+class NeighborhoodAttention3D(NeighborhoodAttentionGeneric):
     """
     3-D Neighborhood Attention torch module.
 
