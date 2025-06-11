@@ -78,12 +78,13 @@ void fna_generic_forward(
   CheckArgs(kernel_size, stride, dilation);
   CheckIfPropertiesMatch(query, key, value);
   CheckIfTensorShapesMatch<kNADim>(query, key);
-  CheckIfTensorShapesMatch<kNADim>(query, value);
+  CheckIfTensorShapesMatchExceptHeadDim<kNADim>(query, value);
   CheckIfTensorShapesMatch<kNADim>(out, value);
 
   int batch_size = query.size(0);
   int heads = query.size(kNADim + 1);
   int dim = query.size(kNADim + 2);
+  int dim_value = value.size(kNADim + 2);
   CheckArgsAgainstDim(qkv_shape, kernel_size, dilation);
   if (logsumexp.has_value()) {
     CheckLogSumExp<kNADim>(out, logsumexp.value());
@@ -120,7 +121,7 @@ void fna_generic_forward(
         qkv_shape,
         heads,
         dim,
-        dim, // dim_value
+        dim_value,
         kernel_size,
         stride,
         dilation,

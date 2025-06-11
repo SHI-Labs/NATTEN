@@ -34,8 +34,6 @@ from torch.nn.attention.flex_attention import (
     flex_attention,
 )
 
-from .._environment import _IS_TORCH_COMPILE_SUPPORTED, _TORCH_VERSION
-from ..context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
 from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
 from ..types import (
     CausalArg1DTypeOrDed,
@@ -58,117 +56,17 @@ from ..utils.checks import (
     check_args_against_input,
     check_input_size_arg,
     fmha_tensor_checks,
-    log_or_raise_error,
     na_tensor_checks,
 )
-from ..utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
 
+from .configs.checks import (  # noqa: F401
+    _FLEX_COMPILE_SUPPORTED,
+    _FLEX_SUPPORTED,
+    can_run_flex_attention,
+)
 from .configs.flex import check_flex_fmha_forward_config, check_flex_fna_forward_config
 
 logger = log.get_logger(__name__)
-
-
-_FLEX_SUPPORTED = _TORCH_VERSION >= [2, 7]
-_FLEX_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 7] and _IS_TORCH_COMPILE_SUPPORTED
-
-
-def can_run_flex_attention(
-    input_tensor: Tensor, torch_compile: bool, raise_error: bool = False
-) -> bool:
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
-
-    if not _FLEX_SUPPORTED:
-        target_fn("Can't run NATTEN with Flex Attention with torch < 2.7.")
-        return False
-
-    if torch_compile and not _FLEX_COMPILE_SUPPORTED:
-        target_fn("Can't run NATTEN with Flex Attention (compiled).)")
-        return False
-
-    if torch_compile and not is_flex_compile_allowed():
-        target_fn(
-            "NATTEN does not allow compiling Flex Attention. This is because we cannot verify "
-            "Flex's correctness in all scenarios through NATTEN's tests. You can choose to override "
-            "this, though it is discouraged, as it may affect your results significantly, "
-            "by doing:\n"
-            "  from natten import allow_flex_compile\n"
-            "  allow_flex_compile()\n"
-        )
-        return False
-
-    if (
-        torch_compile
-        and input_tensor.requires_grad
-        and not is_flex_compile_backprop_allowed()
-    ):
-        target_fn(
-            "NATTEN does not allow compiling Flex Attention for backpropagation "
-            "({q,k,v}.requires_grad=True). This is because we cannot verify Flex's correctness "
-            "in all scenarios through NATTEN's tests. You can choose to override this, though "
-            "it is HIGHLY discouraged, as it may affect the results of your training significantly, "
-            "by doing:\n"
-            "  from natten import allow_flex_compile_backprop\n"
-            "  allow_flex_compile_backprop()\n"
-        )
-        return False
-
-    if input_tensor.dim() not in [4, 5, 6]:
-        target_fn(
-            "Flex backend expects 4-D, 5-D, or 6-D tensors as inputs (corresponding to FMHA/NA1D, "
-            f"NA2D, and NA3D), got {input_tensor.dim()=}.",
-            exception=ValueError,
-        )
-        return False
-
-    if not is_cuda(input_tensor.device):
-        if not is_cpu(input_tensor.device) and not is_rocm(input_tensor.device):
-            target_fn(
-                "Can't run Flex Attention; tensor is not on a CUDA, ROCm, or CPU device: "
-                f"{input_tensor.device.type}"
-            )
-
-            return False
-        # TODO: check if ROCm device supports torch.compile/triton?
-
-    else:
-        device_cc = get_device_cc(input_tensor.device)
-
-        if device_cc < 70:
-            target_fn(
-                "Flex Attention (compiled) only supports CUDA devices with compute capability "
-                f"70 or higher, got {device_cc}."
-            )
-            return False
-
-    head_dim = input_tensor.shape[-1]
-
-    if not torch_compile and input_tensor.dtype not in [
-        torch.float32,
-        torch.float16,
-        torch.bfloat16,
-    ]:
-        target_fn(
-            "Can't run NATTEN with Flex Attention; we only support FP32, FP16, and BF16 for now.",
-            exception=ValueError,
-        )
-        return False
-
-    if torch_compile and input_tensor.dtype not in [torch.float16, torch.bfloat16]:
-        target_fn(
-            "Can't run NATTEN with Flex Attention (compiled); we only support FP32, FP16, and BF16 for now.",
-            exception=ValueError,
-        )
-        return False
-
-    if head_dim < 32 or not math.log2(head_dim).is_integer():
-        target_fn(
-            "Can't run NATTEN with Flex Attention; we only head dims >= 32 that are "
-            f"powers of two, got {head_dim}.",
-            exception=ValueError,
-        )
-        return False
-
-    return True
 
 
 def get_flex_attention_fn(
@@ -282,7 +180,7 @@ def flex_fmha(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    fmha_tensor_checks(query, key, value)
+    fmha_tensor_checks(query, key, value, must_match_head_dims=True)
 
     q_tile_size, kv_tile_size = check_flex_fmha_forward_config(
         input_tensor=query,
@@ -292,7 +190,9 @@ def flex_fmha(
 
     scale = scale or query.shape[-1] ** -0.5
 
-    assert can_run_flex_attention(query, torch_compile=torch_compile, raise_error=True)
+    assert can_run_flex_attention(
+        query, key, value, torch_compile=torch_compile, raise_error=True
+    )
 
     batch_size, seqlen_q, num_heads, head_dim = query.shape
     seqlen_kv = key.shape[1]
@@ -621,7 +521,7 @@ def flex_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value)
+    na_tensor_checks(query, key, value, must_match_head_dims=True)
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
 
@@ -642,7 +542,9 @@ def flex_fna_generic(
 
     scale = scale or query.shape[-1] ** -0.5
 
-    assert can_run_flex_attention(query, torch_compile=torch_compile, raise_error=True)
+    assert can_run_flex_attention(
+        query, key, value, torch_compile=torch_compile, raise_error=True
+    )
 
     if (q_tile_shape is None) ^ (kv_tile_shape is None):
         raise ValueError(

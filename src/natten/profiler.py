@@ -284,7 +284,16 @@ def get_args():
     parser.add_argument(
         "-n", "--heads", type=int, default=1, help="QKV number of heads (no GQA/MQA)."
     )
-    parser.add_argument("-d", "--dim", type=int, default=64, help="QKV head dim.")
+    parser.add_argument(
+        "-d", "--dim", type=int, default=64, help="QK (and optionally V) head dim."
+    )
+    parser.add_argument(
+        "--dim-value",
+        type=int,
+        default=None,
+        help="Head dim for the V tensor, if different from Q and K. Defaults to the value of "
+        "`-d`/`--dim`.",
+    )
 
     parser.add_argument(
         "-i",
@@ -473,6 +482,8 @@ def get_args():
 
     args = parser.parse_args()
 
+    args.dim_value = args.dim_value or args.dim
+
     args.input_size = check_input_size(args.input_size)
     args.window_size = check_window_size(
         input_size=args.input_size, window_size=args.window_size
@@ -496,6 +507,7 @@ def profile(
     heads: int,
     input_size,
     dim: int,
+    dim_value: int,
     window_size: DimensionType,
     stride: DimensionType,
     dilation: DimensionType,
@@ -564,6 +576,7 @@ def profile(
         heads=heads,
         input_size=input_size,
         dim=dim,
+        dim_value=dim_value,
         window_size=window_size,
         stride=stride,
         dilation=dilation,

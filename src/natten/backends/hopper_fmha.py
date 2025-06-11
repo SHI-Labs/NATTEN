@@ -32,67 +32,12 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import HAS_LIBNATTEN, hopper_fmha_forward
+from .._libnatten import hopper_fmha_forward
 from ..types import CutlassHopperFmhaForwardConfigType, KernelSchedule, NoneType
-from ..utils.checks import fmha_tensor_checks, log_or_raise_error
-from ..utils.device import get_device_cc, is_cuda
+from ..utils.checks import fmha_tensor_checks
 
+from .configs.checks import can_run_cutlass_hopper_fmha
 from .configs.cutlass_hopper import check_cutlass_hopper_fmha_forward_config
-
-
-def can_run_cutlass_hopper_fmha(
-    input_tensor: Tensor, raise_error: bool = False
-) -> bool:
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
-
-    if input_tensor.dim() != 4:
-        target_fn(
-            f"Hopper FMHA expects rank-4 input tensors, got {input_tensor.shape=}.",
-            exception=ValueError,
-        )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Hopper FMHA; NATTEN was not built with libnatten.")
-        return False
-
-    if not is_cuda(input_tensor.device):
-        target_fn("Can't run Hopper FMHA; not a CUDA tensor.")
-        return False
-
-    device_cc = get_device_cc(input_tensor.device)
-
-    if device_cc != 90:
-        target_fn(
-            "Can't run Hopper FMHA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 90."
-        )
-        return False
-
-    if input_tensor.requires_grad:
-        target_fn(
-            "Can't run Hopper FMHA; it does not support backpropagation yet.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    head_dim = input_tensor.shape[-1]
-
-    if input_tensor.dtype not in [torch.float16, torch.bfloat16]:
-        target_fn(
-            "Can't run Hopper FMHA; it only supports FP16 and BF16 for now.",
-            exception=ValueError,
-        )
-        return False
-
-    if head_dim not in [32, 64, 128, 256]:
-        target_fn(
-            "Can't run Hopper FMHA; it only supports head dims 32, 64, 128, and 256 for now.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    return True
 
 
 class CutlassHopperFmhaAutogradFn(Function):
@@ -184,9 +129,9 @@ def cutlass_hopper_fmha(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    fmha_tensor_checks(query, key, value)
+    fmha_tensor_checks(query, key, value, must_match_head_dims=True)
 
-    assert can_run_cutlass_hopper_fmha(query, raise_error=True)
+    assert can_run_cutlass_hopper_fmha(query, key, value, raise_error=True)
 
     forward_config = check_cutlass_hopper_fmha_forward_config(
         input_tensor=query,

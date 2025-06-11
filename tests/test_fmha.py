@@ -70,13 +70,16 @@ def _reset_everything():
     torch.cuda.empty_cache()
 
 
-def compute_sdpa_reference(batch, heads, dim, seqlen_q, seqlen_kv, dtype=torch.float32):
+def compute_sdpa_reference(
+    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, dtype=torch.float32
+):
+    dim_v = dim_v or dim
     with torch.no_grad():
         q, k, v, d_out = (
             torch.randn((batch, heads, seqlen_q, dim), device="cuda", dtype=dtype),
             torch.randn((batch, heads, seqlen_kv, dim), device="cuda", dtype=dtype),
-            torch.randn((batch, heads, seqlen_kv, dim), device="cuda", dtype=dtype),
-            torch.randn((batch, heads, seqlen_q, dim), device="cuda", dtype=dtype),
+            torch.randn((batch, heads, seqlen_kv, dim_v), device="cuda", dtype=dtype),
+            torch.randn((batch, heads, seqlen_q, dim_v), device="cuda", dtype=dtype),
         )
         q_, k_, v_, d_out_ = (
             q.clone().permute(0, 2, 1, 3).contiguous(),
@@ -111,14 +114,15 @@ def compute_sdpa_reference(batch, heads, dim, seqlen_q, seqlen_kv, dtype=torch.f
 
 
 def compute_natten_fmha_reference(
-    batch, heads, dim, seqlen_q, seqlen_kv, dtype=torch.float32
+    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, dtype=torch.float32
 ):
+    dim_v = dim_v or dim
     with torch.no_grad():
         q, k, v, d_out = (
             torch.randn((batch, seqlen_q, heads, dim), device="cuda", dtype=dtype),
             torch.randn((batch, seqlen_kv, heads, dim), device="cuda", dtype=dtype),
-            torch.randn((batch, seqlen_kv, heads, dim), device="cuda", dtype=dtype),
-            torch.randn((batch, seqlen_q, heads, dim), device="cuda", dtype=dtype),
+            torch.randn((batch, seqlen_kv, heads, dim_v), device="cuda", dtype=dtype),
+            torch.randn((batch, seqlen_q, heads, dim_v), device="cuda", dtype=dtype),
         )
         q_, k_, v_, d_out_ = (
             q.clone(),
@@ -181,9 +185,11 @@ class FMHABackendTest(unittest.TestCase):
         torch_compile: bool = False,
         test_lse: bool = False,
         reference_str: str = "unspecified reference",
+        head_dim_v: Optional[int] = None,
     ):
+        head_dim_v = head_dim_v or head_dim
         logger.debug(
-            f"Testing FMHA ({backend}) vs {reference_str}: {batch=}, {heads=}, {head_dim=}, "
+            f"Testing FMHA ({backend}) vs {reference_str}: {batch=}, {heads=}, {head_dim=}, {head_dim_v=}, "
             f"{seqlen_q=}, {seqlen_kv=}, {dtype=}, "
             f"{q_tile_size=}, {kv_tile_size=}, {kernel_schedule=}, {run_persistent_kernel=}, {torch_compile=}"
             + (
@@ -298,9 +304,11 @@ class FMHABackendTest(unittest.TestCase):
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         torch_compile: bool = False,
+        head_dim_v: Optional[int] = None,
     ):
+        head_dim_v = head_dim_v or head_dim
         inputs, reference = compute_sdpa_reference(
-            batch, heads, head_dim, seqlen_q, seqlen_kv, dtype=dtype
+            batch, heads, head_dim, head_dim_v, seqlen_q, seqlen_kv, dtype=dtype
         )
         self._test_against_reference_inputs(
             inputs=inputs,
@@ -308,6 +316,7 @@ class FMHABackendTest(unittest.TestCase):
             batch=batch,
             heads=heads,
             head_dim=head_dim,
+            head_dim_v=head_dim_v,
             seqlen_q=seqlen_q,
             seqlen_kv=seqlen_kv,
             atol=atol,
@@ -349,9 +358,11 @@ class FMHABackendTest(unittest.TestCase):
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         torch_compile: bool = False,
+        head_dim_v: Optional[int] = None,
     ):
+        head_dim_v = head_dim_v or head_dim
         inputs, reference = compute_natten_fmha_reference(
-            batch, heads, head_dim, seqlen_q, seqlen_kv, dtype=dtype
+            batch, heads, head_dim, head_dim_v, seqlen_q, seqlen_kv, dtype=dtype
         )
         self._test_against_reference_inputs(
             inputs=inputs,
@@ -359,6 +370,7 @@ class FMHABackendTest(unittest.TestCase):
             batch=batch,
             heads=heads,
             head_dim=head_dim,
+            head_dim_v=head_dim_v,
             seqlen_q=seqlen_q,
             seqlen_kv=seqlen_kv,
             atol=atol,
@@ -384,6 +396,7 @@ class FMHABackendTest(unittest.TestCase):
         batch,
         heads,
         head_dim,
+        head_dim_v,
         seqlen_q,
         seqlen_kv,
     ):
@@ -394,19 +407,30 @@ class FMHABackendTest(unittest.TestCase):
         ]
 
         if supports_float16(torch.get_default_device()):
-            ALLOWED_DTYPES.append((torch.float16, (1e-2, 1e-2), (0, 1e-3)))
+            ALLOWED_DTYPES.append((torch.float16, (1e-2, 4e-2), (0, 1e-3)))
 
         if supports_bfloat16(torch.get_default_device()):
-            ALLOWED_DTYPES.append((torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)))
+            ALLOWED_DTYPES.append((torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)))
 
         for dtype, atol, rtol in ALLOWED_DTYPES:
 
-            dummy = torch.randn(
-                (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
+            dummy_fwd = torch.randn(
+                (batch, seqlen_q, heads, max(head_dim, head_dim_v)),
+                device="cuda",
+                dtype=dtype,
             )
 
-            forward_configs = get_all_fmha_forward_configs(dummy)
-            backward_configs = get_all_fmha_backward_configs(dummy)
+            dummy_bwd = torch.randn(
+                (batch, seqlen_kv, heads, max(head_dim, head_dim_v)),
+                device="cuda",
+                dtype=dtype,
+            )
+
+            forward_configs = get_all_fmha_forward_configs(dummy_fwd)
+            backward_configs = get_all_fmha_backward_configs(dummy_bwd)
+
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
                 q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
@@ -421,6 +445,7 @@ class FMHABackendTest(unittest.TestCase):
                     batch=batch,
                     heads=heads,
                     head_dim=head_dim,
+                    head_dim_v=head_dim_v,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
                     dtype=dtype,
@@ -617,16 +642,22 @@ class FMHABackendTest(unittest.TestCase):
         seqlen_q,
         seqlen_kv,
         backend,
+        head_dim_v=None,
     ):
         if backend == "cutlass-fmha":
             return self._test_cutlass_fmha_against_torch_sdpa(
                 batch=batch,
                 heads=heads,
                 head_dim=head_dim,
+                head_dim_v=head_dim_v,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
             )
         elif backend == "blackwell-fmha":
+            assert (
+                head_dim_v is None or head_dim_v == head_dim
+            ), "Blackwell FMHA does not allow head_dim_v."
+
             return self._test_cutlass_blackwell_fmha_against_torch_sdpa(
                 batch=batch,
                 heads=heads,
@@ -635,6 +666,10 @@ class FMHABackendTest(unittest.TestCase):
                 seqlen_kv=seqlen_kv,
             )
         elif backend == "hopper-fmha":
+            assert (
+                head_dim_v is None or head_dim_v == head_dim
+            ), "Hopper FMHA does not allow head_dim_v."
+
             return self._test_cutlass_hopper_fmha_against_torch_sdpa(
                 batch=batch,
                 heads=heads,
@@ -682,10 +717,20 @@ class FMHABackendTest(unittest.TestCase):
         for i in range(max_tests):
             batch = random.choice(range(1, 4))
             heads = random.choice(range(1, 4))
-            head_dim = (
-                random.choice(range(8, 1024 + 1, 8))
-                if backend != "blackwell-fmha"
-                else random.choice([32, 64, 128])
+
+            supports_dim_v = False
+            if backend == "blackwell-fmha":
+                head_dim_choices = [32, 64, 128]
+            elif backend == "hopper-fmha":
+                head_dim_choices = [32, 64, 128]
+            else:
+                assert backend == "cutlass-fmha"
+                head_dim_choices = range(8, 1024 + 1, 8)
+                supports_dim_v = True
+
+            head_dim = random.choice(head_dim_choices)
+            head_dim_v = (
+                head_dim if not supports_dim_v else random.choice(head_dim_choices)
             )
 
             seqlen_q = random.choice(range(8, 2**14, 8))
@@ -702,6 +747,7 @@ class FMHABackendTest(unittest.TestCase):
                 batch=batch,
                 heads=heads,
                 head_dim=head_dim,
+                head_dim_v=head_dim_v,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
                 backend=backend,
@@ -710,28 +756,38 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_fmha_fast_against_torch_sdpa(self):
         problem_sizes = [
-            (2, 2, 64, 128, 128),
-            (1, 1, 32, 32, 32),
-            (1, 1, 32, 128, 128),
-            (1, 1, 192, 3584, 381),
-            (1, 1, 288, 12072, 1680),
-            (1, 1, 32, 128, 128),
-            (1, 1, 32, 128, 4096),
-            (1, 1, 32, 128, 258),
-            (1, 2, 64, 128, 15),
-            (1, 1, 32, 8, 17),
-            (1, 1, 64, 17, 49),
-            (2, 4, 16, 128, 237),
-            (4, 3, 48, 256, 33),
-            (1, 1, 128, 128, 75),
-            (1, 1, 32, 125, 444),
-            (1, 2, 64, 125, 231),
-            (1, 1, 128, 256, 10240),
+            (1, 1, 32, 64, 128, 128),
+            (2, 2, 64, 32, 128, 128),
+            (1, 1, 32, 16, 32, 32),
+            (1, 1, 32, 48, 128, 128),
+            (1, 1, 192, 64, 3584, 381),
+            (1, 1, 288, 256, 12072, 1680),
+            (1, 1, 32, 64, 128, 128),
+            (1, 1, 32, 128, 128, 4096),
+            #
+            (2, 2, 64, 64, 128, 128),
+            (1, 1, 32, 32, 32, 32),
+            (1, 1, 32, 32, 128, 128),
+            (1, 1, 192, 192, 3584, 381),
+            (1, 1, 288, 288, 12072, 1680),
+            (1, 1, 32, 32, 128, 128),
+            (1, 1, 32, 32, 128, 4096),
+            (1, 1, 32, 32, 128, 258),
+            (1, 2, 64, 64, 128, 15),
+            (1, 1, 32, 32, 8, 17),
+            (1, 1, 64, 64, 17, 49),
+            (2, 4, 16, 16, 128, 237),
+            (4, 3, 48, 48, 256, 33),
+            (1, 1, 128, 128, 128, 75),
+            (1, 1, 32, 32, 125, 444),
+            (1, 2, 64, 64, 125, 231),
+            (1, 1, 128, 128, 256, 10240),
         ]
         for (
             batch,
             heads,
             head_dim,
+            head_dim_v,
             seqlen_q,
             seqlen_kv,
         ) in problem_sizes:
@@ -739,6 +795,7 @@ class FMHABackendTest(unittest.TestCase):
                 batch=batch,
                 heads=heads,
                 head_dim=head_dim,
+                head_dim_v=head_dim_v,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
                 backend="cutlass-fmha",

@@ -181,7 +181,7 @@ void __global__ fna_reference_kernel(
 
         for (int i = 0; i < DimPerThread; ++i) {
           int idx_D = threadIdx.x + i * blockDim.x;
-          if (idx_D < size<2>(problem_shape)) {
+          if (idx_D < size<1>(mO)) {
             for (int j = 0; j < mS_max; j++) {
               int idx_K = j + kv_tile_offset;
               ElementAccumulator eV = mV(idx_K + offset_K, idx_D, idx_L);
@@ -196,7 +196,7 @@ void __global__ fna_reference_kernel(
 
       for (int i = 0; i < DimPerThread; ++i) {
         int idx_D = threadIdx.x + i * blockDim.x;
-        if (idx_D < size<2>(problem_shape)) {
+        if (idx_D < size<1>(mO)) {
           ElementAccumulator scale = 1.0f / sum;
           mO(idx_Q + offset_Q, idx_D, idx_L) =
               static_cast<typename TensorO::value_type>(final_acc[i] * scale);
@@ -223,6 +223,7 @@ void fna_reference_forward(
     int seqlen,
     int heads,
     int dim,
+    int dim_value,
     int num_additional_kv,
     NADim qkv_shape,
     NADim window_size,
@@ -246,11 +247,13 @@ void fna_reference_forward(
       seqlen,
       seqlen + num_additional_kv,
       dim,
-      cute::make_tuple(cute::make_tuple(1, heads), batch));
+      cute::make_tuple(cute::make_tuple(1, heads), batch),
+      dim_value);
 
   int SQ = size<0>(problem_shape);
   int SK = size<1>(problem_shape);
   int D = size<2>(problem_shape);
+  int DV = size<4>(problem_shape);
   int H = size<3, 0>(problem_shape);
   int H_K = size<3, 0, 1>(problem_shape);
   int H_Q = size<3, 0, 0>(problem_shape);
@@ -261,10 +264,12 @@ void fna_reference_forward(
   // stride: (dim*heads*seqlen, dim*heads, dim, 1)
   auto stride_Q = make_stride(
       H * D, _1{}, make_stride(make_stride(D, H_Q * D), H * D * SQ));
-  auto stride_O = stride_Q;
+  auto stride_O = make_stride(
+      H * DV, _1{}, make_stride(make_stride(DV, H_Q * DV), H * DV * SQ));
   auto stride_K = make_stride(
       H_K * D, _1{}, make_stride(make_stride(_0{}, D), H_K * D * SK));
-  auto stride_V = stride_K;
+  auto stride_V = make_stride(
+      H_K * DV, _1{}, make_stride(make_stride(_0{}, DV), H_K * DV * SK));
   auto stride_LSE = make_stride(H, make_stride(make_stride(_1{}, H_Q), SQ * H));
 
   auto mQ = make_tensor(
@@ -274,10 +279,10 @@ void fna_reference_forward(
       make_gmem_ptr(ptr_K), select<1, 2, 3>(problem_shape), stride_K);
 
   auto mV = make_tensor(
-      make_gmem_ptr(ptr_V), select<1, 2, 3>(problem_shape), stride_V);
+      make_gmem_ptr(ptr_V), select<1, 4, 3>(problem_shape), stride_V);
 
   auto mO = make_tensor(
-      make_gmem_ptr(ptr_O), select<0, 2, 3>(problem_shape), stride_O);
+      make_gmem_ptr(ptr_O), select<0, 4, 3>(problem_shape), stride_O);
 
   auto mLSE = make_tensor(
       make_gmem_ptr(ptr_LSE), select<0, 3>(problem_shape), stride_LSE);
@@ -286,7 +291,7 @@ void fna_reference_forward(
   auto qkv_layout = make_layout(qkv_shape, make_qkv_stride(qkv_shape));
 
   NATTEN_CHECK(
-      dim <= MaxDimSupported,
+      size<1>(mO) <= MaxDimSupported,
       "Reference kernel only supports up to head dim 1024.");
 
   dim3 grid(size<0>(mO), size<2>(mO), 1);

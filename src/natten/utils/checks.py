@@ -21,6 +21,7 @@
 #
 #################################################################################################
 
+import functools
 from collections.abc import Sequence
 from typing import Any, Optional, Tuple
 
@@ -35,130 +36,231 @@ from . import log
 logger = log.get_logger(__name__)
 
 
-def _universal_tensor_checks(query: Tensor, key: Tensor, value: Tensor):
+def log_or_raise_error(
+    msg: str, raise_error: bool = False, exception: Any = RuntimeError
+):
+    if raise_error:
+        raise exception(msg)
+    else:
+        logger.debug(msg)
+
+
+def _universal_tensor_checks(
+    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = True
+) -> bool:
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
     if query.is_nested or key.is_nested or value.is_nested:
-        raise NotImplementedError("NATTEN does not support nested tensors.")
+        target_fn(
+            "NATTEN does not support nested tensors.", exception=NotImplementedError
+        )
+        return False
 
     if query.device != key.device or query.device != value.device:
-        raise ValueError(
+        target_fn(
             "Query, key, and value must be on the same device, "
-            f"got {query.device=}, {key.device=}, {value.device=}."
+            f"got {query.device=}, {key.device=}, {value.device=}.",
+            exception=ValueError,
         )
+        return False
 
     if query.dtype != key.dtype or query.dtype != value.dtype:
-        raise ValueError(
+        target_fn(
             "Query, key, and value must assume the same data type, "
-            f"got {query.dtype=}, {key.dtype=}, {value.dtype=}."
+            f"got {query.dtype=}, {key.dtype=}, {value.dtype=}.",
+            exception=ValueError,
         )
+        return False
+
+    return True
 
 
-def na_tensor_checks(query: Tensor, key: Tensor, value: Tensor):
-    _universal_tensor_checks(query, key, value)
+def na_tensor_checks(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    must_match_head_dims: bool = False,
+    raise_error: bool = True,
+) -> bool:
+    if not _universal_tensor_checks(query, key, value):
+        return False
+
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
     if query.dim() != key.dim() or query.dim() != value.dim():
-        raise ValueError(
+        target_fn(
             "Query, key, and value must have the same rank, "
-            f"got {query.dim()=}, {key.dim()=}, {value.dim()=}."
+            f"got {query.dim()=}, {key.dim()=}, {value.dim()=}.",
+            exception=ValueError,
         )
+        return False
 
     if query.dim() not in [4, 5, 6]:
-        raise ValueError(
+        target_fn(
             "Expected 4-D, 5-D, or 6-D tensors as inputs (corresponding to NA1D, NA2D, and NA3D), "
-            f"got {query.dim()=}."
+            f"got {query.dim()=}.",
+            exception=ValueError,
         )
+        return False
 
-    if query.shape != key.shape or query.shape != value.shape:
-        raise ValueError(
-            "Neighborhood attention ops expect Q, K, and V to have the same shape, got "
-            f"{query.shape=}, {key.shape=}, {value.shape=}."
+    if query.shape != key.shape or query.shape[:-1] != value.shape[:-1]:
+        target_fn(
+            "Neighborhood attention ops expect Q, K, and V to have the same shape (except value "
+            f"head dim), got {query.shape=}, {key.shape=}, {value.shape=}.",
+            exception=ValueError,
         )
+        return False
+
+    if must_match_head_dims and (
+        query.shape != key.shape or query.shape != value.shape
+    ):
+        target_fn(
+            "This operation/backend expects Q, K, and V to have the same shape, "
+            f"got {query.shape=}, {key.shape=}, {value.shape=}.",
+            exception=ValueError,
+        )
+        return False
+
+    return True
 
 
-def fmha_tensor_checks(query: Tensor, key: Tensor, value: Tensor):
-    _universal_tensor_checks(query, key, value)
+def fmha_tensor_checks(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    must_match_head_dims: bool = False,
+    raise_error: bool = True,
+) -> bool:
+    if not _universal_tensor_checks(query, key, value):
+        return False
+
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
     if query.dim() != key.dim() or query.dim() != value.dim():
-        raise ValueError(
+        target_fn(
             "Query, key, and value must have the same rank, "
-            f"got {query.dim()=}, {key.dim()=}, {value.dim()=}."
+            f"got {query.dim()=}, {key.dim()=}, {value.dim()=}.",
+            exception=ValueError,
         )
+        return False
 
     if query.dim() != 4:
-        raise ValueError(
-            "Expected 4-D tensors as inputs to FMHA, " f"got {query.dim()=}."
+        target_fn(
+            "Expected 4-D tensors as inputs to FMHA, " f"got {query.dim()=}.",
+            exception=ValueError,
         )
+        return False
 
     if query.shape[-1] != key.shape[-1]:
-        raise ValueError(
-            f"Q and K head dims must match, got {query.shape[-1]=}, {key.shape[-1]=}."
+        target_fn(
+            f"Q and K head dims must match, got {query.shape[-1]=}, {key.shape[-1]=}.",
+            exception=ValueError,
         )
+        return False
 
-    if query.shape[-1] != value.shape[-1]:
-        raise ValueError(
-            "This operation does not support different head dims for QK and V, got "
-            f"{query.shape[-1]=}, {value.shape[-1]=}."
+    if must_match_head_dims and query.shape[-1] != value.shape[-1]:
+        target_fn(
+            "This operation/backend does not support different head dims for QK and V, got "
+            f"{query.shape[-1]=}, {value.shape[-1]=}.",
+            exception=ValueError,
         )
+        return False
 
     if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
-        raise ValueError(
+        target_fn(
             "Q, K, and V must match in batch size, got "
-            f"{query.shape[0]=}, {key.shape[0]=}, {value.shape[0]=}."
+            f"{query.shape[0]=}, {key.shape[0]=}, {value.shape[0]=}.",
+            exception=ValueError,
         )
+        return False
 
     if key.shape[1] != value.shape[1]:
-        raise ValueError(
-            f"K and V must match in sequence length, got {key.shape[1]=}, {value.shape[1]=}."
+        target_fn(
+            f"K and V must match in sequence length, got {key.shape[1]=}, {value.shape[1]=}.",
+            exception=ValueError,
         )
+        return False
 
     if query.shape[2] != key.shape[2] or query.shape[2] != value.shape[2]:
-        raise ValueError(
+        target_fn(
             "NATTEN operations do not support GQA/MQA, therefore number of heads in Q, K, and V "
-            f"must match, got {query.shape[2]=}, {key.shape[2]=}, {value.shape[2]=}."
+            f"must match, got {query.shape[2]=}, {key.shape[2]=}, {value.shape[2]=}.",
+            exception=ValueError,
         )
+        return False
+
+    return True
 
 
 def additional_kv_tensor_checks(
-    query: Tensor, key: Optional[Tensor] = None, value: Optional[Tensor] = None
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    add_key: Optional[Tensor] = None,
+    add_value: Optional[Tensor] = None,
+    must_match_head_dims: bool = False,
 ):
 
-    if (key is not None) ^ (value is not None):
+    if (add_key is not None) ^ (add_value is not None):
         raise ValueError(
             "`additional_keys` and `additional_values` must be either both Tensors or None."
         )
 
-    if key is None:
+    if add_key is None:
         return
 
-    assert key is not None and value is not None
+    assert add_key is not None and add_value is not None
 
-    _universal_tensor_checks(query, key, value)
+    _universal_tensor_checks(query, add_key, add_value)
 
-    if query.shape[-1] != key.shape[-1]:
+    if query.shape[-1] != add_key.shape[-1]:
         raise ValueError(
-            f"Q and K head dims must match, got {query.shape[-1]=}, {key.shape[-1]=}."
+            f"Q and K head dims must match, got {query.shape[-1]=}, {add_key.shape[-1]=}."
         )
 
-    if query.shape[-1] != value.shape[-1]:
+    if must_match_head_dims and query.shape[-1] != add_value.shape[-1]:
         raise ValueError(
             "This operation does not support different head dims for QK and V, got "
-            f"{query.shape[-1]=}, {value.shape[-1]=}."
+            f"{query.shape[-1]=}, {add_value.shape[-1]=}."
         )
 
-    if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
+    if query.shape[0] != add_key.shape[0] or query.shape[0] != add_value.shape[0]:
         raise ValueError(
-            "Q, K, and V must match in batch size, got "
-            f"{query.shape[0]=}, {key.shape[0]=}, {value.shape[0]=}."
+            "Q, additional K, and additional V must match in batch size, got "
+            f"{query.shape[0]=}, {add_key.shape[0]=}, {add_value.shape[0]=}."
         )
 
-    if key.shape[1] != value.shape[1]:
+    if add_key.shape[1] != add_value.shape[1]:
         raise ValueError(
-            f"K and V must match in sequence length, got {key.shape[1]=}, {value.shape[1]=}."
+            f"Additional K and V must match in sequence length, got {add_key.shape[1]=}, "
+            f"{add_value.shape[1]=}."
         )
 
-    if query.shape[-2] != key.shape[-2] or query.shape[-2] != value.shape[-2]:
+    if query.shape[-2] != add_key.shape[-2] or query.shape[-2] != add_value.shape[-2]:
         raise ValueError(
             "NATTEN operations do not support GQA/MQA, therefore number of heads in Q, K, and V "
-            f"must match, got {query.shape[-2]=}, {key.shape[-2]=}, {value.shape[-2]=}."
+            f"must match, got {query.shape[-2]=}, {add_key.shape[-2]=}, {add_value.shape[-2]=}."
+        )
+
+    if key.shape[0] != add_key.shape[0] or value.shape[0] != add_value.shape[0]:
+        raise ValueError(
+            "Additional key/value tokens must match the self attention key/value tokens in batch "
+            f"size, got {key.shape[0]=} != {add_key.shape[0]=}, and "
+            f"{value.shape[0]=} != {add_value.shape[0]=}."
+        )
+
+    if key.shape[-2] != add_key.shape[-2] or value.shape[-2] != add_value.shape[-2]:
+        raise ValueError(
+            "Additional key/value tokens must match the self attention key/value tokens in number "
+            f"of heads, got {key.shape[-2]=} != {add_key.shape[-2]=}, and "
+            f"{value.shape[-2]=} != {add_value.shape[-2]=}."
+        )
+
+    if key.shape[-1] != add_key.shape[-1] or value.shape[-1] != add_value.shape[-1]:
+        raise ValueError(
+            "Additional key/value tokens must match the self attention key/value tokens in head "
+            f"dim, got {key.shape[-1]=} != {add_key.shape[-1]=}, and "
+            f"{value.shape[-1]=} != {add_value.shape[-1]=}."
         )
 
 
@@ -324,15 +426,6 @@ def check_tile_shape(
         f"Unsupported value for tile shape; expected an iterable of at most 3 integers, "
         f"got {type(tile_shape)}: {tile_shape}"
     )
-
-
-def log_or_raise_error(
-    msg: str, raise_error: bool = False, exception: Any = RuntimeError
-):
-    if raise_error:
-        raise exception(msg)
-    else:
-        logger.debug(msg)
 
 
 def check_kernel_schedule(kernel_schedule: Any) -> Optional[KernelSchedule]:

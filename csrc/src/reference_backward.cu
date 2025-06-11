@@ -110,8 +110,9 @@ void reference_na_generic_backward(
   CheckIfPropertiesMatch(grad_query, query, value);
 
   // Everything's flattened to 1D, because we concat additional kvs
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(query, out);
+  CheckIfTensorShapesMatchExceptHeadDim<1>(key, value);
+  CheckIfBatchHeadsHeadDimMatch(query, key);
   CheckIfTensorShapesMatch<1>(grad_query, query);
   CheckIfTensorShapesMatch<1>(grad_key, key);
   CheckIfTensorShapesMatch<1>(grad_value, value);
@@ -124,6 +125,7 @@ void reference_na_generic_backward(
 
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
+  int dim_value = value.size(3);
 
   CheckArgsAgainstDim(qkv_shape, kernel_size, dilation);
 
@@ -168,6 +170,7 @@ void reference_na_generic_backward(
       seqlen,
       heads,
       dim,
+      dim_value,
       num_extra_kv,
       qkv_shape_,
       window_size,

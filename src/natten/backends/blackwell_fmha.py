@@ -32,70 +32,12 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import blackwell_fmha_forward, HAS_LIBNATTEN
+from .._libnatten import blackwell_fmha_forward
 from ..types import CutlassBlackwellFmhaForwardConfigType, NoneType
-from ..utils import log
-from ..utils.checks import fmha_tensor_checks, log_or_raise_error
-from ..utils.device import get_device_cc, is_cuda
+from ..utils.checks import fmha_tensor_checks
 
+from .configs.checks import can_run_cutlass_blackwell_fmha
 from .configs.cutlass_blackwell import check_cutlass_blackwell_fmha_forward_config
-
-logger = log.get_logger(__name__)
-
-
-def can_run_cutlass_blackwell_fmha(
-    input_tensor: Tensor, raise_error: bool = False
-) -> bool:
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
-
-    if input_tensor.dim() != 4:
-        target_fn(
-            f"Blackwell FMHA expects rank-4 input tensors, got {input_tensor.shape=}.",
-            exception=ValueError,
-        )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Blackwell FMHA; NATTEN was not built with libnatten.")
-        return False
-
-    if not is_cuda(input_tensor.device):
-        target_fn("Can't run Blackwell FMHA; not a CUDA tensor.")
-        return False
-
-    device_cc = get_device_cc(input_tensor.device)
-
-    if device_cc != 100:
-        target_fn(
-            "Can't run Blackwell FMHA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 100."
-        )
-        return False
-
-    if input_tensor.requires_grad:
-        target_fn(
-            "Can't run Blackwell FMHA; it does not support backpropagation yet.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    head_dim = input_tensor.shape[-1]
-
-    if input_tensor.dtype not in [torch.float16, torch.bfloat16]:
-        target_fn(
-            "Can't run Blackwell FMHA; it only supports FP16 and BF16 for now.",
-            exception=ValueError,
-        )
-        return False
-
-    if head_dim not in [32, 64, 128]:
-        target_fn(
-            "Can't run Blackwell FMHA; it only supports head dims 32, 64, and 128 for now.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    return True
 
 
 class CutlassBlackwellFmhaAutogradFn(Function):
@@ -186,9 +128,9 @@ def cutlass_blackwell_fmha(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    fmha_tensor_checks(query, key, value)
+    fmha_tensor_checks(query, key, value, must_match_head_dims=True)
 
-    assert can_run_cutlass_blackwell_fmha(query, raise_error=True)
+    assert can_run_cutlass_blackwell_fmha(query, key, value, raise_error=True)
 
     tiling_config_forward = check_cutlass_blackwell_fmha_forward_config(
         input_tensor=query, q_tile_size=q_tile_size, kv_tile_size=kv_tile_size

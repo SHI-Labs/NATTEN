@@ -113,11 +113,11 @@ void fna_generic_backward(
   CheckIfPropertiesMatch(grad_query, query, value);
 
   CheckIfTensorShapesMatch<kNADim>(query, key);
-  CheckIfTensorShapesMatch<kNADim>(query, value);
+  CheckIfTensorShapesMatchExceptHeadDim<kNADim>(query, value);
   CheckIfTensorShapesMatch<kNADim>(out, value);
-  CheckIfTensorShapesMatch<kNADim>(grad_query, grad_key);
-  CheckIfTensorShapesMatch<kNADim>(grad_query, grad_value);
-  CheckIfTensorShapesMatch<kNADim>(grad_out, grad_value);
+  CheckIfTensorShapesMatch<kNADim>(grad_query, query);
+  CheckIfTensorShapesMatch<kNADim>(grad_key, key);
+  CheckIfTensorShapesMatch<kNADim>(grad_value, value);
   CheckIfTensorShapesMatch<kNADim>(grad_out, out);
 
   CheckLogSumExp<kNADim>(out, logsumexp);
@@ -125,6 +125,7 @@ void fna_generic_backward(
   int batch_size = query.size(0);
   int heads = query.size(kNADim + 1);
   int dim = query.size(kNADim + 2);
+  int dim_value = value.size(kNADim + 2);
   auto seqlen = tuple_product(qkv_shape);
   CheckArgsAgainstDim(qkv_shape, kernel_size, dilation);
 
@@ -145,7 +146,7 @@ void fna_generic_backward(
   } else {
     delta = torch::empty(
         {batch_size, seqlen, heads}, query.options().dtype(at::kFloat));
-    compute_delta_(out, grad_out, delta, (int32_t)delta.numel(), dim);
+    compute_delta_(out, grad_out, delta, (int32_t)delta.numel(), dim_value);
   }
   TORCH_CHECK(delta.size(0) == batch_size);
   TORCH_CHECK(delta.size(1) == seqlen);
@@ -186,7 +187,7 @@ void fna_generic_backward(
         qkv_shape,
         heads,
         dim,
-        dim, // dim_value
+        dim_value,
         kernel_size,
         stride,
         dilation,

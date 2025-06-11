@@ -92,6 +92,7 @@ void hopper_fmha_forward(
   CheckIfPropertiesMatch(query, key, value);
   CheckIfTensorShapesMatch<1>(key, value);
   CheckIfTensorShapesMatch<1>(query, out);
+  CheckIfBatchHeadsHeadDimMatch(query, key);
 
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
   TORCH_CHECK(key.dim() == 4, "Tensors must be 4-D.");

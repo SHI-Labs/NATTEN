@@ -32,12 +32,7 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import (
-    HAS_LIBNATTEN,
-    hopper_na1d_forward,
-    hopper_na2d_forward,
-    hopper_na3d_forward,
-)
+from .._libnatten import hopper_na1d_forward, hopper_na2d_forward, hopper_na3d_forward
 from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
 from ..types import (
     CausalArg1DTypeOrDed,
@@ -57,69 +52,10 @@ from ..types import (
     KernelSchedule,
     NoneType,
 )
-from ..utils.checks import (
-    check_all_args,
-    check_args_against_input,
-    log_or_raise_error,
-    na_tensor_checks,
-)
-from ..utils.device import get_device_cc, is_cuda
+from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
 
+from .configs.checks import can_run_cutlass_hopper_fna
 from .configs.cutlass_hopper import check_cutlass_hopper_fna_forward_config
-
-
-def can_run_cutlass_hopper_fna(input_tensor: Tensor, raise_error: bool = False) -> bool:
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
-
-    if input_tensor.dim() not in [4, 5, 6]:
-        target_fn(
-            "Hopper FNA expects 4-D, 5-D, or 6-D tensors as inputs (corresponding to NA1D, NA2D, and NA3D), "
-            f"got {input_tensor.dim()=}.",
-            exception=ValueError,
-        )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Hopper FNA; NATTEN was not built with libnatten.")
-        return False
-
-    if not is_cuda(input_tensor.device):
-        target_fn("Can't run Hopper FNA; not a CUDA tensor.")
-        return False
-
-    device_cc = get_device_cc(input_tensor.device)
-
-    if device_cc != 90:
-        target_fn(
-            "Can't run Hopper FNA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 90."
-        )
-        return False
-
-    if input_tensor.requires_grad:
-        target_fn(
-            "Can't run Hopper FNA; it does not support backpropagation yet.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    head_dim = input_tensor.shape[-1]
-
-    if input_tensor.dtype not in [torch.float16, torch.bfloat16]:
-        target_fn(
-            "Can't run Hopper FNA; it only supports FP16 and BF16 for now.",
-            exception=ValueError,
-        )
-        return False
-
-    if head_dim not in [32, 64, 128, 256]:
-        target_fn(
-            "Can't run Hopper FNA; it only supports head dims 32, 64, 128, and 256 for now.",
-            exception=NotImplementedError,
-        )
-        return False
-
-    return True
 
 
 def make_cutlass_hopper_fna_autograd_fn(na_dim):
@@ -275,9 +211,9 @@ def cutlass_hopper_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value)
+    na_tensor_checks(query, key, value, must_match_head_dims=True)
 
-    assert can_run_cutlass_hopper_fna(query, raise_error=True)
+    assert can_run_cutlass_hopper_fna(query, key, value, raise_error=True)
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
 
