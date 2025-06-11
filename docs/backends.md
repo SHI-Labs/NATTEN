@@ -61,6 +61,11 @@ following functions in your code.
 - [x] Inference (forward pass)
 - [ ] Training (backward pass)
 
+![Hopper FNA performance sample](assets/hopper-fna-perf.png){ width="80%" }
+/// caption
+Performance levels of Hopper FNA as of version `0.20.0`.
+///
+
 Based on CUTLASS's
 [Hopper FMHA kernel](https://github.com/NVIDIA/cutlass/tree/main/examples/88_hopper_fmha)
 (3.X API), this backend offers non-persistent,
@@ -98,8 +103,9 @@ following functions in your code.
 
 ![Blackwell FNA performance sample](assets/blackwell-fna-perf.png){ width="80%" }
 /// caption
-Performance levels of Blackwell FNA as reported in
-[Generalized Neighborhood Attention (2025)](https://arxiv.org/abs/2504.16922).
+Performance levels of Blackwell FNA as of version `0.20.0` (also
+reported in
+[Generalized Neighborhood Attention (2025)](https://arxiv.org/abs/2504.16922)).
 ///
 
 Based on CUTLASS's
