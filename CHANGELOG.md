@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Main branch]
+* Bug in [modules](https://natten.org/modules) was fixed (see #228, #229).
 
 
 ## [0.20.0] - 2025-06-07
