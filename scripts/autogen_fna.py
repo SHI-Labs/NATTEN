@@ -893,8 +893,8 @@ def generate_cuda_kernels(path, num_splits=2):
 )
 @click.option(
     "--num-splits",
-    default=16,
-    help="Number of source files into which the kernels are split. Default: 16.",
+    default=128,
+    help="Number of source files into which the kernels are split. Default: 128.",
 )
 def generate_cuda_fused(output_directory: str, num_splits: int):
     generate_cuda_kernels(output_directory, num_splits=num_splits)

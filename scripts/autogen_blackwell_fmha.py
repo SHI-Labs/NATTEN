@@ -567,8 +567,8 @@ def generate_blackwell_fmha_kernels(path, num_splits=2):
 )
 @click.option(
     "--num-splits",
-    default=2,
-    help="Number of source files into which the kernels are split. Default: 2.",
+    default=1,
+    help="Number of source files into which the kernels are split. Default: 1.",
 )
 def generate_blackwell_fmha(output_directory: str, num_splits: int):
     generate_blackwell_fmha_kernels(output_directory, num_splits=num_splits)
