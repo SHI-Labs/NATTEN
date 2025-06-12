@@ -236,6 +236,7 @@ def idx2crd(index, shape) -> tuple:
 
 
 def get_na_flex_mask(
+    device: str,
     na_dim: int,
     num_heads: int,
     qkv_shape: DimensionType,
@@ -497,6 +498,7 @@ def get_na_flex_mask(
         KV_LEN=seq_length_kv,
         _compile=torch_compile,
         BLOCK_SIZE=(q_tile_size, kv_tile_size),
+        device=device,
     )
     flex_mask_end_time = time.perf_counter()
     flex_mask_time = flex_mask_end_time - flex_mask_start_time
@@ -598,7 +600,8 @@ def flex_fna_generic(
         value_ = value.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
 
     na_block_mask = get_na_flex_mask(
-        na_dim,
+        device=query.device.type,
+        na_dim=na_dim,
         num_heads=num_heads,
         qkv_shape=qkv_shape,
         kernel_size=kernel_size,

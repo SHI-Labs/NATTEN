@@ -43,7 +43,7 @@ class NeighborhoodAttentionGeneric(nn.Module):
     def __init__(
         self,
         na_dim: int,
-        dim: int,
+        embed_dim: int,
         num_heads: int,
         kernel_size: DimensionTypeOrDed,
         stride: DimensionTypeOrDed = 1,
@@ -58,27 +58,42 @@ class NeighborhoodAttentionGeneric(nn.Module):
             na_dim, kernel_size, stride, dilation, is_causal
         )
 
+        if embed_dim % num_heads != 0:
+            raise ValueError(
+                "Number of attention heads must evenly divide embedding dimension, "
+                f"got {embed_dim=}, {num_heads=}."
+            )
+
         self.na_dim = na_dim
+        self.embed_dim = embed_dim
         self.num_heads = num_heads
-        self.head_dim = dim // self.num_heads
+        self.head_dim = self.embed_dim // self.num_heads
         self.scale = qk_scale or self.head_dim**-0.5
         self.kernel_size = kernel_size
         self.stride = stride
         self.dilation = dilation
         self.is_causal = is_causal
 
-        self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
-        self.proj = nn.Linear(dim, dim)
+        self.expected_input_tensor_rank = self.na_dim + 2  # batch, embedding dim
+
+        self.qkv = nn.Linear(self.embed_dim, self.embed_dim * 3, bias=qkv_bias)
+        self.proj = nn.Linear(self.embed_dim, self.embed_dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x: Tensor) -> Tensor:
-        if x.dim() != self.na_dim + 3:
+        if x.dim() != self.expected_input_tensor_rank:
             raise ValueError(
-                f"NeighborhoodAttention{self.na_dim}D expected a rank-{self.na_dim + 3} input "
-                f"tensor; got {x.dim()=}."
+                f"NeighborhoodAttention{self.na_dim}D expected a tensor with rank "
+                f"{self.expected_input_tensor_rank} ({self.na_dim} for token layout, 1 for batch, "
+                f"1 for embedding dimension), got {x.dim()=}."
             )
 
         B, *input_shape, C = x.shape
+
+        if C != self.embed_dim:
+            raise ValueError(
+                f"Expected embedding dimension {self.embed_dim}, got {C} ({x.shape=})."
+            )
 
         # 3, batch, *input_shape, heads, head_dim
         permutation = (
@@ -123,9 +138,9 @@ class NeighborhoodAttention1D(NeighborhoodAttentionGeneric):
     Includes QKV and output linear projections.
 
     Args:
-        dim: Number of input latent dimensions (channels).
+        embed_dim: Embedding dimension size (a.k.a. number of channels, latent size).
             !!! note
-                This is not `head_dim`, but rather `head_dim * num_heads`.
+                This is not `head_dim`. It's `head_dim * num_heads`.
 
         num_heads: Number of attention heads.
 
@@ -157,11 +172,36 @@ class NeighborhoodAttention1D(NeighborhoodAttentionGeneric):
         qk_scale: Attention scale. Defaults to `head_dim ** -0.5`.
 
         proj_drop: Dropout score for projection layer. Defaults is `0.0` (no dropout).
+
+    Example:
+        ```python3
+        import torch
+        from natten import NeighborhoodAttention1D
+
+        num_heads = 4
+        head_dim = 128
+        embed_dim = num_heads * head_dim
+
+        model = NeighborhoodAttention1D(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            kernel_size=2048,
+            stride=2,
+            dilation=4,
+            is_causal=True
+        )
+
+        batch = 1
+        seqlen = 4096
+
+        x = torch.randn(batch, seqlen, embed_dim)
+        y = model(x)
+        ```
     """
 
     def __init__(
         self,
-        dim: int,
+        embed_dim: int,
         num_heads: int,
         kernel_size: Dimension1DTypeOrDed,
         stride: Dimension1DTypeOrDed = 1,
@@ -173,7 +213,7 @@ class NeighborhoodAttention1D(NeighborhoodAttentionGeneric):
     ):
         super().__init__(
             na_dim=1,
-            dim=dim,
+            embed_dim=embed_dim,
             num_heads=num_heads,
             kernel_size=kernel_size,
             stride=stride,
@@ -192,9 +232,9 @@ class NeighborhoodAttention2D(NeighborhoodAttentionGeneric):
     Includes QKV and output linear projections.
 
     Args:
-        dim: Number of input latent dimensions (channels).
+        embed_dim: Embedding dimension size (a.k.a. number of channels, latent size).
             !!! note
-                This is not `head_dim`, but rather `head_dim * num_heads`.
+                This is not `head_dim`. It's `head_dim * num_heads`.
 
         num_heads: Number of attention heads.
 
@@ -233,11 +273,39 @@ class NeighborhoodAttention2D(NeighborhoodAttentionGeneric):
         qk_scale: Attention scale. Defaults to `head_dim ** -0.5`.
 
         proj_drop: Dropout score for projection layer. Defaults is `0.0` (no dropout).
+
+    Example:
+        ```python3
+        import torch
+        from natten import NeighborhoodAttention2D
+
+        num_heads = 4
+        head_dim = 128
+        embed_dim = num_heads * head_dim
+
+        model = NeighborhoodAttention2D(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            kernel_size=(8, 16),
+            stride=(1, 2),
+            dilation=(2, 1),
+            is_causal=False
+        )
+
+        batch = 1
+        token_layout_shape = (16, 32)
+
+        x = torch.randn(batch, *token_layout_shape, embed_dim) # (1)!
+        y = model(x) # (2)!
+        ```
+
+        1. `x.shape == [1, 16, 32, 512]`
+        2. `y.shape == [1, 16, 32, 512]`
     """
 
     def __init__(
         self,
-        dim: int,
+        embed_dim: int,
         num_heads: int,
         kernel_size: Dimension2DTypeOrDed,
         stride: Dimension2DTypeOrDed = 1,
@@ -249,7 +317,7 @@ class NeighborhoodAttention2D(NeighborhoodAttentionGeneric):
     ):
         super().__init__(
             na_dim=2,
-            dim=dim,
+            embed_dim=embed_dim,
             num_heads=num_heads,
             kernel_size=kernel_size,
             stride=stride,
@@ -268,9 +336,9 @@ class NeighborhoodAttention3D(NeighborhoodAttentionGeneric):
     Includes QKV and output linear projections.
 
     Args:
-        dim: Number of input latent dimensions (channels).
+        embed_dim: Embedding dimension size (a.k.a. number of channels, latent size).
             !!! note
-                This is not `head_dim`, but rather `head_dim * num_heads`.
+                This is not `head_dim`. It's `head_dim * num_heads`.
 
         num_heads: Number of attention heads.
 
@@ -309,11 +377,39 @@ class NeighborhoodAttention3D(NeighborhoodAttentionGeneric):
         qk_scale: Attention scale. Defaults to `head_dim ** -0.5`.
 
         proj_drop: Dropout score for projection layer. Defaults is `0.0` (no dropout).
+
+    Example:
+        ```python3
+        import torch
+        from natten import NeighborhoodAttention3D
+
+        num_heads = 4
+        head_dim = 128
+        embed_dim = num_heads * head_dim
+
+        model = NeighborhoodAttention3D(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            kernel_size=(4, 8, 12),
+            stride=(1, 1, 4),
+            dilation=(1, 2, 1),
+            is_causal=(True, False, False)
+        )
+
+        batch = 1
+        token_layout_shape = (16, 16, 16)
+
+        x = torch.randn(batch, *token_layout_shape, embed_dim) # (1)!
+        y = model(x) # (2)!
+        ```
+
+        1. `x.shape == [1, 16, 16, 16, 512]`
+        2. `y.shape == [1, 16, 16, 16, 512]`
     """
 
     def __init__(
         self,
-        dim: int,
+        embed_dim: int,
         num_heads: int,
         kernel_size: Dimension3DTypeOrDed,
         stride: Dimension3DTypeOrDed = 1,
@@ -325,7 +421,7 @@ class NeighborhoodAttention3D(NeighborhoodAttentionGeneric):
     ):
         super().__init__(
             na_dim=3,
-            dim=dim,
+            embed_dim=embed_dim,
             num_heads=num_heads,
             kernel_size=kernel_size,
             stride=stride,
