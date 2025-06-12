@@ -81,7 +81,9 @@ def na_tensor_checks(
     value: Tensor,
     must_match_head_dims: bool = False,
     raise_error: bool = True,
+    backend_name: Optional[str] = None,
 ) -> bool:
+    backend_name = backend_name or "This operation/backend"
     if not _universal_tensor_checks(query, key, value):
         return False
 
@@ -111,12 +113,10 @@ def na_tensor_checks(
         )
         return False
 
-    if must_match_head_dims and (
-        query.shape != key.shape or query.shape != value.shape
-    ):
+    if must_match_head_dims and query.shape[-1] != value.shape[-1]:
         target_fn(
-            "This operation/backend expects Q, K, and V to have the same shape, "
-            f"got {query.shape=}, {key.shape=}, {value.shape=}.",
+            f"{backend_name} does not support different head dims for QK and V, got "
+            f"{query.shape[-1]=}, {value.shape[-1]=}.",
             exception=ValueError,
         )
         return False
@@ -130,7 +130,9 @@ def fmha_tensor_checks(
     value: Tensor,
     must_match_head_dims: bool = False,
     raise_error: bool = True,
+    backend_name: Optional[str] = None,
 ) -> bool:
+    backend_name = backend_name or "This operation/backend"
     if not _universal_tensor_checks(query, key, value):
         return False
 
@@ -160,7 +162,7 @@ def fmha_tensor_checks(
 
     if must_match_head_dims and query.shape[-1] != value.shape[-1]:
         target_fn(
-            "This operation/backend does not support different head dims for QK and V, got "
+            f"{backend_name} does not support different head dims for QK and V, got "
             f"{query.shape[-1]=}, {value.shape[-1]=}.",
             exception=ValueError,
         )
