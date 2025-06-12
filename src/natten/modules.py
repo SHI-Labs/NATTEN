@@ -135,7 +135,7 @@ class NeighborhoodAttention1D(NeighborhoodAttentionGeneric):
     """
     1-D Neighborhood Attention torch module.
 
-    Includes QKV and output linear projections.
+    Performs QKV and output linear projections in addition to the [na1d][natten.na1d] operation.
 
     Args:
         embed_dim: Embedding dimension size (a.k.a. number of channels, latent size).
@@ -229,7 +229,7 @@ class NeighborhoodAttention2D(NeighborhoodAttentionGeneric):
     """
     2-D Neighborhood Attention torch module.
 
-    Includes QKV and output linear projections.
+    Performs QKV and output linear projections in addition to the [na2d][natten.na2d] operation.
 
     Args:
         embed_dim: Embedding dimension size (a.k.a. number of channels, latent size).
@@ -293,14 +293,19 @@ class NeighborhoodAttention2D(NeighborhoodAttentionGeneric):
         )
 
         batch = 1
-        token_layout_shape = (16, 32)
+        token_layout_shape = (16, 32) # (1)!
 
-        x = torch.randn(batch, *token_layout_shape, embed_dim) # (1)!
-        y = model(x) # (2)!
+        x = torch.randn(batch, *token_layout_shape, embed_dim) # (2)!
+        y = model(x) # (3)!
         ```
 
-        1. `x.shape == [1, 16, 32, 512]`
-        2. `y.shape == [1, 16, 32, 512]`
+        1. Tokens are arranged in a 16 x 32 layout, to which we apply a
+            kernel size of 8 x 16,
+            stride 1 x 2,
+            and dilation 2 x 1.
+
+        2. `x.shape == [1, 16, 32, 512]`
+        3. `y.shape == [1, 16, 32, 512]`
     """
 
     def __init__(
@@ -333,7 +338,7 @@ class NeighborhoodAttention3D(NeighborhoodAttentionGeneric):
     """
     3-D Neighborhood Attention torch module.
 
-    Includes QKV and output linear projections.
+    Performs QKV and output linear projections in addition to the [na3d][natten.na3d] operation.
 
     Args:
         embed_dim: Embedding dimension size (a.k.a. number of channels, latent size).
@@ -397,14 +402,19 @@ class NeighborhoodAttention3D(NeighborhoodAttentionGeneric):
         )
 
         batch = 1
-        token_layout_shape = (16, 16, 16)
+        token_layout_shape = (12, 16, 20) # (1)!
 
-        x = torch.randn(batch, *token_layout_shape, embed_dim) # (1)!
-        y = model(x) # (2)!
+        x = torch.randn(batch, *token_layout_shape, embed_dim) # (2)!
+        y = model(x) # (3)!
         ```
 
-        1. `x.shape == [1, 16, 16, 16, 512]`
-        2. `y.shape == [1, 16, 16, 16, 512]`
+        1. Tokens are arranged in a 12 x 16 x 20 layout, to which we apply a
+            kernel size of 4 x 8 x 12,
+            stride 1 x 1 x 4,
+            dilation 1 x 2 x 1, and apply causal masking to the left-most dimension (12).
+
+        2. `x.shape == [1, 12, 16, 20, 512]`
+        3. `y.shape == [1, 12, 16, 20, 512]`
     """
 
     def __init__(
