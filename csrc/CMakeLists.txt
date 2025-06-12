@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(natten LANGUAGES CXX CUDA)
 
-find_package(CUDA 12.0 REQUIRED)
+find_package(CUDAToolkit 12.0 REQUIRED)
 set(CXX_STD "17" CACHE STRING "C++ standard")
 
 
