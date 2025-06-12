@@ -22,12 +22,12 @@
 #
 #################################################################################################
 
-import tempfile
 import multiprocessing
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from os import path
 from pathlib import Path
 from typing import Any, List
@@ -193,7 +193,9 @@ class BuildExtension(build_ext):
             cuda_arch_list_str = arch_list_to_cmake_tags(cuda_arch_list)
             max_sm = max(cuda_arch_list)
 
-            print(f"Building NATTEN for the following archs: {cuda_arch_list} (max: {max_sm})")
+            print(
+                f"Building NATTEN for the following archs: {cuda_arch_list} (max: {max_sm})"
+            )
             print(f"Building with {N_WORKERS} workers.")
             print(f"Build directory: {build_dir}")
 
