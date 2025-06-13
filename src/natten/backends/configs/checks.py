@@ -39,22 +39,27 @@ from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
 def can_run_cutlass_blackwell_fmha(
     query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
 ) -> bool:
-    if not fmha_tensor_checks(
-        query, key, value, must_match_head_dims=True, raise_error=raise_error
-    ):
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run Blackwell FMHA; NATTEN was not built with libnatten.")
         return False
 
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+    if not fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        raise_error=raise_error,
+        backend_name="Blackwell FMHA",
+    ):
+        return False
 
     if query.dim() != 4:
         target_fn(
             f"Blackwell FMHA expects rank-4 input tensors, got {query.shape=}.",
             exception=ValueError,
         )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Blackwell FMHA; NATTEN was not built with libnatten.")
         return False
 
     if not is_cuda(query.device):
@@ -108,12 +113,21 @@ def can_run_cutlass_blackwell_fmha(
 def can_run_cutlass_blackwell_fna(
     query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
 ) -> bool:
-    if not na_tensor_checks(
-        query, key, value, must_match_head_dims=True, raise_error=raise_error
-    ):
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run Blackwell FNA; NATTEN was not built with libnatten.")
         return False
 
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+    if not na_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        raise_error=raise_error,
+        backend_name="Blackwell FNA",
+    ):
+        return False
 
     if query.dim() not in [4, 5, 6]:
         target_fn(
@@ -121,10 +135,6 @@ def can_run_cutlass_blackwell_fna(
             f"got {query.dim()=}.",
             exception=ValueError,
         )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Blackwell FNA; NATTEN was not built with libnatten.")
         return False
 
     if not is_cuda(query.device):
@@ -181,22 +191,27 @@ def can_run_cutlass_blackwell_fna(
 def can_run_cutlass_hopper_fmha(
     query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
 ) -> bool:
-    if not fmha_tensor_checks(
-        query, key, value, must_match_head_dims=True, raise_error=raise_error
-    ):
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run Hopper FMHA; NATTEN was not built with libnatten.")
         return False
 
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+    if not fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        raise_error=raise_error,
+        backend_name="Hopper FMHA",
+    ):
+        return False
 
     if query.dim() != 4:
         target_fn(
             f"Hopper FMHA expects rank-4 input tensors, got {query.shape=}.",
             exception=ValueError,
         )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Hopper FMHA; NATTEN was not built with libnatten.")
         return False
 
     if not is_cuda(query.device):
@@ -250,12 +265,21 @@ def can_run_cutlass_hopper_fmha(
 def can_run_cutlass_hopper_fna(
     query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
 ) -> bool:
-    if not na_tensor_checks(
-        query, key, value, must_match_head_dims=True, raise_error=raise_error
-    ):
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run Hopper FNA; NATTEN was not built with libnatten.")
         return False
 
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+    if not na_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        raise_error=raise_error,
+        backend_name="Hopper FNA",
+    ):
+        return False
 
     if query.dim() not in [4, 5, 6]:
         target_fn(
@@ -263,10 +287,6 @@ def can_run_cutlass_hopper_fna(
             f"got {query.dim()=}.",
             exception=ValueError,
         )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run Hopper FNA; NATTEN was not built with libnatten.")
         return False
 
     if not is_cuda(query.device):
@@ -323,22 +343,27 @@ def can_run_cutlass_hopper_fna(
 def can_run_cutlass_fmha(
     query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
 ) -> bool:
-    if not fmha_tensor_checks(
-        query, key, value, must_match_head_dims=False, raise_error=raise_error
-    ):
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run CUTLASS FMHA; NATTEN was not built with libnatten.")
         return False
 
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+    if not fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=False,
+        raise_error=raise_error,
+        backend_name="CUTLASS FMHA",
+    ):
+        return False
 
     if query.dim() != 4:
         target_fn(
             f"FMHA expects rank-4 input tensors, got {query.shape=}.",
             exception=ValueError,
         )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run CUTLASS FMHA; NATTEN was not built with libnatten.")
         return False
 
     if not is_cuda(query.device):
@@ -393,12 +418,21 @@ def can_run_cutlass_fmha(
 def can_run_cutlass_fna(
     query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
 ) -> bool:
-    if not na_tensor_checks(
-        query, key, value, must_match_head_dims=False, raise_error=raise_error
-    ):
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run CUTLASS FNA; NATTEN was not built with libnatten.")
         return False
 
-    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+    if not na_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=False,
+        raise_error=raise_error,
+        backend_name="CUTLASS FNA",
+    ):
+        return False
 
     if query.dim() not in [4, 5, 6]:
         target_fn(
@@ -406,10 +440,6 @@ def can_run_cutlass_fna(
             f"got {query.dim()=}.",
             exception=ValueError,
         )
-        return False
-
-    if not HAS_LIBNATTEN:
-        target_fn("Can't run CUTLASS FNA; NATTEN was not built with libnatten.")
         return False
 
     if not is_cuda(query.device):
@@ -475,18 +505,6 @@ def can_run_flex_attention(
     torch_compile: bool,
     raise_error: bool = False,
 ) -> bool:
-    # TODO: can we just have different checks for FMHA vs FNA, like the rest of the backends?
-    if query.dim() == 4 and key.dim() == 4 and query.shape[1] != key.shape[1]:
-        supported = fmha_tensor_checks(
-            query, key, value, must_match_head_dims=True, raise_error=raise_error
-        )
-    else:
-        supported = na_tensor_checks(
-            query, key, value, must_match_head_dims=True, raise_error=raise_error
-        )
-    if not supported:
-        return False
-
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
     if not _FLEX_SUPPORTED:
@@ -518,6 +536,28 @@ def can_run_flex_attention(
             "  from natten import allow_flex_compile_backprop\n"
             "  allow_flex_compile_backprop()\n"
         )
+        return False
+
+    # TODO: can we just have different checks for FMHA vs FNA, like the rest of the backends?
+    if query.dim() == 4 and key.dim() == 4 and query.shape[1] != key.shape[1]:
+        supported = fmha_tensor_checks(
+            query,
+            key,
+            value,
+            must_match_head_dims=True,
+            raise_error=raise_error,
+            backend_name="Flex FMHA",
+        )
+    else:
+        supported = na_tensor_checks(
+            query,
+            key,
+            value,
+            must_match_head_dims=True,
+            raise_error=raise_error,
+            backend_name="Flex FMHA/FNA",
+        )
+    if not supported:
         return False
 
     if query.dim() not in [4, 5, 6]:

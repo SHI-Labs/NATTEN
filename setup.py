@@ -27,6 +27,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from os import path
 from pathlib import Path
 from typing import Any, List
@@ -52,17 +53,21 @@ assert torch_ver >= [2, 5], "NATTEN only supports PyTorch >= 2.5"
 
 CUDA_ARCH = os.getenv("NATTEN_CUDA_ARCH", "")
 HAS_CUDA_ARCH = CUDA_ARCH != ""
-NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", 0))
 
-NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", None)
+NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", "0") == "1")
+
+VERBOSE = bool(os.getenv("NATTEN_VERBOSE", "0") == "1")
+
+tmp_dir = tempfile.TemporaryDirectory()
+NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", tmp_dir.name)
+if not os.path.isdir(NATTEN_BUILD_DIR):
+    NATTEN_BUILD_DIR = tmp_dir.name
 
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
-N_WORKERS = str(os.environ.get("NATTEN_N_WORKERS", DEFAULT_N_WORKERS)).strip()
-# In case the env variable is set, but to an empty string
-if N_WORKERS == "":
-    N_WORKERS = str(DEFAULT_N_WORKERS)
-
-VERBOSE = os.environ.get("NATTEN_VERBOSE", 0)
+try:
+    N_WORKERS = int(os.getenv("NATTEN_N_WORKERS", DEFAULT_N_WORKERS))
+except:
+    N_WORKERS = int(DEFAULT_N_WORKERS)
 
 if not HAS_CUDA_ARCH:
     HAS_CUDA = torch.cuda.is_available()
@@ -165,6 +170,8 @@ class BuildExtension(build_ext):
     def build_extension(self, ext):
         if BUILD_WITH_CUDA:
             # Hack so that we can build somewhere other than /tmp in development mode.
+            # Also because we want CMake to build everything elsewhere, otherwise pypi will package
+            # build files.
             build_dir = self.build_lib if NATTEN_BUILD_DIR is None else NATTEN_BUILD_DIR
 
             this_dir = path.dirname(path.abspath(__file__))
@@ -189,7 +196,12 @@ class BuildExtension(build_ext):
             cuda_arch_list_str = arch_list_to_cmake_tags(cuda_arch_list)
             max_sm = max(cuda_arch_list)
 
-            print(f"Current arch list: {cuda_arch_list} (max: {max_sm})")
+            print(
+                f"Building NATTEN for the following archs: {cuda_arch_list} (max: {max_sm})"
+            )
+            print(f"Building with {N_WORKERS} workers.")
+            print(f"Build directory: {build_dir}")
+            print(f"{IS_LIBTORCH_BUILT_WITH_CXX11_ABI=}")
 
             cmake_args = [
                 f"-DPYTHON_PATH={sys.executable}",
@@ -245,7 +257,7 @@ class BuildExtension(build_ext):
                 "--build",
                 build_dir,
                 "-j",
-                N_WORKERS,
+                str(N_WORKERS),
             ]
             if VERBOSE:
                 cmake_build_args.append("--verbose")

@@ -21,6 +21,7 @@
 #
 #################################################################################################
 
+import time
 from typing import List, Optional, Tuple
 
 import torch
@@ -39,10 +40,9 @@ from .problem import Problem
 
 logger = log.get_logger(__name__)
 
-torch_device = "cuda" if torch.cuda.is_available() else "cpu"
-profiler_activity_tag = (
-    ProfilerActivity.CUDA if torch.cuda.is_available() else ProfilerActivity.CPU
-)
+IS_CUDA = torch.cuda.is_available()
+torch_device = "cuda" if IS_CUDA else "cpu"
+profiler_activity_tag = ProfilerActivity.CUDA if IS_CUDA else ProfilerActivity.CPU
 
 
 def init_tensors(
@@ -200,9 +200,12 @@ def measure_natten_runtime(
             else (additional_kv[0].clone(), additional_kv[1].clone())
         )
 
-    start_event = torch.cuda.Event(enable_timing=True)
-    end_event = torch.cuda.Event(enable_timing=True)
-    start_event.record()
+    if IS_CUDA:
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        start_event.record()
+    else:
+        start_time = time.time()
 
     run_ops(
         q,
@@ -217,9 +220,12 @@ def measure_natten_runtime(
         add_kv,
     )
 
-    end_event.record()
-    torch.cuda.synchronize()
-    elapsed_time_ms = start_event.elapsed_time(end_event)
+    if IS_CUDA:
+        end_event.record()
+        torch.cuda.synchronize()
+        elapsed_time_ms = start_event.elapsed_time(end_event)
+    else:
+        elapsed_time_ms = (time.time() - start_time) * 1e3
 
     return elapsed_time_ms
 
@@ -274,7 +280,8 @@ def _profile_na_with_torch(
         disable_backward,
         additional_kv,
     ):
-        torch.cuda.synchronize()
+        if IS_CUDA:
+            torch.cuda.synchronize()
         query.requires_grad = not disable_backward
         key.requires_grad = not disable_backward
         value.requires_grad = not disable_backward
@@ -316,10 +323,12 @@ def _profile_na_with_torch(
             },
         )
 
-        torch.cuda.synchronize()
+        if IS_CUDA:
+            torch.cuda.synchronize()
         if not disable_backward:
             out.backward(d_out)
-            torch.cuda.synchronize()
+            if IS_CUDA:
+                torch.cuda.synchronize()
 
     for _ in range(warmup_steps):
         with torch.no_grad():
@@ -425,9 +434,7 @@ def profile_na_with_torch(
     )
 
     if debug_report_prof_result:
-        logger.debug(
-            profile_result.key_averages().table(sort_by="self_cuda_time_total")
-        )
+        logger.debug(profile_result.key_averages().table())
 
     out = convert_to_natten_profiler_ops(profile_result)
     assert out is not None
@@ -500,9 +507,7 @@ def profile_fmha_with_torch(
     )
 
     if debug_report_prof_result:
-        logger.debug(
-            profile_result.key_averages().table(sort_by="self_cuda_time_total")
-        )
+        logger.debug(profile_result.key_averages().table())
 
     out = convert_to_natten_profiler_ops(profile_result)
     assert out is not None

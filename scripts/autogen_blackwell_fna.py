@@ -792,8 +792,8 @@ def generate_blackwell_fna_kernels(path, num_splits=2):
 )
 @click.option(
     "--num-splits",
-    default=16,
-    help="Number of source files into which the kernels are split. Default: 16.",
+    default=56,
+    help="Number of source files into which the kernels are split. Default: 56.",
 )
 def generate_blackwell_fna(output_directory: str, num_splits: int):
     generate_blackwell_fna_kernels(output_directory, num_splits=num_splits)

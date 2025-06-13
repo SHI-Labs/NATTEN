@@ -9,7 +9,8 @@ We offer torch modules as well for easy integration into your neural network:
           show_signature: true
           separate_signature: true
           show_bases: false
-          show_object_full_path: true
+          show_object_full_path: false
+          show_root_members_full_path: true
           members:
               - NeighborhoodAttention1D
               - NeighborhoodAttention2D
