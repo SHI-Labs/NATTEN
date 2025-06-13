@@ -36,7 +36,7 @@ _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
 # _IS_TORCH_DYNAMO_SUPPORTED = [sys.version_info[0], sys.version_info[1]] < [3, 12]
 _IS_TORCH_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 6]
 
-_RUN_EXTENDED_TESTS = bool(int(os.getenv("NATTEN_RUN_EXTENDED_TESTS", "0")))
+_RUN_EXTENDED_TESTS = bool(os.getenv("NATTEN_RUN_EXTENDED_TESTS", "0") == "1")
 
 # Profiler only
-DISABLE_TQDM = bool(int(os.getenv("NATTEN_DISABLE_TQDM", "0")))
+DISABLE_TQDM = bool(os.getenv("NATTEN_DISABLE_TQDM", "0") == "1")
