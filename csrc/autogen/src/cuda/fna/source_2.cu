@@ -2067,7 +2067,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x32_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 32, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2088,7 +2088,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x32_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 32, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2109,7 +2109,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x32_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 32, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2130,7 +2130,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x64_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 64, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2151,7 +2151,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x64_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 64, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2172,7 +2172,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x64_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 64, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2193,7 +2193,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x128_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 128, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2214,7 +2214,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x128_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 128, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2235,7 +2235,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x128_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 128, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2256,7 +2256,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x65536_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 65536, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2277,7 +2277,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x65536_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 65536, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2298,7 +2298,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x65536_sm80_float32_cm_0(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 65536, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2323,7 +2323,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x32_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 32, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2344,7 +2344,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x32_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 32, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2365,7 +2365,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x32_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 32, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2386,7 +2386,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x64_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 64, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2407,7 +2407,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x64_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 64, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2428,7 +2428,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x64_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 64, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2449,7 +2449,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x128_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 128, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2470,7 +2470,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x128_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 128, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2491,7 +2491,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x128_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 128, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2512,7 +2512,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x65536_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 65536, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2533,7 +2533,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x65536_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 65536, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2554,7 +2554,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x65536_sm80_float32_cm_0_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 65536, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2579,7 +2579,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x32_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 32, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2600,7 +2600,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x32_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 32, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2621,7 +2621,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x32_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 32, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2642,7 +2642,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x64_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 64, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2663,7 +2663,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x64_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 64, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2684,7 +2684,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x64_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 64, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2705,7 +2705,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x128_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 128, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2726,7 +2726,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x128_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 128, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2747,7 +2747,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x128_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 128, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2768,7 +2768,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x65536_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 65536, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2789,7 +2789,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x65536_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 65536, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2810,7 +2810,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x65536_sm80_float32_cm_0_rpb(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 65536, true, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2835,7 +2835,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x32_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 32, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2856,7 +2856,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x32_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 32, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2877,7 +2877,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x32_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 32, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2898,7 +2898,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x64_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 64, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2919,7 +2919,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x64_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 64, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2940,7 +2940,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x64_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 64, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2961,7 +2961,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x128_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 128, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -2982,7 +2982,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x128_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 128, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3003,7 +3003,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x128_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 128, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3024,7 +3024,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x65536_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 32, 128, 65536, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3045,7 +3045,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x65536_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 128, 65536, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3066,7 +3066,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x65536_sm80_float32_cm_0_rpb_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<false>, float, cutlass::arch::Sm80, true, 64, 64, 65536, true, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3091,7 +3091,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x32_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 32, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3112,7 +3112,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x32_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 32, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3133,7 +3133,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x32_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 32, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3154,7 +3154,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x64_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 64, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3175,7 +3175,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x64_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 64, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3196,7 +3196,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x64_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 64, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3217,7 +3217,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x128_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 128, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3238,7 +3238,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x128_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 128, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3259,7 +3259,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x128_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 128, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3280,7 +3280,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x65536_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 65536, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3301,7 +3301,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x65536_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 65536, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3322,7 +3322,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x65536_sm80_float32_cm_1(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 65536, false, false>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3347,7 +3347,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x32_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 32, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3368,7 +3368,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x32_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 32, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3389,7 +3389,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x32_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 32, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3410,7 +3410,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x64_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 64, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3431,7 +3431,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x64_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 64, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3452,7 +3452,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x64_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 64, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3473,7 +3473,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x128_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 128, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3494,7 +3494,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x128_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 128, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3515,7 +3515,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x128_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 128, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3536,7 +3536,7 @@ __global__ void __launch_bounds__(
 fna1d_32x128x65536_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 32, 128, 65536, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3557,7 +3557,7 @@ __global__ void __launch_bounds__(
 fna1d_64x128x65536_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 128, 65536, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
@@ -3578,7 +3578,7 @@ __global__ void __launch_bounds__(
 fna1d_64x64x65536_sm80_float32_cm_1_lse(typename FusedNeighborhoodAttentionKernel<1, CausalMask<true>, float, cutlass::arch::Sm80, true, 64, 64, 65536, false, true>::Params p) {
 #ifdef __CUDA_ARCH__
 #if __CUDA_ARCH__ >= 800
-#if __CUDA_ARCH__ < 1000
+#if __CUDA_ARCH__ < 1300
   if (!p.advance_to_block()) {
     return;
   }
