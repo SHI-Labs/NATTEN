@@ -57,6 +57,7 @@ uninstall:
 
 install-dev: 
 	@echo "Installing NATTEN from source; development mode (editable)"
+	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
 	NATTEN_VERBOSE="${VERBOSE}" \
@@ -65,6 +66,7 @@ install-dev:
 
 install: 
 	@echo "Installing NATTEN from source"
+	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
 	NATTEN_VERBOSE="${VERBOSE}" \
