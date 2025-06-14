@@ -332,10 +332,41 @@ If `True`, you're good to go. If `False`, it could mean either you didn't instal
 
 ## Older NATTEN builds
 We highly recommend using the latest NATTEN builds, but if you need to install older NATTEN
-versions, you can install them via PyPI. We only offer wheels for the `0.17.5` release, and earlier
-releases will have to [compile locally](#natten-via-pypi).
+versions, you can install them via [PyPI](https://pypi.org/project/natten/).
+We only offer wheels for the `0.20.0` and `0.17.5` releases. Earlier releases will have to be
+[compiled locally](#natten-via-pypi).
+
+#### `0.20.0`
+Released on 2025-06-07.
+[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0200---2025-06-07).
+
+??? pip-install "`torch==2.7.0+cu128`"
+
+    ```python
+    pip install natten==0.20.0+torch270cu128 -f https://whl.natten.org
+    ```
+
+??? pip-install "`torch==2.7.0+cu126`"
+    ```python
+    pip install natten==0.20.0+torch270cu126 -f https://whl.natten.org
+    ```
+
+    !!! warning 
+        Blackwell FNA/FMHA kernels are not available in this build. Blackwell support was
+        introduced in CUDA Toolkit 12.8.
+
+??? pip-install "Compile locally (custom torch build)"
+
+    ```python
+    pip install natten==0.20.0
+    ```
+
+    Refer to [NATTEN via PyPI](#natten-via-pypi) for more details.
+
 
 #### `0.17.5`
+Released on 2025-03-20.
+[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0175---2025-03-20).
 
 !!! warning 
     Wheels will be phased out and removed in the coming months. We strongly recommend upgrading to
@@ -376,6 +407,14 @@ releases will have to [compile locally](#natten-via-pypi).
     ```python
     pip install natten==0.17.5+torch260cpu -f https://whl.natten.org
     ```
+
+??? pip-install "Compile locally (custom torch build)"
+
+    ```python
+    pip install natten==0.17.5
+    ```
+
+    Refer to [NATTEN via PyPI](#natten-via-pypi) for more details.
 
 #### < `0.17.5`
 Refer to our release index on [PyPI](https://pypi.org/project/natten/#history).
