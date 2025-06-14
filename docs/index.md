@@ -90,12 +90,12 @@ attention span in any dimension/axis of your input can be controlled with its re
 NATTEN supports PyTorch >= 2.7, and Python >= 3.9 (everything PyTorch supports).
 Please refer to [install instructions](install.md) for details on how to install NATTEN.
 
-### :fire: Release `0.20.0`
+### :fire: Release `0.20.1`
 
 NATTEN has undergone major changes since the last release (`0.17.5`), so we strongly recommend
 reading our new updated documentation in this webpage before upgrading.
 
-The new release adds our [Hopper FNA](backends.md#hopper-fna-fmha) and
+Our latest release ships our [Hopper FNA](backends.md#hopper-fna-fmha) and
 [Blackwell FNA](backends.md#blackwell-fna-fmha) kernels, bringing you
 [massive speedups](profiler.md#hopper-and-blackwell-examples) on
 modern data center class NVIDIA GPUs such as the H100 and B200.

@@ -29,7 +29,7 @@ fetch-submodules:
 	git submodule update --init --recursive
 
 build-wheels:
-	./dev/packaging/build_all_wheels_parallel.sh
+	./scripts/packaging/build_all_wheels_parallel.sh
 
 build-dist:
 	@echo "Generating source dist"
