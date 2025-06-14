@@ -93,6 +93,10 @@ check_one 0.17.5 cpu   2.5.0 $URL_PREFIX
 check_one 0.20.0 cu128 2.7.0 $URL_PREFIX
 check_one 0.20.0 cu126 2.7.0 $URL_PREFIX
 
+# v0.20.1
+check_one 0.20.1 cu128 2.7.0 $URL_PREFIX
+check_one 0.20.1 cu126 2.7.0 $URL_PREFIX
+
 ##################################
 ##################################
 ##################################
