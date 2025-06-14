@@ -23,7 +23,7 @@ namespace fna {
     else if (cc < 80 && cc >= 75) { \
       DISPATCH_FNA_FORWARD_1D_SM75(dtype, is_causal, has_rpb, computes_lse, cb); \
     } \
-    else if (cc < 100 && cc >= 80) { \
+    else if (cc < 130 && cc >= 80) { \
       DISPATCH_FNA_FORWARD_1D_SM80(dtype, is_causal, has_rpb, computes_lse, cb); \
     } \
     else { \
@@ -45,7 +45,7 @@ namespace fna {
     else if (cc < 80 && cc >= 75) { \
       DISPATCH_FNA_FORWARD_2D_SM75(dtype, is_causal, has_rpb, computes_lse, cb); \
     } \
-    else if (cc < 100 && cc >= 80) { \
+    else if (cc < 130 && cc >= 80) { \
       DISPATCH_FNA_FORWARD_2D_SM80(dtype, is_causal, has_rpb, computes_lse, cb); \
     } \
     else { \
@@ -67,7 +67,7 @@ namespace fna {
     else if (cc < 80 && cc >= 75) { \
       DISPATCH_FNA_FORWARD_3D_SM75(dtype, is_causal, has_rpb, computes_lse, cb); \
     } \
-    else if (cc < 100 && cc >= 80) { \
+    else if (cc < 130 && cc >= 80) { \
       DISPATCH_FNA_FORWARD_3D_SM80(dtype, is_causal, has_rpb, computes_lse, cb); \
     } \
     else { \
@@ -89,7 +89,7 @@ namespace fna {
     else if (cc < 80 && cc >= 75) { \
       DISPATCH_FNA_BACKWARD_1D_SM75(dtype, is_causal, cb); \
     } \
-    else if (cc < 100 && cc >= 80) { \
+    else if (cc < 130 && cc >= 80) { \
       DISPATCH_FNA_BACKWARD_1D_SM80(dtype, is_causal, cb); \
     } \
     else { \
@@ -111,7 +111,7 @@ namespace fna {
     else if (cc < 80 && cc >= 75) { \
       DISPATCH_FNA_BACKWARD_2D_SM75(dtype, is_causal, cb); \
     } \
-    else if (cc < 100 && cc >= 80) { \
+    else if (cc < 130 && cc >= 80) { \
       DISPATCH_FNA_BACKWARD_2D_SM80(dtype, is_causal, cb); \
     } \
     else { \
@@ -133,7 +133,7 @@ namespace fna {
     else if (cc < 80 && cc >= 75) { \
       DISPATCH_FNA_BACKWARD_3D_SM75(dtype, is_causal, cb); \
     } \
-    else if (cc < 100 && cc >= 80) { \
+    else if (cc < 130 && cc >= 80) { \
       DISPATCH_FNA_BACKWARD_3D_SM80(dtype, is_causal, cb); \
     } \
     else { \
