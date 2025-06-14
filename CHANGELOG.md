@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Main branch]
+
+
+## [0.20.1] - 2025-06-14
 * Bugs in [modules](https://natten.org/modules) were fixed (see
     [#228](https://github.com/SHI-Labs/NATTEN/issues/228),
     [#229](https://github.com/SHI-Labs/NATTEN/pull/229)),

@@ -192,11 +192,17 @@ class NeighborhoodAttention1D(NeighborhoodAttentionGeneric):
         )
 
         batch = 1
-        seqlen = 4096
+        seqlen = 4096 # (1)!
 
-        x = torch.randn(batch, seqlen, embed_dim)
-        y = model(x)
+        x = torch.randn(batch, seqlen, embed_dim) # (2)!
+        y = model(x) # (3)!
         ```
+
+        1. Tokens are arranged in a sequential layout of size 4096, to which we apply a
+            kernel size of 2048, stride 2, dilation 4, and apply causal masking.
+
+        2. `x.shape == [1, 4096, 512]`
+        3. `y.shape == [1, 4096, 512]`
     """
 
     def __init__(
