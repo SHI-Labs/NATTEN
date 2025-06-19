@@ -198,9 +198,9 @@ def flex_fmha(
     seqlen_kv = key.shape[1]
 
     # Flex and torch attention use heads first layout
-    query_ = query.view(batch_size, seqlen_q, num_heads, head_dim).transpose(1, 2)
-    key_ = key.view(batch_size, seqlen_kv, num_heads, head_dim).transpose(1, 2)
-    value_ = value.view(batch_size, seqlen_kv, num_heads, head_dim).transpose(1, 2)
+    query_ = query.reshape(batch_size, seqlen_q, num_heads, head_dim).transpose(1, 2)
+    key_ = key.reshape(batch_size, seqlen_kv, num_heads, head_dim).transpose(1, 2)
+    value_ = value.reshape(batch_size, seqlen_kv, num_heads, head_dim).transpose(1, 2)
 
     out_, lse_ = run_flex_attn(
         query_,
@@ -213,8 +213,8 @@ def flex_fmha(
         kv_tile_size=kv_tile_size,
     )
 
-    out = out_.transpose(1, 2).view(batch_size, seqlen_q, num_heads, head_dim)
-    lse = lse_.transpose(1, 2).view(batch_size, seqlen_q, num_heads)
+    out = out_.transpose(1, 2).reshape(batch_size, seqlen_q, num_heads, head_dim)
+    lse = lse_.transpose(1, 2).reshape(batch_size, seqlen_q, num_heads)
 
     if return_lse:
         return out, lse
@@ -595,9 +595,9 @@ def flex_fna_generic(
     else:
         seqlen = math.prod(qkv_shape)
         # Flex uses heads first layout
-        query_ = query.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
-        key_ = key.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
-        value_ = value.view(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+        query_ = query.reshape(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+        key_ = key.reshape(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+        value_ = value.reshape(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
 
     na_block_mask = get_na_flex_mask(
         device=query.device.type,
@@ -643,8 +643,8 @@ def flex_fna_generic(
             padding,
         ).squeeze(-1)
     else:
-        out = out_.transpose(1, 2).view(batch_size, *qkv_shape, num_heads, head_dim)
-        lse = lse_.transpose(1, 2).view(batch_size, *qkv_shape, num_heads)
+        out = out_.transpose(1, 2).reshape(batch_size, *qkv_shape, num_heads, head_dim)
+        lse = lse_.transpose(1, 2).reshape(batch_size, *qkv_shape, num_heads)
 
     if return_lse:
         return out, lse
