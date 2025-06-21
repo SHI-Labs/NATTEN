@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+* Allow head dims 8 and 16 in Flex backend (without compilation only)
+* Minor bug fixes in Flex wrapper / backend.
 
 
 ## [0.20.1] - 2025-06-14

@@ -617,10 +617,22 @@ def can_run_flex_attention(
         )
         return False
 
-    if head_dim < 32 or head_dim > 512 or not math.log2(head_dim).is_integer():
+    if torch_compile and (
+        head_dim < 32 or head_dim > 512 or not math.log2(head_dim).is_integer()
+    ):
         target_fn(
-            "Can't run NATTEN with Flex Attention; we only support 32 <= head dims <= 512 that are "
-            f"powers of two, got {head_dim}.",
+            "Can't run NATTEN with Flex Attention (compiled); we only allow 32 <= head_dim <= 512 "
+            f"and only powers of two, got {head_dim}.",
+            exception=ValueError,
+        )
+        return False
+
+    if not torch_compile and (
+        head_dim < 8 or head_dim > 512 or not math.log2(head_dim).is_integer()
+    ):
+        target_fn(
+            "Can't run NATTEN with Flex Attention (not compiled); we only allow 8 <= head_dim <= 512 "
+            f"and only powers of two, got {head_dim}.",
             exception=ValueError,
         )
         return False
