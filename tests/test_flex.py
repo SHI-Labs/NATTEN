@@ -246,11 +246,11 @@ class FlexBackendTest(unittest.TestCase):
     @skip_if_flex_is_not_supported()
     def test_1d_against_cutlass_2x(self):
         problem_sizes = [
-            (1, 1, 32, (128,), (3,), (2,), (5)),
-            (1, 1, 32, (128,), (8,), (7,), (5)),
+            (1, 1, 8, (128,), (3,), (2,), (5)),
+            (1, 1, 16, (128,), (8,), (7,), (5)),
             (1, 1, 32, (125,), (3,), (1,), (1)),
-            (1, 2, 32, (125,), (15,), (1,), (1)),
-            (1, 1, 32, (256,), (3,), (2,), (10)),
+            (1, 2, 8, (125,), (15,), (1,), (1)),
+            (1, 1, 64, (256,), (3,), (2,), (10)),
         ]
         for (
             batch,
@@ -320,9 +320,9 @@ class FlexBackendTest(unittest.TestCase):
     @skip_if_flex_is_not_supported()
     def test_2d_against_cutlass_2x(self):
         problem_sizes = [
-            (1, 1, 32, (84, 69), (7, 20), (1, 6), (5, 1)),
-            (1, 1, 128, (19, 29), (8, 8), (1, 1), (2, 3)),
-            (1, 1, 32, (128, 128), (19, 24), (2, 3), (2, 2)),
+            (1, 1, 8, (84, 69), (7, 20), (1, 6), (5, 1)),
+            (1, 1, 32, (19, 29), (8, 8), (1, 1), (2, 3)),
+            (1, 1, 16, (128, 128), (19, 24), (2, 3), (2, 2)),
             (1, 1, 64, (56, 56), (17, 4), (2, 1), (3, 2)),
             (2, 2, 64, (32, 64), (25, 31), (10, 20), (1, 2)),
             (2, 4, 64, (64, 128), (21, 29), (10, 12), (3, 4)),
@@ -515,8 +515,8 @@ class FlexBackendTest(unittest.TestCase):
     @skip_if_flex_is_not_supported()
     def test_3d_against_cutlass_2x(self):
         problem_sizes = [
-            (1, 1, 128, (13, 11, 9), (3, 4, 3), (2, 3, 3), (3, 2, 2)),
-            (1, 1, 128, (13, 11, 9), (3, 4, 3), (1, 1, 1), (3, 2, 2)),
+            (1, 1, 8, (13, 11, 9), (3, 4, 3), (2, 3, 3), (3, 2, 2)),
+            (1, 1, 16, (13, 11, 9), (3, 4, 3), (1, 1, 1), (3, 2, 2)),
             (1, 2, 128, (8, 8, 12), (5, 8, 11), (2, 3, 4), (1, 1, 1)),
             (1, 1, 64, (32, 10, 10), (7, 3, 3), (5, 1, 1), (1, 2, 3)),
             (1, 4, 32, (8, 8, 16), (3, 3, 3), (2, 1, 2), (2, 2, 4)),
@@ -600,7 +600,9 @@ class FlexBackendTest(unittest.TestCase):
         for i in range(max_tests):
             batch = random.choice(range(1, 4))
             heads = random.choice(range(1, 4))
-            head_dim = random.choice([32, 64, 128])
+
+            head_dim_choices = [32, 64, 128] if torch_compile else [8, 16, 32, 64, 128]
+            head_dim = random.choice(head_dim_choices)
 
             input_shape_ = []
             for j in range(na_dim):
