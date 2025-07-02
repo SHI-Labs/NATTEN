@@ -3,7 +3,9 @@
 ## [Main branch]
 * Allow head dims 8 and 16 in Flex backend (without compilation only)
 * Minor bug fixes in Flex wrapper / backend.
-
+* Add support for SM120, Blackwell RTX (at this time
+    only [CUTLASS FNA/FMHA](https://natten.org/backends/#cutlass-fna-fmha) and
+    [Flex FNA/FMHA](https://natten.org/backends/#flex-fna-fmha) backends are supported.)
 
 ## [0.20.1] - 2025-06-14
 * Bugs in [modules](https://natten.org/modules) were fixed (see
