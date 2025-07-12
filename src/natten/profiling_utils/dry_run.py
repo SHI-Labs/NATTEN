@@ -36,9 +36,12 @@ from ..backends import (
     can_run_flex_attention,
     choose_backend,
     choose_fmha_backend,
+    get_bwd_configs_for_cutlass_blackwell_fmha,
+    get_bwd_configs_for_cutlass_blackwell_fna,
     get_bwd_configs_for_cutlass_fmha,
     get_bwd_configs_for_cutlass_fna,
     get_bwd_configs_for_cutlass_hopper_fmha,
+    get_bwd_configs_for_cutlass_hopper_fna,
     get_compatible_backends,
     get_compatible_fmha_backends,
     get_configs_for_cutlass_blackwell_fmha,
@@ -115,7 +118,12 @@ def dry_run_for_backend(
         if fmha_backend == "blackwell-fmha":
             assert can_run_cutlass_blackwell_fmha(q, k, v, raise_error=True)
             fwd_configs = get_configs_for_cutlass_blackwell_fmha(q, k, v)  # type: ignore[assignment]
+            bwd_configs = get_bwd_configs_for_cutlass_blackwell_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
+            bwd_config_keys = (
+                "backward_q_tile_size",
+                "backward_kv_tile_size",
+            )
 
         elif fmha_backend == "hopper-fmha":
             assert can_run_cutlass_hopper_fmha(q, k, v, raise_error=True)
@@ -155,19 +163,29 @@ def dry_run_for_backend(
         if backend == "blackwell-fna":
             assert can_run_cutlass_blackwell_fna(q, k, v, raise_error=True)
             fwd_configs = get_configs_for_cutlass_blackwell_fna(q, k, v)  # type: ignore[assignment]
+            bwd_configs = get_bwd_configs_for_cutlass_blackwell_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
+            bwd_config_keys = (
+                "backward_q_tile_shape",
+                "backward_kv_tile_shape",
+            )
 
         elif backend == "hopper-fna":
             assert can_run_cutlass_hopper_fna(q, k, v, raise_error=True)
             fwd_configs = get_configs_for_cutlass_hopper_fna(q, k, v)  # type: ignore[assignment]
+            bwd_configs = get_bwd_configs_for_cutlass_hopper_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = (("q_tile_shape", "kv_tile_shape"), "kernel_schedule")  # type: ignore[assignment]
+            bwd_config_keys = (
+                "backward_q_tile_shape",
+                "backward_kv_tile_shape",
+            )
 
         elif backend == "cutlass-fna":
             assert can_run_cutlass_fna(q, k, v, raise_error=True)
             fwd_configs = get_configs_for_cutlass_fna(q, k, v)  # type: ignore[assignment]
             bwd_configs = get_bwd_configs_for_cutlass_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
-            bwd_config_keys = (  # type: ignore[assignment]
+            bwd_config_keys = (
                 "backward_q_tile_shape",
                 "backward_kv_tile_shape",
             )
