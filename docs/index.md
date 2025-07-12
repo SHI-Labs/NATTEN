@@ -14,9 +14,10 @@ a sliding window self-attention mechanism, and its extensions
 [strided NA](https://arxiv.org/abs/2504.16922)).
 Specifically, we provide Fused Multi-Headed Attention (FMHA) and
 [Fused Neighborhood Attention (FNA)](https://arxiv.org/abs/2403.04690)
-training and inference kernels, for all NVIDIA architectures since Maxwell (SM50), as well fast 
-inference kernels for the
-[Hopper (SM90) and Blackwell (SM100)](https://arxiv.org/abs/2504.16922) architectures.
+training and inference kernels, for all NVIDIA architectures since Maxwell (SM50).
+We also ship
+[Hopper (SM90) and Blackwell (SM100)](https://arxiv.org/abs/2504.16922) native kernels, offering
+speedups proportional to reduction in FLOPs over cuDNN and Flash Attention 3.
 
 Neighborhood Attention introduces locality and sparsity into self attention in a manner similar to
 convolution.
@@ -90,7 +91,7 @@ attention span in any dimension/axis of your input can be controlled with its re
 NATTEN supports PyTorch >= 2.7, and Python >= 3.9 (everything PyTorch supports).
 Please refer to [install instructions](install.md) for details on how to install NATTEN.
 
-### :fire: Release `0.20.1`
+### :fire: Release `0.21.0`
 
 NATTEN has undergone major changes since the last release (`0.17.5`), so we strongly recommend
 reading our new updated documentation in this webpage before upgrading.

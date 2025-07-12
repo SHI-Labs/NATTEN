@@ -111,7 +111,8 @@ struct ResidualMask : NoMask {
     CUTLASS_PRAGMA_UNROLL
     for (int i = 0; i < size(acc_qk); i++) {
       auto pos = index_qk(i);
-      if (get<1>(pos) >= get<1>(problem_size)) {
+      if (get<1>(pos) >= get<1>(problem_size) ||
+          get<0>(pos) >= get<0>(problem_size)) {
         acc_qk(i) = -INFINITY;
       }
     }

@@ -227,7 +227,6 @@ class NattenBackendTester:
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         torch_compile: bool = False,
-        try_fuse_additional_kv: bool = False,
     ):
         batch = self.batch
         heads = self.heads
@@ -246,7 +245,7 @@ class NattenBackendTester:
             f"{batch=}, {heads=}, {head_dim=}, {head_dim_v=}, {input_shape=}, {dtype=}\n"
             f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=}, {additional_kv_length=},\n"
             f"{q_tile_shape=}, {kv_tile_shape=}, {run_persistent_kernel=}, {kernel_schedule=}, "
-            f"{torch_compile=}, {try_fuse_additional_kv=}"
+            f"{torch_compile=}"
             + (
                 f"\n{backward_q_tile_shape=}, {backward_kv_tile_shape=}, "
                 f"{backward_kv_splits=}, {backward_use_pt_reduction=}."
@@ -301,7 +300,6 @@ class NattenBackendTester:
             kernel_schedule=kernel_schedule,
             torch_compile=torch_compile,
             attention_kwargs={"backend": target_fmha_backend},
-            try_fuse_additional_kv=try_fuse_additional_kv,
         )
         out = out_.data.clone().float()
 

@@ -38,13 +38,15 @@
 #include "natten/cuda/fna_hopper/collective/fna_collective_load.hpp"
 #include "natten/cuda/fna_hopper/collective/fna_collective_softmax.hpp"
 #include "natten/cuda/fna_hopper/collective/fna_common.hpp"
-#include "natten/cuda/fna_hopper/kernel/fna_options.hpp"
+
+// This is identical to FMHA; reuse
+#include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
 
 namespace cutlass::fna::collective {
 
 using namespace cute;
-using cutlass::fna::kernel::find_option_t;
-using cutlass::fna::kernel::Tag;
+using cutlass::fmha::kernel::find_option_t;
+using cutlass::fmha::kernel::Tag;
 
 template <
     class NADim,
@@ -386,6 +388,10 @@ struct FnaMainloopTmaSm90 {
 
     auto kv_tiled_layout = make_layout(kv_tiled);
 
+    auto iter_to_tile_map = [&ctr_offset, &kv_tiled_layout](int iter) {
+      return crd2idx(ctr_offset(iter), kv_tiled_layout);
+    };
+
     LoadQ load_q{params.tma_load_q, pipeline_q, storage.smem_q};
     auto load_state_q =
         load_q.init_state(_0{}, problem_size, TileShapeQK{}, blk_coord, 1);
@@ -441,25 +447,23 @@ struct FnaMainloopTmaSm90 {
       CUTLASS_PRAGMA_UNROLL
       for (int i = 0; i < StageCount; i++) {
         if (i % 2 == 0) {
-          load_k.template step_kv<false>(
+          load_k.template step_with_iter_tile_map<false>(
               k_tile_iter,
               load_state_k,
               smem_pipe_write,
               lane_predicate,
               k_tile_count_tma,
               mcast_mask_b,
-              ctr_offset,
-              kv_tiled_layout);
+              iter_to_tile_map);
         } else {
-          load_v.template step_kv<true>(
+          load_v.template step_with_iter_tile_map<true>(
               k_tile_iter,
               load_state_k,
               smem_pipe_write,
               lane_predicate,
               k_tile_count_tma,
               mcast_mask_b,
-              ctr_offset,
-              kv_tiled_layout);
+              iter_to_tile_map);
         }
       }
     }
@@ -608,15 +612,14 @@ struct FnaMainloopTmaSm90 {
       ++smem_pipe_read;
 
       if (warp_idx == 0) {
-        load_k.template step_kv<false>(
+        load_k.template step_with_iter_tile_map<false>(
             k_tile_iter,
             load_state_k,
             smem_pipe_write,
             lane_predicate,
             k_tile_count_tma,
             mcast_mask_b,
-            ctr_offset,
-            kv_tiled_layout);
+            iter_to_tile_map);
       }
 
       // Wait for the pipeline MMAs to drain
@@ -686,15 +689,14 @@ struct FnaMainloopTmaSm90 {
       ++smem_pipe_read;
 
       if (warp_idx == 0) {
-        load_v.template step_kv<true>(
+        load_v.template step_with_iter_tile_map<true>(
             k_tile_iter,
             load_state_v,
             smem_pipe_write,
             lane_predicate,
             k_tile_count_tma,
             mcast_mask_b,
-            ctr_offset,
-            kv_tiled_layout);
+            iter_to_tile_map);
       }
 
       tPcP.data() = tPcP.data() + E<1>{} * get<1>(TileShapeQK{});
@@ -724,15 +726,14 @@ struct FnaMainloopTmaSm90 {
       ++smem_pipe_read;
 
       if (warp_idx == 0) {
-        load_k.template step_kv<false>(
+        load_k.template step_with_iter_tile_map<false>(
             k_tile_iter,
             load_state_k,
             smem_pipe_write,
             lane_predicate,
             k_tile_count_tma,
             mcast_mask_b,
-            ctr_offset,
-            kv_tiled_layout);
+            iter_to_tile_map);
       }
 
       // Wait for the pipeline MMAs to drain
@@ -802,15 +803,14 @@ struct FnaMainloopTmaSm90 {
       ++smem_pipe_read;
 
       if (warp_idx == 0) {
-        load_v.template step_kv<true>(
+        load_v.template step_with_iter_tile_map<true>(
             k_tile_iter,
             load_state_v,
             smem_pipe_write,
             lane_predicate,
             k_tile_count_tma,
             mcast_mask_b,
-            ctr_offset,
-            kv_tiled_layout);
+            iter_to_tile_map);
       }
 
       tPcP.data() = tPcP.data() + E<1>{} * get<1>(TileShapeQK{});

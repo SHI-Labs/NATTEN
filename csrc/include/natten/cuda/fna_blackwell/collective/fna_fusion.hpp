@@ -29,6 +29,7 @@
  *POSSIBILITY OF SUCH DAMAGE.
  *
  **************************************************************************************************/
+
 #pragma once
 
 #include "cute/tensor.hpp"
@@ -37,6 +38,8 @@
 namespace cutlass::fna::collective {
 
 using namespace cute;
+
+// Tuple utils
 
 template <class T0, class T1>
 CUTE_HOST_DEVICE constexpr auto floor_tuple(T0 const& t0, T1 const& t1) {
@@ -68,6 +71,20 @@ CUTE_HOST_DEVICE constexpr auto tuple_mul(T0 const& t0, T1 const& t1) {
       t0, t1, [&](auto const& a, auto const& b) { return a * b; });
 }
 
+template <class T>
+CUTE_HOST_DEVICE bool tuple_leq(T t0, T t1) {
+  static_assert(rank(T{}) > 0 && rank(T{}) < 4);
+  if constexpr (rank(T{}) == 1) {
+    return get<0>(t0) <= get<0>(t1);
+  } else if constexpr (rank(T{}) == 2) {
+    return get<0>(t0) <= get<0>(t1) && get<1>(t0) <= get<1>(t1);
+  } else {
+    return get<0>(t0) <= get<0>(t1) && get<1>(t0) <= get<1>(t1) &&
+        get<2>(t0) <= get<2>(t1);
+  }
+}
+
+// NA mask utils
 template <bool IsCausal>
 CUTE_HOST_DEVICE int get_win_start(
     int index,
@@ -106,15 +123,16 @@ CUTE_HOST_DEVICE int get_win_end(
   }
 }
 
-template <class Causal, class NADim>
+template <class Causal, class NADim, class Coord>
 CUTE_HOST_DEVICE auto get_window_start(
-    NADim index,
+    Coord index,
     NADim window_left,
     NADim window_right,
     NADim stride,
     NADim length) {
   static_assert(rank(index) > 0 && rank(index) < 4);
   static_assert(rank(index) == rank(Causal{}));
+  static_assert(rank(index) == rank(length));
   if constexpr (rank(index) == 1) {
     return make_tuple(get_win_start<get<0>(Causal{})>(
         get<0>(index),
@@ -159,14 +177,15 @@ CUTE_HOST_DEVICE auto get_window_start(
   }
 }
 
-template <class Causal, class NADim>
+template <class Causal, class NADim, class Coord>
 CUTE_HOST_DEVICE auto get_window_end(
-    NADim index,
+    Coord index,
     NADim start,
     NADim window_size,
     NADim length) {
   static_assert(rank(index) > 0 && rank(index) < 4);
   static_assert(rank(index) == rank(Causal{}));
+  static_assert(rank(index) == rank(length));
   if constexpr (rank(index) == 1) {
     return make_tuple(get_win_end<get<0>(Causal{})>(
         get<0>(index), get<0>(start), get<0>(window_size), get<0>(length)));
@@ -468,5 +487,123 @@ struct NeighborhoodAttentionMask {
     }
   }
 };
+
+// Misc
+template <class NADim>
+CUTE_HOST_DEVICE constexpr auto get_window_left(NADim const& window_size) {
+  return transform_leaf(window_size, [&](auto const& w) { return w / 2; });
+}
+
+template <class NADim>
+CUTE_HOST_DEVICE constexpr auto get_window_right(NADim const& window_size) {
+  return transform_leaf(
+      window_size, [&](auto const& w) { return (w / 2) + ((w % 2) - 1); });
+}
+
+CUTE_HOST_DEVICE
+bool is_fully_block_sparse_int(
+    int input_size,
+    int window_size,
+    int stride,
+    int q_tile_size,
+    int kv_tile_size) {
+  int num_stride_groups = ceil_div(input_size, stride);
+  int window_left = window_size / 2;
+  int window_right = (window_size / 2) + ((window_size % 2) - 1);
+  int stride_group_center = stride / 2;
+
+  int last_stride_group_center =
+      min((input_size / stride) * stride + stride_group_center, input_size - 1);
+  int last_stride_group_window_start = get_win_start<false>(
+      last_stride_group_center, window_left, window_right, stride, input_size);
+
+  return input_size == window_size ||
+      (stride % q_tile_size == 0 && window_size % kv_tile_size == 0 &&
+       (input_size % stride == 0 ||
+        last_stride_group_window_start % kv_tile_size == 0) &&
+       (((window_left - stride_group_center) % kv_tile_size == 0) ||
+        (
+            // input_size % stride == 0 &&
+            input_size % kv_tile_size == 0 && num_stride_groups == 2 &&
+            stride + stride_group_center >= input_size - window_size)));
+}
+
+template <class Causal, class NADim, class QTile, class KVTile>
+CUTE_HOST_DEVICE bool fully_block_sparse(
+    NADim input_size,
+    NADim window_size,
+    NADim stride,
+    QTile q_tile_shape,
+    KVTile kv_tile_shape) {
+#ifdef NATTEN_DISABLE_FULLY_BLOCK_SPARSE_FAST_PATH
+  return false;
+#else
+  // Causal masking can never be fully block-sparse (unless tile/block size is
+  // 1)
+  // TODO?
+  if (cute::any_of(Causal{}, [&](auto const& a) { return a; })) {
+    return false;
+  }
+
+  static_assert(rank(input_size) > 0 && rank(input_size) < 4);
+  static_assert(rank(q_tile_shape) == rank(input_size));
+  static_assert(rank(kv_tile_shape) == rank(input_size));
+
+  if constexpr (rank(input_size) == 1) {
+    return is_fully_block_sparse_int(
+        get<0>(input_size),
+        get<0>(window_size),
+        get<0>(stride),
+        get<0>(q_tile_shape),
+        get<0>(kv_tile_shape));
+  } else if constexpr (rank(input_size) == 2) {
+    return is_fully_block_sparse_int(
+               get<0>(input_size),
+               get<0>(window_size),
+               get<0>(stride),
+               get<0>(q_tile_shape),
+               get<0>(kv_tile_shape)) &&
+        is_fully_block_sparse_int(
+               get<1>(input_size),
+               get<1>(window_size),
+               get<1>(stride),
+               get<1>(q_tile_shape),
+               get<1>(kv_tile_shape));
+  } else {
+    return is_fully_block_sparse_int(
+               get<0>(input_size),
+               get<0>(window_size),
+               get<0>(stride),
+               get<0>(q_tile_shape),
+               get<0>(kv_tile_shape)) &&
+        is_fully_block_sparse_int(
+               get<1>(input_size),
+               get<1>(window_size),
+               get<1>(stride),
+               get<1>(q_tile_shape),
+               get<1>(kv_tile_shape)) &&
+        is_fully_block_sparse_int(
+               get<2>(input_size),
+               get<2>(window_size),
+               get<2>(stride),
+               get<2>(q_tile_shape),
+               get<2>(kv_tile_shape));
+  }
+#endif
+}
+
+template <class NADim>
+CUTE_HOST_DEVICE bool is_dilated(NADim dilation) {
+  static_assert(rank(dilation) > 0 && rank(dilation) < 4);
+
+  if constexpr (rank(dilation) == 1) {
+    return get<0>(dilation) != 1;
+  } else if constexpr (rank(dilation) == 2) {
+    return get<0>(dilation) != 1 || get<1>(dilation) != 1;
+  } else {
+    return get<0>(dilation) != 1 || get<1>(dilation) != 1 ||
+        get<2>(dilation) != 1;
+  }
+}
 
 } // namespace cutlass::fna::collective

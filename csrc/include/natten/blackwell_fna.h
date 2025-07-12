@@ -48,8 +48,8 @@ void blackwell_na1d_forward(
     const std::tuple<int32_t>& kv_shape_,
     const std::tuple<int32_t>& qkv_shape_,
     int num_extra_kv,
-    const std::tuple<int32_t>& query_tile_size,
-    const std::tuple<int32_t>& key_tile_size,
+    const std::tuple<int32_t>& query_tile_shape,
+    const std::tuple<int32_t>& key_tile_shape,
     bool run_persistent);
 
 void blackwell_na2d_forward(
@@ -67,8 +67,8 @@ void blackwell_na2d_forward(
     const std::tuple<int32_t, int32_t>& kv_shape_,
     const std::tuple<int32_t, int32_t>& qkv_shape_,
     int num_extra_kv,
-    const std::tuple<int32_t, int32_t>& query_tile_size,
-    const std::tuple<int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t>& query_tile_shape,
+    const std::tuple<int32_t, int32_t>& key_tile_shape,
     bool run_persistent);
 
 void blackwell_na3d_forward(
@@ -86,10 +86,73 @@ void blackwell_na3d_forward(
     const std::tuple<int32_t, int32_t, int32_t>& kv_shape_,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape_,
     int num_extra_kv,
-    const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
-    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape,
     bool run_persistent);
 
 // Backward
+
+void blackwell_na1d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& stride,
+    const std::tuple<int32_t>& dilation,
+    const std::tuple<bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t>& q_shape_,
+    const std::tuple<int32_t>& kv_shape_,
+    const std::tuple<int32_t>& qkv_shape_,
+    const std::tuple<int32_t>& query_tile_shape,
+    const std::tuple<int32_t>& key_tile_shape);
+
+void blackwell_na2d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& stride,
+    const std::tuple<int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& q_shape_,
+    const std::tuple<int32_t, int32_t>& kv_shape_,
+    const std::tuple<int32_t, int32_t>& qkv_shape_,
+    const std::tuple<int32_t, int32_t>& query_tile_shape,
+    const std::tuple<int32_t, int32_t>& key_tile_shape);
+
+void blackwell_na3d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& stride,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    const std::tuple<bool, bool, bool>& is_causal,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t, int32_t>& q_shape_,
+    const std::tuple<int32_t, int32_t, int32_t>& kv_shape_,
+    const std::tuple<int32_t, int32_t, int32_t>& qkv_shape_,
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape);
 
 } // namespace natten

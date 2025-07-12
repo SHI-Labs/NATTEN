@@ -24,12 +24,6 @@ SUPPORTED_GEMM_SHAPES_FORWARD = [
     (256, 128, 128),
 ]
 
-SUPPORTED_GEMM_SHAPES_BACKWARD = [
-    (128, 128, 32),
-    (128, 128, 64),
-    (128, 128, 128),
-]
-
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
@@ -142,21 +136,18 @@ class BlackwellFmhaInstance:
         dtype: DataType,
         gemm_shape: Tuple[int, int, int],
         is_persistent: bool,
-        is_backward: bool,
     ):
         assert len(gemm_shape) == 3
         self.gemm_shape = gemm_shape
         self.dtype = dtype
         self.max_head_dim = gemm_shape[2]
         self.is_persistent = is_persistent
-        self.is_backward = is_backward
 
     def get_gemm_shape_cute(self) -> str:
         return iterable_to_static_cute_tuple(self.gemm_shape)
 
     def get_name(self) -> str:
-        backward_str = "" if not self.is_backward else "_backward"
-        name = f"blackwell_fmha{backward_str}"
+        name = "blackwell_fmha"
         name += f"_{self.dtype.short_name}"
         name += "_" + "x".join([str(x) for x in self.gemm_shape])
         if self.is_persistent:
@@ -169,7 +160,6 @@ class BlackwellFmhaInstance:
         )
 
     def get_impl(self) -> str:
-        assert not self.is_backward
         return KERNEL_IMPL_TEMPLATE.format(
             kernel_name=self.get_name(),
             GEMMShape=self.get_gemm_shape_cute(),
@@ -229,11 +219,9 @@ def write_combined_source_file(path, filename, headers, kernels):
 
 
 class DTypeDispatcher:
-    def __init__(self, is_backward: bool):
-        self.dtypes: List[DataType] = []
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FMHA_{fwd_bwd_str}"
-        self.is_backward = is_backward
+    def __init__(self):
+        self.dtypes = []
+        self.name = "DISPATCH_BLACKWELL_FMHA_FORWARD"
 
     def append(self, dtype: DataType):
         self.dtypes.append(dtype)
@@ -269,11 +257,9 @@ class DTypeDispatcher:
 
 
 class HeadDimDispatcher:
-    def __init__(self, is_backward: bool, dtype: DataType):
+    def __init__(self, dtype: DataType):
         self.dtype = dtype
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FMHA_{fwd_bwd_str}_{self.dtype.short_name}"
-        self.is_backward = is_backward
+        self.name = f"DISPATCH_BLACKWELL_FMHA_FORWARD_{self.dtype.short_name}"
 
         self.dims: List[int] = []
 
@@ -315,16 +301,15 @@ class HeadDimDispatcher:
 class TileSizeDispatcher:
     def __init__(
         self,
-        is_backward: bool,
         dtype: DataType,
         head_dim: int,
     ):
         self.dtype = dtype
         self.head_dim = head_dim
 
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FMHA_{fwd_bwd_str}_{self.dtype.short_name}_headdim{head_dim}"
-        self.is_backward = is_backward
+        self.name = (
+            f"DISPATCH_BLACKWELL_FMHA_FORWARD_{self.dtype.short_name}_headdim{head_dim}"
+        )
 
         self.tile_sizes: List = []
 
@@ -340,18 +325,13 @@ class TileSizeDispatcher:
         gemm_K = self.head_dim
         gemm_shape = (gemm_M, gemm_N, gemm_K)
 
-        supported_gemm_shapes = (
-            SUPPORTED_GEMM_SHAPES_BACKWARD
-            if self.is_backward
-            else SUPPORTED_GEMM_SHAPES_FORWARD
-        )
+        supported_gemm_shapes = SUPPORTED_GEMM_SHAPES_FORWARD
         assert gemm_shape in supported_gemm_shapes
 
         kernel = BlackwellFmhaInstance(
             dtype=self.dtype,
             gemm_shape=gemm_shape,
             is_persistent=persistent,
-            is_backward=self.is_backward,
         )
 
         return kernel
@@ -453,17 +433,16 @@ def generate_blackwell_fmha_kernels(path, num_splits=2):
     tile_size_dispatchers = []
     kernels = []
 
-    dtype_dispatcher = DTypeDispatcher(is_backward=False)
+    dtype_dispatcher = DTypeDispatcher()
     for dtype in SUPPORTED_DTYPES:
         dtype_dispatcher.append(dtype)
 
-        head_dim_dispatcher = HeadDimDispatcher(is_backward=False, dtype=dtype)
+        head_dim_dispatcher = HeadDimDispatcher(dtype=dtype)
 
         for head_dim in HEAD_DIMS:
             head_dim_dispatcher.append(head_dim)
 
             tile_size_dispatcher = TileSizeDispatcher(
-                is_backward=False,
                 dtype=dtype,
                 head_dim=head_dim,
             )

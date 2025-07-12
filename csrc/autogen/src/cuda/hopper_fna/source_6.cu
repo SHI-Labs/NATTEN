@@ -45,7 +45,7 @@ void hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal1x1x0(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<32>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -105,7 +105,7 @@ void hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal1x1x0(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<32>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -165,7 +165,7 @@ void hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal1x1x1(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<32>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -225,7 +225,7 @@ void hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal1x1x1(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<32>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -285,7 +285,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x0x0(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -345,7 +345,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x0x0(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -405,7 +405,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x0x1(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -465,7 +465,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x0x1(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -525,7 +525,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x1x0(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -585,7 +585,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x1x0(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -645,7 +645,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x1x1(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -705,7 +705,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x1x1(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -765,7 +765,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal1x0x0(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -825,7 +825,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal1x0x0(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -885,7 +885,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal1x0x1(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -945,7 +945,7 @@ void hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal1x0x1(
   using KVTileShape = cute::tuple<cute::Int<2>, cute::Int<8>, cute::Int<8>>;
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent>;
+    cutlass::half_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent>;
 
   Kernel kernel;
   auto args = kernel.initialize(

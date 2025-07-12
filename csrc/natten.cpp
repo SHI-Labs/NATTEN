@@ -39,7 +39,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   // CUTLASS 3.X kernels
   //// SM100 - Blackwell FNA
   m.def(
-      "blackwell_na1d_forward", &natten::blackwell_na1d_forward, "NA2D forward (fused, SM100)");
+      "blackwell_na1d_forward", &natten::blackwell_na1d_forward, "NA1D forward (fused, SM100)");
 
   m.def(
       "blackwell_na2d_forward", &natten::blackwell_na2d_forward, "NA2D forward (fused, SM100)");
@@ -47,13 +47,24 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def(                                                         
       "blackwell_na3d_forward", &natten::blackwell_na3d_forward, "NA3D forward (fused, SM100)");
 
+  m.def(
+      "blackwell_na1d_backward", &natten::blackwell_na1d_backward, "NA1D backward (fused, SM100)");
+
+  m.def(
+      "blackwell_na2d_backward", &natten::blackwell_na2d_backward, "NA2D backward (fused, SM100)");
+                                                                 
+  m.def(                                                         
+      "blackwell_na3d_backward", &natten::blackwell_na3d_backward, "NA3D backward (fused, SM100)");
+
   ////// SM100 - FMHA
   m.def(
       "blackwell_fmha_forward", &natten::blackwell_fmha_forward, "FMHA forward (fused, SM100)");
+  m.def(
+      "blackwell_fmha_backward", &natten::blackwell_fmha_backward, "FMHA backward (fused, SM100)");
 
   //// SM90 - Hopper FNA
   m.def(
-      "hopper_na1d_forward", &natten::hopper_na1d_forward, "NA2D forward (fused, SM90)");
+      "hopper_na1d_forward", &natten::hopper_na1d_forward, "NA1D forward (fused, SM90)");
 
   m.def(
       "hopper_na2d_forward", &natten::hopper_na2d_forward, "NA2D forward (fused, SM90)");
@@ -61,9 +72,21 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def(                                                         
       "hopper_na3d_forward", &natten::hopper_na3d_forward, "NA3D forward (fused, SM90)");
 
+  m.def(
+      "hopper_na1d_backward", &natten::hopper_na1d_backward, "NA1D backward (fused, SM90)");
+
+  m.def(
+      "hopper_na2d_backward", &natten::hopper_na2d_backward, "NA2D backward (fused, SM90)");
+                                                                 
+  m.def(                                                         
+      "hopper_na3d_backward", &natten::hopper_na3d_backward, "NA3D backward (fused, SM90)");
+
   ////// SM90 - FMHA
   m.def(
       "hopper_fmha_forward", &natten::hopper_fmha_forward, "FMHA forward (fused, SM90)");
+
+  m.def(
+      "hopper_fmha_backward", &natten::hopper_fmha_backward, "FMHA backward (fused, SM90)");
 
   // CUTLASS 2.X kernels
   //// SM50/SM70/SM75/SM80 - Original FNA

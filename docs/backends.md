@@ -24,7 +24,7 @@ You can use these kernels on any NVIDIA GPU with compute capability >= 5.0, and
 both for training and inference.
 
 Some newer architectures such as Hopper (SM90), and Blackwell (SM100) have much more performant
-dedicated kernels, but they are limited to inference for now.
+dedicated kernels.
 
 This implementation fuses multi-dimensional tiling directly into the kernel, but at the same time
 may suffer from additional overhead of software predication.
@@ -59,19 +59,21 @@ following functions in your code.
 **Supported modes**
 
 - [x] Inference (forward pass)
-- [ ] Training (backward pass)
+- [x] Training (backward pass)
 
 ![Hopper FNA performance sample](assets/hopper-fna-perf.png){ width="80%" }
 /// caption
-Performance levels of Hopper FNA as of version `0.20.0`.
+Performance levels of Hopper FNA (forward pass) as of version `0.20.0`.
 ///
 
 Based on CUTLASS's
 [Hopper FMHA kernel](https://github.com/NVIDIA/cutlass/tree/main/examples/88_hopper_fmha)
 (3.X API), this backend offers non-persistent,
 warp-specialized cooperative, and warp-specialized ping-ponging kernels, similar to
-[Flash Attention 3](https://arxiv.org/abs/2407.08608). This kernel exhibits similar forward-pass
-performance to Flash Attention 3.
+[Flash Attention 3](https://arxiv.org/abs/2407.08608). This kernel exhibits similar forward pass
+(inference) performance to Flash Attention 3.
+Backward pass is more limited compared to Flash Attention 3 and cuDNN's Hopper FMHA for now, but we
+plan to improve the performance to those levels in future releases.
 
 This backend does not fuse multi-dimensional tiling into the kernel, and instead uses
 [Token Permutation](https://arxiv.org/abs/2504.16922).
@@ -91,7 +93,9 @@ following functions in your code.
               show_object_full_path: true
               members:
                   - get_configs_for_cutlass_hopper_fmha
+                  - get_bwd_configs_for_cutlass_hopper_fmha
                   - get_configs_for_cutlass_hopper_fna
+                  - get_bwd_configs_for_cutlass_hopper_fna
 
 
 ## Blackwell FNA / FMHA
@@ -99,19 +103,19 @@ following functions in your code.
 **Supported modes**
 
 - [x] Inference (forward pass)
-- [ ] Training (backward pass)
+- [x] Training (backward pass)
 
 ![Blackwell FNA performance sample](assets/blackwell-fna-perf.png){ width="80%" }
 /// caption
-Performance levels of Blackwell FNA as of version `0.20.0` (also
+Performance levels of Blackwell FNA (forward pass) as of version `0.20.0` (also
 reported in
 [Generalized Neighborhood Attention (2025)](https://arxiv.org/abs/2504.16922)).
 ///
 
 Based on CUTLASS's
 [Blackwell FMHA kernel](https://github.com/NVIDIA/cutlass/tree/main/examples/77_blackwell_fmha)
-(3.X API), this backend offers incredible forward-pass performance, which is comparable with
-cuDNN's Blackwell Attention.
+(3.X API), this backend offers incredible forward pass and backward pass performance, which is
+comparable with cuDNN's Blackwell FMHA.
 
 This backend does not fuse multi-dimensional tiling into the kernel, and instead uses
 [Token Permutation](https://arxiv.org/abs/2504.16922).
@@ -131,7 +135,9 @@ following functions in your code.
               show_object_full_path: true
               members:
                   - get_configs_for_cutlass_blackwell_fmha
+                  - get_bwd_configs_for_cutlass_blackwell_fmha
                   - get_configs_for_cutlass_blackwell_fna
+                  - get_bwd_configs_for_cutlass_blackwell_fna
 
 
 ## Flex FNA / FMHA

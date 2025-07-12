@@ -158,16 +158,6 @@ new Hopper FNA and Blackwell FNA kernels.
 | `#!bash --compile`          | Enables compiling Flex Attention block sparse mask and kernel in   |
 |                             | `flex-fna` and `flex-fmha` backends.                               |
 +-----------------------------+--------------------------------------------------------------------+
-| `#!bash --try-fuse-add-kv`  | Try to fuse additional KV (cross attention) into the FNA kernel,   |
-|                             | if any (`#!bash --add-kv > 0`).                                    |
-|                             | This is currently only supported by `blackwell-fna`, and has no    |
-|                             | effect on other backends.                                          |
-|                             |                                                                    |
-|                             | ???+ warning "Experimental feature"                                |
-|                             |     This feature may be removed in the future, as it rarely        |
-|                             |     provides any benefit to separate attention branches and        |
-|                             |     [attention merging][natten.merge_attentions].                  |
-+-----------------------------+--------------------------------------------------------------------+
 | `#!bash --warmup-steps`     | Number of profiling warmup steps. Default: `10`.                   |
 +-----------------------------+--------------------------------------------------------------------+
 | `#!bash --dry-run`          | Display valid forward and backward pass configurations for this    |

@@ -28,7 +28,10 @@ from itertools import product
 
 import torch
 
-from natten.backends.configs.cutlass_blackwell import get_all_forward_configs
+from natten.backends.configs.cutlass_blackwell import (
+    get_all_backward_configs,
+    get_all_forward_configs,
+)
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
@@ -39,7 +42,6 @@ from .utils import NattenBackendTester, reset_torch_compile
 
 ENABLE_ADDITIONAL_KV_TESTS = True
 RAND_SWEEP_TESTS = 1000
-DEFUALT_ADDITIONAL_KV_FUSION = True
 
 ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
 
@@ -77,7 +79,6 @@ class BlackwellFNABackendTest(unittest.TestCase):
         dilation,
         is_causal=None,
         additional_kv_length=0,
-        try_fuse_additional_kv=DEFUALT_ADDITIONAL_KV_FUSION,
         configs_to_test=None,
     ):
         torch.set_default_device("cuda")
@@ -99,30 +100,37 @@ class BlackwellFNABackendTest(unittest.TestCase):
             dilation=dilation,
             is_causal=is_causal,
             additional_kv_length=additional_kv_length,
-            test_backprop=False,  # TODO
+            test_backprop=True,
             reference_backend="cutlass-fna",
             reference_fmha_backend="cutlass-fmha",
             dtype=torch.float32,
         )
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 1e-2), (0, 1e-3)),
+            (torch.float16, (1e-2, 2e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
         ]
 
         test_id = 0
-        # TODO: add in rtol when backprop is supported
         for dtype, atol, rtol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
             )
-            configs = get_all_forward_configs(dummy)
+            forward_configs = get_all_forward_configs(dummy)
+            backward_configs = get_all_backward_configs(dummy)
 
-            if not try_fuse_additional_kv and additional_kv_length > 0:
-                reset_torch_compile(len(configs) * 2)
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
 
-            for q_tile_shape, kv_tile_shape in configs:
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                q_tile_shape, kv_tile_shape = forward_configs[i % len(forward_configs)]
+                backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                if additional_kv_length > 0:
+                    reset_torch_compile(2)
                 for persistent in [True, False]:
                     tester.test(
                         eps=atol,
@@ -131,8 +139,9 @@ class BlackwellFNABackendTest(unittest.TestCase):
                         target_fmha_backend="blackwell-fmha",
                         q_tile_shape=q_tile_shape,
                         kv_tile_shape=kv_tile_shape,
+                        backward_q_tile_shape=backward_q_tile_shape,
+                        backward_kv_tile_shape=backward_kv_tile_shape,
                         run_persistent_kernel=persistent,
-                        try_fuse_additional_kv=try_fuse_additional_kv,
                     )
                     test_id += 1
                     if configs_to_test is not None and test_id > configs_to_test:
@@ -187,6 +196,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
     def test_2d_against_cutlass_2x(self):
         problem_sizes = [
             (1, 1, 32, (5, 25), (5, 16), (1, 16), (1, 1)),
+            (1, 1, 32, (84, 19), (7, 3), (1, 1), (1, 1)),
             (1, 1, 32, (84, 19), (7, 3), (1, 1), (5, 1)),
             (1, 1, 128, (19, 29), (8, 8), (1, 1), (2, 3)),
             (1, 1, 128, (48, 17), (24, 16), (1, 1), (2, 1)),
@@ -233,6 +243,9 @@ class BlackwellFNABackendTest(unittest.TestCase):
         problem_sizes = [
             (1, 2, 32, (5, 25), (5, 16), (1, 16), (1, 1)),
             (1, 2, 32, (5, 25), (5, 16), (4, 16), (1, 1)),
+            (1, 1, 32, (84, 69), (7, 68), (1, 1), (1, 1)),
+            (1, 1, 32, (84, 69), (7, 23), (1, 1), (1, 1)),
+            (1, 1, 32, (84, 69), (7, 20), (1, 6), (1, 1)),
             (1, 1, 32, (84, 69), (7, 68), (1, 1), (5, 1)),
             (1, 1, 32, (84, 69), (7, 23), (1, 1), (5, 1)),
             (1, 1, 32, (84, 69), (7, 20), (1, 6), (5, 1)),
@@ -288,6 +301,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
     def test_3d_against_cutlass_2x(self):
         problem_sizes = [
             (1, 1, 64, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 2, 1)),
+            (1, 1, 32, (13, 11, 9), (3, 4, 3), (2, 3, 3), (1, 1, 1)),
             (1, 1, 32, (13, 11, 9), (3, 4, 3), (2, 3, 3), (3, 2, 2)),
             (4, 8, 64, (32, 10, 10), (7, 3, 3), (5, 1, 1), (1, 2, 3)),
             (1, 4, 32, (8, 8, 16), (3, 3, 3), (2, 1, 2), (2, 2, 4)),
@@ -340,6 +354,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
     def test_3d_against_cutlass_2x_extended(self):
         problem_sizes = [
             (1, 1, 64, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 1, 1)),
+            (1, 1, 32, (13, 11, 9), (3, 4, 3), (1, 1, 1), (1, 1, 1)),
             (1, 1, 32, (13, 11, 9), (3, 4, 3), (1, 1, 1), (3, 2, 2)),
             (1, 1, 32, (8, 8, 4), (3, 4, 3), (1, 1, 1), (1, 1, 1)),
             (2, 2, 32, (8, 8, 10), (3, 4, 3), (3, 4, 1), (1, 1, 1)),
@@ -436,7 +451,6 @@ class BlackwellFNABackendTest(unittest.TestCase):
             additional_kv_length = (
                 random.choice(range(8, 513, 8)) if ENABLE_ADDITIONAL_KV_TESTS else 0
             )
-            try_fuse_additional_kv = random.choice([False, True])
 
             self._test_all_dtypes_against_cutlass_2x_fna(
                 batch=batch,
@@ -448,7 +462,6 @@ class BlackwellFNABackendTest(unittest.TestCase):
                 dilation=dilation,
                 is_causal=is_causal,
                 additional_kv_length=additional_kv_length,
-                try_fuse_additional_kv=try_fuse_additional_kv,
                 configs_to_test=configs_to_test,
             )
 

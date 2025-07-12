@@ -22,7 +22,7 @@ namespace fna_hopper {
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_64x128x32_Q64_KV128_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -37,7 +37,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_64x128x32_Q64_KV128_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -52,7 +52,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_64x128x64_Q64_KV128_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -67,7 +67,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_64x128x64_Q64_KV128_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -82,12 +82,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_128x128x128_coop_Q128_KV128_causal0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_128x128x128_pp_Q128_KV128_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -102,12 +102,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_128x128x128_coop_Q128_KV128_causal1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_128x128x128_pp_Q128_KV128_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -122,7 +122,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 64 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_128x64x256_coop_Q128_KV64_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -137,7 +137,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 64 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_float16_128x64x256_coop_Q128_KV64_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -152,7 +152,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_64x128x32_Q64_KV128_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -167,7 +167,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_64x128x32_Q64_KV128_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -182,7 +182,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_64x128x64_Q64_KV128_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -197,7 +197,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 64 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_64x128x64_Q64_KV128_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -212,12 +212,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_128x128x128_coop_Q128_KV128_causal0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_128x128x128_pp_Q128_KV128_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -232,12 +232,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_128x128x128_coop_Q128_KV128_causal1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 128 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_128x128x128_pp_Q128_KV128_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -252,7 +252,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 64 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_128x64x256_coop_Q128_KV64_causal0(__VA_ARGS__); \
 } \
     else { \
@@ -267,7 +267,7 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 128 && \
 cute::get<0>(kv_tile_shape) == 64 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna1d_bfloat16_128x64x256_coop_Q128_KV64_causal1(__VA_ARGS__); \
 } \
     else { \
@@ -282,12 +282,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV8x16_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -302,12 +302,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV8x16_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -322,12 +322,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV8x16_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -342,12 +342,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x32_Q8x8_KV8x16_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -362,12 +362,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV8x16_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -382,12 +382,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV8x16_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -402,12 +402,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV8x16_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -422,12 +422,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_64x128x64_Q8x8_KV8x16_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -442,12 +442,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_coop_Q16x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_pp_Q16x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -462,12 +462,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_coop_Q16x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_pp_Q16x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -482,12 +482,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_coop_Q16x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_pp_Q16x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -502,12 +502,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_coop_Q16x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x128x128_pp_Q16x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -522,12 +522,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q16x8_KV8x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q8x16_KV8x8_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -542,12 +542,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q16x8_KV8x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q8x16_KV8x8_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -562,12 +562,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q16x8_KV8x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q8x16_KV8x8_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -582,12 +582,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q16x8_KV8x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_float16_128x64x256_coop_Q8x16_KV8x8_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -602,12 +602,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV8x16_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -622,12 +622,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV8x16_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -642,12 +642,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV8x16_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -662,12 +662,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x32_Q8x8_KV8x16_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -682,12 +682,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV8x16_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -702,12 +702,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV8x16_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -722,12 +722,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV8x16_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -742,12 +742,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 16 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_64x128x64_Q8x8_KV8x16_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -762,12 +762,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_coop_Q16x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_pp_Q16x8_KV16x8_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -782,12 +782,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_coop_Q16x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_pp_Q16x8_KV16x8_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -802,12 +802,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_coop_Q16x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_pp_Q16x8_KV16x8_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -822,12 +822,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_coop_Q16x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 16 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x128x128_pp_Q16x8_KV16x8_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -842,12 +842,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q16x8_KV8x8_causal0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q8x16_KV8x8_causal0x0(__VA_ARGS__); \
 } \
     else { \
@@ -862,12 +862,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q16x8_KV8x8_causal0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q8x16_KV8x8_causal0x1(__VA_ARGS__); \
 } \
     else { \
@@ -882,12 +882,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q16x8_KV8x8_causal1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q8x16_KV8x8_causal1x0(__VA_ARGS__); \
 } \
     else { \
@@ -902,12 +902,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 16 && cute::get<1>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q16x8_KV8x8_causal1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 8 && cute::get<1>(q_tile_shape) == 16 && \
 cute::get<0>(kv_tile_shape) == 8 && cute::get<1>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna2d_bfloat16_128x64x256_coop_Q8x16_KV8x8_causal1x1(__VA_ARGS__); \
 } \
     else { \
@@ -922,12 +922,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -942,12 +942,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -962,12 +962,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -982,12 +982,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1002,12 +1002,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1022,12 +1022,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1042,12 +1042,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1062,12 +1062,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x32_Q4x4x4_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1082,12 +1082,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1102,12 +1102,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1122,12 +1122,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1142,12 +1142,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1162,12 +1162,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1182,12 +1182,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1202,12 +1202,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1222,12 +1222,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_64x128x64_Q4x4x4_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1242,22 +1242,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1272,22 +1272,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1302,22 +1302,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1332,22 +1332,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1362,22 +1362,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1392,22 +1392,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1422,22 +1422,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1452,22 +1452,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1482,12 +1482,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1502,12 +1502,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1522,12 +1522,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1542,12 +1542,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1562,12 +1562,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1582,12 +1582,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1602,12 +1602,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1622,12 +1622,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_float16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1642,12 +1642,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1662,12 +1662,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1682,12 +1682,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1702,12 +1702,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1722,12 +1722,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1742,12 +1742,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1762,12 +1762,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1782,12 +1782,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x32_Q4x4x4_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1802,12 +1802,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1822,12 +1822,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1842,12 +1842,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1862,12 +1862,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1882,12 +1882,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1902,12 +1902,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -1922,12 +1922,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -1942,12 +1942,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 4 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_64x128x64_Q4x4x4_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -1962,22 +1962,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -1992,22 +1992,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -2022,22 +2022,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -2052,22 +2052,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -2082,22 +2082,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -2112,22 +2112,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -2142,22 +2142,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -2172,22 +2172,22 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q4x4x8_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q4x4x8_KV4x4x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_coop_Q2x8x8_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 2 && cute::get<1>(kv_tile_shape) == 8 && cute::get<2>(kv_tile_shape) == 8 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x128x128_pp_Q2x8x8_KV2x8x8_causal1x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -2202,12 +2202,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -2222,12 +2222,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -2242,12 +2242,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -2262,12 +2262,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal0x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal0x1x1(__VA_ARGS__); \
 } \
     else { \
@@ -2282,12 +2282,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x0x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x0x0(__VA_ARGS__); \
 } \
     else { \
@@ -2302,12 +2302,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x0x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x0x1(__VA_ARGS__); \
 } \
     else { \
@@ -2322,12 +2322,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x1x0(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x1x0(__VA_ARGS__); \
 } \
     else { \
@@ -2342,12 +2342,12 @@ kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
   [&] { \
     if (cute::get<0>(q_tile_shape) == 4 && cute::get<1>(q_tile_shape) == 4 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x1x1(__VA_ARGS__); \
 } \
     else if (cute::get<0>(q_tile_shape) == 2 && cute::get<1>(q_tile_shape) == 8 && cute::get<2>(q_tile_shape) == 8 && \
 cute::get<0>(kv_tile_shape) == 4 && cute::get<1>(kv_tile_shape) == 4 && cute::get<2>(kv_tile_shape) == 4 && \
-kernel_type == natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fna_hopper::hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x1x1(__VA_ARGS__); \
 } \
     else { \

@@ -6,6 +6,10 @@
 * Add support for SM120, Blackwell RTX (at this time
     only [CUTLASS FNA/FMHA](https://natten.org/backends/#cutlass-fna-fmha) and
     [Flex FNA/FMHA](https://natten.org/backends/#flex-fna-fmha) backends are supported.)
+* Minor bug fixes in Hopper/Blackwell FMHA
+* Removed fused additional KV from Blackwell FNA forward: no improvement in perf, complicates
+    dilation, and difficult to maintain.
+* *Add backward pass kernels to Hopper/Blackwell FMHA/FNA*
 
 ## [0.20.1] - 2025-06-14
 * Bugs in [modules](https://natten.org/modules) were fixed (see

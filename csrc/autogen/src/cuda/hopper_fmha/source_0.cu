@@ -36,9 +36,9 @@ void hopper_fmha_float16_64x128x32(
 
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<32>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, false>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, true>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -106,9 +106,9 @@ void hopper_fmha_float16_64x128x64(
 
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, false>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, true>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -176,9 +176,9 @@ void hopper_fmha_float16_128x128x128_coop(
 
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<128>, cute::Int<128>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, false>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, true>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -246,9 +246,9 @@ void hopper_fmha_float16_128x128x128_pp(
 
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<128>, cute::Int<128>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong, false>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSPingpong, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong, true>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSPingpong, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -316,9 +316,9 @@ void hopper_fmha_float16_128x64x256_coop(
 
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, false>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::half_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, true>;
+    cutlass::half_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -386,9 +386,9 @@ void hopper_fmha_bfloat16_64x128x32(
 
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<32>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, false>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, true>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -456,9 +456,9 @@ void hopper_fmha_bfloat16_64x128x64(
 
   using GemmShape = cute::tuple<cute::Int<64>, cute::Int<128>, cute::Int<64>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, false>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent, true>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::NonPersistent, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -526,9 +526,9 @@ void hopper_fmha_bfloat16_128x128x128_coop(
 
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<128>, cute::Int<128>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, false>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, true>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -596,9 +596,9 @@ void hopper_fmha_bfloat16_128x128x128_pp(
 
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<128>, cute::Int<128>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong, false>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSPingpong, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong, true>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSPingpong, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {
@@ -666,9 +666,9 @@ void hopper_fmha_bfloat16_128x64x256_coop(
 
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
   using Kernel = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, false>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, false>;
   using KernelWithResidualMask = natten::cuda::fmha_hopper::KernelForward<
-    cutlass::bfloat16_t, GemmShape, natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative, true>;
+    cutlass::bfloat16_t, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative, true>;
 
   bool no_mask_required = seqlen_k % get<1>(GemmShape{}) == 0;
   if (no_mask_required) {

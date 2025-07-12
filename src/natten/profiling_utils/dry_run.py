@@ -38,6 +38,7 @@ from ..backends import (
     choose_fmha_backend,
     get_bwd_configs_for_cutlass_fmha,
     get_bwd_configs_for_cutlass_fna,
+    get_bwd_configs_for_cutlass_hopper_fmha,
     get_compatible_backends,
     get_compatible_fmha_backends,
     get_configs_for_cutlass_blackwell_fmha,
@@ -119,7 +120,12 @@ def dry_run_for_backend(
         elif fmha_backend == "hopper-fmha":
             assert can_run_cutlass_hopper_fmha(q, k, v, raise_error=True)
             fwd_configs = get_configs_for_cutlass_hopper_fmha(q, k, v)  # type: ignore[assignment]
+            bwd_configs = get_bwd_configs_for_cutlass_hopper_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = (("q_tile_size", "kv_tile_size"), "kernel_schedule")  # type: ignore[assignment]
+            bwd_config_keys = (
+                "backward_q_tile_shape",
+                "backward_kv_tile_shape",
+            )
 
         elif fmha_backend == "cutlass-fmha":
             assert can_run_cutlass_fmha(q, k, v, raise_error=True)
@@ -341,7 +347,6 @@ def optimize(
     persistent: bool,
     schedule: Optional[str],
     torch_compile: bool,
-    try_fuse_additional_kv: bool,
     q_tile_size: Optional[int],
     kv_tile_size: Optional[int],
     backward_q_tile_size: Optional[int],
@@ -398,7 +403,7 @@ def optimize(
 
     if backward_q_tile is not None and backprop:
         assert backward_kv_tile is not None
-        assert opt_backend == "cutlass-fna"
+        # assert opt_backend == "cutlass-fna"
         bwd_configs = [
             {
                 "backward_q_tile_shape": backward_q_tile,
@@ -424,7 +429,6 @@ def optimize(
                 fmha_backend=opt_fmha_backend,
                 run_persistent_kernel=persistent,
                 torch_compile=torch_compile,
-                try_fuse_additional_kv=try_fuse_additional_kv,
                 warmup_steps=warmup_steps,
                 disable_backward=not run_backprop,
                 **cfg,
@@ -437,7 +441,6 @@ def optimize(
             #     fmha_backend=opt_fmha_backend,
             #     persistent=persistent,
             #     torch_compile=torch_compile,
-            #     try_fuse_additional_kv=try_fuse_additional_kv,
             #     warmup_steps=warmup_steps,
             #     backprop=run_backprop,
             #     max_retries=20,

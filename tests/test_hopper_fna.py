@@ -28,7 +28,10 @@ from itertools import product
 
 import torch
 
-from natten.backends.configs.cutlass_hopper import get_all_forward_configs
+from natten.backends.configs.cutlass_hopper import (
+    get_all_backward_configs,
+    get_all_forward_configs,
+)
 from natten.utils.testing import (
     skip_if_hopper_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
@@ -97,41 +100,49 @@ class HopperFNABackendTest(unittest.TestCase):
             dilation=dilation,
             is_causal=is_causal,
             additional_kv_length=additional_kv_length,
-            test_backprop=False,  # TODO
+            test_backprop=True,
             reference_backend="cutlass-fna",
             reference_fmha_backend="cutlass-fmha",
             dtype=torch.float32,
         )
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 1e-2), (0, 1e-3)),
+            (torch.float16, (1e-2, 3e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
         ]
 
         test_id = 0
-        # TODO: add in rtol when backprop is supported
         for dtype, atol, rtol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
             )
+            forward_configs = get_all_forward_configs(dummy)
+            backward_configs = get_all_backward_configs(dummy)
 
-            for (
-                q_tile_shape,
-                kv_tile_shape,
-            ), kernel_schedule in get_all_forward_configs(dummy):
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                (q_tile_shape, kv_tile_shape), kernel_schedule = forward_configs[
+                    i % len(forward_configs)
+                ]
+                backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
+                    i % len(backward_configs)
+                ]
 
                 if additional_kv_length > 0:
-                    # hopper-fna doesn't fuse additional KV, uses merge_attentions
                     reset_torch_compile(1)
 
                 tester.test(
                     eps=atol,
                     dtype=dtype,
                     target_backend="hopper-fna",
-                    target_fmha_backend="cutlass-fmha",
+                    target_fmha_backend="hopper-fmha",
                     q_tile_shape=q_tile_shape,
                     kv_tile_shape=kv_tile_shape,
+                    backward_q_tile_shape=backward_q_tile_shape,
+                    backward_kv_tile_shape=backward_kv_tile_shape,
                     kernel_schedule=kernel_schedule,
                 )
                 test_id += 1
@@ -142,10 +153,24 @@ class HopperFNABackendTest(unittest.TestCase):
     @skip_if_hopper_kernels_not_supported()
     def test_1d_against_cutlass_2x(self):
         problem_sizes = [
-            (1, 1, 128, (32768,), (2048,), (2048,), (1)),
-            (1, 1, 128, (32768,), (2048,), (256,), (1)),
-            (1, 1, 128, (32768,), (2048,), (128,), (1)),
+            (1, 1, 128, (128,), (8,), (1,), (1)),
+            (1, 1, 128, (256,), (160,), (1,), (1)),
+            (1, 1, 128, (256,), (150,), (1,), (1)),
+            (1, 1, 128, (256,), (96,), (1,), (1)),
+            (1, 1, 128, (256,), (8,), (1,), (1)),
+            (1, 1, 128, (512,), (8,), (1,), (1)),
+            (1, 1, 128, (32768,), (63,), (1,), (4,)),
+            (1, 1, 128, (32768,), (63,), (1,), (8,)),
+            (1, 1, 128, (32768,), (63,), (1,), (16,)),
             (1, 1, 128, (32768,), (2048,), (1,), (1)),
+            (1, 1, 128, (32768,), (2048,), (128,), (1)),
+            (1, 1, 128, (32768,), (2048,), (256,), (1)),
+            (1, 1, 128, (32768,), (2048,), (2048,), (1)),
+            (1, 1, 128, (64,), (8,), (1,), (1)),
+            (1, 2, 128, (128,), (8,), (1,), (1)),
+            (1, 1, 32, (64,), (8,), (1,), (1)),
+            (1, 2, 32, (64,), (8,), (1,), (1)),
+            (1, 2, 32, (64,), (3,), (1,), (1)),
             (1, 2, 32, (64,), (3,), (1,), (1)),
             (1, 1, 32, (64,), (3,), (1,), (1)),
             (1, 1, 32, (67,), (8,), (1,), (1)),
@@ -304,6 +329,7 @@ class HopperFNABackendTest(unittest.TestCase):
     @skip_if_hopper_kernels_not_supported()
     def test_3d_against_cutlass_2x(self):
         problem_sizes = [
+            (2, 2, 128, (68, 64, 8), (14, 32, 2), (3, 4, 1), (1, 2, 3)),
             (1, 1, 64, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 2, 1)),
             (1, 1, 32, (13, 11, 9), (3, 4, 3), (2, 3, 3), (3, 2, 2)),
             (4, 8, 64, (32, 10, 10), (7, 3, 3), (5, 1, 1), (1, 2, 3)),

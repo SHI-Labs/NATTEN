@@ -218,9 +218,31 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
   static bool can_implement(
       ProblemShape const& problem_size,
       Arguments const& args) {
+    // NOTE (ali): the original Hopper FMHA kernel does an alignment check on
+    // seqlen_Q as well, citing TMA requirement. However, it does not look like
+    // TMA runs into any issues, because cases that violate this run perfectly
+    // fine.
+    //
+    // Backprop requires this extra check though, and the point of failure is
+    // LSE.
+    //
+    // This does not cause any issues with FNA kernels, since they already pad
+    // for tile size, and tile sizes are usually powers of two, and at least 64,
+    // so divisibility by the required alignment 16 is a guarantee, though not
+    // explicitly asserted.
+    //
+    // Adding in padding along seqlen_Q requires modifications in the bwd mask
+    // as well.
+    //
+    // Therefore, we only pad LSE, and not any other tensors to get around this
+    // issue in bwd, instead of padding Q, dQ, O and dO as well.
+    //
+    // If we pad those, we would have to modify the residual mask as well.
+    //
     return true && (get<4>(problem_size) <= get<2>(TileShape{})) &&
-        ((get<4>(problem_size) % Alignment) == 0) &&
-        ((get<2>(problem_size) % Alignment) == 0);
+        ((get<4>(problem_size) % Alignment) == 0) /* &&
+         ((get<2>(problem_size) % Alignment) == 0)*/
+        ;
   }
 
   template <class ProblemShape>

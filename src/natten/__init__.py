@@ -24,8 +24,12 @@
 from ._environment import HAS_LIBNATTEN
 
 from .backends import (
+    get_bwd_configs_for_cutlass_blackwell_fmha,
+    get_bwd_configs_for_cutlass_blackwell_fna,
     get_bwd_configs_for_cutlass_fmha,
     get_bwd_configs_for_cutlass_fna,
+    get_bwd_configs_for_cutlass_hopper_fmha,
+    get_bwd_configs_for_cutlass_hopper_fna,
     get_configs_for_cutlass_blackwell_fmha,
     get_configs_for_cutlass_blackwell_fna,
     get_configs_for_cutlass_fmha,
@@ -89,7 +93,11 @@ __all__ = [
     "get_configs_for_cutlass_fmha",
     "get_configs_for_cutlass_fna",
     "get_configs_for_cutlass_hopper_fmha",
+    "get_bwd_configs_for_cutlass_hopper_fmha",
     "get_configs_for_cutlass_hopper_fna",
+    "get_bwd_configs_for_cutlass_hopper_fna",
+    "get_bwd_configs_for_cutlass_blackwell_fmha",
+    "get_bwd_configs_for_cutlass_blackwell_fna",
     "get_configs_for_cutlass_blackwell_fmha",
     "get_configs_for_cutlass_blackwell_fna",
     "get_configs_for_flex_fmha",
