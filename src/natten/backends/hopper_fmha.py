@@ -63,26 +63,6 @@ class CutlassHopperFmhaAutogradFn(Function):
         forward_config: CutlassHopperFmhaForwardConfigType,
         backward_config: CutlassHopperFmhaBackwardConfigType,
     ) -> Tuple[Tensor, Tensor]:
-
-        assert isinstance(
-            scale, float
-        ), f"Expected float attention scale, got {type(scale)}."
-
-        if (
-            not isinstance(forward_config, tuple)
-            or len(forward_config) != 2
-            or not (
-                isinstance(forward_config[0], tuple)
-                and len(forward_config[0]) == 2
-                and all(isinstance(x, int) for x in forward_config[0])
-                and isinstance(forward_config[1], KernelSchedule)
-            )
-        ):
-            raise ValueError(
-                "Invalid tiling config for Hopper FMHA; expected tuple of "
-                f"two tuples: a tuple of two integers, and a kernel configuration type, got {forward_config=}."
-            )
-
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()

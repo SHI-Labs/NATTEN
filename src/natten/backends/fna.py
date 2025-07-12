@@ -98,16 +98,12 @@ def make_cutlass_fna_autograd_fn(na_dim):
             dilation: DimensionType,
             is_causal: CausalArgType,
             scale: float,
-            tiling_config: CutlassFnaForwardConfigType,
-            tiling_config_backward: CutlassFnaBackwardConfigType,
+            forward_config: CutlassFnaForwardConfigType,
+            backward_config: CutlassFnaBackwardConfigType,
         ) -> Tuple[Tensor, Tensor]:
             kernel_size, stride, dilation, is_causal = check_all_args(
                 na_dim, kernel_size, stride, dilation, is_causal
             )
-
-            assert isinstance(
-                scale, float
-            ), f"Expected float attention scale, got {type(scale)}."
 
             query = query.contiguous()
             key = key.contiguous()
@@ -125,7 +121,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
                 query.shape[:-1], dtype=torch.float32, device=query.device
             )
 
-            q_tile_shape, kv_tile_shape = tiling_config
+            q_tile_shape, kv_tile_shape = forward_config
             FORWARD_OPS[na_dim](
                 output,
                 query,
@@ -147,8 +143,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
             ctx.dilation = dilation
             ctx.is_causal = is_causal
             ctx.scale = scale
-            ctx.tiling_config = tiling_config
-            ctx.tiling_config_backward = tiling_config_backward
+            ctx.backward_config = backward_config
 
             return output, logsumexp
 
@@ -173,7 +168,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
             d_value = torch.empty_like(value)
 
             q_tile_shape, k_tile_shape, kv_splits, compute_delta_with_pt = (
-                ctx.tiling_config_backward
+                ctx.backward_config
             )
 
             num_kv_splits = kv_splits
@@ -235,7 +230,6 @@ def cutlass_fna_generic(
     dilation: DimensionTypeOrDed = 1,
     is_causal: Optional[CausalArgTypeOrDed] = False,
     scale: Optional[float] = None,
-    # Perf-related args
     q_tile_shape: Optional[DimensionType] = None,
     kv_tile_shape: Optional[DimensionType] = None,
     backward_q_tile_shape: Optional[DimensionType] = None,
@@ -265,14 +259,14 @@ def cutlass_fna_generic(
         is_causal=is_causal,
     )
 
-    tiling_config_forward = check_cutlass_fna_forward_config(
+    forward_config = check_cutlass_fna_forward_config(
         input_tensor=query if value.shape[-1] <= query.shape[-1] else value,
         dilation=dilation,
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
     )
 
-    tiling_config_backward = check_cutlass_fna_backward_config(
+    backward_config = check_cutlass_fna_backward_config(
         input_tensor=key if value.shape[-1] <= key.shape[-1] else value,
         dilation=dilation,
         q_tile_shape=backward_q_tile_shape,
@@ -292,8 +286,8 @@ def cutlass_fna_generic(
         dilation,
         is_causal,
         scale,
-        tiling_config_forward,
-        tiling_config_backward,
+        forward_config,
+        backward_config,
     )
 
     if return_lse:
@@ -311,7 +305,6 @@ def na1d_cutlass_fna(
     dilation: Dimension1DTypeOrDed = 1,
     is_causal: Optional[CausalArg1DTypeOrDed] = False,
     scale: Optional[float] = None,
-    # Perf-related args
     q_tile_shape: Optional[Dimension1DType] = None,
     kv_tile_shape: Optional[Dimension1DType] = None,
     backward_q_tile_shape: Optional[Dimension1DType] = None,
@@ -329,7 +322,6 @@ def na1d_cutlass_fna(
         dilation=dilation,
         is_causal=is_causal,
         scale=scale,
-        # Perf-related args
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
         backward_q_tile_shape=backward_q_tile_shape,
@@ -349,7 +341,6 @@ def na2d_cutlass_fna(
     dilation: Dimension2DTypeOrDed = 1,
     is_causal: Optional[CausalArg2DTypeOrDed] = False,
     scale: Optional[float] = None,
-    # Perf-related args
     q_tile_shape: Optional[Dimension2DType] = None,
     kv_tile_shape: Optional[Dimension2DType] = None,
     backward_q_tile_shape: Optional[Dimension2DType] = None,
@@ -367,7 +358,6 @@ def na2d_cutlass_fna(
         dilation=dilation,
         is_causal=is_causal,
         scale=scale,
-        # Perf-related args
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
         backward_q_tile_shape=backward_q_tile_shape,
@@ -387,7 +377,6 @@ def na3d_cutlass_fna(
     dilation: Dimension3DTypeOrDed = 1,
     is_causal: Optional[CausalArg3DTypeOrDed] = False,
     scale: Optional[float] = None,
-    # Perf-related args
     q_tile_shape: Optional[Dimension3DType] = None,
     kv_tile_shape: Optional[Dimension3DType] = None,
     backward_q_tile_shape: Optional[Dimension3DType] = None,
@@ -405,7 +394,6 @@ def na3d_cutlass_fna(
         dilation=dilation,
         is_causal=is_causal,
         scale=scale,
-        # Perf-related args
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
         backward_q_tile_shape=backward_q_tile_shape,

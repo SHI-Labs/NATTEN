@@ -139,21 +139,23 @@ new Hopper FNA and Blackwell FNA kernels.
 |                             | Run with `#!bash --dry-run` to see available tile shapes for your  |
 |                             | use case.                                                          |
 +-----------------------------+--------------------------------------------------------------------+
-| `#!bash --backward-q-tile`  | Q tile shape in the **backward pass** kernel (only respected by    |
-|                             | the `cutlass-fna` backend).                                        |
+| `#!bash --backward-q-tile`  | Q tile shape in the **backward pass** kernel (not respected by     |
+|                             | the `flex-fna`/`flex-fmha` backends yet).                          |
 |                             | Run with `#!bash --dry-run` to see available tile shapes for your  |
 |                             | use case.                                                          |
 +-----------------------------+--------------------------------------------------------------------+
-| `#!bash --backward-kv-tile` | KV tile shape in the **backward pass** kernel (only respected by   |
-|                             | the `cutlass-fna` backend).                                        |
+| `#!bash --backward-kv-tile` | KV tile shape in the **backward pass** kernel (not respected by    |
+|                             | the `flex-fna`/`flex-fmha` backends yet).                          |
 |                             | Run with `#!bash --dry-run` to see available tile shapes for your  |
 |                             | use case.                                                          |
 +-----------------------------+--------------------------------------------------------------------+
 | `--schedule`                | Kernel schedule (`hopper-fna` and `hopper-fmha` backends only).    |
-|                             | Choices: non (non-persistent), coop (cooperative), pp (ping-pong). |
+|                             | This is only an option for forward pass.                           |
+|                             | Choices: `non` (non-persistent), `coop` (cooperative), `pp`        |
+|                             | (ping-pong).                                                       |
 +-----------------------------+--------------------------------------------------------------------+
 | `--persistent`              | Use persistent tile scheduler in `blackwell-fna` `blackwell-fmha`  |
-|                             | backends.                                                          |
+|                             | backends. This is only an option for forward pass.                 |
 +-----------------------------+--------------------------------------------------------------------+
 | `#!bash --compile`          | Enables compiling Flex Attention block sparse mask and kernel in   |
 |                             | `flex-fna` and `flex-fmha` backends.                               |

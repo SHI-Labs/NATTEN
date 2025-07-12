@@ -60,6 +60,9 @@ def _reset_everything():
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
+    # Hopper FNA bwd doesn't have deterministic option.
+    torch.use_deterministic_algorithms(False)
+
 
 class HopperFNABackendTest(unittest.TestCase):
     def setUp(self):

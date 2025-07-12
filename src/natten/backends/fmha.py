@@ -59,13 +59,9 @@ class CutlassFmhaAutogradFn(Function):
         key: Tensor,
         value: Tensor,
         scale: float,
-        tiling_config: CutlassFmhaForwardConfigType,
-        tiling_config_backward: CutlassFmhaBackwardConfigType,
+        forward_config: CutlassFmhaForwardConfigType,
+        backward_config: CutlassFmhaBackwardConfigType,
     ) -> Tuple[Tensor, Tensor]:
-
-        assert isinstance(
-            scale, float
-        ), f"Expected float attention scale, got {type(scale)}."
 
         query = query.contiguous()
         key = key.contiguous()
@@ -83,7 +79,7 @@ class CutlassFmhaAutogradFn(Function):
             query.shape[:-1], dtype=torch.float32, device=query.device
         )
 
-        q_tile_size, kv_tile_size = tiling_config
+        q_tile_size, kv_tile_size = forward_config
         fmha_forward(
             output,
             query,
@@ -97,8 +93,7 @@ class CutlassFmhaAutogradFn(Function):
 
         ctx.save_for_backward(query, key, value, logsumexp, output)
         ctx.scale = scale
-        ctx.tiling_config = tiling_config
-        ctx.tiling_config_backward = tiling_config_backward
+        ctx.backward_config = backward_config
 
         return output, logsumexp
 
@@ -118,9 +113,7 @@ class CutlassFmhaAutogradFn(Function):
         d_key = torch.empty_like(key)
         d_value = torch.empty_like(value)
 
-        q_tile_size, k_tile_size, kv_splits, compute_delta_with_pt = (
-            ctx.tiling_config_backward
-        )
+        q_tile_size, k_tile_size, kv_splits, compute_delta_with_pt = ctx.backward_config
 
         num_kv_splits = kv_splits
         if kv_splits > 1 and torch.are_deterministic_algorithms_enabled():
@@ -169,13 +162,13 @@ def cutlass_fmha(
 
     assert can_run_cutlass_fmha(query, key, value, raise_error=True)
 
-    tiling_config_forward = check_cutlass_fmha_forward_config(
+    forward_config = check_cutlass_fmha_forward_config(
         input_tensor=query if value.shape[-1] <= query.shape[-1] else value,
         q_tile_size=q_tile_size,
         kv_tile_size=kv_tile_size,
     )
 
-    tiling_config_backward = check_cutlass_fmha_backward_config(
+    backward_config = check_cutlass_fmha_backward_config(
         input_tensor=key if value.shape[-1] <= key.shape[-1] else value,
         q_tile_size=backward_q_tile_size,
         kv_tile_size=backward_kv_tile_size,
@@ -190,8 +183,8 @@ def cutlass_fmha(
         key,
         value,
         scale,
-        tiling_config_forward,
-        tiling_config_backward,
+        forward_config,
+        backward_config,
     )
 
     if return_lse:

@@ -956,9 +956,7 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(
-            backend="blackwell-fmha", max_tests=10000
-        )
+        self._test_randsweep_against_torch_sdpa(backend="blackwell-fmha")
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()

@@ -63,21 +63,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         backward_config: CutlassBlackwellFmhaBackwardConfigType,
         run_persistent_kernel: bool,
     ) -> Tuple[Tensor, Tensor]:
-
-        assert isinstance(
-            scale, float
-        ), f"Expected float attention scale, got {type(scale)}."
-
-        if (
-            not isinstance(forward_config, tuple)
-            or len(forward_config) != 2
-            or not all(isinstance(x, int) for x in forward_config)
-        ):
-            raise ValueError(
-                "Invalid tiling config for Blackwell FMHA; expected tuple of "
-                f"integers of size 2, got {forward_config=}."
-            )
-
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()

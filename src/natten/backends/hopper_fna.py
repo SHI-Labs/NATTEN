@@ -104,10 +104,6 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
                 na_dim, kernel_size, stride, dilation, is_causal
             )
 
-            assert isinstance(
-                scale, float
-            ), f"Expected float attention scale, got {type(scale)}."
-
             (q_tile_shape, kv_tile_shape), kernel_schedule = forward_config
 
             # Token permute begin
@@ -473,8 +469,8 @@ def na2d_cutlass_hopper_fna(
     scale: Optional[float] = None,
     q_tile_shape: Optional[Dimension2DType] = None,
     kv_tile_shape: Optional[Dimension2DType] = None,
-    backward_q_tile_shape: Optional[Dimension3DType] = None,
-    backward_kv_tile_shape: Optional[Dimension3DType] = None,
+    backward_q_tile_shape: Optional[Dimension2DType] = None,
+    backward_kv_tile_shape: Optional[Dimension2DType] = None,
     kernel_schedule: Optional[KernelSchedule] = None,
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
