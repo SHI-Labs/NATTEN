@@ -96,8 +96,8 @@ void blackwell_fmha_forward(
   const int cc = device_props->major * 10 + device_props->minor;
 
   TORCH_CHECK(
-      cc == 100,
-      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100).");
+      cc == 100 || cc == 103,
+      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
 
   TORCH_CHECK(
       query.scalar_type() == key.scalar_type() &&
@@ -143,7 +143,7 @@ void blackwell_fmha_forward(
       "libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100).");
+  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 
@@ -238,8 +238,8 @@ void blackwell_fmha_backward(
   const int cc = device_props->major * 10 + device_props->minor;
 
   TORCH_CHECK(
-      cc == 100,
-      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100).");
+      cc == 100 || cc == 103,
+      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
 
 #if defined(CUTLASS_ARCH_MMA_SM100_SUPPORTED)
 
@@ -274,7 +274,7 @@ void blackwell_fmha_backward(
       "libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100).");
+  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 
