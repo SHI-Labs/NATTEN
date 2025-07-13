@@ -187,7 +187,7 @@ def get_default_backward_tile_shapes(
     if len(all_configs) < 1:
         device_cc = get_device_cc(input_tensor.device)
         raise ValueError(
-            "No configs exist for this use case; Hopper FMHA/FNA does not support it: "
+            "No configs exist for this use case; Blackwell FMHA/FNA does not support it: "
             f"{input_tensor.shape=}, {input_tensor.dtype=}, {device_cc=}."
         )
 

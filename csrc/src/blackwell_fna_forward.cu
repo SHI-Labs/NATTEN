@@ -145,6 +145,7 @@ void blackwell_fna_generic_forward(
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());
   const int cc = device_props->major * 10 + device_props->minor;
+
   TORCH_CHECK(
       cc == 100,
       "This operation can only run on the Blackwell architecture (SM100).");
