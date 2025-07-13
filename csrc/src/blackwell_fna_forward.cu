@@ -148,7 +148,7 @@ void blackwell_fna_generic_forward(
 
   TORCH_CHECK(
       cc == 100,
-      "This operation can only run on the Blackwell architecture (SM100).");
+      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100).");
 
   TORCH_CHECK(
       query.scalar_type() == key.scalar_type() &&
