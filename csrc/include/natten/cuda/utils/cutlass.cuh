@@ -36,6 +36,67 @@
 #pragma once
 
 #include <cutlass/cutlass.h>
+#include <cutlass/device_kernel.h>
+
+////////////////////////////////////////////////////////////////////////////////
+
+namespace cutlass {
+
+/// SM90 Device Kernel wrapper
+template <typename Operator>
+CUTLASS_GLOBAL
+#ifdef __CUDACC__
+// Enclosing this in __CUDACC__ suppresses MSVC warnings.
+__launch_bounds__(
+    Operator::MaxThreadsPerBlock,
+    Operator::MinBlocksPerMultiprocessor)
+#endif // __CUDACC__
+    void device_kernel_sm90(CUTLASS_GRID_CONSTANT
+                            typename Operator::Params const params) {
+#ifdef __CUDA_ARCH__
+#if __CUDA_ARCH__ == 900
+  // Dynamic shared memory base pointer
+  extern __shared__ char smem[];
+  Operator op;
+  op(params, smem);
+  cutlass::arch::synclog_print();
+#else
+  printf(
+      "FATAL: This kernel was built for SM90, but attempted to launch from SM%d\n",
+      int(__CUDA_ARCH__ + 0) / 10);
+#endif
+#endif
+}
+
+/// SM100 Device Kernel wrapper
+template <typename Operator>
+CUTLASS_GLOBAL
+#ifdef __CUDACC__
+// Enclosing this in __CUDACC__ suppresses MSVC warnings.
+__launch_bounds__(
+    Operator::MaxThreadsPerBlock,
+    Operator::MinBlocksPerMultiprocessor)
+#endif // __CUDACC__
+    void device_kernel_sm100(CUTLASS_GRID_CONSTANT
+                             typename Operator::Params const params) {
+#ifdef __CUDA_ARCH__
+#if __CUDA_ARCH__ == 1000
+  // Dynamic shared memory base pointer
+  extern __shared__ char smem[];
+  Operator op;
+  op(params, smem);
+  cutlass::arch::synclog_print();
+#else
+  printf(
+      "FATAL: This kernel was built for SM100, but attempted to launch from SM%d\n",
+      int(__CUDA_ARCH__ + 0) / 10);
+#endif
+#endif
+}
+
+} // namespace cutlass
+
+////////////////////////////////////////////////////////////////////////////////
 
 #define NATTEN_CUTLASS_CHECK(status)                                    \
   [&] {                                                                 \

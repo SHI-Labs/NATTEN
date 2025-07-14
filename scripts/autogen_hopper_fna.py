@@ -54,16 +54,6 @@ SUPPORTED_CONFIGS_FORWARD = {
     },
 }
 
-# TODO: bwd
-SUPPORTED_CONFIGS_BACKWARD = {  # type: ignore
-    16: {
-        32: [],
-        64: [],
-        128: [],
-        256: [],
-    },
-}
-
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
@@ -172,7 +162,7 @@ def get_dim_type(na_dim: int) -> str:
 
 
 def kernel_type_to_str(kernel_type: KernelType) -> str:
-    namespace = "natten::cuda::fna_hopper::HopperFnaKernelType::"
+    namespace = "natten::cuda::hopper::HopperKernelSchedule::"
     if kernel_type == KernelType.NonPersistent:
         return namespace + "NonPersistent"
     if kernel_type == KernelType.WSCooperative:
@@ -204,7 +194,6 @@ class HopperFnaInstance:
         q_tile_shape: tuple,
         kv_tile_shape: tuple,
         causal: tuple,
-        is_backward: bool,
     ):
         assert 0 < na_dim <= 3
         assert len(gemm_shape) == 3
@@ -219,7 +208,6 @@ class HopperFnaInstance:
         self.dtype = dtype
         self.max_head_dim = gemm_shape[2]
         self.kernel_type = kernel_type
-        self.is_backward = is_backward
 
     def get_q_tile_shape_cute(self) -> str:
         return iterable_to_static_cute_tuple(self.q_tile_shape)
@@ -237,8 +225,7 @@ class HopperFnaInstance:
         return iterable_to_static_cute_tuple(self.gemm_shape)
 
     def get_name(self) -> str:
-        backward_str = "" if not self.is_backward else "_backward"
-        name = f"hopper_fna{self.na_dim}d{backward_str}"
+        name = f"hopper_fna{self.na_dim}d"
         name += f"_{self.dtype.short_name}"
         name += "_" + "x".join([str(x) for x in self.gemm_shape])
         name += kernel_type_to_tag(self.kernel_type)
@@ -253,7 +240,6 @@ class HopperFnaInstance:
         )
 
     def get_impl(self) -> str:
-        assert not self.is_backward
         return KERNEL_IMPL_TEMPLATE.format(
             kernel_name=self.get_name(),
             DimType=get_dim_type(self.na_dim),
@@ -317,11 +303,11 @@ def write_combined_source_file(path, filename, headers, kernels):
 
 
 class NaDimDispatcher:
-    def __init__(self, is_backward: bool):
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_HOPPER_FNA_{fwd_bwd_str}"
-        self.dims: List[int] = []
-        self.is_backward = is_backward
+    def __init__(
+        self,
+    ):
+        self.name = "DISPATCH_HOPPER_FNA_FORWARD"
+        self.dims = []
 
     def append(self, na_dim: int):
         self.dims.append(na_dim)
@@ -353,12 +339,10 @@ class NaDimDispatcher:
 
 
 class DTypeDispatcher:
-    def __init__(self, is_backward: bool, na_dim: int):
+    def __init__(self, na_dim: int):
         self.dtypes: List[DataType] = []
         self.na_dim = na_dim
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_HOPPER_FNA_{fwd_bwd_str}_{self.na_dim}D"
-        self.is_backward = is_backward
+        self.name = f"DISPATCH_HOPPER_FNA_FORWARD_{self.na_dim}D"
 
     def append(self, dtype: DataType):
         self.dtypes.append(dtype)
@@ -392,14 +376,12 @@ class DTypeDispatcher:
 
 
 class HeadDimDispatcher:
-    def __init__(self, is_backward: bool, na_dim: int, dtype: DataType):
+    def __init__(self, na_dim: int, dtype: DataType):
         self.na_dim = na_dim
         self.dtype = dtype
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
         self.name = (
-            f"DISPATCH_HOPPER_FNA_{fwd_bwd_str}_{self.na_dim}D_{self.dtype.short_name}"
+            f"DISPATCH_HOPPER_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}"
         )
-        self.is_backward = is_backward
 
         self.dims: List[int] = []
 
@@ -437,7 +419,6 @@ class HeadDimDispatcher:
 class CausalMaskDispatcher:
     def __init__(
         self,
-        is_backward: bool,
         na_dim: int,
         dtype: DataType,
         head_dim: int,
@@ -446,9 +427,7 @@ class CausalMaskDispatcher:
         self.dtype = dtype
         self.head_dim = head_dim
 
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_HOPPER_FNA_{fwd_bwd_str}_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
-        self.is_backward = is_backward
+        self.name = f"DISPATCH_HOPPER_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
 
         self.cms: List = []
 
@@ -500,7 +479,6 @@ class CausalMaskDispatcher:
 class ConfigDispatcher:
     def __init__(
         self,
-        is_backward: bool,
         na_dim: int,
         dtype: DataType,
         head_dim: int,
@@ -512,10 +490,8 @@ class ConfigDispatcher:
         self.causal_mask = causal_mask
         cm_str = "_causal" + "x".join(["1" if c else "0" for c in self.causal_mask])
 
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_HOPPER_FNA_{fwd_bwd_str}_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
+        self.name = f"DISPATCH_HOPPER_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
         self.name += cm_str
-        self.is_backward = is_backward
 
         self.configs: List = []
 
@@ -533,11 +509,7 @@ class ConfigDispatcher:
         gemm_shape = (gemm_M, gemm_N, gemm_K)
         config = (gemm_shape, kernel_type)
 
-        supported_configs = (
-            SUPPORTED_CONFIGS_BACKWARD[self.dtype.bits][self.head_dim]
-            if self.is_backward
-            else SUPPORTED_CONFIGS_FORWARD[self.dtype.bits][self.head_dim]
-        )
+        supported_configs = SUPPORTED_CONFIGS_FORWARD[self.dtype.bits][self.head_dim]
         assert (
             config in supported_configs
         ), f"{config=} not in supported configs {supported_configs=}"
@@ -550,13 +522,12 @@ class ConfigDispatcher:
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
             causal=self.causal_mask,
-            is_backward=self.is_backward,
         )
 
         return kernel
 
-    def get_target_name(self, q_tile_shape, kv_tile_shape, persistent):
-        kernel = self.get_kernel_instance(q_tile_shape, kv_tile_shape, persistent)
+    def get_target_name(self, q_tile_shape, kv_tile_shape, kernel_type):
+        kernel = self.get_kernel_instance(q_tile_shape, kv_tile_shape, kernel_type)
         return kernel.get_name()
 
     def get_dispatcher(self):
@@ -732,29 +703,26 @@ def generate_hopper_fna_kernels(path, num_splits=2):
     config_dispatchers = []
     kernels = []
 
-    rank_dispatcher = NaDimDispatcher(is_backward=False)
+    rank_dispatcher = NaDimDispatcher()
     for na_dim in NA_DIMS:
         rank_dispatcher.append(na_dim)
 
-        dtype_dispatcher = DTypeDispatcher(is_backward=False, na_dim=na_dim)
+        dtype_dispatcher = DTypeDispatcher(na_dim=na_dim)
         for dtype in SUPPORTED_DTYPES:
             dtype_dispatcher.append(dtype)
 
-            head_dim_dispatcher = HeadDimDispatcher(
-                is_backward=False, dtype=dtype, na_dim=na_dim
-            )
+            head_dim_dispatcher = HeadDimDispatcher(dtype=dtype, na_dim=na_dim)
 
             for head_dim in HEAD_DIMS:
                 head_dim_dispatcher.append(head_dim)
 
                 cm_dispatcher = CausalMaskDispatcher(
-                    is_backward=False, na_dim=na_dim, dtype=dtype, head_dim=head_dim
+                    na_dim=na_dim, dtype=dtype, head_dim=head_dim
                 )
                 for cm in CAUSAL_MASKS[na_dim]:
                     cm_dispatcher.append(cm)
 
                     config_dispatcher = ConfigDispatcher(
-                        is_backward=False,
                         dtype=dtype,
                         head_dim=head_dim,
                         na_dim=na_dim,

@@ -124,10 +124,10 @@ else()
 endif()
 
 # CUDA flags
-add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
-add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
-add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
-add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
+#add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
+#add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
+#add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
+#add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
 
 # Torch/pybind flags
 # Pybind specifically needs these to recognize the module being initialized.
@@ -160,12 +160,12 @@ file(GLOB AUTOGEN_REFERENCE ./autogen/src/cuda/reference/*.cu)
 file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu ./src/cuda/fna/*.cu)
 file(GLOB AUTOGEN_FMHA ./autogen/src/cuda/fmha/*.cu ./src/cuda/fmha/*.cu)
 if(${NATTEN_WITH_HOPPER_FNA})
-  file(GLOB AUTOGEN_HOPPER_FNA ./autogen/src/cuda/hopper_fna/*.cu ./src/cuda/hopper_fna/*.cu)
-  file(GLOB AUTOGEN_HOPPER_FMHA ./autogen/src/cuda/hopper_fmha/*.cu ./src/cuda/hopper_fmha/*.cu)
+  file(GLOB AUTOGEN_HOPPER_FNA ./autogen/src/cuda/hopper_fna/*.cu ./autogen/src/cuda/hopper_fna_bwd/*.cu)
+  file(GLOB AUTOGEN_HOPPER_FMHA ./autogen/src/cuda/hopper_fmha/*.cu ./autogen/src/cuda/hopper_fmha_bwd/*.cu)
 endif()
 if(${NATTEN_WITH_BLACKWELL_FNA})
-  file(GLOB AUTOGEN_BLACKWELL_FNA ./autogen/src/cuda/blackwell_fna/*.cu ./src/cuda/blackwell_fna/*.cu)
-  file(GLOB AUTOGEN_BLACKWELL_FMHA ./autogen/src/cuda/blackwell_fmha/*.cu ./src/cuda/blackwell_fmha/*.cu)
+  file(GLOB AUTOGEN_BLACKWELL_FNA ./autogen/src/cuda/blackwell_fna/*.cu ./autogen/src/cuda/blackwell_fna_bwd/*.cu)
+  file(GLOB AUTOGEN_BLACKWELL_FMHA ./autogen/src/cuda/blackwell_fmha/*.cu ./autogen/src/cuda/blackwell_fmha_bwd/*.cu)
 endif()
 
 file(GLOB ALL_SOURCES 

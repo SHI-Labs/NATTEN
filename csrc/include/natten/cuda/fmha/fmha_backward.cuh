@@ -40,8 +40,8 @@
 #pragma once
 
 #include <natten/cuda/utils/cuda.h>
-#include <natten/cuda/utils/cutlass.h>
 #include <natten/natten.h>
+#include <natten/cuda/utils/cutlass.cuh>
 
 #include <natten_autogen/cuda/fmha/interface.h>
 

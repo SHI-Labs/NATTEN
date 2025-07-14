@@ -33,6 +33,7 @@
 #include <natten/helpers.h>
 #include <natten/natten.h>
 
+#include <natten/cuda/hopper_fmha_fna.h>
 #ifdef NATTEN_WITH_CUTLASS
 #include <natten_autogen/cuda/hopper_fna/interface.h>
 #include <natten/cuda/fna_hopper/fna_forward.cuh>
@@ -56,24 +57,7 @@ namespace natten {
 
 #ifdef NATTEN_WITH_CUTLASS
 #ifdef NATTEN_WITH_HOPPER_FNA
-namespace {
-
-auto kernel_type_int_to_enum_type(int kernel_type) {
-  switch (kernel_type) {
-    case 0:
-      return natten::cuda::fna_hopper::HopperFnaKernelType::NonPersistent;
-    case 1:
-      return natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative;
-    case 2:
-      return natten::cuda::fna_hopper::HopperFnaKernelType::WSPingpong;
-  }
-  std::cerr
-      << "Invalid value for argument kernel_type; expected either 0, 1, or 2, got "
-      << kernel_type << ".\n";
-  return natten::cuda::fna_hopper::HopperFnaKernelType::Invalid;
-}
-
-} // namespace
+namespace {} // namespace
 #endif
 #endif
 
@@ -185,9 +169,10 @@ void hopper_fna_generic_forward(
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
 
-  auto kernel_type_ = kernel_type_int_to_enum_type(kernel_type);
+  auto kernel_type_ =
+      natten::cuda::hopper::kernel_type_int_to_enum_type(kernel_type);
   TORCH_CHECK(
-      kernel_type_ != natten::cuda::fna_hopper::HopperFnaKernelType::Invalid,
+      kernel_type_ != natten::cuda::hopper::HopperKernelSchedule::Invalid,
       "Got invalid kernel_type argument.");
 
 #if defined(CUTLASS_ARCH_MMA_SM90_SUPPORTED)

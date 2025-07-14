@@ -351,6 +351,56 @@ void CheckLogSumExp(const at::Tensor& output, const at::Tensor& logsumexp) {
   }
 }
 
+inline void CheckLogSumExpHeadsFirst(
+    const at::Tensor& output,
+    const at::Tensor& logsumexp) {
+  // Output: [batch, seqlen, heads, dim]
+  // Logsumexp: [batch, heads, seqlen]
+  TORCH_CHECK(
+      logsumexp.scalar_type() == torch::kFloat,
+      "`logsumexp` must be stored in float32 data type, got ",
+      logsumexp.scalar_type());
+  TORCH_CHECK(
+      logsumexp.device().is_cuda() == output.device().is_cuda(),
+      "Expected logsumexp to be on the same device as the operands.");
+  CHECK_CONTIGUOUS(logsumexp);
+  TORCH_CHECK(
+      output.dim() == 4, "Expected 4D tensor, got ", output.dim(), "D.");
+  TORCH_CHECK(
+      logsumexp.dim() == 3,
+      "Expected 3D logsumexp tensor, got ",
+      logsumexp.dim(),
+      "D/");
+
+  TORCH_CHECK(
+      logsumexp.size(0) == output.size(0),
+      "Logsumexp and input tensor don't match in the batch dimension. ",
+      "Input tensor has batch=",
+      output.size(0),
+      ", logsumexp has batch=",
+      logsumexp.size(0),
+      ".");
+
+  TORCH_CHECK(
+      logsumexp.size(1) == output.size(2),
+      "Logsumexp and input tensor don't match in the head dimension. ",
+      "Input tensor has heads=",
+      output.size(2),
+      ", logsumexp has heads=",
+      logsumexp.size(1),
+      ".");
+
+  // NOTE: seqlen check is >= instead of ==, since LSE can be padded
+  TORCH_CHECK(
+      logsumexp.size(2) >= output.size(1),
+      "Logsumexp and input tensor don't match in the seqlen dimension. ",
+      "Input tensor has seqlen=",
+      output.size(1),
+      ", logsumexp has seqlen=",
+      logsumexp.size(2),
+      ".");
+}
+
 inline void AssertDimsAre128BitAligned(
     const at::Tensor& query,
     const at::Tensor& value) {

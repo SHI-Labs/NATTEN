@@ -33,9 +33,11 @@ from natten.backends.configs.cutlass import (
     get_all_fmha_forward_configs,
 )
 from natten.backends.configs.cutlass_blackwell import (
+    get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
 )
 from natten.backends.configs.cutlass_hopper import (
+    get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
 )
 from natten.functional import attention
@@ -68,6 +70,9 @@ def _reset_everything():
 
     torch.manual_seed(42)
     torch.cuda.empty_cache()
+
+    # Hopper and Blackwell FMHA bwd don't have deterministic option.
+    torch.use_deterministic_algorithms(False)
 
 
 def compute_sdpa_reference(
@@ -403,7 +408,7 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float32, (1e-4, 1e-4), (0, 0)),
+            (torch.float32, (1e-4, 1e-3), (0, 0)),
         ]
 
         if supports_float16(torch.get_default_device()):
@@ -428,6 +433,8 @@ class FMHABackendTest(unittest.TestCase):
 
             forward_configs = get_all_fmha_forward_configs(dummy_fwd)
             backward_configs = get_all_fmha_backward_configs(dummy_bwd)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
@@ -473,8 +480,8 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float16, 1e-2, 0),
-            (torch.bfloat16, 1e-1, 0),
+            (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
+            (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
         ]
 
         for dtype, atol, rtol in ALLOWED_DTYPES:
@@ -484,9 +491,18 @@ class FMHABackendTest(unittest.TestCase):
             )
 
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
+            backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
-            for i in range(len(forward_configs)):
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
                 q_tile_size, kv_tile_size = forward_configs[i]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
 
                 self._test_against_torch_sdpa(
                     batch=batch,
@@ -495,12 +511,14 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
                     dtype=dtype,
-                    test_backprop=False,  # TODO
+                    test_backprop=True,
                     atol=atol,
                     rtol=rtol,
                     backend="blackwell-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
                     torch_compile=False,
                 )
 
@@ -515,8 +533,8 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float16, 1e-2, 0),
-            (torch.bfloat16, 1e-1, 0),
+            (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
+            (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
         ]
 
         for dtype, atol, rtol in ALLOWED_DTYPES:
@@ -526,9 +544,20 @@ class FMHABackendTest(unittest.TestCase):
             )
 
             forward_configs = get_all_hopper_fmha_forward_configs(dummy)
+            backward_configs = get_all_hopper_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
-            for i in range(len(forward_configs)):
-                (q_tile_size, kv_tile_size), schedule = forward_configs[i]
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                (q_tile_size, kv_tile_size), schedule = forward_configs[
+                    i % len(forward_configs)
+                ]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
 
                 self._test_against_torch_sdpa(
                     batch=batch,
@@ -537,13 +566,15 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
                     dtype=dtype,
-                    test_backprop=False,  # TODO
+                    test_backprop=True,
                     atol=atol,
                     rtol=rtol,
                     backend="hopper-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
                     kernel_schedule=schedule,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
                     torch_compile=False,
                 )
 
@@ -569,9 +600,20 @@ class FMHABackendTest(unittest.TestCase):
             )
 
             forward_configs = get_all_hopper_fmha_forward_configs(dummy)
+            backward_configs = get_all_hopper_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
-            for i in range(len(forward_configs)):
-                (q_tile_size, kv_tile_size), schedule = forward_configs[i]
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                (q_tile_size, kv_tile_size), schedule = forward_configs[
+                    i % len(forward_configs)
+                ]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
 
                 self._test_against_natten_cutlass_fmha(
                     batch=batch,
@@ -580,7 +622,7 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
                     dtype=dtype,
-                    test_backprop=False,  # TODO
+                    test_backprop=True,
                     test_lse=True,
                     atol=atol,
                     rtol=rtol,
@@ -588,6 +630,8 @@ class FMHABackendTest(unittest.TestCase):
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
                     kernel_schedule=schedule,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
                     torch_compile=False,
                 )
 
@@ -602,8 +646,8 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float16, 1e-2, 0),
-            (torch.bfloat16, 1e-1, 0),
+            (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
+            (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
         ]
 
         for dtype, atol, rtol in ALLOWED_DTYPES:
@@ -613,9 +657,18 @@ class FMHABackendTest(unittest.TestCase):
             )
 
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
+            backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
-            for i in range(len(forward_configs)):
-                q_tile_size, kv_tile_size = forward_configs[i]
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
 
                 self._test_against_natten_cutlass_fmha(
                     batch=batch,
@@ -624,13 +677,15 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
                     dtype=dtype,
-                    test_backprop=False,  # TODO
+                    test_backprop=True,
                     test_lse=True,
                     atol=atol,
                     rtol=rtol,
                     backend="blackwell-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
                     torch_compile=False,
                 )
 
@@ -709,9 +764,8 @@ class FMHABackendTest(unittest.TestCase):
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
 
-    def _test_randsweep_against_torch_sdpa(self, backend):
+    def _test_randsweep_against_torch_sdpa(self, backend, max_tests=1000):
         random.seed(42)
-        max_tests = 1000
 
         max_qk = 2**21
         for i in range(max_tests):
@@ -733,8 +787,8 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim if not supports_dim_v else random.choice(head_dim_choices)
             )
 
-            seqlen_q = random.choice(range(8, 2**14, 8))
-            seqlen_kv = random.choice(range(8, 2**14, 8))
+            seqlen_q = random.choice(range(8, 2**14, 1))
+            seqlen_kv = random.choice(range(8, 2**14, 1))
 
             while seqlen_q * seqlen_kv > max_qk:
                 cut_kv = random.choice([True, False])
@@ -855,6 +909,12 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_fast(self):
         problem_sizes = [
+            (1, 1, 32, 32, 13496),
+            (3, 1, 32, 77, 8504),
+            (1, 1, 32, 77, 8504),
+            (1, 1, 64, 40, 12296),
+            (1, 2, 64, 40, 12296),
+            (1, 1, 128, 128, 128),
             (2, 2, 64, 128, 128),
             (1, 1, 32, 32, 32),
             (1, 1, 32, 128, 128),

@@ -22,7 +22,7 @@
 #################################################################################################
 
 import time
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
@@ -81,9 +81,8 @@ def measure_natten_runtime(
     backward_kv_splits: Optional[DimensionType] = None,
     backward_use_pt_reduction: bool = False,
     run_persistent_kernel: bool = True,
-    kernel_schedule: Optional[KernelSchedule] = None,
+    kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
     # FMHA args
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -147,7 +146,6 @@ def measure_natten_runtime(
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
             torch_compile=torch_compile,
-            try_fuse_additional_kv=try_fuse_additional_kv,
             attention_kwargs={
                 "backend": fmha_backend,
                 "kernel_schedule": kernel_schedule,
@@ -244,9 +242,8 @@ def _profile_na_with_torch(
     backward_kv_splits: Optional[DimensionType] = None,
     backward_use_pt_reduction: bool = False,
     run_persistent_kernel: bool = True,
-    kernel_schedule: Optional[KernelSchedule] = None,
+    kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
     # FMHA args
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -312,7 +309,6 @@ def _profile_na_with_torch(
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
             torch_compile=torch_compile,
-            try_fuse_additional_kv=try_fuse_additional_kv,
             attention_kwargs={
                 "backend": fmha_backend,
                 "kernel_schedule": kernel_schedule,
@@ -400,9 +396,8 @@ def profile_na_with_torch(
     backward_kv_splits: Optional[DimensionType] = None,
     backward_use_pt_reduction: bool = False,
     run_persistent_kernel: bool = True,
-    kernel_schedule: Optional[KernelSchedule] = None,
+    kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
     # Debug
     debug_report_prof_result: bool = False,
     # FMHA args
@@ -426,7 +421,6 @@ def profile_na_with_torch(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
-        try_fuse_additional_kv=try_fuse_additional_kv,
         q_tile_size=q_tile_size,
         kv_tile_size=kv_tile_size,
         backward_q_tile_size=backward_q_tile_size,

@@ -22,7 +22,7 @@ namespace fmha_hopper {
   [&] { \
     if (q_tile_size == 64 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fmha_hopper::hopper_fmha_float16_64x128x32(__VA_ARGS__); \
 } \
     else { \
@@ -37,7 +37,7 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) {
   [&] { \
     if (q_tile_size == 64 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fmha_hopper::hopper_fmha_float16_64x128x64(__VA_ARGS__); \
 } \
     else { \
@@ -52,12 +52,12 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) {
   [&] { \
     if (q_tile_size == 128 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fmha_hopper::hopper_fmha_float16_128x128x128_coop(__VA_ARGS__); \
 } \
     else if (q_tile_size == 128 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fmha_hopper::hopper_fmha_float16_128x128x128_pp(__VA_ARGS__); \
 } \
     else { \
@@ -72,7 +72,7 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong) { \
   [&] { \
     if (q_tile_size == 128 && \
 kv_tile_size == 64 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fmha_hopper::hopper_fmha_float16_128x64x256_coop(__VA_ARGS__); \
 } \
     else { \
@@ -87,7 +87,7 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative) {
   [&] { \
     if (q_tile_size == 64 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fmha_hopper::hopper_fmha_bfloat16_64x128x32(__VA_ARGS__); \
 } \
     else { \
@@ -102,7 +102,7 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) {
   [&] { \
     if (q_tile_size == 64 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::NonPersistent) { \
   natten::cuda::fmha_hopper::hopper_fmha_bfloat16_64x128x64(__VA_ARGS__); \
 } \
     else { \
@@ -117,12 +117,12 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::NonPersistent) {
   [&] { \
     if (q_tile_size == 128 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fmha_hopper::hopper_fmha_bfloat16_128x128x128_coop(__VA_ARGS__); \
 } \
     else if (q_tile_size == 128 && \
 kv_tile_size == 128 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSPingpong) { \
   natten::cuda::fmha_hopper::hopper_fmha_bfloat16_128x128x128_pp(__VA_ARGS__); \
 } \
     else { \
@@ -137,7 +137,7 @@ kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSPingpong) { \
   [&] { \
     if (q_tile_size == 128 && \
 kv_tile_size == 64 && \
-kernel_type == natten::cuda::fmha_hopper::HopperFmhaKernelType::WSCooperative) { \
+kernel_type == natten::cuda::hopper::HopperKernelSchedule::WSCooperative) { \
   natten::cuda::fmha_hopper::hopper_fmha_bfloat16_128x64x256_coop(__VA_ARGS__); \
 } \
     else { \

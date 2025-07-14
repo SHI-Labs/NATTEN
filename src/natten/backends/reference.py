@@ -99,10 +99,6 @@ def make_reference_fna_autograd_fn(na_dim):
                 na_dim, kernel_size, stride, dilation, is_causal
             )
 
-            assert isinstance(
-                scale, float
-            ), f"Expected float attention scale, got {type(scale)}."
-
             query = query.contiguous()
             key = key.contiguous()
             value = value.contiguous()

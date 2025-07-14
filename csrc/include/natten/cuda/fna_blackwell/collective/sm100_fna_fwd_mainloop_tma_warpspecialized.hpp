@@ -46,19 +46,6 @@ namespace cutlass::fna::collective {
 
 using namespace cute;
 
-template <class T>
-CUTE_HOST_DEVICE bool tuple_leq(T t0, T t1) {
-  static_assert(rank(T{}) > 0 && rank(T{}) < 4);
-  if constexpr (rank(T{}) == 1) {
-    return get<0>(t0) <= get<0>(t1);
-  } else if constexpr (rank(T{}) == 2) {
-    return get<0>(t0) <= get<0>(t1) && get<1>(t0) <= get<1>(t1);
-  } else {
-    return get<0>(t0) <= get<0>(t1) && get<1>(t0) <= get<1>(t1) &&
-        get<2>(t0) <= get<2>(t1);
-  }
-}
-
 template <
     class Element_,
     class ElementQK_,

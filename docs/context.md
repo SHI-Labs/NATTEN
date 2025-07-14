@@ -2,16 +2,24 @@
 
 Certain features in NATTEN are guarded by a global context. Those features are:
 
-* **KV parallelism in FNA backward**: necessary for speeding up training, but can introduce
-    non-deterministic behavior, and increased memory footprint. This is standard in almost all
-    fused attention implementations. [Read more](#kv-parallelism-in-fna-fmha).
+* **KV parallelism in CUTLASS FNA/FMHA backward**: necessary for speeding up training, but can
+    introduce non-deterministic behavior, and increased memory footprint. This is standard in
+    almost all fused attention implementations. [Read more](#kv-parallelism-in-fna-fmha).
 * **Flex Attention + `torch.compile`**: Heavily experimental, and may lead to incorrect behavior,
     but users can choose to allow it at their own risk. [Read more](#flex-attention-torchcompile).
 
 
-## KV parallelism in FNA / FMHA
-FNA (as well as most FMHA) backward pass implementations need to parallelize across the KV sequence,
-but this results in a race condition on the query gradient tiles. 
+## KV parallelism in CUTLASS FNA / FMHA
+
+!!! note
+    These controls only affect the [CUTLASS FNA / FMHA](backends.md#cutlass-fna-fmha) backend.
+    If you're using our [Hopper](backends.md#hopper-fna-fmha) or
+    [Blackwell FNA / FMHA](backends.md#blackwell-fna-fmha), or [Flex](backends.md#flex-fna-fmha),
+    they will use KV parallelism automatically. If PyTorch's deterministic mode is enabled, those
+    backends won't be selected, and if forced, NATTEN will raise an error.
+
+CUTLASS FNA/FMHA (as well as most FMHA kernels) backward pass implementations need to parallelize
+across the KV sequence, but this results in a race condition on the query gradient tiles. 
 This is avoided with a mutex lock, which results in non-deterministic order of write, and therefore
 makes the computation non-deterministic.
 In addition, some additional scratch space may be required, which is a function of the parallelism

@@ -171,4 +171,87 @@ struct CausalFusion : DefaultFusion {
   }
 };
 
+template <class Base>
+struct FusionBwdAdapter {
+  template <class BlkCoord, class TileShape, class ProblemSize>
+  CUTLASS_DEVICE int get_trip_count(
+      BlkCoord const& blk_coord,
+      TileShape const& tile_shape,
+      ProblemSize const& problem_size) {
+    return Base{}.get_trip_count(
+        select<1, 0, 2>(blk_coord),
+        select<1, 0, 2>(tile_shape),
+        select<0, 1, 3, 2, 4>(problem_size));
+  }
+
+  template <class AccQK, class IndexQK, class ProblemSize>
+  CUTLASS_DEVICE void before_softmax(
+      AccQK& acc_qk,
+      IndexQK const& index_qk,
+      ProblemSize const& problem_size) {
+    auto index_base = index_qk(_0{});
+    auto index_shape = shape(index_qk);
+    auto index_stride = transform_leaf(stride(index_qk), [](auto elem) {
+      if constexpr (is_scaled_basis<decltype(elem)>::value) {
+        if constexpr (decltype(elem.mode() == _0{})::value) {
+          return ScaledBasis<decltype(elem.value()), 1>(elem.value());
+        } else {
+          return ScaledBasis<decltype(elem.value()), 0>(elem.value());
+        }
+      } else {
+        return elem;
+      }
+    });
+    auto index_qk_bwd = make_tensor(
+        make_inttuple_iter(select<1, 0>(index_base)),
+        make_layout(index_shape, index_stride));
+    Base{}.before_softmax(acc_qk, index_qk_bwd, problem_size);
+  }
+
+  template <class BlkCoord, class TileShape, class ProblemSize>
+  CUTLASS_DEVICE bool is_contributing(
+      BlkCoord const& blk_coord,
+      TileShape const& tile_shape,
+      ProblemSize const& problem_size) {
+    return true;
+  }
+};
+
+template <>
+struct FusionBwdAdapter<CausalFusion> {
+  template <class BlkCoord, class TileShape, class ProblemSize>
+  CUTLASS_DEVICE int get_trip_count(
+      BlkCoord const& blk_coord,
+      TileShape const& tile_shape,
+      ProblemSize const& problem_size) {
+    return get<2>(problem_size) / get<0>(TileShape{});
+  }
+
+  template <class AccQK, class IndexQK, class ProblemSize>
+  CUTLASS_DEVICE void before_softmax(
+      AccQK& acc_qk,
+      IndexQK const& index_qk,
+      ProblemSize const& problem_size
+
+  ) {
+    CUTLASS_PRAGMA_UNROLL
+    for (int i = 0; i < size(acc_qk); i++) {
+      auto pos = index_qk(i);
+      if (get<1>(pos) < get<0>(pos)) {
+        acc_qk(i) = -INFINITY;
+      }
+    }
+  }
+
+  template <class BlkCoord, class TileShape, class ProblemSize>
+  CUTLASS_DEVICE bool is_contributing(
+      BlkCoord const& blk_coord,
+      TileShape const& tile_shape,
+      ProblemSize const& problem_size) {
+    int max_q = get<0>(blk_coord) * get<0>(tile_shape) + get<0>(tile_shape);
+    int min_k = get<1>(blk_coord) * get<1>(tile_shape);
+    return min_k <= max_q;
+  }
+};
+
 } // namespace cutlass::fmha::collective

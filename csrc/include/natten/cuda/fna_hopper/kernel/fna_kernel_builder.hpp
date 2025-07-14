@@ -34,12 +34,19 @@
 
 #include "natten/cuda/fna_hopper/collective/fna_collective_tma.hpp"
 #include "natten/cuda/fna_hopper/collective/fna_collective_tma_warpspecialized.hpp"
-#include "natten/cuda/fna_hopper/collective/fna_epilogue.hpp"
-#include "natten/cuda/fna_hopper/kernel/fna_kernel_tma.hpp"
-#include "natten/cuda/fna_hopper/kernel/fna_kernel_tma_warpspecialized.hpp"
-#include "natten/cuda/fna_hopper/kernel/fna_options.hpp"
+
+// These are identical to FMHA; reuse
+#include "natten/cuda/fmha_hopper/collective/fmha_epilogue.hpp"
+#include "natten/cuda/fmha_hopper/kernel/fmha_kernel_tma.hpp"
+#include "natten/cuda/fmha_hopper/kernel/fmha_kernel_tma_warpspecialized.hpp"
+#include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
+#include "natten/cuda/fmha_hopper/kernel/fmha_tile_scheduler.hpp"
 
 namespace cutlass::fna::kernel {
+
+using cutlass::fmha::kernel::find_option_t;
+using cutlass::fmha::kernel::Option;
+using cutlass::fmha::kernel::Tag;
 
 template <
     class NADim,
@@ -90,13 +97,13 @@ struct FnaBuilder<
       Fusion,
       Options...>;
 
-  using CollectiveEpilogue = cutlass::fna::collective::FnaFwdEpilogueSm90<
+  using CollectiveEpilogue = cutlass::fmha::collective::FmhaFwdEpilogueSm90<
       Element,
       ElementAccumulator,
       typename CollectiveMainloop::TileShapePV>;
 
-  using Kernel = cutlass::fna::kernel::
-      FnaKernelTma<CollectiveMainloop, CollectiveEpilogue, Options...>;
+  using Kernel = cutlass::fmha::kernel::
+      FmhaKernelTma<CollectiveMainloop, CollectiveEpilogue, Options...>;
 };
 
 template <
@@ -141,7 +148,7 @@ struct FnaBuilder<
           Fusion,
           Options...>;
 
-  using CollectiveEpilogue = cutlass::fna::collective::FnaFwdEpilogueSm90<
+  using CollectiveEpilogue = cutlass::fmha::collective::FmhaFwdEpilogueSm90<
       Element,
       ElementAccumulatorPV,
       typename CollectiveMainloop::TileShapePV>;
@@ -150,10 +157,10 @@ struct FnaBuilder<
       find_option_t<Tag::kIsPersistent, false_type, Options...>::value;
   using TileScheduler = std::conditional_t<
       kIsPersistent,
-      cutlass::fna::kernel::PersistentTileScheduler,
-      cutlass::fna::kernel::IndividualTileScheduler>;
+      cutlass::fmha::kernel::PersistentTileScheduler,
+      cutlass::fmha::kernel::IndividualTileScheduler>;
 
-  using Kernel = cutlass::fna::kernel::FnaKernelTmaWarpSpecialized<
+  using Kernel = cutlass::fmha::kernel::FmhaKernelTmaWarpSpecialized<
       CollectiveMainloop,
       CollectiveEpilogue,
       TileScheduler,

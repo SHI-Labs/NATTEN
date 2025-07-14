@@ -32,12 +32,23 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import hopper_fmha_forward
-from ..types import CutlassHopperFmhaForwardConfigType, KernelSchedule, NoneType
+from .._libnatten import hopper_fmha_backward, hopper_fmha_forward
+from ..types import (
+    CutlassHopperFmhaBackwardConfigType,
+    CutlassHopperFmhaForwardConfigType,
+    KernelSchedule,
+    NoneType,
+)
+from ..utils import log
 from ..utils.checks import fmha_tensor_checks
 
 from .configs.checks import can_run_cutlass_hopper_fmha
-from .configs.cutlass_hopper import check_cutlass_hopper_fmha_forward_config
+from .configs.cutlass_hopper import (
+    check_cutlass_hopper_fmha_backward_config,
+    check_cutlass_hopper_fmha_forward_config,
+)
+
+logger = log.get_logger(__name__)
 
 
 class CutlassHopperFmhaAutogradFn(Function):
@@ -50,27 +61,8 @@ class CutlassHopperFmhaAutogradFn(Function):
         value: Tensor,
         scale: float,
         forward_config: CutlassHopperFmhaForwardConfigType,
+        backward_config: CutlassHopperFmhaBackwardConfigType,
     ) -> Tuple[Tensor, Tensor]:
-
-        assert isinstance(
-            scale, float
-        ), f"Expected float attention scale, got {type(scale)}."
-
-        if (
-            not isinstance(forward_config, tuple)
-            or len(forward_config) != 2
-            or not (
-                isinstance(forward_config[0], tuple)
-                and len(forward_config[0]) == 2
-                and all(isinstance(x, int) for x in forward_config[0])
-                and isinstance(forward_config[1], KernelSchedule)
-            )
-        ):
-            raise ValueError(
-                "Invalid tiling config for Hopper FMHA; expected tuple of "
-                f"two tuples: a tuple of two integers, and a kernel configuration type, got {forward_config=}."
-            )
-
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()
@@ -95,6 +87,7 @@ class CutlassHopperFmhaAutogradFn(Function):
 
         ctx.save_for_backward(query, key, value, logsumexp, output)
         ctx.scale = scale
+        ctx.backward_config = backward_config
 
         return output, logsumexp
 
@@ -106,6 +99,7 @@ class CutlassHopperFmhaAutogradFn(Function):
         Tensor,
         NoneType,
         NoneType,
+        NoneType,
     ]:
         query, key, value, logsumexp, output = ctx.saved_tensors
         d_output = grad_out.contiguous()  # noqa: F841
@@ -113,9 +107,54 @@ class CutlassHopperFmhaAutogradFn(Function):
         d_key = torch.empty_like(key)
         d_value = torch.empty_like(value)
 
-        raise NotImplementedError("Hopper FMHA does not support backpropagation yet.")
+        q_tile_size, k_tile_size = ctx.backward_config
 
-        return d_query, d_key, d_value, None, None
+        if torch.are_deterministic_algorithms_enabled():
+            raise RuntimeError(
+                "Hopper FMHA backward pass does not have a deterministic mode, "
+                "but PyTorch's deterministic algorithms were enabled. To proceed, "
+                "you must either disable torch's deterministic mode, or choose a "
+                "different backend."
+            )
+
+        # TODO: change the layout in forward pass so we can skip this!
+        # Same for padding.
+        logsumexp = logsumexp.transpose(-2, -1).contiguous()
+
+        # Padding is required since TMA loads in LSE
+        assert query.dtype in [torch.float16, torch.bfloat16]
+        elem_bytes = 2
+        tma_alignment_bytes = 16 // elem_bytes
+        requires_padding = logsumexp.shape[-1] % tma_alignment_bytes != 0
+        seq_q_padding = tma_alignment_bytes - (
+            logsumexp.shape[-1] % tma_alignment_bytes
+        )
+
+        if requires_padding:
+            old_shape = logsumexp.shape
+            logsumexp = torch.nn.functional.pad(
+                logsumexp, (0, seq_q_padding), "constant", 0
+            )
+            logger.debug(
+                f"Padded logsumexp with shape {old_shape} to {logsumexp.shape}."
+            )
+
+        hopper_fmha_backward(
+            d_query,
+            d_key,
+            d_value,
+            query,
+            key,
+            value,
+            output,
+            d_output,
+            logsumexp,
+            ctx.scale,
+            q_tile_size,
+            k_tile_size,
+        )
+
+        return d_query, d_key, d_value, None, None, None
 
 
 def cutlass_hopper_fmha(
@@ -126,6 +165,8 @@ def cutlass_hopper_fmha(
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
     kernel_schedule: Optional[KernelSchedule] = None,
+    backward_q_tile_size: Optional[int] = None,
+    backward_kv_tile_size: Optional[int] = None,
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
@@ -139,6 +180,11 @@ def cutlass_hopper_fmha(
         kv_tile_size=kv_tile_size,
         kernel_schedule=kernel_schedule,
     )
+    backward_config = check_cutlass_hopper_fmha_backward_config(
+        input_tensor=query,
+        q_tile_size=backward_q_tile_size,
+        kv_tile_size=backward_kv_tile_size,
+    )
 
     scale = scale or query.shape[-1] ** -0.5
 
@@ -148,6 +194,7 @@ def cutlass_hopper_fmha(
         value,
         scale,
         forward_config,
+        backward_config,
     )
 
     if return_lse:

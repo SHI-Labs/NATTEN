@@ -45,7 +45,7 @@ void hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x1x0(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<4>>;
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative>;
+    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -105,7 +105,7 @@ void hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x1x0(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<4>>;
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative>;
+    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -165,7 +165,7 @@ void hopper_fna3d_bfloat16_128x64x256_coop_Q4x4x8_KV4x4x4_causal1x1x1(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<4>>;
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative>;
+    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative>;
 
   Kernel kernel;
   auto args = kernel.initialize(
@@ -225,7 +225,7 @@ void hopper_fna3d_bfloat16_128x64x256_coop_Q2x8x8_KV4x4x4_causal1x1x1(
   using KVTileShape = cute::tuple<cute::Int<4>, cute::Int<4>, cute::Int<4>>;
   using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
   using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::fna_hopper::HopperFnaKernelType::WSCooperative>;
+    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative>;
 
   Kernel kernel;
   auto args = kernel.initialize(

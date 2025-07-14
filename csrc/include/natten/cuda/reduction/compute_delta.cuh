@@ -26,7 +26,7 @@
 #include <natten/natten.h>
 #ifdef NATTEN_WITH_CUTLASS
 #include <natten/cuda/reduction/device/compute_delta.h>
-#include <natten/cuda/utils/cutlass.h>
+#include <natten/cuda/utils/cutlass.cuh>
 #endif
 
 namespace natten {

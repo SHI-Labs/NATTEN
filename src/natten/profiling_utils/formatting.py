@@ -39,8 +39,9 @@ class LibNattenOp(Enum):
     FmhaForward = 3
     FmhaBackward = 4
 
-    # Reduction
+    # Misc
     Reduction = 5
+    Elementwise = 6
 
 
 NATTEN_TAGS = {
@@ -52,6 +53,8 @@ NATTEN_TAGS = {
     ],
     LibNattenOp.FnaBackward: [
         "natten::cuda::fna::FusedNeighborhoodAttentionBackwardKernel<",
+        "cutlass::fna::collective::FnaBwdMainloopTmaWarpSpecializedSm90",
+        "cutlass::fna::kernel::Sm100FnaBwdKernelTmaWarpSpecialized",
     ],
     LibNattenOp.FmhaForward: [
         "cutlass::fmha::kernel::Sm100FmhaFwdKernelTmaWarpspecialized",
@@ -65,9 +68,15 @@ NATTEN_TAGS = {
         "cutlass::fmha::collective::FmhaMainloopTmaWarpSpecializedSm90",
         "cutlass::fmha::collective::FmhaMainloopTmaSm90",
         "natten::cuda::fmha::AttentionBackwardKernel",
+        "cutlass::fmha::collective::FmhaBwdMainloopTmaWarpSpecializedSm90",
+        "cutlass::fmha::kernel::Sm100FmhaBwdKernelTmaWarpSpecialized",
     ],
     LibNattenOp.Reduction: [
         "natten::cuda::reduction::kernel::ComputeDelta",
+        "cutlass::fmha::kernel::FmhaKernelBwdSumOdO",
+    ],
+    LibNattenOp.Elementwise: [
+        "cutlass::fmha::kernel::FmhaKernelBwdConvert",
     ],
 }
 
@@ -113,6 +122,12 @@ class Result:
         elif op in [LibNattenOp.Reduction]:
             self.kernel_type = "reduction"
             self.framework = "CUTLASS"
+            self.tag = "-"
+
+        elif op in [LibNattenOp.Elementwise]:
+            self.kernel_type = "elementwise"
+            self.framework = "CUTLASS"
+            self.tag = "-"
 
         self.op = op
         if op is not None and isinstance(op, LibNattenOp):

@@ -23,20 +23,19 @@
 
 import os
 
-# import sys
-
 import torch
 
 from ._libnatten import HAS_LIBNATTEN  # noqa: F401
+from .utils.device import get_device_cc
 
 _IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
 _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
 
-# _IS_TORCH_DYNAMO_SUPPORTED = [sys.version_info[0], sys.version_info[1]] < [3, 12]
-_IS_TORCH_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 6]
+_IS_TORCH_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70
 
+# Unit tests
 _RUN_EXTENDED_TESTS = bool(os.getenv("NATTEN_RUN_EXTENDED_TESTS", "0") == "1")
 
-# Profiler only
+# Profiler
 DISABLE_TQDM = bool(os.getenv("NATTEN_DISABLE_TQDM", "0") == "1")

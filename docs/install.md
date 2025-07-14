@@ -1,5 +1,8 @@
 # Install NATTEN
 
+**Newest release: `0.21.0`** | 
+**[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md).**
+
 Starting version `0.20.0`, NATTEN only supports PyTorch 2.7 and newer.
 However, you can still attempt to install NATTEN with PyTorch >= 2.5 at your own risk.
 For earlier NATTEN releases, please refer to [Older NATTEN builds](#older-natten-builds).
@@ -32,12 +35,12 @@ To install NATTEN using wheels, please first check your PyTorch version, and sel
 ???+ pip-install "`torch==2.7.0+cu128`"
 
     ```python
-    pip install natten==0.20.1+torch270cu128 -f https://whl.natten.org
+    pip install natten==0.21.0+torch270cu128 -f https://whl.natten.org
     ```
 
 ??? pip-install "`torch==2.7.0+cu126`"
     ```python
-    pip install natten==0.20.1+torch270cu126 -f https://whl.natten.org
+    pip install natten==0.21.0+torch270cu126 -f https://whl.natten.org
     ```
 
     !!! warning 
@@ -86,7 +89,7 @@ For more information refer to
 ???+ pip-install "`torch>=2.7.0`"
 
     ```python
-    pip install natten==0.20.1
+    pip install natten==0.21.0
     ```
 
 ## Build NATTEN + `libnatten`
@@ -149,7 +152,7 @@ To build NATTEN with `libnatten`, you can still use PyPI, or [build from source]
 
 ???+ pip-install "Build NATTEN with `libnatten` on CUDA-supported devices"
     ```python
-    pip install natten==0.20.1
+    pip install natten==0.21.0
     ```
 
 By default, NATTEN will detect your GPU architecture and build `libnatten` specifically for that
@@ -164,13 +167,13 @@ environment variable to a semicolon-separated list of the compute capabilities c
 your desired architectures.
 
 ```python
-NATTEN_CUDA_ARCH="8.9" pip install natten==0.20.1 # (1)!
+NATTEN_CUDA_ARCH="8.9" pip install natten==0.21.0 # (1)!
 
-NATTEN_CUDA_ARCH="9.0" pip install natten==0.20.1 # (2)!
+NATTEN_CUDA_ARCH="9.0" pip install natten==0.21.0 # (2)!
 
-NATTEN_CUDA_ARCH="10.0" pip install natten==0.20.1 # (3)!
+NATTEN_CUDA_ARCH="10.0" pip install natten==0.21.0 # (3)!
 
-NATTEN_CUDA_ARCH="8.0;8.6;9.0;10.0" pip install natten==0.20.1 # (4)!
+NATTEN_CUDA_ARCH="8.0;8.6;9.0;10.0" pip install natten==0.21.0 # (4)!
 ```
 
 1. Build targeting SM89 (Ada Lovelace)
@@ -186,9 +189,9 @@ generate around 60 build targets.
 You can customize the number of workers by setting the `NATTEN_N_WORKERS` environment variable:
 
 ```python
-NATTEN_N_WORKERS=16 pip install natten==0.20.1 # (1)!
+NATTEN_N_WORKERS=16 pip install natten==0.21.0 # (1)!
 
-NATTEN_N_WORKERS=64 pip install natten==0.20.1 # (2)!
+NATTEN_N_WORKERS=64 pip install natten==0.21.0 # (2)!
 ```
 
 1. Build with 16 parallel workers
@@ -333,8 +336,36 @@ If `True`, you're good to go. If `False`, it could mean either you didn't instal
 ## Older NATTEN builds
 We highly recommend using the latest NATTEN builds, but if you need to install older NATTEN
 versions, you can install them via [PyPI](https://pypi.org/project/natten/).
-We only offer wheels for the `0.20.0` and `0.17.5` releases. Earlier releases will have to be
+We only offer wheels for >=`0.20.0` and `0.17.5` releases. Earlier releases will have to be
 [compiled locally](#natten-via-pypi).
+
+#### `0.21.1`
+Released on 2025-06-14.
+[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0201---2025-06-14).
+
+??? pip-install "`torch==2.7.0+cu128`"
+
+    ```python
+    pip install natten==0.20.1+torch270cu128 -f https://whl.natten.org
+    ```
+
+??? pip-install "`torch==2.7.0+cu126`"
+    ```python
+    pip install natten==0.20.1+torch270cu126 -f https://whl.natten.org
+    ```
+
+    !!! warning 
+        Blackwell FNA/FMHA kernels are not available in this build. Blackwell support was
+        introduced in CUDA Toolkit 12.8.
+
+??? pip-install "Compile locally (custom torch build)"
+
+    ```python
+    pip install natten==0.20.1
+    ```
+
+    Refer to [NATTEN via PyPI](#natten-via-pypi) for more details.
+
 
 #### `0.20.0`
 Released on 2025-06-07.
@@ -370,7 +401,7 @@ Released on 2025-03-20.
 
 !!! warning 
     Wheels will be phased out and removed in the coming months. We strongly recommend upgrading to
-    NATTEN `0.20.1`.
+    NATTEN `0.21.0`.
 
 ??? pip-install "`torch==2.6.0+cu126`"
 

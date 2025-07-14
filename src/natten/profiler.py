@@ -77,7 +77,6 @@ def do_profile(
     backward_kv_tile_shape: Optional[DimensionType] = None,
     persistent: bool = True,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -99,7 +98,6 @@ def do_profile(
             backward_kv_tile_shape=backward_kv_tile_shape,
             run_persistent_kernel=persistent,
             torch_compile=torch_compile,
-            try_fuse_additional_kv=try_fuse_additional_kv,
             kernel_schedule=kernel_schedule,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
@@ -157,7 +155,6 @@ def do_profile(
             f"{backward_kv_tile_shape=},\n"
             f"{persistent=},\n"
             f"{torch_compile=},\n"
-            f"{try_fuse_additional_kv=},\n"
             f"{kernel_schedule=},\n"
             f"{warmup_steps=},\n"
             f"{backprop=},\n"
@@ -439,13 +436,6 @@ def get_args():
     )
 
     parser.add_argument(
-        "--try-fuse-add-kv",
-        action="store_true",
-        help="Try to fuse additional KV (cross attention) into the FNA kernel, if any. "
-        "This is currently only supported by blackwell-fna, and has no effect on other backends.",
-    )
-
-    parser.add_argument(
         "--warmup-steps",
         type=int,
         default=10,
@@ -525,7 +515,6 @@ def profile(
     persistent: bool,
     schedule: Optional[str],
     compile: bool,
-    try_fuse_add_kv: bool,
     dry_run: bool,
     max_configs: int,
     optimize: bool,
@@ -621,7 +610,6 @@ def profile(
             schedule=schedule,
             persistent=persistent,
             torch_compile=compile,
-            try_fuse_additional_kv=try_fuse_add_kv,
             warmup_steps=optimize_warmup_steps,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
@@ -639,7 +627,6 @@ def profile(
             backward_kv_tile_shape=opt_backward_kv_tile,
             persistent=persistent,
             torch_compile=compile,
-            try_fuse_additional_kv=try_fuse_add_kv,
             kernel_schedule=opt_schedule,
             warmup_steps=warmup_steps,
             backprop=backprop,
@@ -661,7 +648,6 @@ def profile(
             backward_kv_tile_shape=backward_kv_tile,
             persistent=persistent,
             torch_compile=compile,
-            try_fuse_additional_kv=try_fuse_add_kv,
             kernel_schedule=schedule,
             warmup_steps=warmup_steps,
             backprop=backprop,

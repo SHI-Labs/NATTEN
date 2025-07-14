@@ -127,11 +127,13 @@ def attention(
             You can use [profiler](profiler.md) to find valid choices for your use case.
 
         backward_q_tile_size (int): Tile size along query sequence length in the backward pass
-            kernel. This is only respected by the `"cutlass-fmha"` backend.
+            kernel. This is only respected by the `"cutlass-fmha"`, `"hopper-fmha"`, and
+            `"blackwell-fmha"` backends.
             You can use [profiler](profiler.md) to find valid choices for your use case.
 
         backward_kv_tile_size (int): Tile size along key/value sequence length in the backward pass
-            kernel. This is only respected by the `"cutlass-fmha"` backend.
+            kernel. This is only respected by the `"cutlass-fmha"`, `"hopper-fmha"`, and
+            `"blackwell-fmha"` backends.
             You can use [profiler](profiler.md) to find valid choices for your use case.
 
         backward_kv_splits (int): Number of key/value tiles allowed to work in parallel in the
@@ -184,6 +186,8 @@ def attention(
             scale=scale,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
+            backward_q_tile_size=backward_q_tile_size,
+            backward_kv_tile_size=backward_kv_tile_size,
             run_persistent_kernel=run_persistent_kernel,
             return_lse=return_lse,
         )
@@ -196,6 +200,8 @@ def attention(
             scale=scale,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
+            backward_q_tile_size=backward_q_tile_size,
+            backward_kv_tile_size=backward_kv_tile_size,
             kernel_schedule=kernel_schedule,
             return_lse=return_lse,
         )
@@ -329,7 +335,6 @@ def neighborhood_attention_generic(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
 ) -> Tensor:
 
     na_tensor_checks(query, key, value)
@@ -383,25 +388,11 @@ def neighborhood_attention_generic(
 
     backend = backend or choose_backend(query, key, value, torch_compile=torch_compile)
 
-    can_fuse_additional_kv = backend == "blackwell-fna"
-    should_fuse_additional_kv = can_fuse_additional_kv and try_fuse_additional_kv
     has_additional_attention = (
-        not should_fuse_additional_kv
-        and additional_keys is not None
-        and additional_values is not None
+        additional_keys is not None and additional_values is not None
     )
 
     if backend == "blackwell-fna":
-        additional_kwargs = {}
-        if should_fuse_additional_kv:
-            additional_kwargs["additional_keys"] = additional_keys
-            additional_kwargs["additional_values"] = additional_values
-
-            logger.debug(
-                f"{attention_kwargs=} is ignored when using Blackwell FNA with "
-                f"{try_fuse_additional_kv=}."
-            )
-
         outputs = cutlass_blackwell_fna_generic(
             query=query,
             key=key,
@@ -413,13 +404,13 @@ def neighborhood_attention_generic(
             scale=scale,
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
+            backward_q_tile_shape=backward_q_tile_shape,
+            backward_kv_tile_shape=backward_kv_tile_shape,
             run_persistent_kernel=run_persistent_kernel,
             return_lse=has_additional_attention,
-            **additional_kwargs,
         )
 
     elif backend == "hopper-fna":
-        assert not should_fuse_additional_kv
         outputs = cutlass_hopper_fna_generic(
             query=query,
             key=key,
@@ -431,12 +422,13 @@ def neighborhood_attention_generic(
             scale=scale,
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
+            backward_q_tile_shape=backward_q_tile_shape,
+            backward_kv_tile_shape=backward_kv_tile_shape,
             kernel_schedule=kernel_schedule,
             return_lse=has_additional_attention,
         )
 
     elif backend == "cutlass-fna":
-        assert not should_fuse_additional_kv
         outputs = cutlass_fna_generic(
             query=query,
             key=key,
@@ -456,7 +448,6 @@ def neighborhood_attention_generic(
         )
 
     elif backend == "flex-fna":
-        assert not should_fuse_additional_kv
         outputs = flex_fna_generic(
             query=query,
             key=key,
@@ -524,7 +515,6 @@ def na1d(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
 ) -> Tensor:
     """Computes 1-D neighborhood attention.
 
@@ -651,15 +641,6 @@ def na1d(
                 )
                 ```
 
-        try_fuse_additional_kv (bool): Some backends may support fusing cross-attention (additional
-            KV) into the FNA kernel, instead of having to do a separate
-            [attention][natten.attention] and then [merge][natten.merge_attentions]. This can only
-            be supported in backends using Token Permutation for now, which means when there is
-            dilation, there could be additional memory operations and memory usage if this fusion
-            occurs. For now, only the `"blackwell-fna"` backend supports this.
-            We recommend using the [profiler](profiler.md) to see if this option is suitable for
-            your use case before trying it.
-
     Returns:
         output (Tensor): 4-D output tensor, with the heads last layout
             (`[batch, seqlen, heads, head_dim]`).
@@ -686,7 +667,6 @@ def na1d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
-        try_fuse_additional_kv=try_fuse_additional_kv,
     )
 
 
@@ -712,7 +692,6 @@ def na2d(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
 ) -> Tensor:
     """Computes 2-D neighborhood attention.
 
@@ -849,15 +828,6 @@ def na2d(
                 )
                 ```
 
-        try_fuse_additional_kv (bool): Some backends may support fusing cross-attention (additional
-            KV) into the FNA kernel, instead of having to do a separate
-            [attention][natten.attention] and then [merge][natten.merge_attentions]. This can only
-            be supported in backends using Token Permutation for now, which means when there is
-            dilation, there could be additional memory operations and memory usage if this fusion
-            occurs. For now, only the `"blackwell-fna"` backend supports this.
-            We recommend using the [profiler](profiler.md) to see if this option is suitable for
-            your use case before trying it.
-
     Returns:
         output (Tensor): 5-D output tensor, with the heads last layout
             (`[batch, X, Y, heads, head_dim]`).
@@ -884,7 +854,6 @@ def na2d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
-        try_fuse_additional_kv=try_fuse_additional_kv,
     )
 
 
@@ -910,7 +879,6 @@ def na3d(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
-    try_fuse_additional_kv: bool = False,
 ) -> Tensor:
     """Computes 3-D neighborhood attention.
 
@@ -1047,15 +1015,6 @@ def na3d(
                 )
                 ```
 
-        try_fuse_additional_kv (bool): Some backends may support fusing cross-attention (additional
-            KV) into the FNA kernel, instead of having to do a separate
-            [attention][natten.attention] and then [merge][natten.merge_attentions]. This can only
-            be supported in backends using Token Permutation for now, which means when there is
-            dilation, there could be additional memory operations and memory usage if this fusion
-            occurs. For now, only the `"blackwell-fna"` backend supports this.
-            We recommend using the [profiler](profiler.md) to see if this option is suitable for
-            your use case before trying it.
-
     Returns:
         output (Tensor): 6-D output tensor, with the heads last layout
             (`[batch, X, Y, Z, heads, head_dim]`).
@@ -1082,5 +1041,4 @@ def na3d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
-        try_fuse_additional_kv=try_fuse_additional_kv,
     )

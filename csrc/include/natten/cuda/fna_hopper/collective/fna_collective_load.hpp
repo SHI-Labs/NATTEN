@@ -37,7 +37,7 @@
 
 namespace cutlass::fna::collective {
 
-enum class LoadKind { kQ, kK, kV };
+enum class LoadKind { kQ, kK, kV, kBwdN, kBwdM, kBwdScalar };
 
 template <
     LoadKind kKind,
@@ -98,6 +98,31 @@ struct CollectiveLoadTma {
           mV_full, tile_shape, make_coord(_, _, _), Step<X, _1, _1>{});
       Tensor gV = gV_full(_, _, _0{}, _, get<2>(blk_coord));
       return gV;
+    } else if constexpr (kKind == LoadKind::kBwdN) {
+      Tensor m_full = params.get_tma_tensor(make_shape(
+          get<3>(problem_size),
+          get<4>(problem_size),
+          select<0, 1>(problem_size)));
+      Tensor g_full = local_tile(
+          m_full, tile_shape, make_coord(_, _, _), Step<_1, X, _1>{});
+      Tensor g = g_full(_, _, _, _0{}, get<2>(blk_coord));
+      return make_tensor(
+          g.data() + loop_count * get<1>(blk_coord) * stride<2>(g), g.layout());
+    } else if constexpr (kKind == LoadKind::kBwdM) {
+      Tensor m_full = params.get_tma_tensor(make_shape(
+          get<2>(problem_size),
+          get<4>(problem_size),
+          select<0, 1>(problem_size)));
+      Tensor g_full = local_tile(
+          m_full, tile_shape, make_coord(_, _, _), Step<X, _1, _1>{});
+      Tensor g = g_full(_, _, _, _0{}, get<2>(blk_coord));
+      return g;
+    } else if constexpr (kKind == LoadKind::kBwdScalar) {
+      Tensor m_full = params.get_tma_tensor(select<2, 0, 1>(problem_size));
+      Tensor g_full =
+          local_tile(m_full, tile_shape, make_coord(_, _, _), Step<X, _1, X>{});
+      Tensor g = g_full(_, _, get<2, 0>(blk_coord), get<2, 1>(blk_coord));
+      return g;
     }
   }
 
@@ -128,34 +153,39 @@ struct CollectiveLoadTma {
       bool kAcquireBarrier = true,
       class TileIterator,
       class State,
-      class CtrTensor,
-      class KVTiledLayout>
-  CUTLASS_DEVICE void step_kv(
+      class IterToTileMap>
+  CUTLASS_DEVICE void step_with_iter_tile_map(
       TileIterator& tile_iter,
       State const& state,
       PipelineState& smem_pipe_write,
       int lane_predicate,
       int& tile_count,
       uint16_t mcast_mask,
-      CtrTensor const& ctr_offset,
-      KVTiledLayout const& kv_tiled_layout) {
+      IterToTileMap const& iter_to_tile_map) {
     if ((lane_predicate == 1) && (tile_count > 0)) {
       if constexpr (kAcquireBarrier)
         pipeline.producer_acquire(smem_pipe_write);
       using BarrierType = typename Pipeline::ProducerBarrierType;
       BarrierType* tma_barrier = pipeline.producer_get_barrier(smem_pipe_write);
 
-      copy(
-          params.with(*tma_barrier, mcast_mask),
-          get<0>(state)(
-              _, _, _, crd2idx(ctr_offset(*tile_iter), kv_tiled_layout)),
-          get<1>(state)(_, _, _, smem_pipe_write.index()));
+      if constexpr (kKind == LoadKind::kBwdScalar) {
+        copy(
+            params.with(*tma_barrier, mcast_mask),
+            get<0>(state)(_, _, iter_to_tile_map(*tile_iter)),
+            get<1>(state)(_, _, smem_pipe_write.index()));
+      } else {
+        copy(
+            params.with(*tma_barrier, mcast_mask),
+            get<0>(state)(_, _, _, iter_to_tile_map(*tile_iter)),
+            get<1>(state)(_, _, _, smem_pipe_write.index()));
+      }
 
       if constexpr (kAdvancePipe)
         ++smem_pipe_write;
       if constexpr (kAdvanceIterator)
         ++tile_iter;
     }
+
     --tile_count;
   }
 
@@ -178,10 +208,17 @@ struct CollectiveLoadTma {
       using BarrierType = typename Pipeline::ProducerBarrierType;
       BarrierType* tma_barrier = pipeline.producer_get_barrier(smem_pipe_write);
 
-      copy(
-          params.with(*tma_barrier, mcast_mask),
-          get<0>(state)(_, _, _, *tile_iter),
-          get<1>(state)(_, _, _, smem_pipe_write.index()));
+      if constexpr (kKind == LoadKind::kBwdScalar) {
+        copy(
+            params.with(*tma_barrier, mcast_mask),
+            get<0>(state)(_, _, *tile_iter),
+            get<1>(state)(_, _, smem_pipe_write.index()));
+      } else {
+        copy(
+            params.with(*tma_barrier, mcast_mask),
+            get<0>(state)(_, _, _, *tile_iter),
+            get<1>(state)(_, _, _, smem_pipe_write.index()));
+      }
 
       if constexpr (kAdvancePipe)
         ++smem_pipe_write;

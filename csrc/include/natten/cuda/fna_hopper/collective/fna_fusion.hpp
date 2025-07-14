@@ -86,6 +86,7 @@ CUTE_HOST_DEVICE auto get_window_start(
     NADim length) {
   static_assert(rank(index) > 0 && rank(index) < 4);
   static_assert(rank(index) == rank(Causal{}));
+  static_assert(rank(index) == rank(length));
   if constexpr (rank(index) == 1) {
     return make_tuple(get_win_start<get<0>(Causal{})>(
         get<0>(index),
@@ -138,6 +139,7 @@ CUTE_HOST_DEVICE auto get_window_end(
     NADim length) {
   static_assert(rank(index) > 0 && rank(index) < 4);
   static_assert(rank(index) == rank(Causal{}));
+  static_assert(rank(index) == rank(length));
   if constexpr (rank(index) == 1) {
     return make_tuple(get_win_end<get<0>(Causal{})>(
         get<0>(index), get<0>(start), get<0>(window_size), get<0>(length)));
@@ -420,6 +422,7 @@ struct NeighborhoodAttentionMaskSm90 {
   }
 };
 
+// Misc
 template <class NADim>
 CUTE_HOST_DEVICE constexpr auto get_window_left(NADim const& window_size) {
   return transform_leaf(window_size, [&](auto const& w) { return w / 2; });

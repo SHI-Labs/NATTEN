@@ -50,6 +50,12 @@ def _universal_tensor_checks(
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
+    if query.is_sparse or key.is_sparse or value.is_sparse:
+        target_fn(
+            "NATTEN does not support sparse tensors.", exception=NotImplementedError
+        )
+        return False
+
     if query.is_nested or key.is_nested or value.is_nested:
         target_fn(
             "NATTEN does not support nested tensors.", exception=NotImplementedError

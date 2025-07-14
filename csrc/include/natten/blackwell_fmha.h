@@ -42,4 +42,19 @@ void blackwell_fmha_forward(
     int key_tile_size,
     bool run_persistent);
 
+void blackwell_fmha_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    float attn_scale,
+    int query_tile_size,
+    int key_tile_size,
+    int seqlen_q_actual);
+
 } // namespace natten

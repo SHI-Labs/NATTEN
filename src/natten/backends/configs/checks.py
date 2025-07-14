@@ -75,9 +75,10 @@ def can_run_cutlass_blackwell_fmha(
         )
         return False
 
-    if query.requires_grad:
+    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
         target_fn(
-            "Can't run Blackwell FMHA; it does not support backpropagation yet.",
+            "Can't run Blackwell FMHA; its backprop does not have a deterministic mode, but "
+            "PyTorch's deterministic mode was enabled.",
             exception=NotImplementedError,
         )
         return False
@@ -150,9 +151,10 @@ def can_run_cutlass_blackwell_fna(
         )
         return False
 
-    if query.requires_grad:
+    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
         target_fn(
-            "Can't run Blackwell FNA; it does not support backpropagation yet.",
+            "Can't run Blackwell FMHA; its backprop does not have a deterministic mode, but "
+            "PyTorch's deterministic mode was enabled.",
             exception=NotImplementedError,
         )
         return False
@@ -227,13 +229,6 @@ def can_run_cutlass_hopper_fmha(
         )
         return False
 
-    if query.requires_grad:
-        target_fn(
-            "Can't run Hopper FMHA; it does not support backpropagation yet.",
-            exception=NotImplementedError,
-        )
-        return False
-
     head_dim = query.shape[-1]
     head_dim_v = value.shape[-1]
 
@@ -242,6 +237,22 @@ def can_run_cutlass_hopper_fmha(
             "Can't run Hopper FMHA; it does not support different head dims for QK and V, "
             f"got {head_dim=}, {head_dim_v=}.",
             exception=ValueError,
+        )
+        return False
+
+    if query.requires_grad and head_dim not in [32, 64, 128]:
+        target_fn(
+            f"Can't run Hopper FMHA; it does not support backpropagation for {head_dim=} yet; "
+            "only head dims 32, 64, and 128 are allowed.",
+            exception=NotImplementedError,
+        )
+        return False
+
+    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
+        target_fn(
+            "Can't run Hopper FMHA; its backprop does not have a deterministic mode, but "
+            "PyTorch's deterministic mode was enabled.",
+            exception=NotImplementedError,
         )
         return False
 
@@ -302,13 +313,6 @@ def can_run_cutlass_hopper_fna(
         )
         return False
 
-    if query.requires_grad:
-        target_fn(
-            "Can't run Hopper FNA; it does not support backpropagation yet.",
-            exception=NotImplementedError,
-        )
-        return False
-
     head_dim = query.shape[-1]
     head_dim_v = value.shape[-1]
 
@@ -317,6 +321,22 @@ def can_run_cutlass_hopper_fna(
             "Can't run Hopper FNA; it does not support different head dims for QK and V, "
             f"got {head_dim=}, {head_dim_v=}.",
             exception=ValueError,
+        )
+        return False
+
+    if query.requires_grad and head_dim not in [32, 64, 128]:
+        target_fn(
+            f"Can't run Hopper FNA; it does not support backpropagation for {head_dim=} yet; "
+            "only head dims 32, 64, and 128 are allowed.",
+            exception=NotImplementedError,
+        )
+        return False
+
+    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
+        target_fn(
+            "Can't run Hopper FNA; its backprop does not have a deterministic mode, but "
+            "PyTorch's deterministic mode was enabled.",
+            exception=NotImplementedError,
         )
         return False
 

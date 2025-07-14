@@ -42,4 +42,18 @@ void hopper_fmha_forward(
     int key_tile_size,
     int kernel_type);
 
+void hopper_fmha_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    float attn_scale,
+    int query_tile_size,
+    int key_tile_size);
+
 } // namespace natten

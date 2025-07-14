@@ -30,6 +30,8 @@
  *
  **************************************************************************************************/
 
+#pragma once
+
 #include "cute/arch/tmem_allocator_sm100.hpp"
 #include "cute/layout.hpp"
 #include "cutlass/arch/arch.h"

@@ -32,7 +32,14 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import hopper_na1d_forward, hopper_na2d_forward, hopper_na3d_forward
+from .._libnatten import (
+    hopper_na1d_backward,
+    hopper_na1d_forward,
+    hopper_na2d_backward,
+    hopper_na2d_forward,
+    hopper_na3d_backward,
+    hopper_na3d_forward,
+)
 from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
 from ..types import (
     CausalArg1DTypeOrDed,
@@ -40,6 +47,7 @@ from ..types import (
     CausalArg3DTypeOrDed,
     CausalArgType,
     CausalArgTypeOrDed,
+    CutlassHopperFnaBackwardConfigType,
     CutlassHopperFnaForwardConfigType,
     Dimension1DType,
     Dimension1DTypeOrDed,
@@ -55,7 +63,10 @@ from ..types import (
 from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
 
 from .configs.checks import can_run_cutlass_hopper_fna
-from .configs.cutlass_hopper import check_cutlass_hopper_fna_forward_config
+from .configs.cutlass_hopper import (
+    check_cutlass_hopper_fna_backward_config,
+    check_cutlass_hopper_fna_forward_config,
+)
 
 
 def make_cutlass_hopper_fna_autograd_fn(na_dim):
@@ -67,8 +78,11 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
         3: hopper_na3d_forward,
     }
 
-    # TODO:
-    # BACKWARD_OPS = {}
+    BACKWARD_OPS = {
+        1: hopper_na1d_backward,
+        2: hopper_na2d_backward,
+        3: hopper_na3d_backward,
+    }
 
     class CutlassHopperFnaGenericAutogradFn(Function):
         @staticmethod
@@ -83,36 +97,52 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
             dilation: DimensionType,
             is_causal: CausalArgType,
             scale: float,
-            q_shape: DimensionType,
-            kv_shape: DimensionType,
-            qkv_shape: DimensionType,
-            tiling_config: CutlassHopperFnaForwardConfigType,
+            forward_config: CutlassHopperFnaForwardConfigType,
+            backward_config: CutlassHopperFnaBackwardConfigType,
         ) -> Tuple[Tensor, Tensor]:
             kernel_size, stride, dilation, is_causal = check_all_args(
                 na_dim, kernel_size, stride, dilation, is_causal
             )
 
-            assert isinstance(
-                scale, float
-            ), f"Expected float attention scale, got {type(scale)}."
+            (q_tile_shape, kv_tile_shape), kernel_schedule = forward_config
 
-            query = query.contiguous()
-            key = key.contiguous()
-            value = value.contiguous()
-            output = torch.empty_like(query)
+            # Token permute begin
+            # Shape before padding and token permute
+            qkv_shape = query.shape[1 : 1 + na_dim]
 
-            # TODO: logsumexp should be conditional
-            logsumexp = torch.empty(
-                query.shape[:-1], dtype=torch.float32, device=query.device
+            query_pad, padding = maybe_pad(query, q_tile_shape, dilation=dilation)
+            key_pad, _ = maybe_pad(key, kv_tile_shape, dilation=dilation)
+            value_pad, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
+
+            query_perm, q_shape, qR = token_permute(
+                query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            key_perm, k_shape, kR = token_permute(
+                key_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            value_perm, v_shape, vR = token_permute(
+                value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
 
-            (q_tile_shape, kv_tile_shape), kernel_schedule = tiling_config
+            assert k_shape == v_shape
+            kv_shape = k_shape
+            # Token permute end
+
+            query_perm = query_perm.contiguous()
+            key_perm = key_perm.contiguous()
+            value_perm = value_perm.contiguous()
+            output_perm = torch.empty_like(query_perm)
+
+            logsumexp_perm = torch.empty(
+                query_perm.shape[:-1], dtype=torch.float32, device=query_perm.device
+            )
+
             FORWARD_OPS[na_dim](
-                output,
-                query,
-                key,
-                value,
-                logsumexp,
+                output_perm,
+                query_perm,
+                key_perm,
+                value_perm,
+                logsumexp_perm,
                 kernel_size,
                 stride,
                 dilation,
@@ -126,22 +156,44 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
                 kernel_schedule.value,  # TODO: I don't like this -- write a map with checks?
             )
 
+            # Token un-permute begin
+            output = maybe_unpad(
+                token_unpermute(
+                    output_perm,
+                    q_tile_shape,
+                    q_shape,
+                    qR,
+                    dilation=dilation,
+                    flip_tiled_dims=True,
+                ),
+                padding,
+            )
+            logsumexp = maybe_unpad(
+                token_unpermute(
+                    logsumexp_perm.unsqueeze(-1),
+                    q_tile_shape,
+                    q_shape,
+                    qR,
+                    dilation=dilation,
+                    flip_tiled_dims=True,
+                ),
+                padding,
+            ).squeeze(-1)
+            # Token un-permute end
+
             ctx.save_for_backward(query, key, value, logsumexp, output)
             ctx.kernel_size = kernel_size
             ctx.stride = stride
             ctx.dilation = dilation
             ctx.is_causal = is_causal
             ctx.scale = scale
-            ctx.tiling_config = tiling_config
-            # ctx.tiling_config_backward = tiling_config_backward
+            ctx.backward_config = backward_config
 
             return output, logsumexp
 
         @staticmethod
         @amp_bwd
-        def backward(
-            ctx, grad_out: Tensor, grad_lse: Tensor
-        ) -> Tuple[
+        def backward(ctx, d_output: Tensor, d_lse: Tensor) -> Tuple[
             Tensor,
             Tensor,
             Tensor,
@@ -152,26 +204,134 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
-            NoneType,
-            NoneType,
-            # NoneType,
         ]:
             query, key, value, logsumexp, output = ctx.saved_tensors
-            d_output = grad_out.contiguous()  # noqa: F841
-            d_query = torch.empty_like(query)
-            d_key = torch.empty_like(key)
-            d_value = torch.empty_like(value)
-
-            raise NotImplementedError(
-                "Hopper FNA does not support backpropagation yet."
+            kernel_size, stride, dilation, is_causal, scale = (
+                ctx.kernel_size,
+                ctx.stride,
+                ctx.dilation,
+                ctx.is_causal,
+                ctx.scale,
             )
+
+            q_tile_shape, kv_tile_shape = ctx.backward_config
+
+            # Token permute begin
+            # Shape before padding and token permute
+            qkv_shape = query.shape[1 : 1 + na_dim]
+
+            query_pad, padding_q = maybe_pad(query, q_tile_shape, dilation=dilation)
+            key_pad, padding_kv = maybe_pad(key, kv_tile_shape, dilation=dilation)
+            value_pad, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
+            logsumexp_pad, _ = maybe_pad(
+                logsumexp.unsqueeze(-1), q_tile_shape, dilation=dilation
+            )
+            output_pad, _ = maybe_pad(output, q_tile_shape, dilation=dilation)
+            d_output_pad, _ = maybe_pad(d_output, q_tile_shape, dilation=dilation)
+
+            query_perm, q_shape, qR = token_permute(
+                query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            output_perm, o_shape, oR = token_permute(
+                output_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            d_output_perm, d_o_shape, doR = token_permute(
+                d_output_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            logsumexp_perm, _, _ = token_permute(
+                logsumexp_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            key_perm, k_shape, kR = token_permute(
+                key_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+            value_perm, v_shape, vR = token_permute(
+                value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            )
+
+            assert q_shape == o_shape == d_o_shape
+            assert k_shape == v_shape
+            kv_shape = k_shape
+            # Token permute end
+
+            query_perm = query_perm.contiguous()
+            key_perm = key_perm.contiguous()
+            value_perm = value_perm.contiguous()
+            output_perm = output_perm.contiguous()
+            d_output_perm = d_output_perm.contiguous()
+            d_query_perm = torch.empty_like(query_perm)
+            d_key_perm = torch.empty_like(key_perm)
+            d_value_perm = torch.empty_like(value_perm)
+            logsumexp_perm = logsumexp_perm.squeeze(-1)
+
+            # TODO: this can definitely be done with token permute.
+            logsumexp_perm = logsumexp_perm.transpose(-2, -1).contiguous()
+
+            BACKWARD_OPS[na_dim](
+                d_query_perm,
+                d_key_perm,
+                d_value_perm,
+                query_perm,
+                key_perm,
+                value_perm,
+                output_perm,
+                d_output_perm,
+                logsumexp_perm,
+                kernel_size,
+                stride,
+                dilation,
+                is_causal,
+                scale,
+                q_shape,
+                kv_shape,
+                qkv_shape,
+                q_tile_shape,
+                kv_tile_shape,
+            )
+
+            # Token un-permute begin
+            d_query = maybe_unpad(
+                token_unpermute(
+                    d_query_perm,
+                    q_tile_shape,
+                    q_shape,
+                    qR,
+                    dilation=dilation,
+                    flip_tiled_dims=True,
+                ),
+                padding_q,
+            )
+            d_key = maybe_unpad(
+                token_unpermute(
+                    d_key_perm,
+                    kv_tile_shape,
+                    kv_shape,
+                    kR,
+                    dilation=dilation,
+                    flip_tiled_dims=True,
+                ),
+                padding_kv,
+            )
+            d_value = maybe_unpad(
+                token_unpermute(
+                    d_value_perm,
+                    kv_tile_shape,
+                    kv_shape,
+                    vR,
+                    dilation=dilation,
+                    flip_tiled_dims=True,
+                ),
+                padding_kv,
+            )
+            # Token un-permute end
+
+            assert d_query.shape == query.shape
+            assert d_key.shape == key.shape
+            assert d_value.shape == value.shape
 
             return (
                 d_query,
                 d_key,
                 d_value,
-                None,
-                None,
                 None,
                 None,
                 None,
@@ -207,6 +367,8 @@ def cutlass_hopper_fna_generic(
     scale: Optional[float] = None,
     q_tile_shape: Optional[DimensionType] = None,
     kv_tile_shape: Optional[DimensionType] = None,
+    backward_q_tile_shape: Optional[DimensionType] = None,
+    backward_kv_tile_shape: Optional[DimensionType] = None,
     kernel_schedule: Optional[KernelSchedule] = None,
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
@@ -229,76 +391,34 @@ def cutlass_hopper_fna_generic(
         is_causal=is_causal,
     )
 
-    (q_tile_shape, kv_tile_shape), kernel_schedule = (
-        check_cutlass_hopper_fna_forward_config(
-            input_tensor=query,
-            q_tile_shape=q_tile_shape,
-            kv_tile_shape=kv_tile_shape,
-            kernel_schedule=kernel_schedule,
-        )
+    forward_config = check_cutlass_hopper_fna_forward_config(
+        input_tensor=query,
+        q_tile_shape=q_tile_shape,
+        kv_tile_shape=kv_tile_shape,
+        kernel_schedule=kernel_schedule,
+    )
+    backward_config = check_cutlass_hopper_fna_backward_config(
+        input_tensor=query,
+        q_tile_shape=backward_q_tile_shape,
+        kv_tile_shape=backward_kv_tile_shape,
     )
 
     scale = scale or query.shape[-1] ** -0.5
 
-    # Shape before padding and token permute
-    qkv_shape = query.shape[1 : 1 + na_dim]
-
-    query_pad, padding = maybe_pad(query, q_tile_shape, dilation=dilation)
-    key, _ = maybe_pad(key, kv_tile_shape, dilation=dilation)
-    value, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
-
-    query_perm, q_shape, qR = token_permute(
-        query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
-    )
-    key_perm, k_shape, kR = token_permute(
-        key, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
-    )
-    value_perm, v_shape, vR = token_permute(
-        value, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
-    )
-
-    assert k_shape == v_shape
-    kv_shape = k_shape
-
-    output_perm, lse_perm = CutlassHopperFNAAutogradFns[na_dim].apply(
-        query_perm,
-        key_perm,
-        value_perm,
+    output, lse = CutlassHopperFNAAutogradFns[na_dim].apply(
+        query,
+        key,
+        value,
         kernel_size,
         stride,
         dilation,
         is_causal,
         scale,
-        q_shape,
-        kv_shape,
-        qkv_shape,
-        ((q_tile_shape, kv_tile_shape), kernel_schedule),
+        forward_config,
+        backward_config,
     )
 
-    output = maybe_unpad(
-        token_unpermute(
-            output_perm,
-            q_tile_shape,
-            q_shape,
-            qR,
-            dilation=dilation,
-            flip_tiled_dims=True,
-        ),
-        padding,
-    )
     if return_lse:
-        lse = maybe_unpad(
-            token_unpermute(
-                lse_perm.unsqueeze(-1),
-                q_tile_shape,
-                q_shape,
-                qR,
-                dilation=dilation,
-                flip_tiled_dims=True,
-            ),
-            padding,
-        ).squeeze(-1)
-
         return output, lse
 
     return output
@@ -315,6 +435,8 @@ def na1d_cutlass_hopper_fna(
     scale: Optional[float] = None,
     q_tile_shape: Optional[Dimension1DType] = None,
     kv_tile_shape: Optional[Dimension1DType] = None,
+    backward_q_tile_shape: Optional[Dimension1DType] = None,
+    backward_kv_tile_shape: Optional[Dimension1DType] = None,
     kernel_schedule: Optional[KernelSchedule] = None,
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
@@ -329,6 +451,8 @@ def na1d_cutlass_hopper_fna(
         scale=scale,
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
+        backward_q_tile_shape=backward_q_tile_shape,
+        backward_kv_tile_shape=backward_kv_tile_shape,
         kernel_schedule=kernel_schedule,
         return_lse=return_lse,
     )
@@ -345,6 +469,8 @@ def na2d_cutlass_hopper_fna(
     scale: Optional[float] = None,
     q_tile_shape: Optional[Dimension2DType] = None,
     kv_tile_shape: Optional[Dimension2DType] = None,
+    backward_q_tile_shape: Optional[Dimension2DType] = None,
+    backward_kv_tile_shape: Optional[Dimension2DType] = None,
     kernel_schedule: Optional[KernelSchedule] = None,
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
@@ -359,6 +485,8 @@ def na2d_cutlass_hopper_fna(
         scale=scale,
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
+        backward_q_tile_shape=backward_q_tile_shape,
+        backward_kv_tile_shape=backward_kv_tile_shape,
         kernel_schedule=kernel_schedule,
         return_lse=return_lse,
     )
@@ -375,6 +503,8 @@ def na3d_cutlass_hopper_fna(
     scale: Optional[float] = None,
     q_tile_shape: Optional[Dimension3DType] = None,
     kv_tile_shape: Optional[Dimension3DType] = None,
+    backward_q_tile_shape: Optional[Dimension3DType] = None,
+    backward_kv_tile_shape: Optional[Dimension3DType] = None,
     kernel_schedule: Optional[KernelSchedule] = None,
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
@@ -389,6 +519,8 @@ def na3d_cutlass_hopper_fna(
         scale=scale,
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
+        backward_q_tile_shape=backward_q_tile_shape,
+        backward_kv_tile_shape=backward_kv_tile_shape,
         kernel_schedule=kernel_schedule,
         return_lse=return_lse,
     )

@@ -33,20 +33,32 @@
 #pragma once
 
 #include "cutlass/cutlass.h"
-#include "cutlass/epilogue/collective/collective_builder.hpp"
 #include "cutlass/epilogue/collective/default_epilogue.hpp"
-#include "cutlass/epilogue/thread/linear_combination.h"
 
-#include "natten/cuda/fna_hopper/collective/fna_common.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_epilogue.hpp"
 
-namespace cutlass::fna::collective {
+namespace cutlass::fmha::collective {
 
 template <class Element, class ElementAccumulator, class TileShape_WG>
-struct FnaFwdEpilogueSm90 {
+struct FmhaBwdEpilogueKV {
   static constexpr int Alignment = 16 / sizeof(Element);
 
-  using DefaultOperation = cutlass::epilogue::fusion::
-      LinearCombination<Element, ElementAccumulator, void>;
+  struct Arguments {
+    Element* ptr_K;
+    cute::tuple<int, int, int, cute::_1> dK;
+
+    Element* ptr_V;
+    cute::tuple<int, int, int, _1> dV;
+  };
+
+  // using DefaultOperation =
+  // cutlass::epilogue::fusion::LinearCombination<Element, ElementAccumulator,
+  // void>;
+  static constexpr auto RoundStyle = cutlass::FloatRoundStyle::round_to_nearest;
+  using DefaultOperation = cutlass::epilogue::fusion::Sm90EVT<
+      cutlass::epilogue::fusion::
+          Sm90Compute<cutlass::first, Element, ElementAccumulator, RoundStyle>,
+      cutlass::epilogue::fusion::Sm90AccFetch>;
   using CollectiveEpilogueTMA =
       typename cutlass::epilogue::collective::CollectiveBuilder<
           cutlass::arch::Sm90,
@@ -65,22 +77,12 @@ struct FnaFwdEpilogueSm90 {
           cutlass::epilogue::TmaWarpSpecialized,
           DefaultOperation>::CollectiveOp;
 
-  struct Arguments {
-    Element* ptr_O;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> dO;
-
-    ElementAccumulator* ptr_LSE;
-    cute::tuple<int, cute::tuple<int, cute::_1>> dLSE;
-  };
-
   struct Params {
-    ElementAccumulator* ptr_LSE;
-    cute::tuple<int, cute::tuple<int, cute::_1>> dLSE;
-
-    typename CollectiveEpilogueTMA::Params epilogue_TMA;
+    typename CollectiveEpilogueTMA::Params epilogue_K;
+    typename CollectiveEpilogueTMA::Params epilogue_V;
   };
 
-  using TensorStorage = typename CollectiveEpilogueTMA::TensorStorage;
+  using TensorStorage = typename CollectiveEpilogueTMA::TensorStorage[2];
   using PipelineStorage = typename CollectiveEpilogueTMA::PipelineStorage;
   using LoadPipeline = typename CollectiveEpilogueTMA::LoadPipeline;
   static constexpr int TmaTransactionBytes =
@@ -91,18 +93,29 @@ struct FnaFwdEpilogueSm90 {
       ProblemShape const& problem_size,
       Arguments const& args,
       void* workspace = nullptr) {
-    auto problem_size_o = make_shape(
-        get<2>(problem_size),
+    auto dK = make_stride(
+        get<2>(args.dK),
+        get<3>(args.dK),
+        make_stride(get<0>(args.dK), get<1>(args.dK)));
+    auto dV = make_stride(
+        get<2>(args.dV),
+        get<3>(args.dV),
+        make_stride(get<0>(args.dV), get<1>(args.dV)));
+
+    auto problem_size_kv = make_shape(
+        get<3>(problem_size),
         get<4>(problem_size),
         1,
         make_shape(get<0>(problem_size), get<1>(problem_size)));
-    typename CollectiveEpilogueTMA::Arguments args_tma{
-        {}, args.ptr_O, args.dO, args.ptr_O, args.dO};
+    typename CollectiveEpilogueTMA::Arguments args_k{
+        {}, args.ptr_K, dK, args.ptr_K, dK};
+    typename CollectiveEpilogueTMA::Arguments args_v{
+        {}, args.ptr_V, dV, args.ptr_V, dV};
     return Params{
-        args.ptr_LSE,
-        args.dLSE,
         CollectiveEpilogueTMA::to_underlying_arguments(
-            problem_size_o, args_tma, workspace)};
+            problem_size_kv, args_k, nullptr),
+        CollectiveEpilogueTMA::to_underlying_arguments(
+            problem_size_kv, args_v, nullptr)};
   }
 
   template <
@@ -120,52 +133,14 @@ struct FnaFwdEpilogueSm90 {
       Params const& params,
       LoadPipeline epi_load_pipeline,
       TensorStorage& epi_tensor_storage) {
-    using X = Underscore;
+    auto acc_k = get<0>(result);
+    auto acc_v = get<1>(result);
 
-    auto acc = get<0>(result);
-    auto lse = get<1>(result);
-
-    auto thr_mma = tiled_mma.get_thread_slice(threadIdx.x);
-
-    int seqlen_q = get<2>(problem_size);
-    int num_batch = get<0>(problem_size);
-    int num_heads = get<1>(problem_size);
-    // Epilogue for lse
-    Tensor mLSE = make_tensor(
-        make_gmem_ptr(params.ptr_LSE),
-        make_shape(
-            seqlen_q, get<1>(tile_shape), make_shape(num_batch, num_heads)),
-        make_stride(
-            get<0>(params.dLSE),
-            _0{},
-            make_stride(get<1, 0>(params.dLSE), _1{})));
-    Tensor gLSE_full =
-        local_tile(mLSE, tile_shape, make_coord(_, _, _), Step<_1, _1, X>{});
-    Tensor gLSE = gLSE_full(
-        _, _, get<0>(blk_coord), get<1>(blk_coord), get<2>(blk_coord));
-    Tensor tOgLSE = thr_mma.partition_C(gLSE);
-    Tensor cO = make_identity_tensor(take<0, 2>(tile_shape));
-    Tensor tOcO = thr_mma.partition_C(cO);
-    if (get<1>(tOcO(_0{})) == 0) {
-      auto tOgLSE_mn =
-          make_tensor(tOgLSE.data(), layout_acc_mn(tiled_mma, tOgLSE.layout()));
-      auto tOcO_mn =
-          make_tensor(tOcO.data(), layout_acc_mn(tiled_mma, tOcO.layout()));
-      CUTLASS_PRAGMA_UNROLL
-      for (int i = 0; i < size<0>(tOgLSE_mn); i++) {
-        if (get<0>(tOcO_mn(i)) + get<0>(blk_coord) * get<0>(tile_shape) <
-            get<2>(problem_size)) {
-          tOgLSE_mn(i, _0{}) = lse(i);
-        }
-      }
-    }
-    auto problem_size_o = make_shape(
-        get<2>(problem_size),
+    auto problem_size_kv = make_shape(
+        get<3>(problem_size),
         get<4>(problem_size),
         _,
         make_shape(get<0>(problem_size), get<1>(problem_size)));
-
-    CollectiveEpilogueTMA epilogue_tma(params.epilogue_TMA, epi_tensor_storage);
 
     using EpiStorePipeline = typename CollectiveEpilogueTMA::StorePipeline;
     typename EpiStorePipeline::Params epi_store_pipeline_params;
@@ -177,28 +152,57 @@ struct FnaFwdEpilogueSm90 {
     PipelineState epi_store_pipe_producer_state =
         cutlass::make_producer_start_state<EpiStorePipeline>();
 
-    auto
-        [epi_load_pipe_consumer_state_next,
-         epi_store_pipe_producer_state_next] =
-            epilogue_tma.store(
-                epi_load_pipeline,
-                epi_load_pipe_consumer_state,
-                epi_store_pipeline,
-                epi_store_pipe_producer_state,
-                problem_size_o,
-                tile_shape,
-                make_coord(get<0>(blk_coord), _0{}, _, get<2>(blk_coord)),
-                acc,
-                tiled_mma,
-                threadIdx.x % cutlass::NumThreadsPerWarpGroup,
-                epi_tensor_storage);
+    CollectiveEpilogueTMA epilogue_k{params.epilogue_K, epi_tensor_storage[0]};
+    CollectiveEpilogueTMA epilogue_v{params.epilogue_V, epi_tensor_storage[1]};
 
-    epilogue_tma.store_tail(
-        epi_load_pipeline,
-        epi_load_pipe_consumer_state_next,
-        epi_store_pipeline,
-        epi_store_pipe_producer_state_next);
+    {
+      auto
+          [epi_load_pipe_consumer_state_next,
+           epi_store_pipe_producer_state_next] =
+              epilogue_k.store(
+                  epi_load_pipeline,
+                  epi_load_pipe_consumer_state,
+                  epi_store_pipeline,
+                  epi_store_pipe_producer_state,
+                  problem_size_kv,
+                  tile_shape,
+                  make_coord(get<1>(blk_coord), _0{}, _, get<2>(blk_coord)),
+                  acc_k,
+                  tiled_mma,
+                  threadIdx.x % cutlass::NumThreadsPerWarpGroup,
+                  epi_tensor_storage[0]);
+    }
+
+    {
+      auto
+          [epi_load_pipe_consumer_state_next,
+           epi_store_pipe_producer_state_next] =
+              epilogue_v.store(
+                  epi_load_pipeline,
+                  epi_load_pipe_consumer_state,
+                  epi_store_pipeline,
+                  epi_store_pipe_producer_state,
+                  problem_size_kv,
+                  tile_shape,
+                  make_coord(get<1>(blk_coord), _0{}, _, get<2>(blk_coord)),
+                  acc_v,
+                  tiled_mma,
+                  threadIdx.x % cutlass::NumThreadsPerWarpGroup,
+                  epi_tensor_storage[1]);
+
+      epilogue_k.store_tail(
+          epi_load_pipeline,
+          epi_load_pipe_consumer_state_next,
+          epi_store_pipeline,
+          epi_store_pipe_producer_state_next);
+
+      epilogue_v.store_tail(
+          epi_load_pipeline,
+          epi_load_pipe_consumer_state_next,
+          epi_store_pipeline,
+          epi_store_pipe_producer_state_next);
+    }
   }
 };
 
-} // namespace cutlass::fna::collective
+} // namespace cutlass::fmha::collective

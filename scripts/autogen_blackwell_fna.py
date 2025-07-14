@@ -25,12 +25,6 @@ SUPPORTED_GEMM_SHAPES_FORWARD = [
     (256, 128, 128),
 ]
 
-SUPPORTED_GEMM_SHAPES_BACKWARD = [
-    (128, 128, 32),
-    (128, 128, 64),
-    (128, 128, 128),
-]
-
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
@@ -151,7 +145,6 @@ class BlackwellFnaInstance:
         kv_tile_shape: tuple,
         causal: tuple,
         is_persistent: bool,
-        is_backward: bool,
     ):
         assert 0 < na_dim <= 3
         assert len(gemm_shape) == 3
@@ -166,7 +159,6 @@ class BlackwellFnaInstance:
         self.dtype = dtype
         self.max_head_dim = gemm_shape[2]
         self.is_persistent = is_persistent
-        self.is_backward = is_backward
 
     def get_q_tile_shape_cute(self) -> str:
         return iterable_to_static_cute_tuple(self.q_tile_shape)
@@ -184,8 +176,7 @@ class BlackwellFnaInstance:
         return f"cute::tuple<{consts}>"
 
     def get_name(self) -> str:
-        backward_str = "" if not self.is_backward else "_backward"
-        name = f"blackwell_fna{self.na_dim}d{backward_str}"
+        name = f"blackwell_fna{self.na_dim}d"
         name += f"_{self.dtype.short_name}"
         name += "_" + "x".join([str(x) for x in self.gemm_shape])
         name += "_Q" + "x".join([str(x) for x in self.q_tile_shape])
@@ -201,7 +192,6 @@ class BlackwellFnaInstance:
         )
 
     def get_impl(self) -> str:
-        assert not self.is_backward
         return KERNEL_IMPL_TEMPLATE.format(
             kernel_name=self.get_name(),
             DimType=get_dim_type(self.na_dim),
@@ -265,11 +255,9 @@ def write_combined_source_file(path, filename, headers, kernels):
 
 
 class NaDimDispatcher:
-    def __init__(self, is_backward: bool):
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FNA_{fwd_bwd_str}"
-        self.dims: List[int] = []
-        self.is_backward = is_backward
+    def __init__(self):
+        self.name = "DISPATCH_BLACKWELL_FNA_FORWARD"
+        self.dims = []
 
     def append(self, na_dim: int):
         self.dims.append(na_dim)
@@ -303,12 +291,10 @@ class NaDimDispatcher:
 
 
 class DTypeDispatcher:
-    def __init__(self, is_backward: bool, na_dim: int):
+    def __init__(self, na_dim: int):
         self.dtypes: List[DataType] = []
         self.na_dim = na_dim
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FNA_{fwd_bwd_str}_{self.na_dim}D"
-        self.is_backward = is_backward
+        self.name = f"DISPATCH_BLACKWELL_FNA_FORWARD_{self.na_dim}D"
 
     def append(self, dtype: DataType):
         self.dtypes.append(dtype)
@@ -344,12 +330,12 @@ class DTypeDispatcher:
 
 
 class HeadDimDispatcher:
-    def __init__(self, is_backward: bool, na_dim: int, dtype: DataType):
+    def __init__(self, na_dim: int, dtype: DataType):
         self.na_dim = na_dim
         self.dtype = dtype
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FNA_{fwd_bwd_str}_{self.na_dim}D_{self.dtype.short_name}"
-        self.is_backward = is_backward
+        self.name = (
+            f"DISPATCH_BLACKWELL_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}"
+        )
 
         self.dims: List[int] = []
 
@@ -389,7 +375,6 @@ class HeadDimDispatcher:
 class CausalMaskDispatcher:
     def __init__(
         self,
-        is_backward: bool,
         na_dim: int,
         dtype: DataType,
         head_dim: int,
@@ -398,9 +383,7 @@ class CausalMaskDispatcher:
         self.dtype = dtype
         self.head_dim = head_dim
 
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FNA_{fwd_bwd_str}_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
-        self.is_backward = is_backward
+        self.name = f"DISPATCH_BLACKWELL_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
 
         self.cms: List = []
 
@@ -454,7 +437,6 @@ class CausalMaskDispatcher:
 class TileShapeDispatcher:
     def __init__(
         self,
-        is_backward: bool,
         na_dim: int,
         dtype: DataType,
         head_dim: int,
@@ -466,10 +448,8 @@ class TileShapeDispatcher:
         self.causal_mask = causal_mask
         cm_str = "_causal" + "x".join(["1" if c else "0" for c in self.causal_mask])
 
-        fwd_bwd_str = "BACKWARD" if is_backward else "FORWARD"
-        self.name = f"DISPATCH_BLACKWELL_FNA_{fwd_bwd_str}_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
+        self.name = f"DISPATCH_BLACKWELL_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
         self.name += cm_str
-        self.is_backward = is_backward
 
         self.tile_shapes: List = []
 
@@ -485,12 +465,7 @@ class TileShapeDispatcher:
         gemm_K = self.head_dim
         gemm_shape = (gemm_M, gemm_N, gemm_K)
 
-        supported_gemm_shapes = (
-            SUPPORTED_GEMM_SHAPES_BACKWARD
-            if self.is_backward
-            else SUPPORTED_GEMM_SHAPES_FORWARD
-        )
-        assert gemm_shape in supported_gemm_shapes
+        assert gemm_shape in SUPPORTED_GEMM_SHAPES_FORWARD
 
         kernel = BlackwellFnaInstance(
             na_dim=self.na_dim,
@@ -500,7 +475,6 @@ class TileShapeDispatcher:
             kv_tile_shape=kv_tile_shape,
             causal=self.causal_mask,
             is_persistent=persistent,
-            is_backward=self.is_backward,
         )
 
         return kernel
@@ -646,29 +620,26 @@ def generate_blackwell_fna_kernels(path, num_splits=2):
     tile_shape_dispatchers = []
     kernels = []
 
-    rank_dispatcher = NaDimDispatcher(is_backward=False)
+    rank_dispatcher = NaDimDispatcher()
     for na_dim in NA_DIMS:
         rank_dispatcher.append(na_dim)
 
-        dtype_dispatcher = DTypeDispatcher(is_backward=False, na_dim=na_dim)
+        dtype_dispatcher = DTypeDispatcher(na_dim=na_dim)
         for dtype in SUPPORTED_DTYPES:
             dtype_dispatcher.append(dtype)
 
-            head_dim_dispatcher = HeadDimDispatcher(
-                is_backward=False, na_dim=na_dim, dtype=dtype
-            )
+            head_dim_dispatcher = HeadDimDispatcher(na_dim=na_dim, dtype=dtype)
 
             for head_dim in HEAD_DIMS:
                 head_dim_dispatcher.append(head_dim)
 
                 cm_dispatcher = CausalMaskDispatcher(
-                    is_backward=False, na_dim=na_dim, dtype=dtype, head_dim=head_dim
+                    na_dim=na_dim, dtype=dtype, head_dim=head_dim
                 )
                 for cm in CAUSAL_MASKS[na_dim]:
                     cm_dispatcher.append(cm)
 
                     tile_shape_dispatcher = TileShapeDispatcher(
-                        is_backward=False,
                         na_dim=na_dim,
                         dtype=dtype,
                         head_dim=head_dim,

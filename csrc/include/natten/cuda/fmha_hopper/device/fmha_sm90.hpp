@@ -37,40 +37,9 @@
 
 #pragma once
 
+#include <natten/cuda/utils/cutlass.cuh>
 // common
 #include "cutlass/cutlass.h"
-
-////////////////////////////////////////////////////////////////////////////////
-
-namespace cutlass {
-
-/// Generic CUTLASS kernel template.
-template <typename Operator>
-CUTLASS_GLOBAL
-#ifdef __CUDACC__
-// Enclosing this in __CUDACC__ suppresses MSVC warnings.
-__launch_bounds__(
-    Operator::MaxThreadsPerBlock,
-    Operator::MinBlocksPerMultiprocessor)
-#endif // __CUDACC__
-    void device_kernel_sm90(CUTLASS_GRID_CONSTANT
-                            typename Operator::Params const params) {
-#ifdef __CUDA_ARCH__
-#if __CUDA_ARCH__ == 900
-  // Dynamic shared memory base pointer
-  extern __shared__ char smem[];
-  Operator op;
-  op(params, smem);
-  cutlass::arch::synclog_print();
-#else
-  printf(
-      "FATAL: This kernel was built for SM90, but attempted to launch from SM%d\n",
-      int(__CUDA_ARCH__ + 0) / 10);
-#endif
-#endif
-}
-
-} // namespace cutlass
 
 #if !defined(__CUDACC_RTC__)
 #include "cutlass/cluster_launch.hpp"
@@ -86,7 +55,7 @@ namespace cutlass::fmha::device {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <class Kernel_>
-class FmhaSm90 {
+class Sm90DeviceKernel {
  public:
   using Kernel = Kernel_;
 
@@ -137,7 +106,7 @@ class FmhaSm90 {
 
   /// Computes the maximum number of active blocks per multiprocessor
   static int maximum_active_blocks(int /* smem_capacity */ = -1) {
-    CUTLASS_TRACE_HOST("Universal::maximum_active_blocks()");
+    CUTLASS_TRACE_HOST("Sm90DeviceKernel::maximum_active_blocks()");
     int max_active_blocks = -1;
     int smem_size = Kernel::SharedStorageSize;
 
@@ -183,7 +152,7 @@ class FmhaSm90 {
       void* workspace = nullptr,
       cudaStream_t stream = nullptr) {
     CUTLASS_TRACE_HOST(
-        "Universal::initialize() - workspace "
+        "Sm90DeviceKernel::initialize() - workspace "
         << workspace << ", stream: " << (stream ? "non-null" : "null"));
 
     // Initialize the workspace
@@ -223,7 +192,8 @@ class FmhaSm90 {
   /// Update API is preserved in 3.0, but does not guarantee a lightweight
   /// update of params.
   Status update(Arguments const& args, void* workspace = nullptr) {
-    CUTLASS_TRACE_HOST("Universal()::update() - workspace: " << workspace);
+    CUTLASS_TRACE_HOST(
+        "Sm90DeviceKernel()::update() - workspace: " << workspace);
 
     size_t workspace_bytes = get_workspace_size(args);
     if (workspace_bytes > 0 && nullptr == workspace) {
@@ -238,7 +208,7 @@ class FmhaSm90 {
   /// manage their own params. Supplied params struct must be construct by
   /// calling Kernel::to_underling_arguments()
   static Status run(Params& params, cudaStream_t stream = nullptr) {
-    CUTLASS_TRACE_HOST("Universal::run()");
+    CUTLASS_TRACE_HOST("Sm90DeviceKernel::run()");
     dim3 const block = Kernel::get_block_shape();
     dim3 const grid = get_grid_shape(params);
 

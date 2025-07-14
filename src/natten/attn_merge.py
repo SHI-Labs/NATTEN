@@ -27,12 +27,11 @@ import torch
 from torch import Tensor
 
 from ._environment import _IS_TORCH_COMPILE_SUPPORTED
-from .utils.device import get_device_cc
 
 
 def maybe_torch_compile(*args, **kwargs):
     def decorator(f):
-        if _IS_TORCH_COMPILE_SUPPORTED and get_device_cc() >= 70:
+        if _IS_TORCH_COMPILE_SUPPORTED:
             return torch.compile(f, *args, **kwargs)
         return f
 

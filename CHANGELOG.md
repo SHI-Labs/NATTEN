@@ -1,11 +1,23 @@
 # Changelog
 
 ## [Main branch]
+
+
+## [0.21.0] - 2025-07-14
 * Allow head dims 8 and 16 in Flex backend (without compilation only)
 * Minor bug fixes in Flex wrapper / backend.
 * Add support for SM120, Blackwell RTX (at this time
     only [CUTLASS FNA/FMHA](https://natten.org/backends/#cutlass-fna-fmha) and
     [Flex FNA/FMHA](https://natten.org/backends/#flex-fna-fmha) backends are supported.)
+* Minor bug fixes in Hopper/Blackwell FMHA.
+* Removed fused additional KV from Blackwell FNA forward: no improvement in perf, complicates
+    dilation, and difficult to maintain.
+* **Add backward pass kernels to Hopper/Blackwell FMHA/FNA**: Both backends now support backprop,
+    with the full set of features available in NATTEN. Expected performance gains compared to
+    running CUTLASS (Ampere) FNA/FMHA is up to 10X (op-level). Hopper FMHA/FNA achieves more than
+    50% of FAv3 backward performance, while Blackwell FMHA/FNA can in some cases even outperform
+    cuDNN backward.
+ 
 
 ## [0.20.1] - 2025-06-14
 * Bugs in [modules](https://natten.org/modules) were fixed (see

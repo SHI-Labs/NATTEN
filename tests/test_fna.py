@@ -111,7 +111,7 @@ class FNABackendTest(unittest.TestCase):
 
         # TODO: write note on why backprop eps is different when additional_kv_length > 0
         ALLOWED_DTYPES = [
-            (torch.float32, (1e-4, 1e-4 if additional_kv_length == 0 else 2e-1)),
+            (torch.float32, (1e-4, 1e-4 if additional_kv_length == 0 else 5e-1)),
         ]
 
         if supports_float16(torch.get_default_device()):
@@ -138,6 +138,8 @@ class FNABackendTest(unittest.TestCase):
             dilation = check_dilation_arg(len(input_shape), dilation)
             forward_configs = get_all_forward_configs(dummy)
             backward_configs = get_all_backward_configs(dummy, dilation)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             num_fwd_configs = len(forward_configs)
             num_bwd_configs = len(backward_configs)

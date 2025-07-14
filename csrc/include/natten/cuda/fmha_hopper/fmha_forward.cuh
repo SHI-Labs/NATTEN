@@ -1,41 +1,25 @@
 /***************************************************************************************************
  * Copyright (c) 2022-2025 Ali Hassani.
  *
- * Fused Neighborhood Attention kernels are heavily based on the
- * memory-efficient attention kernels from the xFormers project by Meta
- * Platforms, Inc.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
  *
- * Copyright (c) Facebook, Inc. and its affiliates
+ * The above copyright notice and this permission notice shall be included in
+ *all copies or substantial portions of the Software.
  *
- * BSD 3-Clause License
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * 3. Neither the names of Facebook, Deepmind Technologies, NYU, NEC
- * Laboratories America and IDIAP Research Institute nor the names of its
- * contributors may be used to endorse or promote products derived from this
- * software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+ **************************************************************************************************/
 
 #pragma once
 
@@ -48,16 +32,11 @@
 #include "natten/cuda/fmha_hopper/device/fmha_sm90.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_builder.hpp"
 
+#include "natten/cuda/hopper_fmha_fna.h"
+
 namespace natten {
 namespace cuda {
 namespace fmha_hopper {
-
-enum class HopperFmhaKernelType {
-  NonPersistent,
-  WSCooperative,
-  WSPingpong,
-  Invalid
-};
 
 #if defined(CUTLASS_ARCH_MMA_SM90_SUPPORTED)
 
@@ -69,7 +48,7 @@ using namespace cutlass::fmha;
 template <
     typename Element,
     class TileShape,
-    HopperFmhaKernelType KernelSchedule,
+    natten::cuda::hopper::HopperKernelSchedule KernelSchedule,
     bool kIsResidual>
 struct KernelForward {
   using ElementAccumulatorQK = float;
@@ -89,15 +68,19 @@ struct KernelForward {
   using StrideLSE = cute::tuple<int, cute::tuple<int, _1>>; // Q (B H)
 
   static_assert(
-      KernelSchedule == HopperFmhaKernelType::NonPersistent ||
-      KernelSchedule == HopperFmhaKernelType::WSCooperative ||
-      KernelSchedule == HopperFmhaKernelType::WSPingpong);
+      KernelSchedule ==
+          natten::cuda::hopper::HopperKernelSchedule::NonPersistent ||
+      KernelSchedule ==
+          natten::cuda::hopper::HopperKernelSchedule::WSCooperative ||
+      KernelSchedule == natten::cuda::hopper::HopperKernelSchedule::WSPingpong);
 
   using DispatchPolicy = std::conditional_t<
-      KernelSchedule == HopperFmhaKernelType::NonPersistent,
+      KernelSchedule ==
+          natten::cuda::hopper::HopperKernelSchedule::NonPersistent,
       cutlass::gemm::KernelTma,
       std::conditional_t<
-          KernelSchedule == HopperFmhaKernelType::WSCooperative,
+          KernelSchedule ==
+              natten::cuda::hopper::HopperKernelSchedule::WSCooperative,
           cutlass::gemm::KernelTmaWarpSpecializedCooperative,
           cutlass::gemm::KernelTmaWarpSpecializedPingpong>>;
 
@@ -106,7 +89,7 @@ struct KernelForward {
       cutlass::fmha::collective::ResidualFusion,
       cutlass::fmha::collective::DefaultFusion>;
 
-  using Operation = cutlass::fmha::device::FmhaSm90<
+  using Operation = cutlass::fmha::device::Sm90DeviceKernel<
       typename cutlass::fmha::kernel::FmhaBuilder<
           Element,
           ElementAccumulatorQK,
@@ -196,6 +179,7 @@ struct KernelForward {
     if (status != cutlass::Status::kSuccess) {
       std::cerr << "This kernel is not supported. Last CUDA error is: "
                 << cudaGetErrorString(cudaGetLastError()) << std::endl;
+      return;
     }
 
     status = op.initialize(arguments, workspace_ptr, stream);
@@ -203,6 +187,7 @@ struct KernelForward {
       std::cerr
           << "Failed to initialize the CUTLASS kernel. Last CUDA error is: "
           << cudaGetErrorString(cudaGetLastError()) << std::endl;
+      return;
     }
 
     // Run
@@ -210,6 +195,7 @@ struct KernelForward {
     if (status != cutlass::Status::kSuccess) {
       std::cerr << "Failed to launch the CUTLASS kernel. Last CUDA error is: "
                 << cudaGetErrorString(cudaGetLastError()) << std::endl;
+      return;
     }
 
 #if 0
@@ -217,6 +203,7 @@ struct KernelForward {
     if (result != cudaSuccess) {
       std::cerr << "Error running the CUTLASS kernel. Last CUDA error is: "
                 << cudaGetErrorString(result) << std::endl;
+      return;
     }
 #endif
   }

@@ -177,6 +177,7 @@ struct CollectiveLoadTma {
             get<0>(state)(_, _, _, *tile_iter),
             get<1>(state)(_, _, _, smem_pipe_write.index()));
       }
+
       if constexpr (kAdvancePipe)
         ++smem_pipe_write;
       if constexpr (kAdvanceIterator)
