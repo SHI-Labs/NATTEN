@@ -138,6 +138,8 @@ class FNABackendTest(unittest.TestCase):
             dilation = check_dilation_arg(len(input_shape), dilation)
             forward_configs = get_all_forward_configs(dummy)
             backward_configs = get_all_backward_configs(dummy, dilation)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             num_fwd_configs = len(forward_configs)
             num_bwd_configs = len(backward_configs)

@@ -433,6 +433,8 @@ class FMHABackendTest(unittest.TestCase):
 
             forward_configs = get_all_fmha_forward_configs(dummy_fwd)
             backward_configs = get_all_fmha_backward_configs(dummy_bwd)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
@@ -490,6 +492,8 @@ class FMHABackendTest(unittest.TestCase):
 
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
             backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
@@ -541,6 +545,8 @@ class FMHABackendTest(unittest.TestCase):
 
             forward_configs = get_all_hopper_fmha_forward_configs(dummy)
             backward_configs = get_all_hopper_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
@@ -595,6 +601,8 @@ class FMHABackendTest(unittest.TestCase):
 
             forward_configs = get_all_hopper_fmha_forward_configs(dummy)
             backward_configs = get_all_hopper_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
@@ -650,6 +658,8 @@ class FMHABackendTest(unittest.TestCase):
 
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
             backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)

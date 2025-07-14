@@ -122,6 +122,8 @@ class HopperFNABackendTest(unittest.TestCase):
             )
             forward_configs = get_all_forward_configs(dummy)
             backward_configs = get_all_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
