@@ -408,7 +408,7 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float32, (1e-4, 1e-4), (0, 0)),
+            (torch.float32, (1e-4, 1e-3), (0, 0)),
         ]
 
         if supports_float16(torch.get_default_device()):

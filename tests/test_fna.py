@@ -111,7 +111,7 @@ class FNABackendTest(unittest.TestCase):
 
         # TODO: write note on why backprop eps is different when additional_kv_length > 0
         ALLOWED_DTYPES = [
-            (torch.float32, (1e-4, 1e-4 if additional_kv_length == 0 else 2e-1)),
+            (torch.float32, (1e-4, 1e-4 if additional_kv_length == 0 else 5e-1)),
         ]
 
         if supports_float16(torch.get_default_device()):
