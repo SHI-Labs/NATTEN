@@ -127,13 +127,11 @@ def attention(
             You can use [profiler](profiler.md) to find valid choices for your use case.
 
         backward_q_tile_size (int): Tile size along query sequence length in the backward pass
-            kernel. This is only respected by the `"cutlass-fmha"`, `"hopper-fmha"`, and
-            `"blackwell-fmha"` backends.
+            kernel. This is ignored by `"flex-fmha"`.
             You can use [profiler](profiler.md) to find valid choices for your use case.
 
         backward_kv_tile_size (int): Tile size along key/value sequence length in the backward pass
-            kernel. This is only respected by the `"cutlass-fmha"`, `"hopper-fmha"`, and
-            `"blackwell-fmha"` backends.
+            kernel. This is ignored by `"flex-fmha"`.
             You can use [profiler](profiler.md) to find valid choices for your use case.
 
         backward_kv_splits (int): Number of key/value tiles allowed to work in parallel in the
@@ -581,12 +579,12 @@ def na1d(
             case, and search for the best combination.
 
         backward_q_tile_shape (Tuple[int]): 1-D Tile shape for the query token layout in the
-            backward pass kernel. This is only respected by the `"cutlass-fna"` backend.
+            backward pass kernel. This is ignored by `"flex-fna"`.
             You can use [profiler](profiler.md) to find valid choices for your use case, and
             search for the best combination.
 
         backward_kv_tile_shape (Tuple[int]): 1-D Tile shape for the key/value token layout in the
-            backward pass kernel. This is only respected by the `"cutlass-fna"` backend.
+            backward pass kernel. This is ignored by `"flex-fna"`.
             You can use [profiler](profiler.md) to find valid choices for your use case, and
             search for the best combination.
 
@@ -768,12 +766,12 @@ def na2d(
             use case, and search for the best combination.
 
         backward_q_tile_shape (Tuple[int, int]): 2-D Tile shape for the query token layout in the
-            backward pass kernel. This is only respected by the `"cutlass-fna"` backend.
+            backward pass kernel. This is ignored by `"flex-fna"`.
             You can use [profiler](profiler.md) to find valid choices for your use case, and
             search for the best combination.
 
         backward_kv_tile_shape (Tuple[int, int]): 2-D Tile shape for the key/value token layout in
-            the backward pass kernel. This is only respected by the `"cutlass-fna"` backend.
+            the backward pass kernel. This is ignored by `"flex-fna"`.
             You can use [profiler](profiler.md) to find valid choices for your use case, and
             search for the best combination.
 
@@ -955,13 +953,13 @@ def na3d(
             use case, and search for the best combination.
 
         backward_q_tile_shape (Tuple[int, int, int]): 3-D Tile shape for the query token layout in
-            the backward pass kernel. This is only respected by the `"cutlass-fna"` backend.
+            the backward pass kernel. This is ignored by `"flex-fna"`.
             You can use [profiler](profiler.md) to find valid choices for your use case, and
             search for the best combination.
 
         backward_kv_tile_shape (Tuple[int, int, int]): 3-D Tile shape for the key/value token
-            layout in the backward pass kernel. This is only respected by the `"cutlass-fna"`
-            backend. You can use [profiler](profiler.md) to find valid choices for your use case,
+            layout in the backward pass kernel. This is ignored by `"flex-fna"`.
+            You can use [profiler](profiler.md) to find valid choices for your use case,
             and search for the best combination.
 
         backward_kv_splits (Tuple[int, int, int]): Number of key/value tiles allowed to work in

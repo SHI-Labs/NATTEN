@@ -97,6 +97,10 @@ check_one 0.20.0 cu126 2.7.0 $URL_PREFIX
 check_one 0.20.1 cu128 2.7.0 $URL_PREFIX
 check_one 0.20.1 cu126 2.7.0 $URL_PREFIX
 
+# v0.21.0
+check_one 0.21.0 cu128 2.7.0 $URL_PREFIX
+check_one 0.21.0 cu126 2.7.0 $URL_PREFIX
+
 ##################################
 ##################################
 ##################################
