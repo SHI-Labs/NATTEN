@@ -4,7 +4,9 @@ hide:
   - navigation
 ---
 
-<a href="https://natten.org/install/"><img src="https://img.shields.io/pypi/v/natten" /></a>
+<a href="https://pypi.org/project/natten/"><img src="https://img.shields.io/pypi/v/natten" /></a>
+&nbsp;
+<a href="https://natten.org/install/"><img src="https://img.shields.io/badge/Install%20instructions-0A3161" /></a>
 
 NATTEN is an open-source project dedicated to providing infrastructure for
 **multi-dimensional** sparse attention methods, specifically

@@ -2,7 +2,8 @@
 
 **Fast Multi-dimensional Sparse Attention**
 
-<a href="https://natten.org">Documentation / Wheels</a>
+Visit <a href="https://natten.org">natten.org</a> to view our documentation, install instructions,
+and pre-built wheels.
 
 NATTEN is an open-source project dedicated to providing infrastructure for
 **multi-dimensional** sparse attention methods, specifically

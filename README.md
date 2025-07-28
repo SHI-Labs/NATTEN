@@ -2,8 +2,10 @@
 
 **Fast Multi-dimensional Sparse Attention**
 
-<a href="https://natten.org/install/"><img src="https://img.shields.io/pypi/v/natten" /></a>
-&nbsp;&nbsp;
+<a href="https://pypi.org/project/natten/"><img src="https://img.shields.io/pypi/v/natten" /></a>
+&nbsp;
+<a href="https://natten.org/install/"><img src="https://img.shields.io/badge/Install%20instructions-0A3161" /></a>
+&nbsp;
 <a href="https://natten.org/"><img src="https://img.shields.io/badge/Documentation-natten.org-%23B31942" /></a>
 
 NATTEN is an open-source project dedicated to providing infrastructure for
