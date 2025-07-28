@@ -1,16 +1,17 @@
 <img src="https://natten.org/assets/natten_light.png" width="384" />
 
-*Neighborhood Attention Extension*
+**Fast Multi-dimensional Sparse Attention**
 
 <a href="https://natten.org">Documentation / Wheels</a>
 
 NATTEN is an open-source project dedicated to providing infrastructure for
+**multi-dimensional** sparse attention methods, specifically
 [Neighborhood Attention (NA)](https://openaccess.thecvf.com/content/CVPR2023/html/Hassani_Neighborhood_Attention_Transformer_CVPR_2023_paper.html),
 a sliding window self-attention mechanism, and its extensions
 ([dilated NA](https://arxiv.org/abs/2209.15001),
 [causal NA](https://arxiv.org/abs/2403.04690),
 [strided NA](https://arxiv.org/abs/2504.16922)).
-Specifically, we provide Fused Multi-Headed Attention (FMHA) and
+We provide Fused Multi-Headed Attention (FMHA) and
 [Fused Neighborhood Attention (FNA)](https://arxiv.org/abs/2403.04690)
 training and inference kernels, for all NVIDIA architectures since Maxwell (SM50).
 We also ship
@@ -22,7 +23,7 @@ convolution.
 This means for any self attention problem, you will be able to specify a `kernel_size`, `stride`,
 and `dilation`. Because it's attention, you can also toggle causal masking.
 
-NATTEN is dedicated to **multi-dimensional** layouts of tokens (i.e.
+NATTEN is dedicated to multi-dimensional layouts of tokens (i.e.
 [2-D](https://natten.org/operations/#natten.na2d) and
 [3-D](https://natten.org/operations/#natten.na3d) feature maps).
 Users have the freedom to explore the massive parameter space that NATTEN offers, in which the
