@@ -2,7 +2,7 @@
 
 **Fast Multi-dimensional Sparse Attention**
 
-Visit <a href="https://natten.org">natten.org</a> to view our documentation, install instructions,
+Visit <a href="https://natten.org" target="_blank">natten.org</a> to view our documentation, install instructions,
 and pre-built wheels.
 
 NATTEN is an open-source project dedicated to providing infrastructure for
