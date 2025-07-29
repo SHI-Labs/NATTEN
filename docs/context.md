@@ -4,7 +4,7 @@ Certain features in NATTEN are guarded by a global context. Those features are:
 
 * **KV parallelism in CUTLASS FNA/FMHA backward**: necessary for speeding up training, but can
     introduce non-deterministic behavior, and increased memory footprint. This is standard in
-    almost all fused attention implementations. [Read more](#kv-parallelism-in-fna-fmha).
+    almost all fused attention implementations. [Read more](#kv-parallelism-in-cutlass-fna-fmha).
 * **Flex Attention + `torch.compile`**: Heavily experimental, and may lead to incorrect behavior,
     but users can choose to allow it at their own risk. [Read more](#flex-attention-torchcompile).
 
