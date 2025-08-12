@@ -45,7 +45,11 @@ void na1d_forward(
     const std::tuple<bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t>& query_tile_size,
-    const std::tuple<int32_t>& key_tile_size);
+    const std::tuple<int32_t>& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void na2d_forward(
     at::Tensor& out,
@@ -59,7 +63,11 @@ void na2d_forward(
     const std::tuple<bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t>& query_tile_size,
-    const std::tuple<int32_t, int32_t>& key_tile_size);
+    const std::tuple<int32_t, int32_t>& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void na3d_forward(
     at::Tensor& out,
@@ -73,7 +81,11 @@ void na3d_forward(
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
-    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size);
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 // Backward
 
@@ -95,7 +107,11 @@ void na1d_backward(
     const std::tuple<int32_t>& query_tile_size,
     const std::tuple<int32_t>& key_tile_size,
     const std::tuple<int32_t>& num_splits_key,
-    bool compute_delta_with_torch);
+    bool compute_delta_with_torch,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void na2d_backward(
     at::Tensor& grad_query,
@@ -115,7 +131,11 @@ void na2d_backward(
     const std::tuple<int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t>& key_tile_size,
     const std::tuple<int32_t, int32_t>& num_splits_key,
-    bool compute_delta_with_torch);
+    bool compute_delta_with_torch,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void na3d_backward(
     at::Tensor& grad_query,
@@ -135,6 +155,10 @@ void na3d_backward(
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& num_splits_key,
-    bool compute_delta_with_torch);
+    bool compute_delta_with_torch,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 } // namespace natten

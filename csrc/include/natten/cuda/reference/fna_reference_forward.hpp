@@ -73,7 +73,11 @@ void __global__ fna_reference_kernel(
     Causal is_causal,
     QKVLayout qkv_layout,
     float attn_scale,
-    int num_additional_kv) {
+    int num_additional_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   auto attention_mask =
@@ -133,6 +137,20 @@ void __global__ fna_reference_kernel(
             ElementAccumulator eK = mK(idx_K + offset_K, idx_D, idx_L);
             acc += eQ * eK;
           }
+
+          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
+          // SCALING.
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc = cutlass::fast_max(acc, dot_product_min);
+            } else if (not has_dot_product_min) {
+              acc = cutlass::fast_min(acc, dot_product_max);
+            } else {
+              acc = cutlass::fast_max(
+                  cutlass::fast_min(acc, dot_product_max), dot_product_min);
+            }
+          }
+
           acc = acc * attn_scale;
           auto frag = make_tensor<ElementAccumulator>(Shape<_1, _1>{});
           frag(0) = acc;
@@ -231,7 +249,11 @@ void fna_reference_forward(
     NADim dilation,
     Causal is_causal,
     float attn_scale,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   // Only so that we don't oversubscribe shmem when seqlen is large.
@@ -317,7 +339,11 @@ void fna_reference_forward(
           Causal{},
           qkv_layout,
           attn_scale,
-          num_additional_kv);
+          num_additional_kv,
+          has_dot_product_min,
+          has_dot_product_max,
+          dot_product_min,
+          dot_product_max);
 
   NATTEN_CUDA_CHECK(cudaGetLastError());
 }

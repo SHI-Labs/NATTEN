@@ -66,6 +66,8 @@ class NattenBackendTester:
         reference_fmha_backend: str,
         dtype: torch.dtype,
         head_dim_v: Optional[int] = None,
+        dot_product_min: Optional[float] = None,
+        dot_product_max: Optional[float] = None,
     ):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)
@@ -84,6 +86,12 @@ class NattenBackendTester:
         self.test_backprop = test_backprop
         self.reference_backend = reference_backend
         self.reference_fmha_backend = reference_fmha_backend
+
+        self.dot_product_min = dot_product_min
+        self.dot_product_max = dot_product_max
+        self.has_dot_product_clip = (
+            dot_product_min is not None or dot_product_max is not None
+        )
 
         with torch.no_grad():
             q_ref, k_ref, v_ref, d_out_ref = (
@@ -164,6 +172,8 @@ class NattenBackendTester:
                 additional_keys=additional_k_ref,
                 additional_values=additional_v_ref,
                 return_lse=False,
+                dot_product_min=dot_product_min,
+                dot_product_max=dot_product_max,
             )
 
         else:
@@ -181,6 +191,8 @@ class NattenBackendTester:
                 additional_values=additional_v_ref,
                 backend=reference_backend,
                 attention_kwargs={"backend": reference_fmha_backend},
+                dot_product_min=dot_product_min,
+                dot_product_max=dot_product_max,
             )
 
         self.out_ref = out_ref_.data.clone().float()  # type: ignore[union-attr]
@@ -247,6 +259,11 @@ class NattenBackendTester:
             f"{q_tile_shape=}, {kv_tile_shape=}, {run_persistent_kernel=}, {kernel_schedule=}, "
             f"{torch_compile=}"
             + (
+                f", {self.dot_product_min=}, {self.dot_product_max=}, "
+                if self.has_dot_product_clip
+                else ""
+            )
+            + (
                 f"\n{backward_q_tile_shape=}, {backward_kv_tile_shape=}, "
                 f"{backward_kv_splits=}, {backward_use_pt_reduction=}."
                 if self.test_backprop
@@ -300,6 +317,8 @@ class NattenBackendTester:
             kernel_schedule=kernel_schedule,
             torch_compile=torch_compile,
             attention_kwargs={"backend": target_fmha_backend},
+            dot_product_min=self.dot_product_min,
+            dot_product_max=self.dot_product_max,
         )
         out = out_.data.clone().float()
 

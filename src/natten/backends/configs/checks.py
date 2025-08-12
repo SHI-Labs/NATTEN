@@ -22,6 +22,7 @@
 #################################################################################################
 import functools
 import math
+from typing import Optional
 
 import torch
 from torch import Tensor
@@ -37,9 +38,19 @@ from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
 
 
 def can_run_cutlass_blackwell_fmha(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if has_dot_product_clip:
+        target_fn(
+            "Blackwell FMHA does not support clipping dot products (dot_product_{min,max})."
+        )
+        return False
 
     if not HAS_LIBNATTEN:
         target_fn("Can't run Blackwell FMHA; NATTEN was not built with libnatten.")
@@ -112,9 +123,19 @@ def can_run_cutlass_blackwell_fmha(
 
 
 def can_run_cutlass_blackwell_fna(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if has_dot_product_clip:
+        target_fn(
+            "Blackwell FNA does not support clipping dot products (dot_product_{min,max})."
+        )
+        return False
 
     if not HAS_LIBNATTEN:
         target_fn("Can't run Blackwell FNA; NATTEN was not built with libnatten.")
@@ -191,9 +212,19 @@ def can_run_cutlass_blackwell_fna(
 
 
 def can_run_cutlass_hopper_fmha(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if has_dot_product_clip:
+        target_fn(
+            "Hopper FMHA does not support clipping dot products (dot_product_{min,max})."
+        )
+        return False
 
     if not HAS_LIBNATTEN:
         target_fn("Can't run Hopper FMHA; NATTEN was not built with libnatten.")
@@ -274,9 +305,19 @@ def can_run_cutlass_hopper_fmha(
 
 
 def can_run_cutlass_hopper_fna(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if has_dot_product_clip:
+        target_fn(
+            "Hopper FNA does not support clipping dot products (dot_product_{min,max})."
+        )
+        return False
 
     if not HAS_LIBNATTEN:
         target_fn("Can't run Hopper FNA; NATTEN was not built with libnatten.")
@@ -361,9 +402,19 @@ def can_run_cutlass_hopper_fna(
 
 
 def can_run_cutlass_fmha(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if has_dot_product_clip:
+        target_fn(
+            "CUTLASS FMHA does not support clipping dot products (dot_product_{min,max})."
+        )
+        return False
 
     if not HAS_LIBNATTEN:
         target_fn("Can't run CUTLASS FMHA; NATTEN was not built with libnatten.")
@@ -436,7 +487,11 @@ def can_run_cutlass_fmha(
 
 
 def can_run_cutlass_fna(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
@@ -524,8 +579,15 @@ def can_run_flex_attention(
     value: Tensor,
     torch_compile: bool,
     raise_error: bool = False,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if has_dot_product_clip:
+        target_fn(
+            "Flex FMHA/FNA does not support clipping dot products (dot_product_{min,max})."
+        )
+        return False
 
     if not _FLEX_SUPPORTED:
         target_fn("Can't run NATTEN with Flex Attention with torch < 2.7.")

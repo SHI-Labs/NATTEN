@@ -35,7 +35,9 @@ void reference_fna3d_float32_causal1x1x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::true_type, cute::false_type>;
 
@@ -57,7 +59,9 @@ void reference_fna3d_float32_causal1x1x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -81,7 +85,9 @@ void reference_fna3d_float32_causal1x1x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::true_type, cute::true_type>;
 
@@ -103,7 +109,9 @@ void reference_fna3d_float32_causal1x1x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -127,7 +135,9 @@ void reference_fna3d_float16_causal0x0x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::false_type, cute::false_type>;
 
@@ -149,7 +159,9 @@ void reference_fna3d_float16_causal0x0x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -173,7 +185,9 @@ void reference_fna3d_float16_causal0x0x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::false_type, cute::true_type>;
 
@@ -195,7 +209,9 @@ void reference_fna3d_float16_causal0x0x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -219,7 +235,9 @@ void reference_fna3d_float16_causal0x1x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::true_type, cute::false_type>;
 
@@ -241,7 +259,9 @@ void reference_fna3d_float16_causal0x1x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -265,7 +285,9 @@ void reference_fna3d_float16_causal0x1x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::true_type, cute::true_type>;
 
@@ -287,7 +309,9 @@ void reference_fna3d_float16_causal0x1x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -311,7 +335,9 @@ void reference_fna3d_float16_causal1x0x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::false_type, cute::false_type>;
 
@@ -333,7 +359,9 @@ void reference_fna3d_float16_causal1x0x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -357,7 +385,9 @@ void reference_fna3d_float16_causal1x0x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::false_type, cute::true_type>;
 
@@ -379,7 +409,9 @@ void reference_fna3d_float16_causal1x0x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -403,7 +435,9 @@ void reference_fna3d_float16_causal1x1x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::true_type, cute::false_type>;
 
@@ -425,7 +459,9 @@ void reference_fna3d_float16_causal1x1x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -449,7 +485,9 @@ void reference_fna3d_float16_causal1x1x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::true_type, cute::true_type>;
 
@@ -471,7 +509,9 @@ void reference_fna3d_float16_causal1x1x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -495,7 +535,9 @@ void reference_fna3d_bfloat16_causal0x0x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::false_type, cute::false_type>;
 
@@ -517,7 +559,9 @@ void reference_fna3d_bfloat16_causal0x0x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -541,7 +585,9 @@ void reference_fna3d_bfloat16_causal0x0x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::false_type, cute::true_type>;
 
@@ -563,7 +609,9 @@ void reference_fna3d_bfloat16_causal0x0x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -587,7 +635,9 @@ void reference_fna3d_bfloat16_causal0x1x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::true_type, cute::false_type>;
 
@@ -609,7 +659,9 @@ void reference_fna3d_bfloat16_causal0x1x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -633,7 +685,9 @@ void reference_fna3d_bfloat16_causal0x1x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::true_type, cute::true_type>;
 
@@ -655,7 +709,9 @@ void reference_fna3d_bfloat16_causal0x1x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -679,7 +735,9 @@ void reference_fna3d_bfloat16_causal1x0x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::false_type, cute::false_type>;
 
@@ -701,7 +759,9 @@ void reference_fna3d_bfloat16_causal1x0x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -725,7 +785,9 @@ void reference_fna3d_bfloat16_causal1x0x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::false_type, cute::true_type>;
 
@@ -747,7 +809,9 @@ void reference_fna3d_bfloat16_causal1x0x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -771,7 +835,9 @@ void reference_fna3d_bfloat16_causal1x1x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::true_type, cute::false_type>;
 
@@ -793,7 +859,9 @@ void reference_fna3d_bfloat16_causal1x1x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -817,7 +885,9 @@ void reference_fna3d_bfloat16_causal1x1x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::true_type, cute::true_type, cute::true_type>;
 
@@ -839,7 +909,9 @@ void reference_fna3d_bfloat16_causal1x1x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -867,7 +939,9 @@ void reference_fna3d_backward_float32_causal0x0x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::false_type, cute::false_type>;
 
@@ -893,7 +967,9 @@ void reference_fna3d_backward_float32_causal0x0x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -921,7 +997,9 @@ void reference_fna3d_backward_float32_causal0x0x1(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::false_type, cute::true_type>;
 
@@ -947,7 +1025,9 @@ void reference_fna3d_backward_float32_causal0x0x1(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
@@ -975,7 +1055,9 @@ void reference_fna3d_backward_float32_causal0x1x0(
       cute::tuple<int, int, int> stride,
       cute::tuple<int, int, int> dilation,
       float attn_scale,
-      cudaStream_t stream) {
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {
 
   using Causal = cute::tuple<cute::false_type, cute::true_type, cute::false_type>;
 
@@ -1001,7 +1083,9 @@ void reference_fna3d_backward_float32_causal0x1x0(
     dilation,
     Causal{},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }
 
 
