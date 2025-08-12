@@ -89,7 +89,11 @@ void fna_backward_generic(
     float attn_scale,
     IntTuple query_tile_shape,
     IntTuple key_tile_shape,
-    IntTuple num_splits_key) {
+    IntTuple num_splits_key,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   static constexpr auto kRank =
       std::tuple_size<decltype(spatial_extent)>::value;
   using Dim = typename GetDim<kRank>::type;
@@ -156,6 +160,18 @@ void fna_backward_generic(
     p.key_tile_shape = tuple_to_na_dim<Dim>(key_tile_shape);
 
     p.num_splits_key = tuple_to_na_dim<Dim>(num_splits_key);
+
+    // Optional dot product clipping
+    p.has_dot_product_clip = has_dot_product_min || has_dot_product_max;
+    p.has_dot_product_min = has_dot_product_min;
+    p.has_dot_product_max = has_dot_product_max;
+    if (has_dot_product_min) {
+      p.dot_product_min = dot_product_min;
+    }
+    if (has_dot_product_max) {
+      p.dot_product_max = dot_product_max;
+    }
+    //
 
     int64_t size_bytes = p.workspace_size();
     if (size_bytes) {

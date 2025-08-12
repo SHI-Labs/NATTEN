@@ -68,7 +68,11 @@ void reference_na_generic_forward(
     const StdCausal& is_causal,
     float attn_scale,
     const StdNADim& qkv_shape,
-    int num_extra_kv) {
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   static_assert(
       std::tuple_size_v<StdNADim> > 0 && std::tuple_size_v<StdNADim> < 4);
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
@@ -152,7 +156,11 @@ void reference_na_generic_forward(
       stride_,
       dilation_,
       attn_scale,
-      cuda_stream);
+      cuda_stream,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 #else
   TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
 #endif
@@ -170,7 +178,11 @@ void reference_na1d_forward(
     const std::tuple<bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t>& qkv_shape,
-    int num_extra_kv) {
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   reference_na_generic_forward(
@@ -185,7 +197,11 @@ void reference_na1d_forward(
       is_causal,
       attn_scale,
       qkv_shape,
-      num_extra_kv);
+      num_extra_kv,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 void reference_na2d_forward(
@@ -200,7 +216,11 @@ void reference_na2d_forward(
     const std::tuple<bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t>& qkv_shape,
-    int num_extra_kv) {
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   reference_na_generic_forward(
@@ -215,7 +235,11 @@ void reference_na2d_forward(
       is_causal,
       attn_scale,
       qkv_shape,
-      num_extra_kv);
+      num_extra_kv,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 void reference_na3d_forward(
@@ -230,7 +254,11 @@ void reference_na3d_forward(
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape,
-    int num_extra_kv) {
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   reference_na_generic_forward(
@@ -245,7 +273,11 @@ void reference_na3d_forward(
       is_causal,
       attn_scale,
       qkv_shape,
-      num_extra_kv);
+      num_extra_kv,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 } // namespace natten

@@ -45,7 +45,11 @@ void reference_na1d_forward(
     const std::tuple<bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t>& qkv_shape,
-    int num_extra_kv);
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void reference_na2d_forward(
     at::Tensor& out,
@@ -59,7 +63,11 @@ void reference_na2d_forward(
     const std::tuple<bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t>& qkv_shape,
-    int num_extra_kv);
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void reference_na3d_forward(
     at::Tensor& out,
@@ -73,7 +81,11 @@ void reference_na3d_forward(
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape,
-    int num_extra_kv);
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 // Backward
 
@@ -93,7 +105,11 @@ void reference_na1d_backward(
     const std::tuple<bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t>& qkv_shape,
-    int num_extra_kv);
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void reference_na2d_backward(
     at::Tensor& grad_query,
@@ -111,7 +127,11 @@ void reference_na2d_backward(
     const std::tuple<bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t>& qkv_shape,
-    int num_extra_kv);
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 void reference_na3d_backward(
     at::Tensor& grad_query,
@@ -129,6 +149,10 @@ void reference_na3d_backward(
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape,
-    int num_extra_kv);
+    int num_extra_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max);
 
 } // namespace natten

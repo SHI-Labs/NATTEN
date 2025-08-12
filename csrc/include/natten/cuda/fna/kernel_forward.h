@@ -200,6 +200,17 @@ struct FusedNeighborhoodAttentionKernel {
     bool is_fully_block_sparse = false;
     bool has_kv_padding = false;
 
+    // Optional dot product clipping -- all must be set explicitly for avoiding
+    // comparisons.
+    bool has_dot_product_clip = false;
+    bool has_dot_product_min = false;
+    bool has_dot_product_max = false;
+    accum_t dot_product_min =
+        -cutlass::platform::numeric_limits<accum_t>::infinity();
+    accum_t dot_product_max =
+        cutlass::platform::numeric_limits<accum_t>::infinity();
+    //
+
     // Moves pointers to what we should process
     // Returns "false" if there is no work to do
     CUTLASS_DEVICE bool advance_to_block() {
@@ -732,6 +743,27 @@ struct FusedNeighborhoodAttentionKernel {
         prologueV(0);
       } else {
         MM1::Mma::drain_cp_asyncs();
+      }
+
+      // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
+      // SCALING.
+      if (p.has_dot_product_clip) {
+        if (not p.has_dot_product_max) {
+          for (int i = 0; i < MM0::Mma::FragmentC::kElements; ++i) {
+            accum[i] = cutlass::fast_max(accum[i], p.dot_product_min);
+          }
+        } else if (not p.has_dot_product_min) {
+          for (int i = 0; i < MM0::Mma::FragmentC::kElements; ++i) {
+            accum[i] = cutlass::fast_min(accum[i], p.dot_product_max);
+          }
+        } else {
+          // assert(p.has_dot_product_min && p.has_dot_product_max);
+          for (int i = 0; i < MM0::Mma::FragmentC::kElements; ++i) {
+            accum[i] = cutlass::fast_max(
+                cutlass::fast_min(accum[i], p.dot_product_max),
+                p.dot_product_min);
+          }
+        }
       }
 
       if (not p.is_fully_block_sparse) {

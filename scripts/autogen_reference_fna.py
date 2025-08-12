@@ -35,7 +35,9 @@ void {kernel_name}(
       {DimType} stride,
       {DimType} dilation,
       float attn_scale,
-      cudaStream_t stream);
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max);
 """
 
 
@@ -57,7 +59,9 @@ void {kernel_name}(
       {DimType} stride,
       {DimType} dilation,
       float attn_scale,
-      cudaStream_t stream) {{
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {{
 
   using Causal = {Causal};
 
@@ -79,7 +83,9 @@ void {kernel_name}(
     dilation,
     Causal{{}},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }}
 """
 
@@ -106,7 +112,9 @@ void {kernel_name}(
       {DimType} stride,
       {DimType} dilation,
       float attn_scale,
-      cudaStream_t stream);
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max);
 """
 
 
@@ -132,7 +140,9 @@ void {kernel_name}(
       {DimType} stride,
       {DimType} dilation,
       float attn_scale,
-      cudaStream_t stream) {{
+      cudaStream_t stream,
+      bool has_dot_product_min, bool has_dot_product_max,
+      float dot_product_min, float dot_product_max) {{
 
   using Causal = {Causal};
 
@@ -158,7 +168,9 @@ void {kernel_name}(
     dilation,
     Causal{{}},
     attn_scale,
-    stream);
+    stream,
+    has_dot_product_min, has_dot_product_max,
+    dot_product_min, dot_product_max);
 }}
 """
 
