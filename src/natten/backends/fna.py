@@ -100,6 +100,8 @@ def make_cutlass_fna_autograd_fn(na_dim):
             scale: float,
             forward_config: CutlassFnaForwardConfigType,
             backward_config: CutlassFnaBackwardConfigType,
+            dot_product_min: Optional[float] = None,
+            dot_product_max: Optional[float] = None,
         ) -> Tuple[Tensor, Tensor]:
             kernel_size, stride, dilation, is_causal = check_all_args(
                 na_dim, kernel_size, stride, dilation, is_causal
@@ -135,6 +137,10 @@ def make_cutlass_fna_autograd_fn(na_dim):
                 scale,
                 q_tile_shape,
                 kv_tile_shape,
+                dot_product_min is not None,
+                dot_product_max is not None,
+                dot_product_min or 0.0,
+                dot_product_max or 0.0,
             )
 
             ctx.save_for_backward(query, key, value, logsumexp, output)
@@ -144,6 +150,8 @@ def make_cutlass_fna_autograd_fn(na_dim):
             ctx.is_causal = is_causal
             ctx.scale = scale
             ctx.backward_config = backward_config
+            ctx.dot_product_min = dot_product_min
+            ctx.dot_product_max = dot_product_max
 
             return output, logsumexp
 
@@ -153,6 +161,8 @@ def make_cutlass_fna_autograd_fn(na_dim):
             Tensor,
             Tensor,
             Tensor,
+            NoneType,
+            NoneType,
             NoneType,
             NoneType,
             NoneType,
@@ -202,9 +212,26 @@ def make_cutlass_fna_autograd_fn(na_dim):
                 k_tile_shape,
                 num_kv_splits,
                 compute_delta_with_pt,
+                ctx.dot_product_min is not None,
+                ctx.dot_product_max is not None,
+                ctx.dot_product_min or 0.0,
+                ctx.dot_product_max or 0.0,
             )
 
-            return d_query, d_key, d_value, None, None, None, None, None, None, None
+            return (
+                d_query,
+                d_key,
+                d_value,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
     return CutlassFnaGenericAutogradFn
 
@@ -237,6 +264,8 @@ def cutlass_fna_generic(
     backward_kv_splits: Optional[DimensionType] = None,
     backward_use_pt_reduction: bool = False,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     na_tensor_checks(query, key, value, must_match_head_dims=False)
@@ -288,6 +317,8 @@ def cutlass_fna_generic(
         scale,
         forward_config,
         backward_config,
+        dot_product_min,
+        dot_product_max,
     )
 
     if return_lse:
@@ -312,6 +343,8 @@ def na1d_cutlass_fna(
     backward_kv_splits: Optional[Dimension1DType] = None,
     backward_use_pt_reduction: bool = False,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     return cutlass_fna_generic(
         query=query,
@@ -329,6 +362,8 @@ def na1d_cutlass_fna(
         backward_kv_splits=backward_kv_splits,
         backward_use_pt_reduction=backward_use_pt_reduction,
         return_lse=return_lse,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )
 
 
@@ -348,6 +383,8 @@ def na2d_cutlass_fna(
     backward_kv_splits: Optional[Dimension2DType] = None,
     backward_use_pt_reduction: bool = False,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     return cutlass_fna_generic(
         query=query,
@@ -365,6 +402,8 @@ def na2d_cutlass_fna(
         backward_kv_splits=backward_kv_splits,
         backward_use_pt_reduction=backward_use_pt_reduction,
         return_lse=return_lse,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )
 
 
@@ -384,6 +423,8 @@ def na3d_cutlass_fna(
     backward_kv_splits: Optional[Dimension3DType] = None,
     backward_use_pt_reduction: bool = False,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     return cutlass_fna_generic(
         query=query,
@@ -401,4 +442,6 @@ def na3d_cutlass_fna(
         backward_kv_splits=backward_kv_splits,
         backward_use_pt_reduction=backward_use_pt_reduction,
         return_lse=return_lse,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )

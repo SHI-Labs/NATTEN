@@ -74,7 +74,11 @@ void __global__ fna_bwd_reference_dQ_kernel(
     Causal is_causal,
     QKVLayout qkv_layout,
     float attn_scale,
-    int num_additional_kv) {
+    int num_additional_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   auto attention_mask =
@@ -111,6 +115,20 @@ void __global__ fna_bwd_reference_dQ_kernel(
             acc_dov += mDO(idx_Q, idx_D1, idx_L) * mV(idx_K, idx_D1, idx_L);
             acc_doo += mDO(idx_Q, idx_D1, idx_L) * mO(idx_Q, idx_D1, idx_L);
           } // for idx_D1
+
+          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
+          // SCALING.
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc_qk = cutlass::fast_max(acc_qk, dot_product_min);
+            } else if (not has_dot_product_min) {
+              acc_qk = cutlass::fast_min(acc_qk, dot_product_max);
+            } else {
+              acc_qk = cutlass::fast_max(
+                  cutlass::fast_min(acc_qk, dot_product_max), dot_product_min);
+            }
+          }
+
           acc_qk *= attn_scale;
           acc_dov *= attn_scale;
           acc_doo *= attn_scale;
@@ -186,7 +204,11 @@ void __global__ fna_bwd_reference_dK_kernel(
     Causal is_causal,
     QKVLayout qkv_layout,
     float attn_scale,
-    int num_additional_kv) {
+    int num_additional_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   auto attention_mask =
@@ -223,6 +245,20 @@ void __global__ fna_bwd_reference_dK_kernel(
             acc_dov += mDO(idx_Q, idx_D1, idx_L) * mV(idx_K, idx_D1, idx_L);
             acc_doo += mDO(idx_Q, idx_D1, idx_L) * mO(idx_Q, idx_D1, idx_L);
           } // for idx_D1
+
+          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
+          // SCALING.
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc_qk = cutlass::fast_max(acc_qk, dot_product_min);
+            } else if (not has_dot_product_min) {
+              acc_qk = cutlass::fast_min(acc_qk, dot_product_max);
+            } else {
+              acc_qk = cutlass::fast_max(
+                  cutlass::fast_min(acc_qk, dot_product_max), dot_product_min);
+            }
+          }
+
           acc_qk *= attn_scale;
           acc_dov *= attn_scale;
           acc_doo *= attn_scale;
@@ -299,7 +335,11 @@ void __global__ fna_bwd_reference_dV_kernel(
     Causal is_causal,
     QKVLayout qkv_layout,
     float attn_scale,
-    int num_additional_kv) {
+    int num_additional_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   auto attention_mask =
@@ -333,6 +373,20 @@ void __global__ fna_bwd_reference_dV_kernel(
             ElementAccumulator rK = mK(idx_K, idx_D0, idx_L);
             acc_qk += rQ * rK;
           } // for idx_D0
+
+          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
+          // SCALING.
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc_qk = cutlass::fast_max(acc_qk, dot_product_min);
+            } else if (not has_dot_product_min) {
+              acc_qk = cutlass::fast_min(acc_qk, dot_product_max);
+            } else {
+              acc_qk = cutlass::fast_max(
+                  cutlass::fast_min(acc_qk, dot_product_max), dot_product_min);
+            }
+          }
+
           acc_qk *= attn_scale;
 
           auto id = make_identity_tensor(make_shape(1, 1));
@@ -408,7 +462,11 @@ void fna_bwd_reference_dQ(
     QKVLayout qkv_layout,
     float attn_scale,
     int num_additional_kv,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   // Only so that we don't oversubscribe shmem when seqlen is large.
@@ -447,7 +505,11 @@ void fna_bwd_reference_dQ(
           Causal{},
           qkv_layout,
           attn_scale,
-          num_additional_kv);
+          num_additional_kv,
+          has_dot_product_min,
+          has_dot_product_max,
+          dot_product_min,
+          dot_product_max);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -480,7 +542,11 @@ void fna_bwd_reference_dK(
     QKVLayout qkv_layout,
     float attn_scale,
     int num_additional_kv,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   // Only so that we don't oversubscribe shmem when seqlen is large.
@@ -519,7 +585,11 @@ void fna_bwd_reference_dK(
           Causal{},
           qkv_layout,
           attn_scale,
-          num_additional_kv);
+          num_additional_kv,
+          has_dot_product_min,
+          has_dot_product_max,
+          dot_product_min,
+          dot_product_max);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -552,7 +622,11 @@ void fna_bwd_reference_dV(
     QKVLayout qkv_layout,
     float attn_scale,
     int num_additional_kv,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   // Only so that we don't oversubscribe shmem when seqlen is large.
@@ -591,7 +665,11 @@ void fna_bwd_reference_dV(
           Causal{},
           qkv_layout,
           attn_scale,
-          num_additional_kv);
+          num_additional_kv,
+          has_dot_product_min,
+          has_dot_product_max,
+          dot_product_min,
+          dot_product_max);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -619,7 +697,11 @@ void fna_reference_backward(
     NADim dilation,
     Causal is_causal,
     float attn_scale,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   // No GQA/MQA for now
@@ -694,7 +776,11 @@ void fna_reference_backward(
       qkv_layout,
       attn_scale,
       num_additional_kv,
-      stream);
+      stream,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
   fna_bwd_reference_dK(
       problem_shape,
       mQ,
@@ -711,7 +797,11 @@ void fna_reference_backward(
       qkv_layout,
       attn_scale,
       num_additional_kv,
-      stream);
+      stream,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
   fna_bwd_reference_dV(
       problem_shape,
       mQ,
@@ -728,7 +818,11 @@ void fna_reference_backward(
       qkv_layout,
       attn_scale,
       num_additional_kv,
-      stream);
+      stream,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 } // namespace reference
