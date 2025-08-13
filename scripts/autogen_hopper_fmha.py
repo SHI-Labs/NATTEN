@@ -549,11 +549,20 @@ def generate_hopper_fmha_kernels(path, num_splits=2):
     for kernel in kernels:
         headers += kernel.get_decl()
 
-    split_size = (len(kernels) + num_splits - 1) // num_splits
+    assert (
+        len(kernels) >= num_splits
+    ), f"Generated {len(kernels)} kernels, but got {num_splits=}."
+    split_size = len(kernels) // num_splits
+    num_splits_with_res = len(kernels) % num_splits
     kernels_emitted = []
+    kernels_split = []
     for split_idx in range(num_splits):
-        kernel_start_idx = split_size * split_idx
-        kernel_end_idx = min(kernel_start_idx + split_size, len(kernels))
+        kernel_start_idx = split_size * split_idx + min(num_splits_with_res, split_idx)
+        num_kernels_in_split = split_size + (
+            1 if split_idx < num_splits_with_res else 0
+        )
+        kernel_end_idx = kernel_start_idx + num_kernels_in_split
+        assert kernel_end_idx <= len(kernels)
         pth_set = set()
         source_list = []
         for kernel_idx in range(kernel_start_idx, kernel_end_idx):
@@ -565,10 +574,14 @@ def generate_hopper_fmha_kernels(path, num_splits=2):
         write_combined_source_file(
             path_to_sources, f"source_{split_idx}.cu", sorted(pth_set), source_list
         )
+        kernels_split.append(source_list)
+        # print(f"{split_idx=}, {kernel_start_idx=}, {kernel_end_idx=}, {len(kernels_emitted)=}")
     assert split_idx == num_splits - 1, f"Expected {split_idx=} == {num_splits=} - 1"
-    assert len(kernels_emitted) == len(kernels) and sorted(kernels_emitted) == [
+    assert len(kernels_emitted) == len(kernels)
+    assert sorted(kernels_emitted) == [
         x for x in range(len(kernels))
-    ]
+    ], f"{sorted(kernels_emitted)=}"
+    assert all(len(x) > 0 for x in kernels_split)
 
     namespaces = ["natten", "cuda", "fmha_hopper"]
     cuda_headers = [

@@ -915,66 +915,6 @@ void hopper_fna2d_bfloat16_128x64x256_coop_Q16x8_KV8x8_causal0x1(
 }
 
 
-
-
-
-void hopper_fna2d_bfloat16_128x64x256_coop_Q8x16_KV8x8_causal0x1(
-      void* ptr_Q,
-      void* ptr_K,
-      void* ptr_V,
-      void* ptr_O,
-      void* ptr_LSE,
-      int batch_size,
-      int seqlen_q,
-      int seqlen_k,
-      int heads,
-      int dim,
-      cute::tuple<int, int> q_shape,
-      cute::tuple<int, int> kv_shape,
-      cute::tuple<int, int> qkv_shape,
-      cute::tuple<int, int> window_size,
-      cute::tuple<int, int> stride,
-      cute::tuple<int, int> dilation,
-      int device_id,
-      float attn_scale,
-      cudaStream_t stream,
-      at::TensorOptions tensor_options) {
-
-  using Causal = cute::tuple<cute::false_type, cute::true_type>;
-  using QTileShape = cute::tuple<cute::Int<8>, cute::Int<16>>;
-  using KVTileShape = cute::tuple<cute::Int<8>, cute::Int<8>>;
-  using GemmShape = cute::tuple<cute::Int<128>, cute::Int<64>, cute::Int<256>>;
-  using Kernel = natten::cuda::fna_hopper::KernelForward<
-    cutlass::bfloat16_t, Causal, QTileShape, KVTileShape, GemmShape, natten::cuda::hopper::HopperKernelSchedule::WSCooperative>;
-
-  Kernel kernel;
-  auto args = kernel.initialize(
-      ptr_Q,
-      ptr_K,
-      ptr_V,
-      ptr_O,
-      ptr_LSE,
-      batch_size,
-      seqlen_q,
-      seqlen_k,
-      heads,
-      dim,
-      q_shape,
-      kv_shape,
-      qkv_shape,
-      window_size,
-      stride,
-      dilation,
-      device_id,
-      attn_scale);
-
-  auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
-  auto workspace = at::empty({bytes}, tensor_options.dtype(at::ScalarType::Byte));
-  auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
-  kernel.run(args, workspace_ptr, stream);
-}
-
-
 } // namespace fna_hopper 
 } // namespace cuda 
 } // namespace natten 
