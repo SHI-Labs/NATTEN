@@ -9,10 +9,9 @@
 # overly-repetitive, and will be replaced in future PRs.
 # Please use it with caution.
 
+import argparse
 import os
 from typing import List, Tuple
-
-import argparse
 
 
 DEFAULT_OUTPUT_DIR = "csrc/"

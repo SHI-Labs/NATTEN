@@ -22,6 +22,7 @@
 #
 #################################################################################################
 
+import filecmp
 import multiprocessing
 import os
 import shutil
@@ -31,7 +32,6 @@ import tempfile
 from os import path
 from pathlib import Path
 from typing import Any, List
-import filecmp
 
 import torch
 from setuptools import Extension, setup  # type: ignore
@@ -217,7 +217,6 @@ NUM_SPLITS = {
 }
 
 
-
 def autogen_directories_match(dir1, dir2):
     """
     Compare two directories recursively, ignoring timestamps and hidden files.
@@ -226,17 +225,16 @@ def autogen_directories_match(dir1, dir2):
     Used for skipping redundant autogen writes that can mislead cmake into recompiling things.
     """
 
-    extensions = {'.cu', '.cpp', '.h', '.hpp', '.cuh'}
+    extensions = {".cu", ".cpp", ".h", ".hpp", ".cuh"}
 
     def should_include(filename):
-        return (not filename.startswith('.') and
-                Path(filename).suffix in extensions)
+        return not filename.startswith(".") and Path(filename).suffix in extensions
 
     def get_matching_files(directory):
         files = {}
         for root, dirs, filenames in os.walk(directory):
             # Skip hidden directories
-            dirs[:] = [d for d in dirs if not d.startswith('.')]
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
 
             for filename in filenames:
                 if should_include(filename):
@@ -260,9 +258,17 @@ def autogen_directories_match(dir1, dir2):
     return True
 
 
-def autogen_kernel_instantitations(this_dir: str, autogen_dir: str, scripts_dir: str, policy: str, cuda_arch_list: List[int]):
+def autogen_kernel_instantitations(
+    this_dir: str,
+    autogen_dir: str,
+    scripts_dir: str,
+    policy: str,
+    cuda_arch_list: List[int],
+):
     if policy not in NUM_SPLITS.keys():
-        raise ValueError(f"Unrecognized autogen policy {policy}; supported policies: {list(NUM_SPLITS.keys())}.")
+        raise ValueError(
+            f"Unrecognized autogen policy {policy}; supported policies: {list(NUM_SPLITS.keys())}."
+        )
 
     NUM_SPLITS_POLICY = NUM_SPLITS[policy]
 
@@ -300,28 +306,47 @@ def autogen_kernel_instantitations(this_dir: str, autogen_dir: str, scripts_dir:
         assert cat in NUM_SPLITS_POLICY
         script_path = path.join(scripts_dir, script)
         if not path.isfile(script_path):
-            raise RuntimeError(f"Expected to find autogen script {script} under {scripts_dir}, but "
-                               f"{script_path} does not exist. Raise an issue if you didn't change anything.")
+            raise RuntimeError(
+                f"Expected to find autogen script {script} under {scripts_dir}, but "
+                f"{script_path} does not exist. Raise an issue if you didn't change anything."
+            )
 
         print(f"Stamping out {cat} kernels")
 
-        subprocess.check_call(["python", script_path,
-                               "--num-splits", str(NUM_SPLITS_POLICY[cat]),
-                               "-o", tmp_output_dir,
-                               ], cwd=this_dir)
+        subprocess.check_call(
+            [
+                "python",
+                script_path,
+                "--num-splits",
+                str(NUM_SPLITS_POLICY[cat]),
+                "-o",
+                tmp_output_dir,
+            ],
+            cwd=this_dir,
+        )
 
-        target_include_dir = path.join(tmp_output_dir, "autogen", "include", "natten_autogen", "cuda", out_dir)
+        target_include_dir = path.join(
+            tmp_output_dir, "autogen", "include", "natten_autogen", "cuda", out_dir
+        )
         target_src_dir = path.join(tmp_output_dir, "autogen", "src", "cuda", out_dir)
 
-        current_include_dir = path.join(autogen_dir, "include", "natten_autogen", "cuda", out_dir)
+        current_include_dir = path.join(
+            autogen_dir, "include", "natten_autogen", "cuda", out_dir
+        )
         current_src_dir = path.join(autogen_dir, "src", "cuda", out_dir)
 
-        for current_dir, target_dir in zip([current_include_dir, current_src_dir], [target_include_dir, target_src_dir]):
+        for current_dir, target_dir in zip(
+            [current_include_dir, current_src_dir], [target_include_dir, target_src_dir]
+        ):
             if not path.isdir(target_dir):
-                raise RuntimeError(f"Autogen for {cat} failed; {target_dir} is not a directory.")
+                raise RuntimeError(
+                    f"Autogen for {cat} failed; {target_dir} is not a directory."
+                )
 
             if not path.isdir(current_dir):
-                print(f" -- {cat} did not have any previously generated targets; direct copy.")
+                print(
+                    f" -- {cat} did not have any previously generated targets; direct copy."
+                )
                 shutil.move(target_dir, current_dir)
                 continue
 
@@ -329,7 +354,9 @@ def autogen_kernel_instantitations(this_dir: str, autogen_dir: str, scripts_dir:
                 print(f" -- autogen targets for {cat} are unchanged; skipping...")
                 continue
 
-            print(f" -- autogen targets for {cat} are different, replacing with new ones.")
+            print(
+                f" -- autogen targets for {cat} are different, replacing with new ones."
+            )
             shutil.rmtree(current_dir)
             shutil.move(target_dir, current_dir)
 
@@ -371,9 +398,13 @@ class BuildExtension(build_ext):
 
             # Auto-gen kernel instantiations
             print("Auto-generating kernel instantiations")
-            autogen_kernel_instantitations(this_dir=this_dir, autogen_dir=autogen_dir,
-                                           scripts_dir=scripts_dir, policy=AUTOGEN_POLICY,
-                                           cuda_arch_list=cuda_arch_list)
+            autogen_kernel_instantitations(
+                this_dir=this_dir,
+                autogen_dir=autogen_dir,
+                scripts_dir=scripts_dir,
+                policy=AUTOGEN_POLICY,
+                cuda_arch_list=cuda_arch_list,
+            )
 
             # Set up cmake
             print(

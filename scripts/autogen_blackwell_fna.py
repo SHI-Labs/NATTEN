@@ -9,11 +9,10 @@
 # overly-repetitive, and will be replaced in future PRs.
 # Please use it with caution.
 
+import argparse
 import math
 import os
 from typing import List, Tuple
-
-import argparse
 
 
 DEFAULT_OUTPUT_DIR = "csrc/"
@@ -706,7 +705,7 @@ def generate_blackwell_fna_kernels(path, num_splits=2):
     assert (
         len(kernels) >= num_splits
     ), f"Generated {len(kernels)} kernels, but got {num_splits=}."
-    #print(f"Generated {len(kernels)} kernels, got {num_splits=}.")
+    # print(f"Generated {len(kernels)} kernels, got {num_splits=}.")
     split_size = len(kernels) // num_splits
     num_splits_with_res = len(kernels) % num_splits
     kernels_emitted = []

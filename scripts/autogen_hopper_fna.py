@@ -9,12 +9,11 @@
 # overly-repetitive, and will be replaced in future PRs.
 # Please use it with caution.
 
+import argparse
 import math
 import os
 from enum import Enum
 from typing import List, Tuple
-
-import argparse
 
 
 DEFAULT_OUTPUT_DIR = "csrc/"

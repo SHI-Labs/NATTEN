@@ -1,7 +1,7 @@
 # Auto-generated build targets
 csrc/autogen
 
-tmp/
+# Docs & wheel index
 site/
 wheel-index/
 
