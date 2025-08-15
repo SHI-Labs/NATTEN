@@ -1,6 +1,26 @@
 # Changelog
 
 ## [Main branch]
+* Build system improvements and doc updates ([#253](https://github.com/SHI-Labs/NATTEN/pull/253)):
+  * Build system fixes:
+    * "True" autogen: Auto-generated kernel instantiations and macro wrappers are no longer tracked, and the individual autogen scripts will be called prior to each build and `cmake` setup.
+      * Dependency to `click` was removed from auto-gen scripts. Setup needs to run with minimal dependencies (just torch and standard python libraries)
+      * New env variable `NATTEN_AUTOGEN_POLICY` ("default", "coarse", "fine") will allow customizing the number of generated targets
+        * Also configurable via `make AUTOGEN_POLICY=...`.
+      * It will also prevent itself from updating unchanged scripts so that cmake doesn't fall into a timestamp trap.
+    * Deprecated python apis used by cmake fixed.
+    * Correctly distribute kernels in autogen scripts:
+      * Autogen has been splitting kernels into multiple targets incorrectly; some targets wind up empty.
+  * Doc fixes here and there
+  * Dockerfile version fix (was targeting 0.20.1 instead of 0.21)
+  * Cleans up LICENSE and moves attributions to third party software to a separate NOTICE file. Their licenses are already included in the relevant files and ship with natten.
+  * New env vars / makefile options for toggling Flex tests, additional KV tests, and changing the size of rand sweeps.
+    * Existing:
+      * `NATTEN_RUN_EXTENDED_TESTS={0,1}` / `make test RUN_EXTENDED_TESTS={0,1}`: run additional longer sweeps and additional hard coded test cases. Default: 0 (off).
+    * New:
+      * `NATTEN_RAND_SWEEP_TESTS`: number of additional randomly generated use cases to test (applies only to the **extended** tests), default: 1000.
+      * `NATTEN_RUN_ADDITIONAL_KV_TESTS={0,1}` / `make test RUN_ADDITIONAL_KV_TESTS={0,1}`: test the additional KV feature. Default: 1 (on).
+      * `NATTEN_RUN_FLEX_TESTS={0,1}` / `make test RUN_FLEX_TESTS={0,1}`: test Flex backend (without compile only). Default: 1 (on).
 
 
 ## [0.21.0] - 2025-07-14
@@ -22,8 +42,8 @@
 ## [0.20.1] - 2025-06-14
 * Bugs in [modules](https://natten.org/modules) were fixed (see
     [#228](https://github.com/SHI-Labs/NATTEN/issues/228),
-    [#229](https://github.com/SHI-Labs/NATTEN/pull/229)),
-    [#229](https://github.com/SHI-Labs/NATTEN/pull/233)).
+    [#229](https://github.com/SHI-Labs/NATTEN/pull/229),
+    [#233](https://github.com/SHI-Labs/NATTEN/pull/233)).
 * Allow different head dim for value tensor in
     [CUTLASS FNA/FMHA](https://natten.org/backends/#cutlass-fna-fmha).
     * Will gradually add support to other backends if possible.
