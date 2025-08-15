@@ -52,8 +52,7 @@ void blackwell_fmha_forward(
     int query_tile_size,
     int key_tile_size,
     bool run_persistent) {
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_BLACKWELL_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CONTIGUOUS(query);
@@ -146,9 +145,6 @@ void blackwell_fmha_forward(
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100).");
 #endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
-#endif
 }
 
 void blackwell_fmha_backward(
@@ -165,8 +161,7 @@ void blackwell_fmha_backward(
     int query_tile_size,
     int key_tile_size,
     int seqlen_q_actual) {
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_BLACKWELL_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CUDA(query);
@@ -280,9 +275,6 @@ void blackwell_fmha_backward(
 #endif
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100).");
-#endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
 #endif
 }
 

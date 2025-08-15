@@ -55,12 +55,6 @@ auto std_tuple_to_cute_tuple(StdTuple a) {
 
 namespace natten {
 
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_HOPPER_FNA
-namespace {} // namespace
-#endif
-#endif
-
 template <class StdNADim, class StdCausal>
 void hopper_fna_generic_forward(
     at::Tensor& out,
@@ -84,8 +78,7 @@ void hopper_fna_generic_forward(
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
   static_assert(std::tuple_size_v<StdCausal> == kNADim);
 
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_HOPPER_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CONTIGUOUS(query);
@@ -214,9 +207,6 @@ void hopper_fna_generic_forward(
 #endif
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Hopper (SM90).");
-#endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
 #endif
 }
 
