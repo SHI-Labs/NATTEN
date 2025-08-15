@@ -37,7 +37,14 @@ _IS_TORCH_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70
 
 def parse_env_flag(env_var: str, default: bool) -> bool:
     default_str = "1" if default else "0"
-    return os.getenv(env_var, default_str) == "1"
+    out_str = os.getenv(env_var, default_str)
+    if out_str.strip() == "":
+        return default
+    if out_str == "0":
+        return False
+    if out_str == "1":
+        return True
+    return default
 
 
 def parse_env_int(env_var: str, default: int) -> int:
