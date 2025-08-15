@@ -31,6 +31,7 @@ from itertools import product
 import torch
 
 from natten import allow_flex_compile
+from natten._environment import _RUN_FLEX_TESTS as RUN_FLEX_TESTS
 from natten.backends.configs.flex import FLEX_FORWARD_TILE_SHAPES
 from natten.utils import log
 from natten.utils.testing import (
@@ -76,6 +77,7 @@ def _reset_everything():
     )
 
 
+@unittest.skipIf(not RUN_FLEX_TESTS, "Flex tests are disabled by environment variable")
 class FlexBackendTest(unittest.TestCase):
     def setUp(self):
         _reset_everything()
