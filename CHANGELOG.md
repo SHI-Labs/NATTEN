@@ -11,6 +11,8 @@
     * Deprecated python apis used by cmake fixed.
     * Correctly distribute kernels in autogen scripts:
       * Autogen has been splitting kernels into multiple targets incorrectly; some targets wind up empty.
+  * Add python 3.13 (and 3.13t?) to list of release targets.
+  * Add torch 2.8.X (CTK 12.6, 12.8, 12.9) to list of release targets.
   * Doc fixes here and there
   * Dockerfile version fix (was targeting 0.20.1 instead of 0.21)
   * Cleans up LICENSE and moves attributions to third party software to a separate NOTICE file. Their licenses are already included in the relevant files and ship with natten.
