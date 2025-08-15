@@ -1,0 +1,16 @@
+NATTEN
+Copyright (c) 2022 - 2025 Ali Hassani.
+Refer to LICENSE for details.
+
+This project's CUDA C++ kernels are largely based on kernels from the NVIDIA CUTLASS Project.
+CUTLASS is included as a submodule under third_party/cutlass/, and can also be accessed at
+https://github.com/NVIDIA/cutlass/, available under the BSD 3-Clause License (see
+third_party/cutlass/LICENSE.txt).
+
+Ampere Fused Neighborhood Attention kernels are based on the memory-efficient
+attention kernels from the xFormers project by Meta Platforms, Inc, which is available at
+https://github.com/facebookresearch/xformers/ under the BSD 3-Clause License (see
+https://raw.githubusercontent.com/facebookresearch/xformers/refs/heads/main/LICENSE).
+
+csrc/include/natten/cuda/fmha and csrc/include/natten/cuda/fna are mostly based on the xFormers
+CUTLASS attention kernels.

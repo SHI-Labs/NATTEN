@@ -260,7 +260,7 @@ def get_bwd_configs_for_cutlass_hopper_fmha(
     returns *backward pass* configurations compatible with the tensor dtype and head dim.
 
     Each configuration for this operation is an integer tuple:
-    `((backward_q_tile_size, backward_kv_tile_size), kernel_schedule)`. These are arguments to
+    `(backward_q_tile_size, backward_kv_tile_size)`. These are arguments to
     [natten.attention][natten.attention].
 
     Note that unlike forward pass, kernel schedule is not part of the configuration. All backward

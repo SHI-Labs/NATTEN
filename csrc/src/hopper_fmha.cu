@@ -34,7 +34,7 @@
 #include <natten/natten.h>
 
 #include <natten/cuda/hopper_fmha_fna.h>
-#ifdef NATTEN_WITH_CUTLASS
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
 #include <natten_autogen/cuda/hopper_fmha/interface.h>
 #include <natten_autogen/cuda/hopper_fmha_bwd/interface.h>
 #endif
@@ -51,8 +51,7 @@ void hopper_fmha_forward(
     int query_tile_size,
     int key_tile_size,
     int kernel_type) {
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_HOPPER_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CONTIGUOUS(query);
@@ -150,9 +149,6 @@ void hopper_fmha_forward(
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Hopper (SM90).");
 #endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
-#endif
 }
 
 void hopper_fmha_backward(
@@ -168,8 +164,7 @@ void hopper_fmha_backward(
     float attn_scale,
     int query_tile_size,
     int key_tile_size) {
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_HOPPER_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CUDA(query);
@@ -278,9 +273,6 @@ void hopper_fmha_backward(
 #endif
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Hopper (SM90).");
-#endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
 #endif
 }
 

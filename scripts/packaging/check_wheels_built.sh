@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-NATTEN_VERSION="0.20.0"
+NATTEN_VERSION="0.21.0"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 
@@ -14,7 +14,8 @@ check_one() {
   pytorch_ver=$2
   torch_build="torch${pytorch_ver//./}${cu}"
 
-  py_versions=(3.9 3.10 3.11 3.12)
+  # Torch started supporting python 3.13 since ~2.5
+  py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
 
   torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter=";")
   torch_major=${torch_major/;/}
@@ -37,6 +38,12 @@ check_one() {
   done
 }
 
+# Torch 2.8.X
+check_one cu129 2.8.0
+check_one cu128 2.8.0
+check_one cu126 2.8.0
+
+# Torch 2.7.X
 check_one cu128 2.7.0
 check_one cu126 2.7.0
 # check_one cu118 2.7.0

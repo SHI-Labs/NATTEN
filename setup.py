@@ -22,6 +22,7 @@
 #
 #################################################################################################
 
+import filecmp
 import multiprocessing
 import os
 import shutil
@@ -57,6 +58,9 @@ HAS_CUDA_ARCH = CUDA_ARCH != ""
 NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", "0") == "1")
 
 VERBOSE = bool(os.getenv("NATTEN_VERBOSE", "0") == "1")
+
+AUTOGEN_POLICY = os.getenv("NATTEN_AUTOGEN_POLICY", "default")
+AUTOGEN_POLICY = AUTOGEN_POLICY if AUTOGEN_POLICY != "" else "default"
 
 tmp_dir = tempfile.TemporaryDirectory()
 NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", tmp_dir.name)
@@ -166,16 +170,212 @@ def arch_list_to_cmake_tags(arch_list: List[int]) -> str:
     )
 
 
+# determines the number of build targets for each category of kernels under different
+# policies. More build targets means fewer kernels in each build target, and more room for
+# build parallelism.
+
+NUM_SPLITS = {
+    "default": {
+        "reference": 2,
+        "fna": 64,
+        "fmha": 6,
+        "hopper-fna": 8,
+        "hopper-fna-bwd": 4,
+        "hopper-fmha": 1,
+        "hopper-fmha-bwd": 1,
+        "blackwell-fna": 28,
+        "blackwell-fna-bwd": 14,
+        "blackwell-fmha": 1,
+        "blackwell-fmha-bwd": 1,
+    },
+    "fine": {
+        "reference": 4,
+        "fna": 128,
+        "fmha": 12,
+        "hopper-fna": 16,
+        "hopper-fna-bwd": 8,
+        "hopper-fmha": 1,
+        "hopper-fmha-bwd": 1,
+        "blackwell-fna": 56,
+        "blackwell-fna-bwd": 28,
+        "blackwell-fmha": 1,
+        "blackwell-fmha-bwd": 1,
+    },
+    "coarse": {
+        "reference": 1,
+        "fna": 32,
+        "fmha": 3,
+        "hopper-fna": 4,
+        "hopper-fna-bwd": 2,
+        "hopper-fmha": 1,
+        "hopper-fmha-bwd": 1,
+        "blackwell-fna": 14,
+        "blackwell-fna-bwd": 7,
+        "blackwell-fmha": 1,
+        "blackwell-fmha-bwd": 1,
+    },
+}
+
+
+def autogen_directories_match(dir1, dir2):
+    """
+    Compare two directories recursively, ignoring timestamps and hidden files.
+    Only compares files with .cu, .cpp, .h, .hpp, .cuh extensions.
+
+    Used for skipping redundant autogen writes that can mislead cmake into recompiling things.
+    """
+
+    extensions = {".cu", ".cpp", ".h", ".hpp", ".cuh"}
+
+    def should_include(filename):
+        return not filename.startswith(".") and Path(filename).suffix in extensions
+
+    def get_matching_files(directory):
+        files = {}
+        for root, dirs, filenames in os.walk(directory):
+            # Skip hidden directories
+            dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+            for filename in filenames:
+                if should_include(filename):
+                    filepath = os.path.join(root, filename)
+                    rel_path = os.path.relpath(filepath, directory)
+                    files[rel_path] = filepath
+        return files
+
+    files1 = get_matching_files(dir1)
+    files2 = get_matching_files(dir2)
+
+    # Check if same files exist in both directories
+    if set(files1.keys()) != set(files2.keys()):
+        return False
+
+    # Compare file contents
+    for rel_path in files1:
+        if not filecmp.cmp(files1[rel_path], files2[rel_path]):
+            return False
+
+    return True
+
+
+def autogen_kernel_instantitations(
+    this_dir: str,
+    autogen_dir: str,
+    scripts_dir: str,
+    policy: str,
+    cuda_arch_list: List[int],
+):
+    if policy not in NUM_SPLITS.keys():
+        raise ValueError(
+            f"Unrecognized autogen policy {policy}; supported policies: {list(NUM_SPLITS.keys())}."
+        )
+
+    NUM_SPLITS_POLICY = NUM_SPLITS[policy]
+
+    # if path.isdir(autogen_dir):
+    #     shutil.rmtree(autogen_dir)
+
+    categories = {
+        "reference": ("autogen_reference_fna.py", "reference"),
+        "fna": ("autogen_fna.py", "fna"),
+        "fmha": ("autogen_fmha.py", "fmha"),
+    }
+    categories_sm90 = {
+        "hopper-fna": ("autogen_hopper_fna.py", "hopper_fna"),
+        "hopper-fmha": ("autogen_hopper_fmha.py", "hopper_fmha"),
+        "hopper-fna-bwd": ("autogen_hopper_fna_bwd.py", "hopper_fna_bwd"),
+        "hopper-fmha-bwd": ("autogen_hopper_fmha_bwd.py", "hopper_fmha_bwd"),
+    }
+    categories_sm100 = {
+        "blackwell-fna": ("autogen_blackwell_fna.py", "blackwell_fna"),
+        "blackwell-fmha": ("autogen_blackwell_fmha.py", "blackwell_fmha"),
+        "blackwell-fna-bwd": ("autogen_blackwell_fna_bwd.py", "blackwell_fna_bwd"),
+        "blackwell-fmha-bwd": ("autogen_blackwell_fmha_bwd.py", "blackwell_fmha_bwd"),
+    }
+
+    if 90 in cuda_arch_list:
+        categories = categories | categories_sm90
+
+    if 100 in cuda_arch_list:
+        categories = categories | categories_sm100
+
+    tmp_dir_autogen = tempfile.TemporaryDirectory()
+    tmp_output_dir = path.join(tmp_dir_autogen.name, "csrc")
+
+    for cat, (script, out_dir) in categories.items():
+        assert cat in NUM_SPLITS_POLICY
+        script_path = path.join(scripts_dir, script)
+        if not path.isfile(script_path):
+            raise RuntimeError(
+                f"Expected to find autogen script {script} under {scripts_dir}, but "
+                f"{script_path} does not exist. Raise an issue if you didn't change anything."
+            )
+
+        print(f"Stamping out {cat} kernels")
+
+        subprocess.check_call(
+            [
+                "python",
+                script_path,
+                "--num-splits",
+                str(NUM_SPLITS_POLICY[cat]),
+                "-o",
+                tmp_output_dir,
+            ],
+            cwd=this_dir,
+        )
+
+        target_include_dir = path.join(
+            tmp_output_dir, "autogen", "include", "natten_autogen", "cuda", out_dir
+        )
+        target_src_dir = path.join(tmp_output_dir, "autogen", "src", "cuda", out_dir)
+
+        current_include_dir = path.join(
+            autogen_dir, "include", "natten_autogen", "cuda", out_dir
+        )
+        current_src_dir = path.join(autogen_dir, "src", "cuda", out_dir)
+
+        for current_dir, target_dir in zip(
+            [current_include_dir, current_src_dir], [target_include_dir, target_src_dir]
+        ):
+            if not path.isdir(target_dir):
+                raise RuntimeError(
+                    f"Autogen for {cat} failed; {target_dir} is not a directory."
+                )
+
+            if not path.isdir(current_dir):
+                print(
+                    f" -- {cat} did not have any previously generated targets; direct copy."
+                )
+                shutil.move(target_dir, current_dir)
+                continue
+
+            if autogen_directories_match(current_dir, target_dir):
+                print(f" -- autogen targets for {cat} are unchanged; skipping...")
+                continue
+
+            print(
+                f" -- autogen targets for {cat} are different, replacing with new ones."
+            )
+            shutil.rmtree(current_dir)
+            shutil.move(target_dir, current_dir)
+
+
 class BuildExtension(build_ext):
     def build_extension(self, ext):
         if BUILD_WITH_CUDA:
+
+            print("Preparing to build LIBNATTEN")
+            this_dir = path.dirname(path.abspath(__file__))
+            cmake_lists_dir = path.join(this_dir, "csrc")
+            autogen_dir = path.join(cmake_lists_dir, "autogen")
+            scripts_dir = path.join(this_dir, "scripts")
+
             # Hack so that we can build somewhere other than /tmp in development mode.
             # Also because we want CMake to build everything elsewhere, otherwise pypi will package
             # build files.
             build_dir = self.build_lib if NATTEN_BUILD_DIR is None else NATTEN_BUILD_DIR
 
-            this_dir = path.dirname(path.abspath(__file__))
-            cmake_lists_dir = path.join(this_dir, "csrc")
             try:
                 subprocess.check_output(["cmake", "--version"])
             except OSError:
@@ -196,6 +396,17 @@ class BuildExtension(build_ext):
             cuda_arch_list_str = arch_list_to_cmake_tags(cuda_arch_list)
             max_sm = max(cuda_arch_list)
 
+            # Auto-gen kernel instantiations
+            print("Auto-generating kernel instantiations")
+            autogen_kernel_instantitations(
+                this_dir=this_dir,
+                autogen_dir=autogen_dir,
+                scripts_dir=scripts_dir,
+                policy=AUTOGEN_POLICY,
+                cuda_arch_list=cuda_arch_list,
+            )
+
+            # Set up cmake
             print(
                 f"Building NATTEN for the following archs: {cuda_arch_list} (max: {max_sm})"
             )

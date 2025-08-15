@@ -33,7 +33,7 @@
 #include <natten/helpers.h>
 #include <natten/natten.h>
 
-#ifdef NATTEN_WITH_CUTLASS
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
 #include <natten_autogen/cuda/hopper_fna_bwd/interface.h>
 #include <natten/cuda/fna_hopper/fna_backward.cuh>
 
@@ -71,10 +71,8 @@ void hopper_fna_generic_backward(
     const StdCausal& is_causal_,
     float attn_scale,
     const StdNADim& q_shape_, // after token permute and padding
-    const StdNADim&
-        kv_shape_, // after token permute and padding, including extra KV
-    const StdNADim&
-        qkv_shape_, // before token permute and padding, not including extra KV
+    const StdNADim& kv_shape_, // after token permute and padding
+    const StdNADim& qkv_shape_, // before token permute and padding
     const StdNADim& query_tile_shape_,
     const StdNADim& key_tile_shape_) {
   static_assert(
@@ -82,8 +80,7 @@ void hopper_fna_generic_backward(
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
   static_assert(std::tuple_size_v<StdCausal> == kNADim);
 
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_HOPPER_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CONTIGUOUS(query);
@@ -115,9 +112,7 @@ void hopper_fna_generic_backward(
   CheckIfPropertiesMatch(grad_query, query, value);
 
   // NOTE (alih): q and kv might have slightly different shapes because we're
-  // padding to multiples of the tile shape. We're also supporting extra KV
-  // tokens, so we can't have 5D/6D tensors anymore. Seqlen mode must be
-  // flattened.
+  // padding to multiples of the tile shape. Seqlen mode must be flattened.
   CheckIfTensorShapesMatch<1>(query, out);
   CheckIfTensorShapesMatch<1>(key, value);
   CheckIfTensorShapesMatch<1>(query, grad_query);
@@ -225,9 +220,6 @@ void hopper_fna_generic_backward(
 #endif
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Hopper (SM90).");
-#endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
 #endif
 }
 

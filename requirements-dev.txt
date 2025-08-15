@@ -13,9 +13,6 @@ mypy==1.8.0
 # Testing
 pytest==7.4.4
 
-# Script/tool dependencies
-click==8.1.7
-
 # Docs
 mkdocs==1.6.1
 mkdocs-material==9.6.14

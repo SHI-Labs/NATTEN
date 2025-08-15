@@ -33,7 +33,7 @@
 #include <natten/helpers.h>
 #include <natten/natten.h>
 
-#ifdef NATTEN_WITH_CUTLASS
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
 #include <natten_autogen/cuda/blackwell_fna_bwd/interface.h>
 #include <natten/cuda/fna_blackwell/fna_backward.cuh>
 
@@ -82,8 +82,7 @@ void blackwell_fna_generic_backward(
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
   static_assert(std::tuple_size_v<StdCausal> == kNADim);
 
-#ifdef NATTEN_WITH_CUTLASS
-#ifdef NATTEN_WITH_BLACKWELL_FNA
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
   CHECK_CONTIGUOUS(query);
@@ -225,9 +224,6 @@ void blackwell_fna_generic_backward(
 #endif
 #else
   TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100).");
-#endif
-#else
-  TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");
 #endif
 }
 

@@ -28,10 +28,9 @@ build_one() {
   echo "Launching container with $image_name to build for torch $pytorch_ver + $cu..."
   container_name="natten_build_"_"$cu"_"$pytorch_ver"
 
-  py_versions=(3.9 3.10 3.11 3.12)
+  # Torch started supporting python 3.13 since ~2.5
+  py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
 
-  # Torch started supporting python 3.12 since
-  # 2.2.0
   # NOTE: I can't surpress the warning from sub
   # when --output-delimiter is "", and I'm not
   # spending more time on this.
@@ -77,6 +76,11 @@ else
   # compatible in their python API and ABIs.
 
   # We're only building for torch >= 2.7, and only CTK > 12.0 starting 0.20.0.
+
+  build_one_and_capture_output cuda12.9 2.8.0 & \
+    build_one_and_capture_output cuda12.8 2.8.0 & \
+    build_one_and_capture_output cuda12.6 2.8.0
+
   build_one_and_capture_output cuda12.8 2.7.0 & build_one_and_capture_output cuda12.6 2.7.0
 
   wait

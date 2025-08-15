@@ -27,6 +27,10 @@ import unittest
 from itertools import product
 
 import torch
+from natten._environment import (
+    _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
+    _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS,
+)
 
 from natten.backends.configs.cutlass_blackwell import (
     get_all_backward_configs,
@@ -39,9 +43,6 @@ from natten.utils.testing import (
 )
 
 from .utils import NattenBackendTester, reset_torch_compile
-
-ENABLE_ADDITIONAL_KV_TESTS = True
-RAND_SWEEP_TESTS = 1000
 
 ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
 

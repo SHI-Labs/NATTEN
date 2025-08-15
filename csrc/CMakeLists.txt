@@ -16,7 +16,7 @@ endif()
 message("Python: " ${PYTHON_PATH})
 
 ## Python includes 
-execute_process(COMMAND ${PYTHON_PATH} "-c" "from __future__ import print_function; from distutils import sysconfig; print(sysconfig.get_python_inc());"
+execute_process(COMMAND ${PYTHON_PATH} "-c" "from __future__ import print_function; import sysconfig; print(sysconfig.get_paths()[\"include\"]);"
                 RESULT_VARIABLE _PYTHON_SUCCESS
                 OUTPUT_VARIABLE PY_INCLUDE_DIR)
 if (NOT _PYTHON_SUCCESS MATCHES 0)

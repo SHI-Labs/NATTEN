@@ -1,4 +1,7 @@
-tmp/
+# Auto-generated build targets
+csrc/autogen
+
+# Docs & wheel index
 site/
 wheel-index/
 

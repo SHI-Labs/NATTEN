@@ -28,6 +28,7 @@ from typing import Optional, Tuple, Union
 import natten  # noqa: F401
 
 import torch
+from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass import (
     get_all_fmha_backward_configs,
     get_all_fmha_forward_configs,
@@ -960,19 +961,25 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(backend="cutlass-fmha")
+        self._test_randsweep_against_torch_sdpa(
+            backend="cutlass-fmha", max_tests=RAND_SWEEP_TESTS
+        )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(backend="blackwell-fmha")
+        self._test_randsweep_against_torch_sdpa(
+            backend="blackwell-fmha", max_tests=RAND_SWEEP_TESTS
+        )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
     def test_cutlass_hopper_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(backend="hopper-fmha")
+        self._test_randsweep_against_torch_sdpa(
+            backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS
+        )
 
 
 if __name__ == "__main__":
