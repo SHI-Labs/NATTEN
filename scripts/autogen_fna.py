@@ -9,10 +9,9 @@
 # overly-repetitive, and will be replaced in future PRs.
 # Please use it with caution.
 
+import argparse
 import os
 from typing import List, Tuple
-
-import click
 
 
 DEFAULT_OUTPUT_DIR = "csrc/"
@@ -895,23 +894,25 @@ def generate_cuda_kernels(path, num_splits=2):
     write_header_file(headers, path_headers, namespaces, cuda_headers)
 
 
-@click.command()
-@click.option(
-    "-o",
-    "--output-directory",
-    default=DEFAULT_OUTPUT_DIR,
-    help="Path to the directory where the auto-generated "
-    "kernel instantiations are dumped. "
-    f"Default: {DEFAULT_OUTPUT_DIR}",
-)
-@click.option(
-    "--num-splits",
-    default=128,
-    help="Number of source files into which the kernels are split. Default: 128.",
-)
 def generate_cuda_fused(output_directory: str, num_splits: int):
     generate_cuda_kernels(output_directory, num_splits=num_splits)
 
 
 if __name__ == "__main__":
-    generate_cuda_fused()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-o",
+        "--output-directory",
+        default=DEFAULT_OUTPUT_DIR,
+        help="Path to the directory where the auto-generated "
+        "kernel instantiations are dumped. "
+        f"Default: {DEFAULT_OUTPUT_DIR}",
+    )
+    parser.add_argument(
+        "--num-splits",
+        type=int,
+        default=128,
+        help="Number of source files into which the kernels are split. Default: 128.",
+    )
+    args = parser.parse_args()
+    generate_cuda_fused(args.output_directory, args.num_splits)

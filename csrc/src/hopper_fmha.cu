@@ -34,7 +34,7 @@
 #include <natten/natten.h>
 
 #include <natten/cuda/hopper_fmha_fna.h>
-#ifdef NATTEN_WITH_CUTLASS
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
 #include <natten_autogen/cuda/hopper_fmha/interface.h>
 #include <natten_autogen/cuda/hopper_fmha_bwd/interface.h>
 #endif

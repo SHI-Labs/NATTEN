@@ -1,9 +1,10 @@
 recursive-include csrc *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc *.inl
 recursive-include third_party/cutlass/include *.cpp *.cuh *.cu *.h *.txt *.hpp *.cc *.inl
 include third_party/cutlass/LICENSE.txt third_party/cutlass/EULA.txt third_party/cutlass/README.md
+recursive-include scripts autogen_*.py
 prune dev/
 prune site/
-prune scripts/
+prune csrc/autogen/
 prune tests/
 prune assets/
 prune docs/

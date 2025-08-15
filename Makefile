@@ -5,6 +5,7 @@ CUDA_ARCH=${NATTEN_CUDA_ARCH}
 WORKERS=${NATTEN_N_WORKERS}
 VERBOSE=${NATTEN_VERBOSE}
 RUN_EXTENDED_TESTS=${NATTEN_RUN_EXTENDED_TESTS}
+AUTOGEN_POLICY=${NATTEN_AUTOGEN_POLICY}
 
 RELEASE=
 
@@ -40,7 +41,10 @@ release:
 
 clean: 
 	@echo "Cleaning up"
+	rm -rf build/ 
+	rm -rf build_dir/ 
 	rm -rf dist/ 
+	rm -rf csrc/autogen/ 
 	rm -rf natten.egg-info/ 
 	rm -rf src/natten/_C.* 
 	rm -rf src/natten/libnatten.* 
@@ -60,6 +64,7 @@ install-dev:
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
+	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
 	pip3 install --verbose --no-build-isolation -e . 2>&1 | tee install.out
@@ -69,6 +74,7 @@ install:
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
+	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
 	pip3 install --verbose --no-build-isolation . 2>&1 | tee install.out

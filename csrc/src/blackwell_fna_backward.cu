@@ -33,7 +33,7 @@
 #include <natten/helpers.h>
 #include <natten/natten.h>
 
-#ifdef NATTEN_WITH_CUTLASS
+#if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
 #include <natten_autogen/cuda/blackwell_fna_bwd/interface.h>
 #include <natten/cuda/fna_blackwell/fna_backward.cuh>
 
