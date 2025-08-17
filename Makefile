@@ -42,8 +42,8 @@ build-dist:
 release:
 	twine upload --repository ${RELEASE} dist/*
 
-clean: 
-	@echo "Cleaning up"
+deep-clean: 
+	@echo "Cleaning up (deep clean)"
 	rm -rf build/ 
 	rm -rf build_dir/ 
 	rm -rf dist/ 
@@ -51,6 +51,19 @@ clean:
 	rm -rf natten.egg-info/ 
 	rm -rf src/natten/_C.* 
 	rm -rf src/natten/libnatten.* 
+	rm -rf __pycache__
+	rm -rf tests/__pycache__
+	rm -rf src/__pycache__
+	rm -rf src/natten/__pycache__
+	rm -rf src/natten.egg*
+	rm -rf install.out
+
+clean:
+	@echo "Cleaning up"
+	rm -rf dist/
+	rm -rf natten.egg-info/
+	rm -rf src/natten/_C.*
+	rm -rf src/natten/libnatten.*
 	rm -rf __pycache__
 	rm -rf tests/__pycache__
 	rm -rf src/__pycache__
