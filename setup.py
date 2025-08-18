@@ -131,7 +131,7 @@ def _check_cuda_arch(arch: Any) -> int:
         arch = float(arch)
         arch = arch * 10  # 8.6 => 86
         assert (
-            arch >= 30 and arch < 100
+            arch >= 30
         ), f"Only SM30 and above are supported at this time, got {arch}."
         return int(arch)
     except ValueError:
