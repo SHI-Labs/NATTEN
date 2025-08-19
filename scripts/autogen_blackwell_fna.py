@@ -535,7 +535,8 @@ class TileShapeDispatcher:
         return dispatcher_str
 
 
-def write_header_file(content, path, namespaces, extra_includes=[]):
+def write_header_file(content, path, namespaces, extra_includes=None):
+    extra_includes = extra_includes or []
     header_head = [
         "#pragma once\n",
         "\n\n",
