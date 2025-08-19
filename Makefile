@@ -9,6 +9,8 @@ RUN_ADDITIONAL_KV_TESTS=${NATTEN_RUN_ADDITIONAL_KV_TESTS}
 RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
 NUM_RAND_SWEEP_TESTS=${NATTEN_RAND_SWEEP_TESTS}
 AUTOGEN_POLICY=${NATTEN_AUTOGEN_POLICY}
+PYTHON=python
+PIP=pip
 
 RELEASE=
 
@@ -21,12 +23,12 @@ full: clean uninstall install-deps fetch-submodules install
 dev: clean uninstall fetch-submodules install-dev
 
 install-deps:
-	@echo "Recognized python bin:"
-	@which python3
-	pip install -r requirements.txt
+	@echo "Recognized $(PYTHON) bin:"
+	@which $(PYTHON)
+	$(PIP) install -r requirements.txt
 
 install-release-deps:
-	pip3 install twine
+	$(PIP) install twine
 
 fetch-submodules:
 	@echo "Fetching all third party submodules"
@@ -37,7 +39,7 @@ build-wheels:
 
 build-dist:
 	@echo "Generating source dist"
-	python3 setup.py sdist
+	$(PYTHON) setup.py sdist
 
 release:
 	twine upload --repository ${RELEASE} dist/*
@@ -60,7 +62,7 @@ clean:
 
 uninstall: 
 	@echo "Uninstalling NATTEN"
-	pip uninstall -y natten
+	$(PIP) uninstall -y natten
 
 install-dev: 
 	@echo "Installing NATTEN from source; development mode (editable)"
@@ -70,7 +72,7 @@ install-dev:
 	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
-	pip3 install --verbose --no-build-isolation -e . 2>&1 | tee install.out
+	$(PIP) install --verbose --no-build-isolation -e . 2>&1 | tee install.out
 
 install: 
 	@echo "Installing NATTEN from source"
@@ -80,7 +82,7 @@ install:
 	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
-	pip3 install --verbose --no-build-isolation . 2>&1 | tee install.out
+	$(PIP) install --verbose --no-build-isolation . 2>&1 | tee install.out
 
 test:
 	NATTEN_LOG_LEVEL="CRITICAL" \

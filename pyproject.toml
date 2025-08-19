@@ -1,0 +1,108 @@
+[build-system]
+# Minimum requirements
+requires = [
+    "torch>=2.8.0",
+    #"hatchling",
+    "uv_build",
+]
+
+build-backend = "uv_build"
+#build-backend = "hatchling.build"
+
+[project]
+name = "NATTEN"
+version = "0.21.1"
+description = "Neighborhood Attention Extension"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [
+    {name = "Ali Hassani", email="foo@example.com" },
+]
+maintainers = [
+    {name = "Ali Hassani", email="foo@example.com"},
+]
+keywords = [
+    "sparse attention",
+    "deep learning",
+    "machine learning",
+    "ml",
+    "artificial intelligence",
+    "ai",
+]
+
+dependencies = [
+    "numpy>=2.0.2",
+    "pytest>=8.4.1",
+    "torch>=2.8.0",
+]
+
+# Classifiers for better searching pypi
+# https://pypi.org/classifiers/
+classifiers = [
+     "Development Status :: 4 - Beta",
+     "Environment :: GPU",
+     "Environment :: GPU :: NVIDIA CUDA",
+     "Intended Audience :: Science/Research",
+     "Intended Audience :: DEvelopers",
+     "License :: OSI Approved :: MIT License",
+     "Operating System :: OS Independent",
+     "Programming Language :: Python",
+     "Programming Language :: Python :: 3",
+     "Topic :: Scientific/Engineering",
+     "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
+[project.urls]
+Homepage = "https://natten.org"
+Repository = "https://github.com/SHI-Labs/NATTEN.git"
+Issues = "https://github.com/SHI-Labs/NATTEN/issues"
+Changelog = "https://github.com/SHI-Labs/NATTEN/blob/master/CHANGELOG.md"
+Documentation = "https://natten.org/"
+Download = "https://whl.natten.org/"
+
+[dependency-groups]
+# ruff should replace flake8...
+dev = [
+    "flake8>=7.0.0",
+    "markdown-grid-tables>=0.5.0",
+    "mkdocs>=1.6.1",
+    "mkdocs-glightbox>=0.4.0",
+    "mkdocs-material>=9.6.14",
+    "mkdocstrings-python>=1.16.11",
+    "mypy>=1.8.0",
+    "packaging>=25.0",
+    "pygments>=2.19.1",
+    "pymdown-extensions>=10.15",
+    "rich>=14.0.0",
+    "ruff>=0.11.12",
+    "tqdm>=4.67.1",
+    "twine>=6.1.0",
+    "ufmt>=2.3.0",
+]
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.ruff]
+exclude = [
+    ".venv",
+    ".*",
+]
+# Set max line to 85, giving a little buffer
+line-length = 85
+
+[tool.ruff.lint]
+# See https://docs.astral.sh/ruff/rules
+select = [
+    # flake8 bugbear (B), bandit (S), builtins (A), debugger (T10)
+    "B", "S", "A", "T10",
+    # isort
+    "I",
+    # Warnings
+    "W",
+]
+
+[tool.uv.build-backend]
+module-name = "natten"

@@ -138,7 +138,7 @@ dmypy.json
 .pyre/
 
 # Editor
-*.swp
+*.sw?
 
 # Output files
 *.out
