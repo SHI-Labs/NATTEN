@@ -1639,29 +1639,33 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       auto lane_offset = MatmulQK::AccumLambdaIterator::get_lane_offset(
           lane_id, warp_id, output_tile_coords);
 
-      // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
-      // SCALING.
+      // Dot product scale
+      accum = cutlass::multiplies<typename Mma::FragmentC>()(scale, accum);
+
+      // (Optional) clip dot products (mask off out of bound dot products)
       if (p.has_dot_product_clip) {
         if (not p.has_dot_product_max) {
           for (int i = 0; i < Mma::FragmentC::kElements; ++i) {
-            accum[i] = cutlass::fast_max(accum[i], p.dot_product_min);
+            accum[i] = accum[i] < p.dot_product_min
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
           }
         } else if (not p.has_dot_product_min) {
           for (int i = 0; i < Mma::FragmentC::kElements; ++i) {
-            accum[i] = cutlass::fast_min(accum[i], p.dot_product_max);
+            accum[i] = accum[i] > p.dot_product_max
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
           }
         } else {
           // assert(p.has_dot_product_min && p.has_dot_product_max);
           for (int i = 0; i < Mma::FragmentC::kElements; ++i) {
-            accum[i] = cutlass::fast_max(
-                cutlass::fast_min(accum[i], p.dot_product_max),
-                p.dot_product_min);
+            accum[i] =
+                (accum[i] < p.dot_product_min || accum[i] > p.dot_product_max)
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
           }
         }
       }
-
-      // Dot product scale
-      accum = cutlass::multiplies<typename Mma::FragmentC>()(scale, accum);
 
       if (not p.is_fully_block_sparse) {
         // Neighborhood Attention masking

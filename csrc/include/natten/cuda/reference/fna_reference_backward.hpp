@@ -116,22 +116,29 @@ void __global__ fna_bwd_reference_dQ_kernel(
             acc_doo += mDO(idx_Q, idx_D1, idx_L) * mO(idx_Q, idx_D1, idx_L);
           } // for idx_D1
 
-          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
-          // SCALING.
-          if (has_dot_product_min || has_dot_product_max) {
-            if (not has_dot_product_max) {
-              acc_qk = cutlass::fast_max(acc_qk, dot_product_min);
-            } else if (not has_dot_product_min) {
-              acc_qk = cutlass::fast_min(acc_qk, dot_product_max);
-            } else {
-              acc_qk = cutlass::fast_max(
-                  cutlass::fast_min(acc_qk, dot_product_max), dot_product_min);
-            }
-          }
-
           acc_qk *= attn_scale;
           acc_dov *= attn_scale;
           acc_doo *= attn_scale;
+
+          // (Optional) clip dot products (mask off out of bound dot products)
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc_qk = acc_qk < dot_product_min
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
+            } else if (not has_dot_product_min) {
+              acc_qk = acc_qk > dot_product_max
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
+            } else {
+              acc_qk = (acc_qk < dot_product_min || acc_qk > dot_product_max)
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
+            }
+          }
 
           auto id = make_identity_tensor(make_shape(1, 1));
           auto frag = make_tensor<ElementAccumulator>(Shape<_1, _1>{});
@@ -246,22 +253,29 @@ void __global__ fna_bwd_reference_dK_kernel(
             acc_doo += mDO(idx_Q, idx_D1, idx_L) * mO(idx_Q, idx_D1, idx_L);
           } // for idx_D1
 
-          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
-          // SCALING.
-          if (has_dot_product_min || has_dot_product_max) {
-            if (not has_dot_product_max) {
-              acc_qk = cutlass::fast_max(acc_qk, dot_product_min);
-            } else if (not has_dot_product_min) {
-              acc_qk = cutlass::fast_min(acc_qk, dot_product_max);
-            } else {
-              acc_qk = cutlass::fast_max(
-                  cutlass::fast_min(acc_qk, dot_product_max), dot_product_min);
-            }
-          }
-
           acc_qk *= attn_scale;
           acc_dov *= attn_scale;
           acc_doo *= attn_scale;
+
+          // (Optional) clip dot products (mask off out of bound dot products)
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc_qk = acc_qk < dot_product_min
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
+            } else if (not has_dot_product_min) {
+              acc_qk = acc_qk > dot_product_max
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
+            } else {
+              acc_qk = (acc_qk < dot_product_min || acc_qk > dot_product_max)
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
+            }
+          }
 
           auto id = make_identity_tensor(make_shape(1, 1));
           auto frag = make_tensor<ElementAccumulator>(Shape<_1, _1>{});
@@ -374,20 +388,27 @@ void __global__ fna_bwd_reference_dV_kernel(
             acc_qk += rQ * rK;
           } // for idx_D0
 
-          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
-          // SCALING.
+          acc_qk *= attn_scale;
+
+          // (Optional) clip dot products (mask off out of bound dot products)
           if (has_dot_product_min || has_dot_product_max) {
             if (not has_dot_product_max) {
-              acc_qk = cutlass::fast_max(acc_qk, dot_product_min);
+              acc_qk = acc_qk < dot_product_min
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
             } else if (not has_dot_product_min) {
-              acc_qk = cutlass::fast_min(acc_qk, dot_product_max);
+              acc_qk = acc_qk > dot_product_max
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
             } else {
-              acc_qk = cutlass::fast_max(
-                  cutlass::fast_min(acc_qk, dot_product_max), dot_product_min);
+              acc_qk = (acc_qk < dot_product_min || acc_qk > dot_product_max)
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc_qk;
             }
           }
-
-          acc_qk *= attn_scale;
 
           auto id = make_identity_tensor(make_shape(1, 1));
           auto frag = make_tensor<ElementAccumulator>(Shape<_1, _1>{});

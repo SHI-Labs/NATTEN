@@ -138,20 +138,26 @@ void __global__ fna_reference_kernel(
             acc += eQ * eK;
           }
 
-          // (Optional) clip dot products -- MUST BE DONE PRIOR TO MASKING &
-          // SCALING.
+          acc = acc * attn_scale;
+
+          // (Optional) clip dot products (mask off out of bound dot products)
           if (has_dot_product_min || has_dot_product_max) {
             if (not has_dot_product_max) {
-              acc = cutlass::fast_max(acc, dot_product_min);
+              acc = acc < dot_product_min ? -cutlass::platform::numeric_limits<
+                                                ElementAccumulator>::infinity()
+                                          : acc;
             } else if (not has_dot_product_min) {
-              acc = cutlass::fast_min(acc, dot_product_max);
+              acc = acc > dot_product_max ? -cutlass::platform::numeric_limits<
+                                                ElementAccumulator>::infinity()
+                                          : acc;
             } else {
-              acc = cutlass::fast_max(
-                  cutlass::fast_min(acc, dot_product_max), dot_product_min);
+              acc = (acc < dot_product_min || acc > dot_product_max)
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc;
             }
           }
 
-          acc = acc * attn_scale;
           auto frag = make_tensor<ElementAccumulator>(Shape<_1, _1>{});
           frag(0) = acc;
           attention_mask.apply_mask(
@@ -212,17 +218,17 @@ void __global__ fna_reference_kernel(
         __syncthreads();
       }
 
+      ElementAccumulator scale = sum == 0.0f ? 0.0f : 1.0f / sum;
       for (int i = 0; i < DimPerThread; ++i) {
         int idx_D = threadIdx.x + i * blockDim.x;
         if (idx_D < size<1>(mO)) {
-          ElementAccumulator scale = 1.0f / sum;
           mO(idx_Q + offset_Q, idx_D, idx_L) =
               static_cast<typename TensorO::value_type>(final_acc[i] * scale);
         }
       }
 
       if (threadIdx.x == 0) {
-        mLSE(idx_Q + offset_Q, idx_L) = log(sum) + maxS;
+        mLSE(idx_Q + offset_Q, idx_L) = sum == 0.0f ? 0.0f : (log(sum) + maxS);
       }
     }
   }
