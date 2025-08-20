@@ -54,7 +54,11 @@ void fna_generic_forward(
     float attn_scale,
     const StdNADim& qkv_shape,
     const StdNADim& query_tile_size,
-    const StdNADim& key_tile_size) {
+    const StdNADim& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   static_assert(
       std::tuple_size_v<StdNADim> > 0 && std::tuple_size_v<StdNADim> < 4);
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
@@ -130,7 +134,11 @@ void fna_generic_forward(
         logsumexp.has_value() ? static_cast<void*>(logsumexp.value().data_ptr())
                               : nullptr,
         query_tile_size,
-        key_tile_size);
+        key_tile_size,
+        has_dot_product_min,
+        has_dot_product_max,
+        dot_product_min,
+        dot_product_max);
   } else {
     NATTEN_FAILURE(
         "Fused kernels are only available on devices with "
@@ -154,7 +162,11 @@ void na1d_forward(
     const std::tuple<bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t>& query_tile_size,
-    const std::tuple<int32_t>& key_tile_size) {
+    const std::tuple<int32_t>& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   fna_generic_forward(
@@ -170,7 +182,11 @@ void na1d_forward(
       attn_scale,
       {query.size(1)},
       query_tile_size,
-      key_tile_size);
+      key_tile_size,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 void na2d_forward(
@@ -185,7 +201,11 @@ void na2d_forward(
     const std::tuple<bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t>& query_tile_size,
-    const std::tuple<int32_t, int32_t>& key_tile_size) {
+    const std::tuple<int32_t, int32_t>& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   TORCH_CHECK(query.dim() == 5, "Tensors must be 5-D.");
 
   fna_generic_forward(
@@ -201,7 +221,11 @@ void na2d_forward(
       attn_scale,
       {query.size(1), query.size(2)},
       query_tile_size,
-      key_tile_size);
+      key_tile_size,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 void na3d_forward(
@@ -216,7 +240,11 @@ void na3d_forward(
     const std::tuple<bool, bool, bool>& is_causal,
     float attn_scale,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
-    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size) {
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_size,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   TORCH_CHECK(query.dim() == 6, "Tensors must be 6-D.");
 
   fna_generic_forward(
@@ -232,7 +260,11 @@ void na3d_forward(
       attn_scale,
       {query.size(1), query.size(2), query.size(3)},
       query_tile_size,
-      key_tile_size);
+      key_tile_size,
+      has_dot_product_min,
+      has_dot_product_max,
+      dot_product_min,
+      dot_product_max);
 }
 
 } // namespace natten

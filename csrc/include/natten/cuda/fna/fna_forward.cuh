@@ -79,7 +79,11 @@ void fna_forward_generic(
     float attn_scale,
     void* logsumexp_ptr,
     IntTuple query_tile_shape,
-    IntTuple key_tile_shape) {
+    IntTuple key_tile_shape,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   static constexpr auto kRank =
       std::tuple_size<decltype(spatial_extent)>::value;
   using Dim = typename GetDim<kRank>::type;
@@ -166,6 +170,18 @@ void fna_forward_generic(
 
     p.query_tile_shape = tuple_to_na_dim<Dim>(query_tile_shape);
     p.key_tile_shape = tuple_to_na_dim<Dim>(key_tile_shape);
+
+    // Optional dot product clipping
+    p.has_dot_product_clip = has_dot_product_min || has_dot_product_max;
+    p.has_dot_product_min = has_dot_product_min;
+    p.has_dot_product_max = has_dot_product_max;
+    if (has_dot_product_min) {
+      p.dot_product_min = dot_product_min;
+    }
+    if (has_dot_product_max) {
+      p.dot_product_max = dot_product_max;
+    }
+    //
 
     if (smem_bytes > 0xc000) {
       auto err = cudaFuncSetAttribute(
