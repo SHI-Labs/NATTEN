@@ -1,46 +1,50 @@
-.PHONY: sdist clean uninstall install-deps install test style quality
+.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test style serve-docs build-docs
 
-DEV=
+# build flags
 CUDA_ARCH=${NATTEN_CUDA_ARCH}
 WORKERS=${NATTEN_N_WORKERS}
 VERBOSE=${NATTEN_VERBOSE}
+AUTOGEN_POLICY=${NATTEN_AUTOGEN_POLICY}
+
+# test flags
 RUN_EXTENDED_TESTS=${NATTEN_RUN_EXTENDED_TESTS}
 RUN_ADDITIONAL_KV_TESTS=${NATTEN_RUN_ADDITIONAL_KV_TESTS}
 RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
 NUM_RAND_SWEEP_TESTS=${NATTEN_RAND_SWEEP_TESTS}
-AUTOGEN_POLICY=${NATTEN_AUTOGEN_POLICY}
 
+# env
+PYTHON=python
+PIP=pip
+GIT=git
+TWINE=twine
+PYTEST=pytest
+UFMT=ufmt
+MYPY=mypy
+FLAKE8=flake8
+MKDOCS=mkdocs
+
+# dist release
 RELEASE=
 
 check_dirs := src/natten tests scripts setup.py
 
 all: clean uninstall fetch-submodules install
 
-full: clean uninstall install-deps fetch-submodules install
-
 dev: clean uninstall fetch-submodules install-dev
-
-install-deps:
-	@echo "Recognized python bin:"
-	@which python3
-	pip install -r requirements.txt
-
-install-release-deps:
-	pip3 install twine
 
 fetch-submodules:
 	@echo "Fetching all third party submodules"
-	git submodule update --init --recursive
+	$(GIT) submodule update --init --recursive
 
 build-wheels:
 	./scripts/packaging/build_all_wheels_parallel.sh
 
 build-dist:
 	@echo "Generating source dist"
-	python3 setup.py sdist
+	$(PYTHON) setup.py sdist
 
 release:
-	twine upload --repository ${RELEASE} dist/*
+	$(TWINE) upload --repository ${RELEASE} dist/*
 
 deep-clean: 
 	@echo "Cleaning up (deep clean)"
@@ -73,17 +77,17 @@ clean:
 
 uninstall: 
 	@echo "Uninstalling NATTEN"
-	pip uninstall -y natten
+	$(PIP) uninstall -y natten
 
 install-dev: 
-	@echo "Installing NATTEN from source; development mode (editable)"
+	@echo "Installing NATTEN from source - development mode (editable)"
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
 	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
-	pip3 install --verbose --no-build-isolation -e . 2>&1 | tee install.out
+	$(PIP) install --verbose --no-build-isolation -e . 2>&1 | tee install.out
 
 install: 
 	@echo "Installing NATTEN from source"
@@ -93,7 +97,7 @@ install:
 	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
-	pip3 install --verbose --no-build-isolation . 2>&1 | tee install.out
+	$(PIP) install --verbose --no-build-isolation . 2>&1 | tee install.out
 
 test:
 	NATTEN_LOG_LEVEL="CRITICAL" \
@@ -103,12 +107,12 @@ test:
 	NATTEN_RAND_SWEEP_TESTS="${NUM_RAND_SWEEP_TESTS}" \
 	PYTORCH_NO_CUDA_MEMORY_CACHING=1 \
 	CUBLAS_WORKSPACE_CONFIG=":4096:8" \
-	pytest -v -x ./tests
+	$(PYTEST) -v -x ./tests
 
 style:
-	ufmt format $(check_dirs)
-	flake8 $(check_dirs)
-	mypy $(check_dirs)
+	$(UFMT) format $(check_dirs)
+	$(FLAKE8) $(check_dirs)
+	$(MYPY) $(check_dirs)
 	find csrc/include/ \
 		-iname \*.h -o \
 		-iname \*.cpp -o \
@@ -129,7 +133,7 @@ style:
 		clang-format -i
 
 serve-docs:
-	mkdocs serve
+	$(MKDOCS) serve
 
 build-docs:
-	mkdocs build
+	$(MKDOCS) build
