@@ -1,3 +1,9 @@
+###########################################################################
+# BEGIN ignore patterns for:
+#                               NATTEN-specific
+#
+###########################################################################
+
 # Auto-generated build targets
 csrc/autogen
 
@@ -5,9 +11,35 @@ csrc/autogen
 site/
 wheel-index/
 
+# Persistent build directory (default)
+build_dir/
+
+# Wheel target directory / wheels
+wheels/
+*.whl
+
+# Log files (i.e. install.out)
+*.out
+
+# MSVC
+.vs/
+
+###########################################################################
+# END ignore patterns for:
+#                               NATTEN-specific
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                  Python
+#
+###########################################################################
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
-*.py[cod]
+*.py[codz]
 *$py.class
 
 # C extensions
@@ -16,7 +48,6 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
-build_dir/
 develop-eggs/
 dist/
 downloads/
@@ -28,12 +59,10 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-*.whl
 MANIFEST
 
 # PyInstaller
@@ -56,9 +85,10 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-*.py,cover
+*.py.cover
 .hypothesis/
 .pytest_cache/
+cover/
 
 # Translations
 *.mo
@@ -81,6 +111,7 @@ instance/
 docs/_build/
 
 # PyBuilder
+.pybuilder/
 target/
 
 # Jupyter Notebook
@@ -91,6 +122,8 @@ profile_default/
 ipython_config.py
 
 # pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
 .python-version
 
 # pipenv
@@ -100,7 +133,37 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+#poetry.toml
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
+#pdm.lock
+#pdm.toml
+.pdm-python
+.pdm-build/
+
+# pixi
+#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
+#pixi.lock
+#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
+#   in the .venv directory. It is recommended not to include this directory in version control.
+.pixi
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
 
 # Celery stuff
@@ -112,6 +175,7 @@ celerybeat.pid
 
 # Environments
 .env
+.envrc
 .venv
 env/
 venv/
@@ -137,16 +201,174 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Editor
-*.swp
+# pytype static type analyzer
+.pytype/
 
-# Output files
+# Cython debug symbols
+cython_debug/
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+# Streamlit
+.streamlit/secrets.toml
+
+###########################################################################
+# END ignore patterns for:
+#                                  Python
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                    C++
+#
+###########################################################################
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Linker files
+*.ilk
+
+# Debugger Files
+*.pdb
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
 *.out
+*.app
 
-# MSVC
-.vs/
+# debug information files
+*.dwo
 
-# Macos
+###########################################################################
+# END ignore patterns for:
+#                                    C++
+#
+###########################################################################
+
+
+###########################################################################
+# START ignore patterns for:
+#                                   CUDA
+#
+###########################################################################
+
+*.i
+*.ii
+*.gpu
+*.ptx
+*.cubin
+*.fatbin
+
+###########################################################################
+# END ignore patterns for:
+#                                   CUDA
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                   cmake
+#
+###########################################################################
+
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+#Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+CMakeUserPresets.json
+
+###########################################################################
+# END ignore patterns for:
+#                                   cmake
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                    vim
+#
+###########################################################################
+
+# Swap
+[._]*.s[a-v][a-z]
+# comment out the next line if you don't need vector files
+!*.svg
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Session
+Session.vim
+Sessionx.vim
+
+# Temporary
+.netrwhist
+*~
+# Auto-generated tag files
+tags
+# Persistent undo
+[._]*.un~
+
+###########################################################################
+# END ignore patterns for:
+#                                    vim
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                   macOS
+#
+###########################################################################
+
 # General
 .DS_Store
 .AppleDouble
@@ -172,3 +394,78 @@ Icon[
 Network Trash Folder
 Temporary Items
 .apdisk
+
+
+###########################################################################
+# END ignore patterns for:
+#                                   macOS
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                   Linux
+#
+###########################################################################
+
+*~
+
+# temporary files which can be created if a process still has a handle open of a deleted file
+.fuse_hidden*
+
+# Metadata left by Dolphin file manager, which comes with KDE Plasma
+.directory
+
+# Linux trash folder which might appear on any partition or disk
+.Trash-*
+
+# .nfs files are created when an open file is removed but is still being accessed
+.nfs*
+
+# Log files created by default by the nohup command
+nohup.out
+
+###########################################################################
+# END ignore patterns for:
+#                                   Linux
+#
+###########################################################################
+
+
+###########################################################################
+# BEGIN ignore patterns for:
+#                                   Windows
+#
+###########################################################################
+
+# Windows thumbnail cache files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+
+# Dump file
+*.stackdump
+
+# Folder config file
+[Dd]esktop.ini
+
+# Recycle Bin used on file shares
+$RECYCLE.BIN/
+
+# Windows Installer files
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+
+# Windows shortcuts
+*.lnk
+
+###########################################################################
+# END ignore patterns for:
+#                                   Windows
+#
+###########################################################################
