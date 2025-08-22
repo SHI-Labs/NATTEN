@@ -4,10 +4,15 @@ requires = [
     "torch>=2.8.0",
     #"hatchling",
     "uv_build",
+    # Rely on torch versioning for setuptools
+    "setuptools",
+    "wheel",
+    "setuptools-cuda",
 ]
 
-build-backend = "uv_build"
+#build-backend = "uv_build"
 #build-backend = "hatchling.build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "NATTEN"
@@ -45,14 +50,22 @@ classifiers = [
      "Environment :: GPU",
      "Environment :: GPU :: NVIDIA CUDA",
      "Intended Audience :: Science/Research",
-     "Intended Audience :: DEvelopers",
-     "License :: OSI Approved :: MIT License",
+     "Intended Audience :: Developers",
+     #"License :: OSI Approved :: MIT License",
      "Operating System :: OS Independent",
      "Programming Language :: Python",
      "Programming Language :: Python :: 3",
      "Topic :: Scientific/Engineering",
      "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
+
+#[project.optional-dependencies]
+#cpu = [
+#  "torch>=2.8.0",
+#]
+#cu128 = [
+#  "torch>=2.8.0",
+#]
 
 [project.urls]
 Homepage = "https://natten.org"
@@ -84,6 +97,28 @@ dev = [
 
 [tool.uv]
 dev-dependencies = []
+#conflicts = [
+#  [
+#    { extra = "cpu" },
+#    { extra = "cu128" },
+#  ],
+#]
+#
+#[tool.uv.sources]
+#torch = [
+#  { index = "pytorch-cpu", extra = "cpu" },
+#  { index = "pytorch-cu128", extra = "cu128" },
+#]
+#
+#[[tool.uv.index]]
+#name = "pytorch-cpu"
+#url = "https://download.pytorch.org/whl/cpu"
+#explicit = true
+#
+#[[tool.uv.index]]
+#name = "pytorch-cu128"
+#url = "https://download.pytorch.org/whl/cu128"
+#explicit = true
 
 [tool.ruff]
 exclude = [
@@ -97,7 +132,7 @@ line-length = 85
 # See https://docs.astral.sh/ruff/rules
 select = [
     # flake8 bugbear (B), bandit (S), builtins (A), debugger (T10)
-    "B", "S", "A", "T10",
+    "B", "A", "T10",
     # isort
     "I",
     # Warnings
