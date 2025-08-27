@@ -171,14 +171,14 @@ NATTEN_CUDA_ARCH="8.9" pip install natten==0.21.0 # (1)!
 
 NATTEN_CUDA_ARCH="9.0" pip install natten==0.21.0 # (2)!
 
-NATTEN_CUDA_ARCH="10.0" pip install natten==0.21.0 # (3)!
+NATTEN_CUDA_ARCH="10.0;10.3" pip install natten==0.21.0 # (3)!
 
 NATTEN_CUDA_ARCH="8.0;8.6;9.0;10.0" pip install natten==0.21.0 # (4)!
 ```
 
 1. Build targeting SM89 (Ada Lovelace)
 2. Build targeting SM90 (Hopper)
-3. Build targeting SM100 (Blackwell)
+3. Build targeting SM100 (Blackwell and Blackwell Ultra)
 4. Multi-arch build targeting SM80, SM86, SM90 and SM100
 
 By default the setup will attempt to use 1/4th of the number of processor threads available in your
@@ -222,14 +222,14 @@ make CUDA_ARCH="8.9" # (1)!
 
 make CUDA_ARCH="9.0" # (2)!
 
-make CUDA_ARCH="10.0" # (3)!
+make CUDA_ARCH="10.0;10.3" # (3)!
 
 make CUDA_ARCH="8.0;8.6;9.0;10.0" # (4)!
 ```
 
 1. Build targeting SM89 (Ada Lovelace)
 2. Build targeting SM90 (Hopper)
-3. Build targeting SM100 (Blackwell)
+3. Build targeting SM100 (Blackwell and Blackwell Ultra)
 4. Multi-arch build targeting SM80, SM86, SM90 and SM100
 
 Customizing the number of workers again works similarly.
