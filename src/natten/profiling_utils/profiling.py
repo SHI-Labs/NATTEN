@@ -435,6 +435,18 @@ def profile_na_with_torch(
 
     return out
 
+def check_fa_installed():
+    try:
+        import flash_attn
+        fa_version = 2
+        logger.info(f"Using FAv{fa_version}.")
+    except ImportError:
+        import flash_attn_interface
+        fa_version = 3
+        logger.info(f"Using FAv{fa_version}.")
+    except:
+        raise ValueError("Please install flash-attention before using `fa` backend.")
+
 
 def _profile_fmha_with_torch(
     problem: Problem,
@@ -448,8 +460,13 @@ def _profile_fmha_with_torch(
         not problem.has_additional_kv
     ), "Profiling SDPA with additional KV is not supported."
 
+    is_flash_attn = backend == "fa"
+
+    if is_flash_attn:
+        check_fa_installed()
+
     query, key, value, d_out, additional_kv = init_tensors(
-        problem, flatten_sequence=True, heads_last=False  # torch SDPA is heads first :(
+        problem, flatten_sequence=True, heads_last=is_flash_attn  # heads first except if flash attn
     )
 
     def run_ops(query, key, value, d_out, backend):

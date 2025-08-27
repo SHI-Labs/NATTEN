@@ -55,7 +55,7 @@ __all__ = []  # type: ignore
 SUPPORTED_DTYPES = ["fp32", "bf16", "fp16"]
 NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna"]
 NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha"]
-SDPA_BACKENDS = ["xformers", "cudnn", "fav2"]
+SDPA_BACKENDS = ["xformers", "cudnn", "fav2", "fa"]
 
 SCHEDULE_MAP = {
     "non": KernelSchedule.NonPersistent,
