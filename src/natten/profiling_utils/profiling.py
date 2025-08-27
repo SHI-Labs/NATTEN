@@ -34,7 +34,7 @@ from natten.utils import log
 from natten.utils.checks import check_all_args
 
 from .formatting import convert_to_natten_profiler_ops, Result
-from .ops import sdpa
+from .ops import fmha
 
 from .problem import Problem
 
@@ -435,18 +435,6 @@ def profile_na_with_torch(
 
     return out
 
-def check_fa_installed():
-    try:
-        import flash_attn
-        fa_version = 2
-        logger.info(f"Using FAv{fa_version}.")
-    except ImportError:
-        import flash_attn_interface
-        fa_version = 3
-        logger.info(f"Using FAv{fa_version}.")
-    except:
-        raise ValueError("Please install flash-attention before using `fa` backend.")
-
 
 def _profile_fmha_with_torch(
     problem: Problem,
@@ -462,18 +450,17 @@ def _profile_fmha_with_torch(
 
     is_flash_attn = backend == "fa"
 
-    if is_flash_attn:
-        check_fa_installed()
-
+    # PyTorch SDPA expects heads first, like it's still 2021. Flash expects heads last, like NATTEN.
+    heads_last_layout = is_flash_attn
     query, key, value, d_out, additional_kv = init_tensors(
-        problem, flatten_sequence=True, heads_last=is_flash_attn  # heads first except if flash attn
+        problem, flatten_sequence=True, heads_last=heads_last_layout
     )
 
     def run_ops(query, key, value, d_out, backend):
         query.requires_grad = not disable_backward
         key.requires_grad = not disable_backward
         value.requires_grad = not disable_backward
-        out = sdpa(query, key, value, backend=backend)
+        out = fmha(query, key, value, backend=backend)
         if not disable_backward:
             out.backward(d_out)
 
