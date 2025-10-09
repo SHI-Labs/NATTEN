@@ -29,13 +29,13 @@ build_one() {
   container_name="natten_build_"_"$cu"_"$pytorch_ver"
 
   # Torch started supporting python 3.13 since ~2.5
+  # We are building wheels for 3.13 starting 0.21.1
   py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
 
   # NOTE: I can't surpress the warning from sub
   # when --output-delimiter is "", and I'm not
   # spending more time on this.
-  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter=";")
-  torch_major=${torch_major/;/}
+  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
 
   if [[ $torch_major -lt 27 ]]; then
     echo "Only torch 2.7 and later are supported from now on."
@@ -75,13 +75,11 @@ else
   # We don't need to build for every minor torch release; they're usually
   # compatible in their python API and ABIs.
 
-  # We're only building for torch >= 2.7, and only CTK > 12.0 starting 0.20.0.
+  # We're only building for the most recent stable torch release starting 0.21.1.
 
   build_one_and_capture_output cuda12.9 2.8.0 & \
     build_one_and_capture_output cuda12.8 2.8.0 & \
     build_one_and_capture_output cuda12.6 2.8.0
-
-  build_one_and_capture_output cuda12.8 2.7.0 & build_one_and_capture_output cuda12.6 2.7.0
 
   wait
 

@@ -36,12 +36,18 @@ check_one() {
 
   py_versions=(3.9 3.10 3.11 3.12)
 
-  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter=";")
-  torch_major=${torch_major/;/}
+  natten_minor=$(echo $NATTEN_VERSION | cut -d "." -f 2,3  --output-delimiter="")
+  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
 
   if [[ $torch_major -lt 25 ]]; then
     echo "Only torch 2.5 and later are supported from now on."
     exit 1
+  fi
+
+  if [[ $natten_minor -ge 211 ]]; then
+    # Torch started supporting python 3.13 since ~2.5
+    # We are building wheels for 3.13 starting 0.21.1
+    py_versions=(3.13 3.13t)
   fi
 
   for py in "${py_versions[@]}"; do
