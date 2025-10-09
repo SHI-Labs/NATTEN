@@ -80,7 +80,7 @@ __launch_bounds__(
     void device_kernel_sm100(CUTLASS_GRID_CONSTANT
                              typename Operator::Params const params) {
 #ifdef __CUDA_ARCH__
-#if __CUDA_ARCH__ == 1000
+#if __CUDA_ARCH__ == 1000 || __CUDA_ARCH__ == 1030
   // Dynamic shared memory base pointer
   extern __shared__ char smem[];
   Operator op;
@@ -88,7 +88,7 @@ __launch_bounds__(
   cutlass::arch::synclog_print();
 #else
   printf(
-      "FATAL: This kernel was built for SM100, but attempted to launch from SM%d\n",
+      "FATAL: This kernel was built for SM100 and SM103, but attempted to launch from SM%d\n",
       int(__CUDA_ARCH__ + 0) / 10);
 #endif
 #endif

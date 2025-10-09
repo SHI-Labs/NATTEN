@@ -112,8 +112,10 @@ def skip_if_hopper_kernels_not_supported():
 def skip_if_blackwell_kernels_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if get_device_cc() != 100:
-                self.skipTest("Blackwell kernels are only supported on SM100.")
+            if get_device_cc() not in [100, 103]:
+                self.skipTest(
+                    "Blackwell kernels are only supported on SM100 and SM103."
+                )
             else:
                 return f(self, *args, **kwargs)
 

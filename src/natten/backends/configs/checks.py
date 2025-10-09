@@ -68,10 +68,10 @@ def can_run_cutlass_blackwell_fmha(
 
     device_cc = get_device_cc(query.device)
 
-    if device_cc != 100:
+    if device_cc not in [100, 103]:
         target_fn(
             "Can't run Blackwell FMHA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 100."
+            f"compute capability {device_cc}, expected 100 or 103."
         )
         return False
 
@@ -144,10 +144,10 @@ def can_run_cutlass_blackwell_fna(
 
     device_cc = get_device_cc(query.device)
 
-    if device_cc != 100:
+    if device_cc not in [100, 103]:
         target_fn(
             "Can't run Blackwell FNA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 100."
+            f"compute capability {device_cc}, expected 100 or 103."
         )
         return False
 

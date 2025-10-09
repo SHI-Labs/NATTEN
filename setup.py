@@ -165,7 +165,9 @@ def get_cuda_arch_list(cuda_arch_list: str) -> List[int]:
 
 def arch_list_to_cmake_tags(arch_list: List[int]) -> str:
     return (
-        "-real;".join([str(x) if x not in [90, 100] else f"{x}a" for x in arch_list])
+        "-real;".join(
+            [str(x) if x not in [90, 100, 103] else f"{x}a" for x in arch_list]
+        )
         + "-real"
     )
 
@@ -296,7 +298,7 @@ def autogen_kernel_instantitations(
     if 90 in cuda_arch_list:
         categories = categories | categories_sm90
 
-    if 100 in cuda_arch_list:
+    if 100 in cuda_arch_list or 103 in cuda_arch_list:
         categories = categories | categories_sm100
 
     tmp_dir_autogen = tempfile.TemporaryDirectory()
@@ -431,7 +433,7 @@ class BuildExtension(build_ext):
             if 90 in cuda_arch_list:
                 cmake_args.append("-DNATTEN_WITH_HOPPER_FNA=1")
 
-            if 100 in cuda_arch_list:
+            if 100 in cuda_arch_list or 103 in cuda_arch_list:
                 cmake_args.append("-DNATTEN_WITH_BLACKWELL_FNA=1")
 
             if IS_WINDOWS:

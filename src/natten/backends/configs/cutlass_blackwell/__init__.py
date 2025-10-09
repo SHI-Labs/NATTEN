@@ -110,7 +110,7 @@ def get_all_forward_configs(
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
     device_cc = get_device_cc(input_tensor.device)
-    if device_cc != 100:
+    if device_cc not in [100, 103]:
         return []
 
     return BLACKWELL_FORWARD_TILE_SHAPES[na_dim]  # type: ignore
@@ -123,7 +123,7 @@ def get_all_backward_configs(
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
     device_cc = get_device_cc(input_tensor.device)
-    if device_cc != 100:
+    if device_cc not in [100, 103]:
         return []
 
     return BLACKWELL_BACKWARD_TILE_SHAPES[na_dim]  # type: ignore
