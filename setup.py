@@ -298,7 +298,7 @@ def autogen_kernel_instantitations(
     if 90 in cuda_arch_list:
         categories = categories | categories_sm90
 
-    if 100 in cuda_arch_list:
+    if 100 in cuda_arch_list or 103 in cuda_arch_list:
         categories = categories | categories_sm100
 
     tmp_dir_autogen = tempfile.TemporaryDirectory()
