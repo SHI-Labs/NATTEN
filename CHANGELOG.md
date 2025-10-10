@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Main branch]
+* FP8 inference support for Blackwell DC-class ([#266](https://github.com/SHI-Labs/NATTEN/pull/266))
+  * Blackwell FMHA and FNA now allow float_e4m3 and float_e5m2 tensors in forward pass
+* Blackwell Ultra (SM103) support ([#261](https://github.com/SHI-Labs/NATTEN/pull/261))
 * Build system improvements and doc updates ([#253](https://github.com/SHI-Labs/NATTEN/pull/253)):
   * Build system fixes:
     * "True" autogen: Auto-generated kernel instantiations and macro wrappers are no longer tracked, and the individual autogen scripts will be called prior to each build and `cmake` setup.
