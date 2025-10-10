@@ -425,31 +425,34 @@ inline void AssertDimsAre128BitAligned(
       query.scalar_type(),
       ".");
 
-  int alignment; 
+  int alignment;
   if (query.scalar_type() == torch::kFloat) {
     alignment = 4;
   } else if (
       query.scalar_type() == torch::kFloat16 ||
       query.scalar_type() == torch::kBFloat16) {
     alignment = 8;
-  } else if (query.scalar_type() == c10::ScalarType::Float8_e4m3fn || query.scalar_type() == c10::ScalarType::Float8_e5m2) {
+  } else if (
+      query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+      query.scalar_type() == c10::ScalarType::Float8_e5m2) {
     alignment = 16;
-  }
-  else {
-    TORCH_CHECK(
-        false,
-        "This should not have happened. Please open an issue.");
+  } else {
+    TORCH_CHECK(false, "This should not have happened. Please open an issue.");
   }
 
   TORCH_CHECK(
       head_dim % alignment == 0,
-      "Query head dimension must be a multiple of ", alignment, " for this data type ",
+      "Query head dimension must be a multiple of ",
+      alignment,
+      " for this data type ",
       "to meet the 128-bit alignment constraint, got  ",
       head_dim,
       ".");
   TORCH_CHECK(
       head_dim_value % alignment == 0,
-      "Value head dimension must be a multiple of ", alignment, " for this data type ",
+      "Value head dimension must be a multiple of ",
+      alignment,
+      " for this data type ",
       "to meet the 128-bit alignment constraint, got  ",
       head_dim_value,
       ".");

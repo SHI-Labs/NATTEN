@@ -145,7 +145,9 @@ void blackwell_fmha_forward(
       "Blackwell FMHA forward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "Blackwell FMHA forward: libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FMHA forward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 
@@ -276,7 +278,9 @@ void blackwell_fmha_backward(
       "Blackwell FMHA backward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "Blackwell FMHA backward: libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FMHA backward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 

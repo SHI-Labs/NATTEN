@@ -223,7 +223,9 @@ void blackwell_fna_generic_backward(
       "Blackwell FNA backward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "Blackwell FNA backward: libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FNA backward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 
