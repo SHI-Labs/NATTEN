@@ -132,14 +132,14 @@ void blackwell_fna_generic_forward(
 
   TORCH_CHECK(
       size(q_shape) == seqlen_q,
-      "Q's sequence length (q.shape[1]) must match the size of QKV shape.");
+      "Blackwell FNA forward: Q sequence length (q.shape[1]) must match the size of QKV shape.");
   TORCH_CHECK(
       size(kv_shape) + num_extra_kv == seqlen_kv,
-      "KV's sequence length ({k,v}.shape[1]) must match the size of QKV shape + num_extra_kv.");
+      "Blackwell FNA forward: KV sequence length ({k,v}.shape[1]) must match the size of QKV shape + num_extra_kv.");
 
   TORCH_CHECK(
       dim == 32 || dim == 64 || dim == 128,
-      "FNA Blackwell only supports head dims 32, 64, and 128.");
+      "Blackwell FNA forward only supports head dims 32, 64, and 128 for now.");
 
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());
@@ -147,18 +147,20 @@ void blackwell_fna_generic_forward(
 
   TORCH_CHECK(
       cc == 100 || cc == 103,
-      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
+      "Blackwell FNA forward can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
 
   TORCH_CHECK(
       query.scalar_type() == key.scalar_type() &&
           query.scalar_type() == value.scalar_type() &&
           query.scalar_type() == out.scalar_type(),
-      "Query, key, value, and output must match in dtype.");
+      "Blackwell FNA forward: Query, key, value, and output must match in dtype.");
 
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat16 ||
-          query.scalar_type() == torch::kBFloat16,
-      "Only FP16/BF16 is supported for now.");
+          query.scalar_type() == torch::kBFloat16 ||
+          query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+          query.scalar_type() == c10::ScalarType::Float8_e5m2,
+      "Blackwell FNA forward only supports FP16, BF16, FP8_E4M3, and FP8_E5M2.");
 
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
@@ -166,7 +168,7 @@ void blackwell_fna_generic_forward(
   TORCH_CHECK(
       cute::evenly_divides(q_shape, query_tile_shape) &&
           cute::evenly_divides(kv_shape, key_tile_shape),
-      "Tile shapes must evenly divide input. Please pad your inputs.");
+      "Blackwell FNA forward: Tile shapes must evenly divide input. Please pad your inputs.");
 
 #if defined(CUTLASS_ARCH_MMA_SM100_SUPPORTED)
 
@@ -204,10 +206,12 @@ void blackwell_fna_generic_forward(
 #else
   TORCH_CHECK(
       false,
-      "libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
+      "Blackwell FNA forward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FNA forward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 

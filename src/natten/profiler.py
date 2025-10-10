@@ -52,7 +52,13 @@ logger = log.get_logger(__name__)
 
 __all__ = []  # type: ignore
 
-SUPPORTED_DTYPES = ["fp32", "bf16", "fp16"]
+DTYPE_MAP = {
+    "fp32": torch.float32,
+    "bf16": torch.bfloat16,
+    "fp16": torch.float16,
+    "e4m3": torch.float8_e4m3fn,
+    "e5m2": torch.float8_e5m2,
+}
 NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna"]
 NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha"]
 SDPA_BACKENDS = ["xformers", "cudnn", "fav2"]
@@ -344,8 +350,8 @@ def get_args():
         "--dtype",
         type=str,
         default=DEFAULT_DTYPE,
-        choices=SUPPORTED_DTYPES,
-        help=f"Element (data) type. Choices: {', '.join(SUPPORTED_DTYPES)}",
+        choices=DTYPE_MAP.keys(),
+        help=f"Element (data) type. Choices: {", ".join(DTYPE_MAP.keys())}",
     )
 
     parser.add_argument(
@@ -368,8 +374,8 @@ def get_args():
         choices=NATTEN_BACKENDS + SDPA_BACKENDS,
         help="Backend / kernel to run."
         "Choices: "
-        f"NATTEN backends: {', '.join(NATTEN_BACKENDS)}.\n"
-        f"Torch SDPA backends (can only perform self attention): {', '.join(SDPA_BACKENDS)}.",
+        f"NATTEN backends: {", ".join(NATTEN_BACKENDS)}.\n"
+        f"Torch SDPA backends (can only perform self attention): {", ".join(SDPA_BACKENDS)}.",
     )
 
     parser.add_argument(
@@ -379,7 +385,7 @@ def get_args():
         choices=NATTEN_FMHA_BACKENDS,
         help="Backend / kernel for cross-attention (additional KV) and fast-path self attention in NATTEN. "
         "Choices: "
-        f"{', '.join(NATTEN_FMHA_BACKENDS)}.",
+        f"{", ".join(NATTEN_FMHA_BACKENDS)}.",
     )
 
     parser.add_argument(
@@ -543,15 +549,12 @@ def profile(
         None if backward_kv_tile is None else math.prod(backward_kv_tile)
     )
 
-    if dtype == "fp16":
-        torch_dtype = torch.float16
-    elif dtype == "bf16":
-        torch_dtype = torch.bfloat16
-    elif dtype == "fp32":
-        torch_dtype = torch.float32
+    if dtype in DTYPE_MAP:
+        torch_dtype = DTYPE_MAP[dtype]
     else:
         raise NotImplementedError(
-            f"Data type {dtype} is not supported. Choices are " "fp16, bf16, fp32."
+            f"Data type {dtype} is not supported. Choices are: "
+            ", ".join(DTYPE_MAP.keys())
         )
 
     if compile:

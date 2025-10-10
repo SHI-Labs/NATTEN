@@ -86,6 +86,10 @@ class NattenBackendTester:
         self.reference_fmha_backend = reference_fmha_backend
 
         with torch.no_grad():
+            orig_dtype = dtype
+            if dtype in [torch.float8_e5m2, torch.float8_e4m3fn]:
+                dtype = torch.float16
+
             q_ref, k_ref, v_ref, d_out_ref = (
                 torch.randn(
                     (self.batch, *self.input_shape, self.heads, self.head_dim),
@@ -109,6 +113,12 @@ class NattenBackendTester:
                 )
                 * 0.05,
             )
+
+            if dtype != orig_dtype:
+                q_ref = q_ref.to(orig_dtype)
+                k_ref = k_ref.to(orig_dtype)
+                v_ref = v_ref.to(orig_dtype)
+                d_out_ref = d_out_ref.to(orig_dtype)
 
             self.q, self.k, self.v, self.d_out = (
                 q_ref.clone(),
@@ -135,6 +145,13 @@ class NattenBackendTester:
                     device="cuda",
                     dtype=dtype,
                 )
+
+                if dtype != orig_dtype:
+                    q_ref = q_ref.to(orig_dtype)
+                    k_ref = k_ref.to(orig_dtype)
+                    v_ref = v_ref.to(orig_dtype)
+                    d_out_ref = d_out_ref.to(orig_dtype)
+
                 self.additional_k = additional_k_ref.clone()
                 self.additional_v = additional_v_ref.clone()
 
@@ -227,6 +244,7 @@ class NattenBackendTester:
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         torch_compile: bool = False,
+        test_backprop: Optional[bool] = None,
     ):
         batch = self.batch
         heads = self.heads
@@ -239,6 +257,9 @@ class NattenBackendTester:
         is_causal = self.is_causal
         additional_kv_length = self.additional_kv_length
         reference_backend = self.reference_backend
+        test_backprop_safe: bool = (
+            self.test_backprop if test_backprop is None else test_backprop
+        )
 
         logger.debug(
             f"Testing {target_backend} against {reference_backend}:\n"
@@ -249,7 +270,7 @@ class NattenBackendTester:
             + (
                 f"\n{backward_q_tile_shape=}, {backward_kv_tile_shape=}, "
                 f"{backward_kv_splits=}, {backward_use_pt_reduction=}."
-                if self.test_backprop
+                if test_backprop_safe
                 else "."
             )
         )
@@ -260,10 +281,10 @@ class NattenBackendTester:
             self.v.clone().to(dtype),
             self.d_out.clone().to(dtype),
         )
-        q.requires_grad_(self.test_backprop)
-        k.requires_grad_(self.test_backprop)
-        v.requires_grad_(self.test_backprop)
-        d_out.requires_grad_(self.test_backprop)
+        q.requires_grad_(test_backprop_safe)
+        k.requires_grad_(test_backprop_safe)
+        v.requires_grad_(test_backprop_safe)
+        d_out.requires_grad_(test_backprop_safe)
 
         additional_k, additional_v = None, None
         if additional_kv_length > 0:
@@ -272,8 +293,8 @@ class NattenBackendTester:
             additional_k = self.additional_k.clone().to(dtype)
             additional_v = self.additional_v.clone().to(dtype)
 
-            additional_k = additional_k.requires_grad_(self.test_backprop)
-            additional_v = additional_v.requires_grad_(self.test_backprop)
+            additional_k = additional_k.requires_grad_(test_backprop_safe)
+            additional_v = additional_v.requires_grad_(test_backprop_safe)
 
         torch.cuda.synchronize()
         start_time = time.time()
@@ -303,7 +324,7 @@ class NattenBackendTester:
         )
         out = out_.data.clone().float()
 
-        if self.test_backprop:
+        if test_backprop_safe:
             dq, dk, dv = None, None, None
             d_additional_k, d_additional_v = None, None
             out_.backward(d_out)
@@ -337,7 +358,7 @@ class NattenBackendTester:
 
         torch.testing.assert_close(out, self.out_ref, atol=eps_forward, rtol=0)
 
-        if self.test_backprop:
+        if test_backprop_safe:
             torch.testing.assert_close(dq, self.dq_ref, atol=eps_backward, rtol=0)
             torch.testing.assert_close(dk, self.dk_ref, atol=eps_backward, rtol=0)
             torch.testing.assert_close(dv, self.dv_ref, atol=eps_backward, rtol=0)

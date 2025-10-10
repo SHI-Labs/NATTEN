@@ -109,7 +109,8 @@ new Hopper FNA and Blackwell FNA kernels.
 |                             | number of elements as in `#!bash --input-size`. Defaults to        |
 |                             | `False`s (bi-directional in all dimensions).                       |
 +-----------------------------+--------------------------------------------------------------------+
-| `--dtype`                   | Element (data) type. Choices: `fp32`, `bf16`, `fp16`.              |
+| `--dtype`                   | Element (data) type. Choices: `fp32`, `bf16`, `fp16`, `e4m3`,      |
+|                             | `e5m2`.                                                            |
 +-----------------------------+--------------------------------------------------------------------+
 | `--backprop`                | Profile backward pass as well as forward pass.                     |
 +-----------------------------+--------------------------------------------------------------------+

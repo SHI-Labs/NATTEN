@@ -44,6 +44,7 @@ from natten.backends.configs.cutlass_hopper import (
 from natten.functional import attention
 from natten.types import KernelSchedule
 from natten.utils import log
+from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_hopper_kernels_not_supported,
@@ -208,6 +209,10 @@ class FMHABackendTest(unittest.TestCase):
 
         q, k, v, d_out = inputs
         out_ref, lse_ref, dq_ref, dk_ref, dv_ref = reference
+        q = q.to(dtype)
+        k = k.to(dtype)
+        v = v.to(dtype)
+        d_out = d_out.to(dtype)
 
         # Run target
         q.requires_grad_(test_backprop)
@@ -313,8 +318,9 @@ class FMHABackendTest(unittest.TestCase):
         head_dim_v: Optional[int] = None,
     ):
         head_dim_v = head_dim_v or head_dim
+        sdpa_dtype = dtype if not is_fp8(dtype) else torch.float16
         inputs, reference = compute_sdpa_reference(
-            batch, heads, head_dim, head_dim_v, seqlen_q, seqlen_kv, dtype=dtype
+            batch, heads, head_dim, head_dim_v, seqlen_q, seqlen_kv, dtype=sdpa_dtype
         )
         self._test_against_reference_inputs(
             inputs=inputs,
@@ -483,11 +489,12 @@ class FMHABackendTest(unittest.TestCase):
         ALLOWED_DTYPES = [
             (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
+            (torch.float8_e4m3fn, (3e-1, None), (0, None)),
+            (torch.float8_e5m2, (7e-1, None), (0, None)),
         ]
 
         for dtype, atol, rtol in ALLOWED_DTYPES:
-
-            dummy = torch.randn(
+            dummy = torch.empty(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
             )
 
@@ -512,7 +519,7 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
                     dtype=dtype,
-                    test_backprop=True,
+                    test_backprop=not is_fp8(dtype),
                     atol=atol,
                     rtol=rtol,
                     backend="blackwell-fmha",

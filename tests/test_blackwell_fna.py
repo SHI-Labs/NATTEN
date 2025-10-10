@@ -36,6 +36,7 @@ from natten.backends.configs.cutlass_blackwell import (
     get_all_backward_configs,
     get_all_forward_configs,
 )
+from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
@@ -113,12 +114,14 @@ class BlackwellFNABackendTest(unittest.TestCase):
         ALLOWED_DTYPES = [
             (torch.float16, (1e-2, 2e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
+            (torch.float8_e4m3fn, (4e-1, None), (0, None)),
+            (torch.float8_e5m2, (7e-1, None), (0, None)),
         ]
 
         test_id = 0
         for dtype, atol, rtol in ALLOWED_DTYPES:
 
-            dummy = torch.randn(
+            dummy = torch.empty(
                 (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
             )
             forward_configs = get_all_forward_configs(dummy)
@@ -148,6 +151,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
                         backward_q_tile_shape=backward_q_tile_shape,
                         backward_kv_tile_shape=backward_kv_tile_shape,
                         run_persistent_kernel=persistent,
+                        test_backprop=not is_fp8(dtype),
                     )
                     test_id += 1
                     if configs_to_test is not None and test_id > configs_to_test:

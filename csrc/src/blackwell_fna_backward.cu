@@ -147,29 +147,29 @@ void blackwell_fna_generic_backward(
   auto is_causal = std_tuple_to_cute_tuple(is_causal_);
 
   TORCH_CHECK(
+      dim == 32 || dim == 64 || dim == 128,
+      "Blackwell FNA backward only supports head dims 32, 64, and 128 for now.");
+
+  TORCH_CHECK(
       size(q_shape) == seqlen_q,
-      "Q's sequence length (q.shape[1]) must match the size of Q shape.");
+      "Blackwell FNA backward: Q sequence length (q.shape[1]) must match the size of Q shape.");
   TORCH_CHECK(
       size(kv_shape) == seqlen_kv,
-      "KV's sequence length ({k,v}.shape[1]) must match the size of KV shape.");
+      "Blackwell FNA backward: KV sequence length ({k,v}.shape[1]) must match the size of KV shape.");
 
   TORCH_CHECK(
       cute::evenly_divides(q_shape, query_tile_shape) &&
           cute::evenly_divides(kv_shape, key_tile_shape),
-      "Tile shapes must evenly divide input. Please pad your inputs.");
+      "Blackwell FNA backward: Tile shapes must evenly divide input. Please pad your inputs.");
 
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat16 ||
           query.scalar_type() == torch::kBFloat16,
-      "Only FP16/BF16 is supported for now.");
-
-  TORCH_CHECK(
-      dim == 32 || dim == 64 || dim == 128,
-      "FNA Blackwell only supports head dims 32, 64, and 128.");
+      "Blackwell FNA backward only supports FP16 and BF16.");
 
   TORCH_CHECK(
       not at::globalContext().deterministicAlgorithms(),
-      "Blackwell FNA backward pass is non-deterministic, "
+      "Blackwell FNA backward is non-deterministic, "
       "but PyTorch's deterministic mode is enabled. "
       "NATTEN Python API should have avoided this; which means "
       "you're probably calling the C function directly.");
@@ -181,7 +181,7 @@ void blackwell_fna_generic_backward(
 
   TORCH_CHECK(
       cc == 100 || cc == 103,
-      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
+      "Blackwell FMHA backward can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
 
 #if defined(CUTLASS_ARCH_MMA_SM100_SUPPORTED)
 
@@ -220,10 +220,12 @@ void blackwell_fna_generic_backward(
 #else
   TORCH_CHECK(
       false,
-      "libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
+      "Blackwell FNA backward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FNA backward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 

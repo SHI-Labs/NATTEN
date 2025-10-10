@@ -29,6 +29,8 @@ from torch import Tensor
 
 from natten.types import CausalArgType, DimensionType
 
+from natten.utils.dtype import is_fp8
+
 
 class Problem:
     def __init__(
@@ -63,6 +65,8 @@ class Problem:
         self.stride = stride
         self.dilation = dilation
         self.dtype = dtype
+        self.dtype_safe = self.dtype if not is_fp8(self.dtype) else torch.float16
+        self.requires_typecast = self.dtype != self.dtype_safe
         self.is_causal = is_causal or [False for _ in range(na_dim)]
         self.has_additional_kv = (
             additional_kv_length is not None and additional_kv_length > 0
@@ -124,21 +128,25 @@ class Problem:
         q = torch.randn(
             self.get_q_tensor_shape(heads_last=heads_last, flatten=flatten),
             device=device,
-            dtype=self.dtype,
+            dtype=self.dtype_safe,
             requires_grad=requires_grad,
         )
         k = torch.randn(
             self.get_k_tensor_shape(heads_last=heads_last, flatten=flatten),
             device=device,
-            dtype=self.dtype,
+            dtype=self.dtype_safe,
             requires_grad=requires_grad,
         )
         v = torch.randn(
             self.get_v_tensor_shape(heads_last=heads_last, flatten=flatten),
             device=device,
-            dtype=self.dtype,
+            dtype=self.dtype_safe,
             requires_grad=requires_grad,
         )
+        if self.requires_typecast:
+            q = q.to(self.dtype)
+            k = k.to(self.dtype)
+            v = v.to(self.dtype)
 
         return q, k, v
 
@@ -154,9 +162,12 @@ class Problem:
         o = torch.randn(
             self.get_o_tensor_shape(heads_last=heads_last, flatten=flatten),
             device=device,
-            dtype=self.dtype,
+            dtype=self.dtype_safe,
             requires_grad=requires_grad,
         )
+        if self.requires_typecast:
+            o = o.to(self.dtype)
+
         return q, k, v, o
 
     def make_additional_kv_tensors(
@@ -165,15 +176,18 @@ class Problem:
         add_k = torch.randn(
             self.get_add_k_tensor_shape(heads_last=heads_last),
             device=device,
-            dtype=self.dtype,
+            dtype=self.dtype_safe,
             requires_grad=requires_grad,
         )
         add_v = torch.randn(
             self.get_add_v_tensor_shape(heads_last=heads_last),
             device=device,
-            dtype=self.dtype,
+            dtype=self.dtype_safe,
             requires_grad=requires_grad,
         )
+        if self.requires_typecast:
+            add_k = add_k.to(self.dtype)
+            add_v = add_v.to(self.dtype)
 
         return add_k, add_v
 

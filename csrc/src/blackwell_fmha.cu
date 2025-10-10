@@ -89,7 +89,7 @@ void blackwell_fmha_forward(
 
   TORCH_CHECK(
       dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FMHA only supports head dims 32, 64, and 128 for now.");
+      "Blackwell FMHA forward only supports head dims 32, 64, and 128 for now.");
 
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());
@@ -97,18 +97,20 @@ void blackwell_fmha_forward(
 
   TORCH_CHECK(
       cc == 100 || cc == 103,
-      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
+      "Blackwell FMHA forward can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
 
   TORCH_CHECK(
       query.scalar_type() == key.scalar_type() &&
           query.scalar_type() == value.scalar_type() &&
           query.scalar_type() == out.scalar_type(),
-      "Query, key, value, and output must match in dtype.");
+      "Blackwell FMHA forward: Query, key, value, and output must match in dtype.");
 
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat16 ||
-          query.scalar_type() == torch::kBFloat16,
-      "Only FP16/BF16 is supported for now.");
+          query.scalar_type() == torch::kBFloat16 ||
+          query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+          query.scalar_type() == c10::ScalarType::Float8_e5m2,
+      "Blackwell FMHA forward only supports FP16, BF16, FP8_E4M3, and FP8_E5M2.");
 
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
@@ -140,10 +142,12 @@ void blackwell_fmha_forward(
 #else
   TORCH_CHECK(
       false,
-      "libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
+      "Blackwell FMHA forward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FMHA forward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 
@@ -210,24 +214,24 @@ void blackwell_fmha_backward(
 
   TORCH_CHECK(
       seqlen_q_actual <= seqlen_q_aligned,
-      "seqlen_q_actual cannot be greater than the tensor seqlen.");
+      "Blackwell FMHA backward: seqlen_q_actual cannot be greater than the tensor seqlen.");
 
   TORCH_CHECK(
       dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FMHA backward pass only supports head dims 32, 64, and 128 for now.");
+      "Blackwell FMHA backward only supports head dims 32, 64, and 128 for now.");
 
   TORCH_CHECK(
       seqlen_q_aligned % query_tile_size == 0,
-      "Blackwell FMHA backward pass only allows seqlen_q to be a multiple of query tile size.");
+      "Blackwell FMHA backward only allows seqlen_q to be a multiple of query tile size.");
 
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat16 ||
           query.scalar_type() == torch::kBFloat16,
-      "Only FP16/BF16 is supported for now.");
+      "Blackwell FMHA backward only supports FP16 and BF16.");
 
   TORCH_CHECK(
       not at::globalContext().deterministicAlgorithms(),
-      "Blackwell FMHA backward pass is non-deterministic, "
+      "Blackwell FMHA backward is non-deterministic, "
       "but PyTorch's deterministic mode is enabled. "
       "NATTEN Python API should have avoided this; which means "
       "you're probably calling the C function directly.");
@@ -239,7 +243,7 @@ void blackwell_fmha_backward(
 
   TORCH_CHECK(
       cc == 100 || cc == 103,
-      "This operation can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
+      "Blackwell FMHA backward can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
 
 #if defined(CUTLASS_ARCH_MMA_SM100_SUPPORTED)
 
@@ -271,10 +275,12 @@ void blackwell_fmha_backward(
 #else
   TORCH_CHECK(
       false,
-      "libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
+      "Blackwell FMHA backward: libnatten was not compiled with CUTLASS_ARCH_MMA_SM100_SUPPORTED.");
 #endif
 #else
-  TORCH_CHECK(false, "libnatten was not compiled for Blackwell (SM100/SM103).");
+  TORCH_CHECK(
+      false,
+      "Blackwell FMHA backward: libnatten was not compiled for Blackwell (SM100/SM103).");
 #endif
 }
 
