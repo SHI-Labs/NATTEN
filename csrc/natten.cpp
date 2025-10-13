@@ -30,6 +30,7 @@
 #include "natten/blackwell_fna.h"
 #include "natten/hopper_fna.h"
 #include "natten/fmha.h"
+#include "natten/flash_fmha.h"
 #include "natten/blackwell_fmha.h"
 #include "natten/hopper_fmha.h"
 #include "natten/token_permute.h"
@@ -109,6 +110,13 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "hopper_fmha_backward", &natten::hopper_fmha_backward, "FMHA backward (fused, SM90)");
 
   // CUTLASS 2.X kernels
+
+  //// SM80/SM86/SM89 - Flash FMHA
+  m.def(
+      "flash_fmha_forward", &natten::flash_fmha_forward, "Flash FMHA forward");
+  m.def(
+      "flash_fmha_backward", &natten::flash_fmha_backward, "Flash FMHA backward");
+  
   //// SM50/SM70/SM75/SM80 - Original FNA
   m.def(
       "na1d_forward", &natten::na1d_forward, "NA1D forward (fused)");

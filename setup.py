@@ -181,6 +181,7 @@ NUM_SPLITS = {
         "reference": 2,
         "fna": 64,
         "fmha": 6,
+        "flash-fmha": 6,
         "hopper-fna": 8,
         "hopper-fna-bwd": 4,
         "hopper-fmha": 1,
@@ -194,6 +195,7 @@ NUM_SPLITS = {
         "reference": 4,
         "fna": 128,
         "fmha": 12,
+        "flash-fmha": 12,
         "hopper-fna": 16,
         "hopper-fna-bwd": 8,
         "hopper-fmha": 1,
@@ -207,6 +209,7 @@ NUM_SPLITS = {
         "reference": 1,
         "fna": 32,
         "fmha": 3,
+        "flash-fmha": 3,
         "hopper-fna": 4,
         "hopper-fna-bwd": 2,
         "hopper-fmha": 1,
@@ -281,6 +284,7 @@ def autogen_kernel_instantitations(
         "reference": ("autogen_reference_fna.py", "reference"),
         "fna": ("autogen_fna.py", "fna"),
         "fmha": ("autogen_fmha.py", "fmha"),
+        "flash-fmha": ("autogen_flash_fmha.py", "flash_fmha"),
     }
     categories_sm90 = {
         "hopper-fna": ("autogen_hopper_fna.py", "hopper_fna"),
@@ -377,6 +381,7 @@ class BuildExtension(build_ext):
             # Also because we want CMake to build everything elsewhere, otherwise pypi will package
             # build files.
             build_dir = self.build_lib if NATTEN_BUILD_DIR is None else NATTEN_BUILD_DIR
+            print(f"************************* BUILD_DIR: {build_dir}")
 
             try:
                 subprocess.check_output(["cmake", "--version"])
