@@ -1,0 +1,79 @@
+rm -f main.o main
+nvcc -c --generate-code=arch=compute_80,code=sm_80 -std=c++17 -O3 --ftemplate-backtrace-limit=0 --use_fast_math --resource-usage -lineinfo -DCUTLASS_DEBUG_TRACE_LEVEL=0 -DNDEBUG --expt-relaxed-constexpr -I../../csrc/cutlass/include  -I../../csrc/cutlass/tools/util/include -I.. -I. -o "main.o" main.cu
+ptxas info    : 218647 bytes gmem, 72 bytes cmem[3], 488 bytes cmem[4]
+ptxas info    : Compiling entry function '_ZN7cutlass9reference6device6kernel12BlockForEachINS_6half_tENS1_6detail18RandomGaussianFuncIS4_EEEEvPT_mNT0_6ParamsE' for 'sm_80'
+ptxas info    : Function properties for _ZN7cutlass9reference6device6kernel12BlockForEachINS_6half_tENS1_6detail18RandomGaussianFuncIS4_EEEEvPT_mNT0_6ParamsE
+    80 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, used 0 barriers, 80 bytes cumulative stack size, 400 bytes cmem[0]
+ptxas info    : Compile time = 26.490 ms
+ptxas info    : Compiling entry function '_ZN7cutlass9reference6device6kernel12BlockForEachINS_6half_tENS1_6detail17RandomUniformFuncIS4_EEEEvPT_mNT0_6ParamsE' for 'sm_80'
+ptxas info    : Function properties for _ZN7cutlass9reference6device6kernel12BlockForEachINS_6half_tENS1_6detail17RandomUniformFuncIS4_EEEEvPT_mNT0_6ParamsE
+    96 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 30 registers, used 0 barriers, 96 bytes cumulative stack size, 416 bytes cmem[0]
+ptxas info    : Compile time = 16.890 ms
+ptxas info    : Compiling entry function '_ZN7cutlass13device_kernelIN5flash32FlashAttnBwdPostprocessConvertdQIN4cute5tupleIJNS3_1CILi64EEENS5_ILi128EEEEEENS_6half_tEfNS_4arch4Sm80ELi256ENS3_8TiledMMAINS3_8MMA_AtomIJNS3_28SM80_16x8x16_F32F16F16F32_TNEEEENS3_6LayoutINS4_IJNS5_ILi2EEENS5_ILi4EEENS5_ILi1EEEEEENS4_IJSJ_SH_NS5_ILi0EEEEEEEENS4_IJNS5_ILi32EEES6_NS5_ILi16EEEEEEEELb0EEEEEvNT_6ParamsE' for 'sm_80'
+ptxas info    : Function properties for _ZN7cutlass13device_kernelIN5flash32FlashAttnBwdPostprocessConvertdQIN4cute5tupleIJNS3_1CILi64EEENS5_ILi128EEEEEENS_6half_tEfNS_4arch4Sm80ELi256ENS3_8TiledMMAINS3_8MMA_AtomIJNS3_28SM80_16x8x16_F32F16F16F32_TNEEEENS3_6LayoutINS4_IJNS5_ILi2EEENS5_ILi4EEENS5_ILi1EEEEEENS4_IJSJ_SH_NS5_ILi0EEEEEEEENS4_IJNS5_ILi32EEES6_NS5_ILi16EEEEEEEELb0EEEEEvNT_6ParamsE
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 54 registers, used 1 barriers, 448 bytes cmem[0]
+ptxas info    : Compile time = 7.934 ms
+ptxas info    : Compiling entry function '_ZN7cutlass13device_kernelIN5flash19enable_sm80_to_sm89INS1_16FlashAttnBwdSm80INS1_25CollectiveMainloopBwdSm80ILi2ELi2EN4cute5tupleIJNS5_1CILi64EEENS7_ILi128EEES9_EEENS_6half_tEfNS_4arch4Sm80ELb0ELb1ELb0ELb0ELi2ELi2ELi2ELi2ELb0EEENS1_21CollectiveEpilogueBwdISA_SB_SD_Li256ELb0ELi4EEENS1_19SingleTileSchedulerILb0ELi128EEEEEEEEEvNT_6ParamsE' for 'sm_80'
+ptxas info    : Function properties for _ZN7cutlass13device_kernelIN5flash19enable_sm80_to_sm89INS1_16FlashAttnBwdSm80INS1_25CollectiveMainloopBwdSm80ILi2ELi2EN4cute5tupleIJNS5_1CILi64EEENS7_ILi128EEES9_EEENS_6half_tEfNS_4arch4Sm80ELb0ELb1ELb0ELb0ELi2ELi2ELi2ELi2ELb0EEENS1_21CollectiveEpilogueBwdISA_SB_SD_Li256ELb0ELi4EEENS1_19SingleTileSchedulerILb0ELi128EEEEEEEEEvNT_6ParamsE
+    200 bytes stack frame, 200 bytes spill stores, 216 bytes spill loads
+ptxas info    : Used 255 registers, used 2 barriers, 200 bytes cumulative stack size, 880 bytes cmem[0]
+ptxas info    : Compile time = 353.726 ms
+ptxas info    : Compiling entry function '_ZN7cutlass13device_kernelIN5flash22FlashAttnBwdPreprocessIN4cute5tupleIJNS3_1CILi64EEENS5_ILi128EEEEEENS_6half_tEfNS_4arch4Sm80ELb1EEEEEvNT_6ParamsE' for 'sm_80'
+ptxas info    : Function properties for _ZN7cutlass13device_kernelIN5flash22FlashAttnBwdPreprocessIN4cute5tupleIJNS3_1CILi64EEENS5_ILi128EEEEEENS_6half_tEfNS_4arch4Sm80ELb1EEEEEvNT_6ParamsE
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 62 registers, used 0 barriers, 576 bytes cmem[0]
+ptxas info    : Compile time = 15.199 ms
+ptxas info    : Compiling entry function '_ZN7cutlass13device_kernelIN5flash19enable_sm80_to_sm89INS1_16FlashAttnFwdSm80INS1_25CollectiveMainloopFwdSm80ILi4ELi1ELb0EN4cute5tupleIJNS5_1CILi128EEENS7_ILi64EEES8_EEELi128ENS_6half_tEfNS_4arch4Sm80ELb0EEENS1_21CollectiveEpilogueFwdINS6_IJS8_S8_S9_EEENS6_IJNS7_ILi1EEESH_SH_EEESB_SD_Li128ELb0ELb0EEENS1_19SingleTileSchedulerILb0ELi128EEEEEEEEEvNT_6ParamsE' for 'sm_80'
+ptxas info    : Function properties for _ZN7cutlass13device_kernelIN5flash19enable_sm80_to_sm89INS1_16FlashAttnFwdSm80INS1_25CollectiveMainloopFwdSm80ILi4ELi1ELb0EN4cute5tupleIJNS5_1CILi128EEENS7_ILi64EEES8_EEELi128ENS_6half_tEfNS_4arch4Sm80ELb0EEENS1_21CollectiveEpilogueFwdINS6_IJS8_S8_S9_EEENS6_IJNS7_ILi1EEESH_SH_EEESB_SD_Li128ELb0ELb0EEENS1_19SingleTileSchedulerILb0ELi128EEEEEEEEEvNT_6ParamsE
+    168 bytes stack frame, 192 bytes spill stores, 196 bytes spill loads
+ptxas info    : Used 255 registers, used 2 barriers, 168 bytes cumulative stack size, 1040 bytes cmem[0]
+ptxas info    : Compile time = 432.840 ms
+ptxas info    : Compiling entry function '_Z28fmha_bwd_reference_dV_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEESI_SI_13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_T8_T9_' for 'sm_80'
+ptxas info    : Function properties for _Z28fmha_bwd_reference_dV_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEESI_SI_13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_T8_T9_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 33 registers, used 1 barriers, 649 bytes cmem[0], 8 bytes cmem[2]
+ptxas info    : Compile time = 54.530 ms
+ptxas info    : Compiling entry function '_Z28fmha_bwd_reference_dK_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEESI_SI_13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_T8_T9_' for 'sm_80'
+ptxas info    : Function properties for _Z28fmha_bwd_reference_dK_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEESI_SI_13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_T8_T9_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 40 registers, used 1 barriers, 649 bytes cmem[0], 8 bytes cmem[2]
+ptxas info    : Compile time = 71.656 ms
+ptxas info    : Compiling entry function '_Z28fmha_bwd_reference_dQ_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEESI_SI_13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_T8_T9_' for 'sm_80'
+ptxas info    : Function properties for _Z28fmha_bwd_reference_dQ_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEESI_SI_13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_T8_T9_
+    0 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 42 registers, used 1 barriers, 649 bytes cmem[0], 8 bytes cmem[2]
+ptxas info    : Compile time = 71.225 ms
+ptxas info    : Compiling entry function '_Z25reference_abs_diff_kernelIfEvPT_S1_mPdS2_b' for 'sm_80'
+ptxas info    : Function properties for _Z25reference_abs_diff_kernelIfEvPT_S1_mPdS2_b
+    32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, used 1 barriers, 32 bytes cumulative stack size, 16 bytes smem, 393 bytes cmem[0]
+ptxas info    : Compile time = 7.724 ms
+ptxas info    : Compiling entry function '_Z25reference_abs_diff_kernelIN7cutlass6half_tEEvPT_S3_mPdS4_b' for 'sm_80'
+ptxas info    : Function properties for _Z25reference_abs_diff_kernelIN7cutlass6half_tEEvPT_S3_mPdS4_b
+    32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 32 registers, used 1 barriers, 32 bytes cumulative stack size, 16 bytes smem, 393 bytes cmem[0]
+ptxas info    : Compile time = 8.048 ms
+ptxas info    : Compiling entry function '_Z21fmha_reference_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEE13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_' for 'sm_80'
+ptxas info    : Function properties for _Z21fmha_reference_kernelILi2048ELi4EN4cute5tupleIJiiiiiEEENS0_6TensorINS0_10ViewEngineINS0_8gmem_ptrIPN7cutlass6half_tEEEEENS0_6LayoutINS1_IJiiNS1_IJiiEEEEEENS1_IJiNS0_1CILi1EEESC_EEEEEEESI_SI_SI_NS3_INS4_INS5_IPfEEEENSB_INS1_IJiSC_EEENS1_IJSF_SC_EEEEEEE13DefaultFusionEvT1_T2_T3_T4_T5_T6_T7_
+    16 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 38 registers, used 1 barriers, 16 bytes cumulative stack size, 569 bytes cmem[0], 8 bytes cmem[2]
+ptxas info    : Compile time = 66.394 ms
+ptxas info    : Compiling entry function '_Z13print_tensorsPPvi' for 'sm_80'
+ptxas info    : Function properties for _Z13print_tensorsPPvi
+    16 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 28 registers, used 0 barriers, 16 bytes cumulative stack size, 364 bytes cmem[0]
+ptxas info    : Compile time = 19.888 ms
+ptxas info    : Compiling entry function '_Z14print_dQ_dK_dVPvS_S_S_S_S_' for 'sm_80'
+ptxas info    : Function properties for _Z14print_dQ_dK_dVPvS_S_S_S_S_
+    16 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 24 registers, used 0 barriers, 16 bytes cumulative stack size, 400 bytes cmem[0]
+ptxas info    : Compile time = 15.321 ms
+ptxas info    : Compiling entry function '_Z15print_O_and_LSEPvS_S_S_' for 'sm_80'
+ptxas info    : Function properties for _Z15print_O_and_LSEPvS_S_S_
+    16 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 24 registers, used 0 barriers, 16 bytes cumulative stack size, 384 bytes cmem[0]
+ptxas info    : Compile time = 10.512 ms
+nvcc --generate-code=arch=compute_80,code=sm_80 -std=c++17 -O3 --ftemplate-backtrace-limit=0 --use_fast_math --resource-usage -lineinfo -DCUTLASS_DEBUG_TRACE_LEVEL=0 -DNDEBUG --expt-relaxed-constexpr  -o main main.o -lcuda
