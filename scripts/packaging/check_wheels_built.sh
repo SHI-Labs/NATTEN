@@ -17,8 +17,7 @@ check_one() {
   # Torch started supporting python 3.13 since ~2.5
   py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
 
-  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter=";")
-  torch_major=${torch_major/;/}
+  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
 
   if [[ $torch_major -lt 27 ]]; then
     echo "Only torch 2.7 and later are supported from now on."
@@ -42,11 +41,6 @@ check_one() {
 check_one cu129 2.8.0
 check_one cu128 2.8.0
 check_one cu126 2.8.0
-
-# Torch 2.7.X
-check_one cu128 2.7.0
-check_one cu126 2.7.0
-# check_one cu118 2.7.0
 
 WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING))
 
