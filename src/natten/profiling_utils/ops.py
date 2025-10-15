@@ -27,9 +27,22 @@ from torch.nn.attention import sdpa_kernel, SDPBackend
 
 from torch.nn.functional import scaled_dot_product_attention
 
+HAS_FLASH_ATTN = False
+try:
+    from flash_attn import flash_attn_func
+    HAS_FLASH_ATTN = True
+except ImportError:
+    from flash_attn_interface import flash_attn_func
+    HAS_FLASH_ATTN = True
 
-def sdpa(q: Tensor, k: Tensor, v: Tensor, backend: str) -> Tensor:
+def fmha(q: Tensor, k: Tensor, v: Tensor, backend: str) -> Tensor:
     backends = []
+
+    if backend == "fa":
+        if not HAS_FLASH_ATTN:
+            raise ValueError("Please install flash-attention before using `fa` backend.")
+
+        return flash_attn_func(q, k, v)
 
     if backend == "xformers":
         backends = [SDPBackend.EFFICIENT_ATTENTION]
