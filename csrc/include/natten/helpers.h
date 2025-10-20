@@ -404,48 +404,58 @@ inline void CheckLogSumExpHeadsFirst(
 inline void AssertDimsAre128BitAligned(
     const at::Tensor& query,
     const at::Tensor& value) {
-  auto head_dim = query.size(-1);
-  auto head_dim_value = value.size(-1);
+  int head_dim = static_cast<int>(query.size(-1));
+  int head_dim_value = static_cast<int>(value.size(-1));
+
   TORCH_CHECK(
       query.scalar_type() == value.scalar_type(),
-      "QKV must match in data type, got query.dtype=",
+      "Q, K, and V must match in data type, got query.dtype=",
       query.scalar_type(),
       ", but value.dtype=",
       value.scalar_type(),
       ".");
+
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat ||
           query.scalar_type() == torch::kFloat16 ||
-          query.scalar_type() == torch::kBFloat16,
-      "This NATTEN operation only supports FP32, FP16, and BF16 data types, got ",
+          query.scalar_type() == torch::kBFloat16 ||
+          query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+          query.scalar_type() == c10::ScalarType::Float8_e5m2,
+      "This NATTEN operation only supports FP32, FP16, BF16, and FP8 data types, got ",
       query.scalar_type(),
       ".");
 
+  int alignment;
   if (query.scalar_type() == torch::kFloat) {
-    TORCH_CHECK(
-        head_dim % 4 == 0,
-        "Query dimension must be a multiple of 4 for FP32 operands, got ",
-        head_dim,
-        ".");
-    TORCH_CHECK(
-        head_dim_value % 4 == 0,
-        "Value dimension must be a multiple of 4 for FP32 operands, got ",
-        head_dim_value,
-        ".");
+    alignment = 4;
   } else if (
       query.scalar_type() == torch::kFloat16 ||
       query.scalar_type() == torch::kBFloat16) {
-    TORCH_CHECK(
-        head_dim % 8 == 0,
-        "Query dimension must be a multiple of 8 for FP16/BF16 operands, got ",
-        head_dim,
-        ".");
-    TORCH_CHECK(
-        head_dim_value % 8 == 0,
-        "Value dimension must be a multiple of 8 for FP16/BF16 operands, got ",
-        head_dim_value,
-        ".");
+    alignment = 8;
+  } else if (
+      query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+      query.scalar_type() == c10::ScalarType::Float8_e5m2) {
+    alignment = 16;
+  } else {
+    TORCH_CHECK(false, "This should not have happened. Please open an issue.");
   }
+
+  TORCH_CHECK(
+      head_dim % alignment == 0,
+      "Query head dimension must be a multiple of ",
+      alignment,
+      " for this data type ",
+      "to meet the 128-bit alignment constraint, got  ",
+      head_dim,
+      ".");
+  TORCH_CHECK(
+      head_dim_value % alignment == 0,
+      "Value head dimension must be a multiple of ",
+      alignment,
+      " for this data type ",
+      "to meet the 128-bit alignment constraint, got  ",
+      head_dim_value,
+      ".");
 }
 
 } // namespace natten

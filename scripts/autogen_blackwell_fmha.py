@@ -122,6 +122,8 @@ class DataType:
 
 Half = DataType("cutlass::half_t", "float16", "torch::kFloat16", 16)
 BFloat = DataType("cutlass::bfloat16_t", "bfloat16", "torch::kBFloat16", 16)
+E4M3 = DataType("cutlass::float_e4m3_t", "e4m3", "c10::ScalarType::Float8_e4m3fn", 8)
+E5M2 = DataType("cutlass::float_e5m2_t", "e5m2", "c10::ScalarType::Float8_e5m2", 8)
 
 
 def iterable_to_static_cute_tuple(shape_in) -> str:
@@ -384,7 +386,8 @@ class TileSizeDispatcher:
         return dispatcher_str
 
 
-def write_header_file(content, path, namespaces, extra_includes=[]):
+def write_header_file(content, path, namespaces, extra_includes=None):
+    extra_includes = extra_includes or []
     header_head = [
         "#pragma once\n",
         "\n\n",
@@ -420,6 +423,8 @@ def generate_blackwell_fmha_kernels(path, num_splits=2):
     SUPPORTED_DTYPES = [
         Half,
         BFloat,
+        E4M3,
+        E5M2,
     ]
 
     HEAD_DIMS = [32, 64, 128]

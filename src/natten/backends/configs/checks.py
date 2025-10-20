@@ -31,6 +31,7 @@ from ..._libnatten import HAS_LIBNATTEN
 from ...context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
 from ...utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_checks
 from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
+from ...utils.dtype import is_fp8
 
 
 ### Blackwell FMHA/FNA
@@ -68,10 +69,10 @@ def can_run_cutlass_blackwell_fmha(
 
     device_cc = get_device_cc(query.device)
 
-    if device_cc != 100:
+    if device_cc not in [100, 103]:
         target_fn(
             "Can't run Blackwell FMHA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 100."
+            f"compute capability {device_cc}, expected 100 or 103."
         )
         return False
 
@@ -94,9 +95,22 @@ def can_run_cutlass_blackwell_fmha(
         )
         return False
 
-    if query.dtype not in [torch.float16, torch.bfloat16]:
+    if query.dtype not in [
+        torch.float16,
+        torch.bfloat16,
+        torch.float8_e4m3fn,
+        torch.float8_e5m2,
+    ]:
         target_fn(
-            "Can't run Blackwell FMHA; it only supports FP16 and BF16 for now.",
+            "Can't run Blackwell FMHA; it only supports FP16, BF16, FP8-E4M3 and FP8-E5M2.",
+            exception=ValueError,
+        )
+        return False
+
+    if query.requires_grad and is_fp8(query.dtype):
+        target_fn(
+            "Blackwell FMHA does not support FP8 backward pass, but "
+            f"got {query.requires_grad=}, {query.dtype=}.",
             exception=ValueError,
         )
         return False
@@ -144,10 +158,10 @@ def can_run_cutlass_blackwell_fna(
 
     device_cc = get_device_cc(query.device)
 
-    if device_cc != 100:
+    if device_cc not in [100, 103]:
         target_fn(
             "Can't run Blackwell FNA; tensor was on CUDA device with "
-            f"compute capability {device_cc}, expected 100."
+            f"compute capability {device_cc}, expected 100 or 103."
         )
         return False
 
@@ -170,9 +184,22 @@ def can_run_cutlass_blackwell_fna(
         )
         return False
 
-    if query.dtype not in [torch.float16, torch.bfloat16]:
+    if query.dtype not in [
+        torch.float16,
+        torch.bfloat16,
+        torch.float8_e4m3fn,
+        torch.float8_e5m2,
+    ]:
         target_fn(
-            "Can't run Blackwell FNA; it only supports FP16 and BF16 for now.",
+            "Can't run Blackwell FNA; it only supports FP16, BF16, FP8-E4M3 and FP8-E5M2.",
+            exception=ValueError,
+        )
+        return False
+
+    if query.requires_grad and is_fp8(query.dtype):
+        target_fn(
+            "Blackwell FNA does not support FP8 backward pass, but "
+            f"got {query.requires_grad=}, {query.dtype=}.",
             exception=ValueError,
         )
         return False

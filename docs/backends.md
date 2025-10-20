@@ -23,8 +23,8 @@ multiple architectures: SM50 (Maxwell), SM70 (Volta), SM75 (Turing), and SM80 (A
 You can use these kernels on any NVIDIA GPU with compute capability >= 5.0, and
 both for training and inference.
 
-Some newer architectures such as Hopper (SM90), and Blackwell (SM100) have much more performant
-dedicated kernels.
+Some newer architectures such as Hopper (SM90), and Blackwell DC-class (SM100, SM103) have much
+more performant dedicated kernels.
 
 This implementation fuses multi-dimensional tiling directly into the kernel, but at the same time
 may suffer from additional overhead of software predication.

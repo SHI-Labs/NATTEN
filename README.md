@@ -19,8 +19,8 @@ We provide Fused Multi-Headed Attention (FMHA) and
 [Fused Neighborhood Attention (FNA)](https://arxiv.org/abs/2403.04690)
 training and inference kernels, for all NVIDIA architectures since Maxwell (SM50).
 We also ship
-[Hopper (SM90) and Blackwell (SM100)](https://arxiv.org/abs/2504.16922) native kernels, offering
-speedups proportional to reduction in FLOPs over cuDNN and Flash Attention 3.
+[Hopper (SM90) and Blackwell (SM100, SM103)](https://arxiv.org/abs/2504.16922) native kernels,
+offering speedups proportional to reduction in FLOPs over cuDNN and Flash Attention 3.
 
 Neighborhood Attention introduces locality and sparsity into self attention in a manner similar to
 convolution.

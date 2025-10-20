@@ -32,7 +32,11 @@ _IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
 _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
 
-_IS_TORCH_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70
+# NOTE: Triton does not recognize SM103 yet.
+# TODO: remove the extra condition once Triton adds SM103 support.
+_IS_TORCH_COMPILE_SUPPORTED = (
+    _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70 and get_device_cc() not in [103]
+)
 
 
 def parse_env_flag(env_var: str, default: bool) -> bool:
