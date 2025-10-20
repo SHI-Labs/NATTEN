@@ -34,8 +34,6 @@ keywords = [
 ]
 
 dependencies = [
-    "numpy>=2.0.2",
-    "pytest>=8.4.1",
     "torch>=2.8.0",
 ]
 
@@ -81,10 +79,9 @@ dev = [
     "tqdm>=4.67.1",
     "twine>=6.1.0",
     "ufmt>=2.3.0",
+    "numpy>=2.0.2",
+    "pytest>=8.4.1",
 ]
-
-[tool.uv]
-dev-dependencies = []
 
 [tool.ruff]
 exclude = [

@@ -23,15 +23,16 @@
 #################################################################################################
 
 import filecmp
+import glob
 import multiprocessing
 import os
 import shutil
 import subprocess
 import sys
-from tempfile import TemporaryDirectory
 from os import path
 from pathlib import Path
-from typing import Any, List
+from tempfile import TemporaryDirectory
+from typing import Any, List, Optional
 
 import torch
 from setuptools import Extension, setup  # type: ignore
@@ -56,10 +57,13 @@ WINDOWS_EXPERIMENTAL : bool = True
 ################################################################################
 DEFAULT_N_WORKERS : int = max(1, (multiprocessing.cpu_count() // 4))
 
+# Temp building dir. We could clean this up with a context manager.
+# Not called until BuildExtension
 tmp_dir = TemporaryDirectory()
 env = {
     "AUTOGEN_POLICY": os.getenv("NATTEN_AUTOGEN_POLICY", "default"),
     "BUILD_DIR": os.getenv("NATTEN_BUILD_DIR", tmp_dir.name),
+    "CMAKE_CUDA_FLAGS": os.getenv("CMAKE_CUDA_FLAGS", None),
     "CUDA_ARCH": os.getenv("NATTEN_CUDA_ARCH", None),
     "DISABLE_LIBNATTEN": os.environ.__contains__("DISABLE_LIBNATTEN"),
     "HAS_CUDA_ARCH": False,
@@ -80,9 +84,7 @@ def verify_env(env : dict) -> dict:
         env['AUTOGEN_POLICY'] = "default"
 
     if not os.path.isdir(env['BUILD_DIR']):
-        raise NotADirectoryError(
-            f"Please specify a valid build directory. Got {env['BUILD_DIR']}"
-        )
+        os.makedirs(env['BUILD_DIR'])
 
     try:
         env['LONG_DESC'] = env['CWD'].joinpath("docs/README_pypi.md").read_text()
@@ -90,7 +92,7 @@ def verify_env(env : dict) -> dict:
         env['LONG_DESC'] = "Neighborhood Attention Extension."
 
     #if env['OS_TYPE'] == "Windows" and _CUDA_VERSION >= MIN_WINDOWS_CUDA_VERSION:
-    if os_type == 'win32' and WINDOWS_EXPERIMENTAL:
+    if env['OS_TYPE'] == 'win32' and WINDOWS_EXPERIMENTAL:
         #TODO: If becomes version specific then change print statement
         print(
             "WARNING: NATTEN builds for Windows are currently experimental. "
@@ -99,7 +101,7 @@ def verify_env(env : dict) -> dict:
             "for more details."
         )
 
-    if env['TORCH_VER'] >= MIN_TORCH_VERSION:
+    if env['TORCH_VER'] < MIN_TORCH_VERSION:
         raise ValueError(
             f"NATTEN only supports PyTorch >= {MIN_TORCH_VERSION}, "
             f"detected {env['TORCH_VER']}"
@@ -110,20 +112,20 @@ def verify_env(env : dict) -> dict:
 
     return env
 
-env = verify_env(env['""'])
+env = verify_env(env)
 
 ################################################################################
 ############################### Autogen Policies ###############################
 ################################################################################
-# Let's increase flexibility and readability here and not hard code. 
+# Let's increase flexibility and readability here and not hard code.
 #
 # Current policies are just scales of a subset of keys in the default policy.
 # Writing this way we'll make clear which keys are being tuned as well as make
-# this easier to provide different scaling factors. 
+# this easier to provide different scaling factors.
 # We may wish to extend _tune_ag_policy to incorporate excluding specific keys.
 # Worst case we can hard code the union.
 # Note: Union operator means last key wins.
-_tune_ag_policy(policy: dict, scale : float) -> dict:
+def _tune_ag_policy(policy: dict, scale : float) -> dict:
     for key in policy:
         policy[key] = int(policy[key] * scale)
     return policy
@@ -165,7 +167,7 @@ AG_CATEGORIES = {
     "fmha": ("autogen_fmha.py", "fmha"),
 }
 
-_category_generator(arch: str) -> dict:
+def _category_generator(arch: str) -> dict:
     _arch_dict = {}
     for x in ["fna", "fmha"]:
         _arch_dict |= {
@@ -176,13 +178,15 @@ _category_generator(arch: str) -> dict:
 
 
 
+##################
 # Helper functions
+##################
 def _get_torch_cuda_version() -> float:
     _version = None
     try:
         _version = float(".".join(torch.version.cuda.split(".")[:2]))
-    except:
-        raise ValueError(
+    except exception as e:
+        raise ValueError from e(
             "Could not get valid CUDA version from PyTorch "
             f"({torch.version.cuda=}"
         )
@@ -196,7 +200,7 @@ def autodetect_cuda() -> str:
                 "detected a PyTorch build with CUDA."
                 "This likely means you did not build the submodules correctly. "
                 "Please run `git submodule update --init --recursive` and try "
-                "again. " 
+                "again. "
                 "If you wish to continue without CUDA support then please set "
                 "environment variable DISABLE_LIBNATTEN before trying again."
             )
@@ -212,7 +216,7 @@ def autodetect_cuda() -> str:
     # Check for major and minor versions only
     #_TORCH_CUDA_VERSION = float(".".join(torch.version.cuda.split(".")[:2]))
     _TORCH_CUDA_VERSION = _get_torch_cuda_version()
-    if _TORCH_CUDA_VERSION >= MIN_CUDA_VERSION:
+    if _TORCH_CUDA_VERSION < MIN_CUDA_VERSION:
         raise ValueError(
             f"NATTEN only supports CUDA {MIN_CUDA_VERSION} and above "
             f"(you have {_TORCH_CUDA_VERSION})"
@@ -223,38 +227,21 @@ def autodetect_cuda() -> str:
 
     return str(_CUDA_ARCH)
 
-# Try to autodetect CUDA if user hasn't specified.
-_autodetect_cuda = \
-        env['CUDA_ARCH'] is None \
-        and env['TORCH_HAS_CUDA'] \
-        and not env['DISABLE_LIBNATTEN']
-
-if _autodetect_cuda:
-    env['CUDA_ARCH'] = autodetect_cuda(env['CUDA_ARCH'])
-else:
-    print(
-        "Building without CUDA support (libnatten). Either DISABLE_LIBNATTEN "
-        "was net (DISABLE_LIBNATTEN={env['DISABLE_LIBNATTEN']}) or we could not "
-        "detect a PyTorch build with CUDA ({torch.cuda.is_available()=}"
-    )
-    env['DISABLE_LIBNATTEN'] = True
-
-print(f"Building using {env['N_WORKERS']} threads")
 
 def set_natten_version(
         is_building_dist: bool,
         torch_has_cuda: bool,
         torch_version : float,
         torch_cu_tag: str,
-        cwd: str,
+        cwd: os.Path,
     ) -> str:
 
-    version_file = path.join( 
+    version_file = path.join(
         cwd, "src/natten/version.py"
     )
 
     with open(version_file, 'r') as _vfile:
-        for line in f:
+        for line in _vfile:
             if line.startswith("__version__"):
                 _version = line.split("=")[1].strip().strip('"')
                 break
@@ -269,28 +256,18 @@ def set_natten_version(
 
     return _version
 
-natten_version = set_natten_version(*list(map(env.get, ["NATTEN_IS_BUILDING_DIST",
-                                                        "TORCH_HAS_CUDA",
-                                                        "TORCH_VER",
-                                                        "TORCH_CUDA_TAG",
-                                                        "CWD",
-                                                        ]
-                                              )
-                                          )
-                 )
-        
+
 def _check_cuda_arch(arch: str|int|float) -> int:
-    try:
-        arch = float(arch)
-        arch = arch * 10
-        if arch < MIN_SM:
-            raise ValueError(
-                f"Only SM{MIN_SM} and above are currently supported. Detected SM{arch}"
-            )
-        return int(arch)
+    arch = float(arch)
+    arch = arch * 10
+    if arch < MIN_SM:
+        raise ValueError(
+            f"Only SM{MIN_SM} and above are currently supported. Detected SM{arch}"
+        )
+    return int(arch)
+
 
 def get_cuda_arch_list(cuda_arch_list : str,
-                       env: dict,
     ) -> List[int]:
 
     delimiter = ";"
@@ -305,16 +282,42 @@ def get_cuda_arch_list(cuda_arch_list : str,
 def _arch_list_to_cmake_tags(arch_list: List[int]) -> str:
     return (
         "-real;".join(
-            [str(x) if x in SUPPORTED_GPU_ARCH else f"{x}a" for x in arch_list]
+            [str(x) if x not in SUPPORTED_GPU_ARCH else f"{x}a" for x in arch_list]
         ) + "-real"
     )
 
 def autogen_directories_match(dir1 : str, dir2: str) -> bool:
-    # TODO: There is definitely a better way
-    pass
+    """
+    Compare two directories recursively, ignoring hidden files.
+    Only compares files with .cu, .cpp, .h, .hpp, .cuh extensions.
+
+    Used for skipping redundant autogen writes that can mislead cmake into recompiling things.
+    """
+    extns = (".cpp", ".h", ".hpp", ".cu", ".cuh")
+    # Get files with extension but remove leading directory name
+    def strip_glob(_dir, extn):
+        return [str(Path(p).relative_to(_dir))
+                for p in glob.glob(f"{_dir}/**/*.{extn}",
+                                   recursive=True
+                          )
+                ]
+    # Iterate over all extensions
+    for extn in extns:
+        # Find files in dir1 and dir2 with extensions
+        d1_files = strip_glob(dir1, extn)
+        d2_files = strip_glob(dir2, extn)
+        # If the list of files are different then we'll rebuild
+        if d1_files != d2_files:
+            return False
+        # If list of files are the same, check if they are identical
+        for f1 in d1_files:
+            if not filecmp.cmp(f"{dir1}/{f1}", f"{dir2}/{f1}"):
+                return False
+    # Directories are identical
+    return True
 
 def autogen_kernel_instantiations(
-        cwd : std,
+        this_dir: str,
         autogen_dir : str,
         script_dir : str,
         policy : str,
@@ -327,22 +330,21 @@ def autogen_kernel_instantiations(
             "The requested autogen policy cannot be found. "
             f"Got '{policy}' but expected one of {list(AG_POLICIES.keys())}"
         )
+
     if not os.path.isdir(script_dir):
         raise NotADirectoryError(
             f"Script directory {script_dir} does not exist or is not a directory."
         )
+
     _split_policies = AG_POLICIES[policy]
+    # Generate the categories for each of the architectures
     for arch in cuda_arch_list:
         if arch in CAT2ARCH.keys():
-            _categories |= _category_generator(arch))
-        else:
-            raise ValueError(
-                f"Tried to create category for SM{arch} but this is not allowed. "
-                f"Supported architectures are {SUPPORTED_GPU_ARCH}"
-            )
+            _categories |= _category_generator(CAT2ARCH[arch])
 
-    with TemporaryDirectory() as autogen_dir:
-        tmp_dir = path.join(autogen_dir, "csrc")
+    # Build into a temporary directory then we'll move over
+    with TemporaryDirectory() as _autogen_dir:
+        _tmp_dir = path.join(_autogen_dir, "csrc")
 
         for cat, (script, out_dir) in _categories.items():
             if cat not in _split_policies:
@@ -351,37 +353,39 @@ def autogen_kernel_instantiations(
                 )
             script_path = path.join(script_dir, script)
             if not path.isfile(script_path):
-                raise NotAFileError(
+                raise FileNotFoundError(
                     f"Expected to find autogen script {script} under "
-                    f"{scripts_dir}, but {script_path} does not exist. "
+                    f"{script_dir}, but {script_path} does not exist. "
                     "Please raise an issue if you didn't change anything."
                 )
-            print(f"Stamping out {cat} kernels")
 
             subprocess.check_call(
-                    [
-                        "python",
-                        script_path,
-                        "--num-splits",
-                        str(_split_policies[cat]),
-                        "-o",
-                        tmp_dir,
-                    ],
-                    cwd=cwd,
+                [
+                    "python",
+                    script_path,
+                    "--num-splits",
+                    str(_split_policies[cat]),
+                    "-o",
+                    _tmp_dir,
+                ],
+                #cwd=path.dirname(path.abspath(__file__)),
+                cwd=this_dir,
             )
 
-            tgt_include_dir = path.join(
-                tmp_dir, f"autogen/include/natten_autogen/cuda/{out_dir}"
+            # Temporary directories
+            tgt_inc_dir = path.join(
+                _tmp_dir, "autogen/include/natten_autogen/cuda", out_dir
             )
             tgt_src_dir = path.join(
-                target_include_dir, f"autogen/src/cuda/{out_dir}"
+                _tmp_dir, "autogen/src/cuda", out_dir
             )
 
-            cur_inc_dir = path.join(
-                autogen_dir, f"include/natten_autogen/cuda/{out_dir}"
-            )
+            # Final destination
             cur_src_dir = path.join(
-                autogen_dir, f"src/cuda/{out_dir}"
+                autogen_dir, "src/cuda", out_dir
+            )
+            cur_inc_dir = path.join(
+                autogen_dir, "include/natten_autogen/cuda", out_dir
             )
 
             for cur, tgt in zip([cur_inc_dir, cur_src_dir], [tgt_inc_dir, tgt_src_dir]):
@@ -389,18 +393,21 @@ def autogen_kernel_instantiations(
                     raise NotADirectoryError(
                         f"Autogen for {cat} failed: {tgt} is not a directory"
                     )
+
                 if not path.isdir(cur):
                     print(
                         f" -- {cat} did not have previously generated targets; "
                         "directly copying"
                     )
                     shutil.move(tgt, cur)
+                    continue
 
                 if autogen_directories_match(cur, tgt):
                     print(
-                        f" -- autogen targets for {cat} are unchanged; "
+                        f"\n\t\t -- autogen targets for {cat} are unchanged; "
                         "skipping..."
                     )
+                    continue
 
                 print(
                     f" -- autogen targets for {cat} are different; "
@@ -410,42 +417,56 @@ def autogen_kernel_instantiations(
                 shutil.rmtree(cur)
                 shutil.move(tgt, cur)
 
+# Try to autodetect CUDA if user hasn't specified.
+_autodetect_cuda = \
+        env['CUDA_ARCH'] is None \
+        and env['TORCH_HAS_CUDA'] \
+        and not env['DISABLE_LIBNATTEN']
+
+if _autodetect_cuda:
+    env['CUDA_ARCH'] = autodetect_cuda()
+else:
+    print(
+        "Building without CUDA support (libnatten). Either DISABLE_LIBNATTEN "
+        f"was net (DISABLE_LIBNATTEN={env['DISABLE_LIBNATTEN']}) or we could not "
+        f"detect a PyTorch build with CUDA ({torch.cuda.is_available()=}"
+    )
+    env['DISABLE_LIBNATTEN'] = True
+
+natten_version = set_natten_version(
+    *list(map(env.get, ["NATTEN_IS_BUILDING_DIST",
+                        "TORCH_HAS_CUDA",
+                        "TORCH_VER",
+                        "TORCH_CUDA_TAG",
+                        "CWD",
+                       ]
+             )
+         )
+    )
+
 
 class BuildExtension(build_ext):
-    def build_extension(
-        self,
-        ext,
-        CUDA_ARCH : str|float,
-        AUTOGEN_POLICY : str,
-        DISABLE_LIBNATTEN : bool = False,
-        CWD : str = '.',
-        NATTEN_BUILD_DIR : Optional[str] = None,
-        N_WORKERS : int = 1,
-        IS_LIBTORCH_BUILT_WITH_CXX11_ABI : bool = False,
-        OS_TYPE : Optional[str] = None,
-        VERBOSE : bool = False,
-        NATTEN_IS_BUILDING_DIST : bool = False,
-    ) -> None:
-        if not DISABLE_LIBNATTEN:
-            print("Preparing to build LIBNATTEN")
-            cmake_dir = path.join(CWD, "csrc")
+    def build_extension(self, ext):
+        if not env['DISABLE_LIBNATTEN']:
+            this_dir = path.dirname(path.abspath(__file__))
+            cmake_dir = path.join(this_dir, "csrc")
             autogen_dir = path.join(cmake_dir, "autogen")
-            script_dir = path.join(CWD, "scripts")
+            script_dir = path.join(this_dir, "scripts")
+            os.makedirs(cmake_dir, exist_ok=True)
+            os.makedirs(autogen_dir, exist_ok=True)
 
-            if NATTEN_BUILD_DIR is not None:
-                build_dir = NATTEN_BUILD_DIR
+            if env['BUILD_DIR'] is not None:
+                build_dir = env['BUILD_DIR']
             else:
                 build_dir = self.build_lib
 
-            if not os.path.exists(build_dir):
-                os.mkdirs(build_dir)
+            os.makedirs(build_dir, exist_ok=True)
 
-            if not os.path.exists(build_lib):
-                os.mkdirs(build_lib)
+            # Why do these exist?
+            os.makedirs(self.build_lib, exist_ok=True)
 
-            try: 
-                subprocess.check_output(["cmake", "--version"])
-            except OSError as e:
+            cmv = os.system('cmake --version | head -n1')
+            if cmv != 0:
                 raise RuntimeError(
                     "Could not find a CMake executable. Possibly you do not "
                     "have cmake installed or it is not part of the current "
@@ -454,51 +475,48 @@ class BuildExtension(build_ext):
                 )
 
             # i.e. libnatten.cpython-VERSION-ARCH-OS.so
+            #   output_so_name = output_bin_name[:-(len(LIB_EXT))]
             output_bin_name = self.get_ext_filename(ext.name)
 
             max_sm = 0
             cuda_arch_list = []
             cuda_arch_list_str = ""
 
-            cuda_arch_list = get_cuda_arch_list(CUDA_ARCH)
-            cuda_arch_list_str = arch_list_to_cmake_tags(cuda_arch_list)
+            cuda_arch_list = get_cuda_arch_list(env['CUDA_ARCH'])
+            cuda_arch_list_str = _arch_list_to_cmake_tags(cuda_arch_list)
             max_sm = max(cuda_arch_list)
             # We shouldn't need to check max version again because this should
             # have been done through get_cuda_arch_list
 
             # Autogen kernel inistantiations
-            print("Auto-generating Kernel Instantiations")
             autogen_kernel_instantiations(
-                cwd = CWD,
+                this_dir = this_dir,
                 autogen_dir = autogen_dir,
                 script_dir = script_dir,
-                policy = AUTOGEN_POLICY,
+                policy = env['AUTOGEN_POLICY'],
                 cuda_arch_list = cuda_arch_list,
+                _categories = AG_CATEGORIES
             )
 
             # Cmake
-            print(
-                f"Building NATTEN for CUDA architectures: {cuda_arch_list} "
-                f"(max: {max_sm})"
-            )
-            print(f"Building with {N_WORKERS} workers.")
-            print(f"Building directory: {build_dir}")
-            print(f"{IS_LIBTORCH_BUILT_WITH_CXX11_ABI=}")
-
             cmake_args = [
                 f"-DPYTHON_PATH={sys.executable}",
-                f"-DOUTPUT_FILE_NAME={output_so_name}",
+                f"-DOUTPUT_FILE_NAME={output_bin_name[:-(len(LIB_EXT))]}",
                 f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list_str}",
-                f"-DNATTEN_IS_WINDOWS={int(OS_TYPE == 'win32')}",
-                f"-DIS_LIBTORCH_BUILT_WITH_CXX11_ABI={int(IS_LIBTORCH_BUILT_WITH_CXX11_ABI)}",
+                f"-DNATTEN_IS_WINDOWS={int(env['OS_TYPE'] == 'win32')}",
+                f"-DIS_LIBTORCH_BUILT_WITH_CXX11_ABI={int(env['IS_LIBTORCH_BUILT_WITH_CXX11_ABI'])}",
+                #f"-DCMAKE_CUDA_FLAGS='-Wno-deprecated-declarations'",
             ]
+            if env['CMAKE_CUDA_FLAGS'] is not None:
+                cmake_args.append(f"-DCMAKE_CUDA_FLAGS='{env['CMAKE_CUDA_FLAGS']}'")
 
             # If we have GPU specific optimizations let's enable them
             for arch in cuda_arch_list:
                 if arch in CAT2ARCH.keys():
+                    print(f"Found {arch=} so -DNATTEN_WITH_{CAT2ARCH[arch].upper()}_FNA=1")
                     cmake_args.append(f"-DNATTEN_WITH_{CAT2ARCH[arch].upper()}_FNA=1")
 
-            if OS_TYPE == 'win32':
+            if env['OS_TYPE'] == 'win32':
                 python_path = sys.executable
                 if "python.exe" not in python_path:
                     raise FileNotFoundError(
@@ -514,37 +532,36 @@ class BuildExtension(build_ext):
                                         os.path.dirname(output_bin_name)
             )
             so_path_local = f"{build_dir}/{output_bin_name}"
-            if not os.path.exists(so_path_local):
-                os.mkdirs(so_path_local)
+            os.makedirs(so_dir_local, exist_ok=True)
 
             so_dir_final = os.path.join(self.build_lib,
                                         os.path.dirname(output_bin_name)
             )
             so_path_final = f"{self.build_lib}/{output_bin_name}"
-            if not os.path.exists(so_path_final):
-                os.mkdirs(so_path_final)
+            os.makedirs(so_dir_final, exist_ok=True)
 
             # Configure and build extension
             subprocess.check_call(
-                ["cmake", cmake_lists_dir] + cmake_args, cwd=build_dir
+                ["cmake", cmake_dir] + cmake_args, cwd=build_dir
             )
-            # Use fstrings to mate keys and values
             cmake_build_args = [
-                f"--build {build_dir}",
-                f"-j {N_WORKERS}",
+                "--build", build_dir,
+                "-j", str(env['N_WORKERS']),
             ]
 
-            if VERBOSE:
+            if env['VERBOSE']:
                 cmake_build_args.append("--verbose")
             subprocess.check_call(["cmake", *cmake_build_args])
 
             if not os.path.isfile(so_path_local):
                 raise FileNotFoundError(
                     f"Expected libnatten binary to be located in {so_path_local}"
+                    f" ({os.listdir(path.dirname(so_path_local))=})"
                 )
 
             if build_dir != self.build_lib:
                 shutil.copy(so_path_local, so_path_final)
+
             if not os.path.isfile(so_path_final):
                 raise FileNotFoundError(
                     f"Cannot find {so_path_final}"
@@ -552,7 +569,7 @@ class BuildExtension(build_ext):
 
             # Cleanup cmake when building distribution
             #   Files packaged within wheel
-            if NATTEN_IS_BUILDING_DIST:
+            if env['NATTEN_IS_BUILDING_DIST']:
                 for file in os.listdir(build_dir):
                     fn = os.path.join(build_dir, file)
                     if os.path.isfile(fn):
@@ -563,11 +580,11 @@ class BuildExtension(build_ext):
 
 setup(
     name="natten",
-    version=get_version(),
+    version=natten_version,
     author="Ali Hassani",
     url="https://natten.org",
     description="Neighborhood Attention Extension.",
-    long_description=long_description,
+    long_description=env['LONG_DESC'],
     long_description_content_type="text/markdown",
     package_dir={"": "src"},
     packages=[
@@ -589,6 +606,6 @@ setup(
         "torch",
     ],
     extras_require={},
-    ext_modules=[Extension("natten.libnatten", [])] if BUILD_WITH_CUDA else [],
-    cmdclass={"build_ext": BuildExtension} if BUILD_WITH_CUDA else {},
+    ext_modules=[Extension("natten.libnatten", [])],# if BUILD_WITH_CUDA else [],
+    cmdclass={"build_ext": BuildExtension},# if BUILD_WITH_CUDA else {},
 )
