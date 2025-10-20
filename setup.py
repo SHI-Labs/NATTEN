@@ -428,7 +428,7 @@ if _autodetect_cuda:
 else:
     print(
         "Building without CUDA support (libnatten). Either DISABLE_LIBNATTEN "
-        f"was net (DISABLE_LIBNATTEN={env['DISABLE_LIBNATTEN']}) or we could not "
+        f"was set (DISABLE_LIBNATTEN={env['DISABLE_LIBNATTEN']}) or we could not "
         f"detect a PyTorch build with CUDA ({torch.cuda.is_available()=}"
     )
     env['DISABLE_LIBNATTEN'] = True
@@ -606,6 +606,6 @@ setup(
         "torch",
     ],
     extras_require={},
-    ext_modules=[Extension("natten.libnatten", [])],# if BUILD_WITH_CUDA else [],
-    cmdclass={"build_ext": BuildExtension},# if BUILD_WITH_CUDA else {},
+    ext_modules=[Extension("natten.libnatten", [])] if not env['DISABLE_LIBNATTEN'] else [],
+    cmdclass={"build_ext": BuildExtension} if not env['DISABLE_LIBNATTEN'] else {},
 )
