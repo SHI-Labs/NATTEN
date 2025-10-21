@@ -35,6 +35,7 @@ check_one() {
   fi
 
   py_versions=(3.9 3.10 3.11 3.12)
+  SUPPORTED_ARCHES=("x86-64")
 
   natten_minor=$(echo $NATTEN_VERSION | cut -d "." -f 2,3  --output-delimiter="")
   torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
@@ -48,6 +49,10 @@ check_one() {
     # Torch started supporting python 3.13 since ~2.5
     # We are building wheels for 3.13 starting 0.21.1
     py_versions=(3.13 3.13t)
+
+    # Torch also started shipping arm builds since 2.8.
+    # NATTEN started since 0.21.1
+    SUPPORTED_ARCHES+=("aarch64")
   fi
 
   for py in "${py_versions[@]}"; do
@@ -55,27 +60,29 @@ check_one() {
 
     NATTEN_VERSION_WITH_TORCH_TAG="${NATTEN_VERSION}+${torch_build}"
 
-    EXPECTED_WHL_LINK=$(gen_whl_link $URL_PREFIX $NATTEN_VERSION $NATTEN_VERSION_WITH_TORCH_TAG $python_tag)
+    for arch_tag in "${SUPPORTED_ARCHES[@]}";do
+      EXPECTED_WHL_LINK=$(gen_whl_link $URL_PREFIX $NATTEN_VERSION $NATTEN_VERSION_WITH_TORCH_TAG $python_tag $arch_tag)
 
-    WHL_FILENAME=$(gen_whl_filename $NATTEN_VERSION_WITH_TORCH_TAG $python_tag)
-    ROOT_WHL_FILENAME="${cu}/torch${pytorch_ver}/$WHL_FILENAME"
-    CTK_WHL_FILENAME="torch${pytorch_ver}/$WHL_FILENAME"
+      WHL_FILENAME=$(gen_whl_filename $NATTEN_VERSION_WITH_TORCH_TAG $python_tag $arch_tag)
+      ROOT_WHL_FILENAME="${cu}/torch${pytorch_ver}/$WHL_FILENAME"
+      CTK_WHL_FILENAME="torch${pytorch_ver}/$WHL_FILENAME"
 
-    if curl --head --silent --fail $EXPECTED_WHL_LINK 2> /dev/null 1> /dev/null; then
-      echo "[CHECK] $EXPECTED_WHL_LINK"
-    else
-      echo "[NOT FOUND] $EXPECTED_WHL_LINK"
-      exit 1
-    fi
+      if curl --head --silent --fail $EXPECTED_WHL_LINK 2> /dev/null 1> /dev/null; then
+        echo "[CHECK] $EXPECTED_WHL_LINK"
+      else
+        echo "[NOT FOUND] $EXPECTED_WHL_LINK"
+        exit 1
+      fi
 
-    # Add link to HTML
-    TORCH_LINK="<a href=\"${EXPECTED_WHL_LINK/+/%2B}\">$WHL_FILENAME</a><br>"
-    CTK_LINK="<a href=\"${EXPECTED_WHL_LINK/+/%2B}\">$CTK_WHL_FILENAME</a><br>"
-    ROOT_LINK="<a href=\"${EXPECTED_WHL_LINK/+/%2B}\">$ROOT_WHL_FILENAME</a><br>"
+      # Add link to HTML
+      TORCH_LINK="<a href=\"${EXPECTED_WHL_LINK/+/%2B}\">$WHL_FILENAME</a><br>"
+      CTK_LINK="<a href=\"${EXPECTED_WHL_LINK/+/%2B}\">$CTK_WHL_FILENAME</a><br>"
+      ROOT_LINK="<a href=\"${EXPECTED_WHL_LINK/+/%2B}\">$ROOT_WHL_FILENAME</a><br>"
 
-    TORCH_VER_WHEEL_DICT[$TORCH_VER_WHEEL_DICT_KEY]+="$TORCH_LINK"
-    CTK_VER_WHEEL_DICT[$cu]+="$CTK_LINK"
-    ROOT_WHEEL_LIST+="$ROOT_LINK"
+      TORCH_VER_WHEEL_DICT[$TORCH_VER_WHEEL_DICT_KEY]+="$TORCH_LINK"
+      CTK_VER_WHEEL_DICT[$cu]+="$CTK_LINK"
+      ROOT_WHEEL_LIST+="$ROOT_LINK"
+    done
 
   done
 }

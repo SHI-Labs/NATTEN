@@ -4,8 +4,9 @@
 gen_whl_filename() {
   NATTEN_VERSION_WITH_TORCH_TAG=$1
   PY=$2
+  ARCH_TAG=$3
 
-  echo "natten-${NATTEN_VERSION_WITH_TORCH_TAG}-${PY}-linux_x86_64.whl"
+  echo "natten-${NATTEN_VERSION_WITH_TORCH_TAG}-${PY}-linux_$ARCH_TAG.whl"
 }
 
 gen_whl_link() {
@@ -13,9 +14,10 @@ gen_whl_link() {
   NATTEN_VERSION=$2
   NATTEN_VERSION_WITH_TORCH_TAG=$3
   PY=$4
+  ARCH_TAG=$5
 
   WHL_PATH="v${NATTEN_VERSION}/"
-  WHL_FILENAME=$(gen_whl_filename $NATTEN_VERSION_WITH_TORCH_TAG $PY)
+  WHL_FILENAME=$(gen_whl_filename $NATTEN_VERSION_WITH_TORCH_TAG $PY $ARCH_TAG)
 
   echo "${PREFIX}${WHL_PATH}${WHL_FILENAME}"
 }

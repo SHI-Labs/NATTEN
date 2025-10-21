@@ -32,6 +32,10 @@ build_one() {
   # We are building wheels for 3.13 starting 0.21.1
   py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
 
+  # Torch also started shipping arm builds since 2.8.
+  # NATTEN started since 0.21.1
+  SUPPORTED_ARCHES=("linux/amd64" "linux/arm64")
+
   # NOTE: I can't surpress the warning from sub
   # when --output-delimiter is "", and I'm not
   # spending more time on this.
@@ -43,23 +47,26 @@ build_one() {
   fi
 
   for py in "${py_versions[@]}"; do
-    container_name_="${container_name}_${py}"
+    for arch_tag in "${SUPPORTED_ARCHES[@]}";do
+      container_name_="${container_name}_${py}_${arch_tag}"
 
-    docker run -itd --rm \
-      --gpus=all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
-      --name "$container_name_" \
-      --mount type=bind,source="$(pwd)",target=/natten \
-      $image_name
-    cat <<EOF | docker exec -i $container_name_ sh
-      export CU_VERSION=$cu PYTHON_VERSION=$py
-      export PYTORCH_VERSION=$pytorch_ver
-      export OUTPUT_DIR=/natten
-      cp -r /natten /natten-build
-      cd /natten-build && 
-      make clean &&
-      ./scripts/packaging/build_wheel.sh
+      docker run -itd --rm \
+        --platform $arch_tag \
+        --gpus=all --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+        --name "$container_name_" \
+        --mount type=bind,source="$(pwd)",target=/natten \
+        $image_name
+      cat <<EOF | docker exec -i $container_name_ sh
+        export CU_VERSION=$cu PYTHON_VERSION=$py
+        export PYTORCH_VERSION=$pytorch_ver
+        export OUTPUT_DIR=/natten
+        cp -r /natten /natten-build
+        cd /natten-build && 
+        make clean &&
+        ./scripts/packaging/build_wheel.sh
 EOF
-    docker container stop $container_name_
+      docker container stop $container_name_
+    done
   done
 }
 

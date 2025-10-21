@@ -17,6 +17,7 @@
   * Add python 3.13 (and 3.13t) to list of release targets.
   * Add torch 2.8.X (CTK 12.6, 12.8, 12.9) to list of release targets.
   * Add torch 2.9.X (CTK 12.6, 12.8, 13.0) to list of release targets.
+  * Add arm builds to release targets.
   * Doc fixes here and there
   * Dockerfile version fix (was targeting 0.20.1 instead of 0.21)
   * Cleans up LICENSE and moves attributions to third party software to a separate NOTICE file. Their licenses are already included in the relevant files and ship with natten.

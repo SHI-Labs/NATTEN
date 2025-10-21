@@ -26,14 +26,16 @@ check_one() {
 
   for py in "${py_versions[@]}"; do
     python_tag="cp${py//./}-cp${py//./}"
-    WHEEL_FILE="wheels/${cu}/torch${pytorch_ver}/natten-${NATTEN_VERSION}+${torch_build}-${python_tag}-linux_x86_64.whl"
-    if [ -f $WHEEL_FILE ]; then
-      echo "[x] Wheel found for v${NATTEN_VERSION} with ${torch_build} for Python $py."
-      WHEELS_FOUND=$((WHEELS_FOUND+1))
-    else
-      echo "[ ] Wheel MISSING for v${NATTEN_VERSION} with ${torch_build} for Python $py."
-      WHEELS_MISSING=$((WHEELS_MISSING+1))
-    fi
+    for arch_tag in "x86_64" "aarch64";do
+      WHEEL_FILE="wheels/${cu}/torch${pytorch_ver}/natten-${NATTEN_VERSION}+${torch_build}-${python_tag}-linux_${arch_tag}.whl"
+      if [ -f $WHEEL_FILE ]; then
+        echo "[x] Wheel found for v${NATTEN_VERSION} with ${torch_build} for Python $py."
+        WHEELS_FOUND=$((WHEELS_FOUND+1))
+      else
+        echo "[ ] Wheel MISSING for v${NATTEN_VERSION} with ${torch_build} for Python $py."
+        WHEELS_MISSING=$((WHEELS_MISSING+1))
+      fi
+    done
   done
 }
 
