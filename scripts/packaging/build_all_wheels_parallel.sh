@@ -75,7 +75,9 @@ else
   # We don't need to build for every minor torch release; they're usually
   # compatible in their python API and ABIs.
 
-  # We're only building for the most recent stable torch release starting 0.21.1.
+  build_one_and_capture_output cuda13.0 2.9.0 & \
+    build_one_and_capture_output cuda12.8 2.9.0 & \
+    build_one_and_capture_output cuda12.6 2.9.0
 
   build_one_and_capture_output cuda12.9 2.8.0 & \
     build_one_and_capture_output cuda12.8 2.8.0 & \

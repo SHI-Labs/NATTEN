@@ -25,7 +25,7 @@ pip_install pip numpy -U
 pip_install -U "torch==${PYTORCH_VERSION}+${CU_VERSION}" \
   -f https://download.pytorch.org/whl/torch/
 
-pip install cmake==3.20.3
+pip install cmake==4.1.0
 
 python setup.py \
   bdist_wheel -d "$OUTPUT_DIR/wheels/$CU_VERSION/torch$PYTORCH_VERSION"

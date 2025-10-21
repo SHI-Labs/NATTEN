@@ -37,6 +37,11 @@ check_one() {
   done
 }
 
+# Torch 2.9.X
+check_one cu130 2.9.0
+check_one cu128 2.9.0
+check_one cu126 2.9.0
+
 # Torch 2.8.X
 check_one cu129 2.8.0
 check_one cu128 2.8.0
