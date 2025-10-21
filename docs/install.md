@@ -424,19 +424,19 @@ Released on 2025-03-20.
 ??? pip-install "`torch==2.5.0+cu124`"
 
     ```python
-    pip install natten==0.17.5+torch260cu124 -f https://whl.natten.org
+    pip install natten==0.17.5+torch250cu124 -f https://whl.natten.org
     ```
 
 ??? pip-install "`torch==2.5.0+cu121`"
 
     ```python
-    pip install natten==0.17.5+torch260cu121 -f https://whl.natten.org
+    pip install natten==0.17.5+torch250cu121 -f https://whl.natten.org
     ```
 
 ??? pip-install "`torch==2.5.0+cpu`"
 
     ```python
-    pip install natten==0.17.5+torch260cpu -f https://whl.natten.org
+    pip install natten==0.17.5+torch250cpu -f https://whl.natten.org
     ```
 
 ??? pip-install "Compile locally (custom torch build)"
