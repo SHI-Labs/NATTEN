@@ -339,7 +339,7 @@ versions, you can install them via [PyPI](https://pypi.org/project/natten/).
 We only offer wheels for >=`0.20.0` and `0.17.5` releases. Earlier releases will have to be
 [compiled locally](#natten-via-pypi).
 
-#### `0.21.1`
+#### `0.20.1`
 Released on 2025-06-14.
 [Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0201---2025-06-14).
 
