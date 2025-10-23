@@ -41,7 +41,7 @@ build-wheels:
 
 build-dist:
 	@echo "Generating source dist"
-	$(PYTHON) setup.py sdist
+	$(PYTHON) -m build --sdist --no-isolation
 
 release:
 	$(TWINE) upload --repository ${RELEASE} dist/*

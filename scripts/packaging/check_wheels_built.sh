@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-NATTEN_VERSION="0.21.0"
+NATTEN_VERSION="0.21.1"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 
@@ -15,7 +15,8 @@ check_one() {
   torch_build="torch${pytorch_ver//./}${cu}"
 
   # Torch started supporting python 3.13 since ~2.5
-  py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
+  # We are building wheels for 3.13 starting 0.21.1
+  py_versions=(3.10 3.11 3.12 3.13 3.13t)
 
   torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
 
@@ -24,15 +25,25 @@ check_one() {
     exit 1
   fi
 
+  # Torch 2.9 no longer ships for python 3.9.
+  if [[ $torch_major -lt 29 ]]; then
+    py_versions+=(3.9)
+  fi
+
+  # Torch also started shipping arm builds since 2.8.
+  SUPPORTED_ARCHES=("x86_64")
+  #SUPPORTED_ARCHES=("aarch64")
+
   for py in "${py_versions[@]}"; do
-    python_tag="cp${py//./}-cp${py//./}"
-    for arch_tag in "x86_64" "aarch64";do
+    pytag_a=${py//./}
+    python_tag="cp${pytag_a/t/}-cp${py//./}"
+    for arch_tag in "${SUPPORTED_ARCHES[@]}";do
       WHEEL_FILE="wheels/${cu}/torch${pytorch_ver}/natten-${NATTEN_VERSION}+${torch_build}-${python_tag}-linux_${arch_tag}.whl"
       if [ -f $WHEEL_FILE ]; then
-        echo "[x] Wheel found for v${NATTEN_VERSION} with ${torch_build} for Python $py."
+        echo "[x] Wheel found for v${NATTEN_VERSION} with ${torch_build} for Python $py, arch $arch_tag."
         WHEELS_FOUND=$((WHEELS_FOUND+1))
       else
-        echo "[ ] Wheel MISSING for v${NATTEN_VERSION} with ${torch_build} for Python $py."
+        echo "[ ] Wheel MISSING for v${NATTEN_VERSION} with ${torch_build} for Python $py, arch $arch_tag."
         WHEELS_MISSING=$((WHEELS_MISSING+1))
       fi
     done

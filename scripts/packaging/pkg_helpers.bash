@@ -22,7 +22,7 @@ setup_cuda() {
       cuda_path=/usr/local/cuda-13.0/
       export PATH=${cuda_path}/bin${PATH:+:${PATH}}
       export LD_LIBRARY_PATH=${cuda_path}/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-      export TORCH_CUDA_ARCH_LIST="5.0;6.0;6.1;7.0;7.5;8.0;8.6;8.9;9.0;10.0;10.3;12.0"
+      export TORCH_CUDA_ARCH_LIST="7.5;8.0;8.6;8.9;9.0;10.0;10.3;12.0"
       ;;
     cu129)
       cuda_path=/usr/local/cuda-12.9/

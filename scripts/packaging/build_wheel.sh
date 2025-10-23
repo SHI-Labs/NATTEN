@@ -15,17 +15,31 @@ echo "PYTORCH_VERSION: $PYTORCH_VERSION"       # e.g. 1.4
 
 setup_cuda
 setup_wheel_python
-      
+
 export NATTEN_IS_BUILDING_DIST=1
 export NATTEN_CUDA_ARCH=$TORCH_CUDA_ARCH_LIST
 export NATTEN_N_WORKERS=64
-export NATTEN_VERBOSE=0
+export NATTEN_VERBOSE=1
 
-pip_install pip numpy -U
+# choices are: 'default', 'coarse', 'fine'
+# Warning: 'fine' has a linker error with cu129/cu130 
+export NATTEN_AUTOGEN_POLICY="default"
+
+pip_install pip numpy setuptools -U
 pip_install -U "torch==${PYTORCH_VERSION}+${CU_VERSION}" \
   -f https://download.pytorch.org/whl/torch/
 
 pip install cmake==4.1.0
 
-python setup.py \
-  bdist_wheel -d "$OUTPUT_DIR/wheels/$CU_VERSION/torch$PYTORCH_VERSION"
+# Print torch version and support acrhs
+python -c "import torch;\
+print(f\"{torch.__version__=}\");\
+print(f\"{torch.cuda.is_available()=}\");\
+print(f\"{torch._C._cuda_getArchFlags()=}\");"
+
+echo "Building NATTEN for archs=$NATTEN_CUDA_ARCH"
+
+python -m build \
+  --no-isolation \
+  --wheel \
+  -o "$OUTPUT_DIR/wheels/$CU_VERSION/torch$PYTORCH_VERSION"

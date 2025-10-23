@@ -30,11 +30,13 @@ build_one() {
 
   # Torch started supporting python 3.13 since ~2.5
   # We are building wheels for 3.13 starting 0.21.1
-  py_versions=(3.9 3.10 3.11 3.12 3.13 3.13t)
+  py_versions=(3.10 3.11 3.12 3.13 3.13t)
 
   # Torch also started shipping arm builds since 2.8.
-  # NATTEN started since 0.21.1
-  SUPPORTED_ARCHES=("linux/amd64" "linux/arm64")
+  SUPPORTED_ARCHES=("linux/amd64")
+
+  # TODO: arm builds are best done on an arm machine -- emulators are SLOW
+  #SUPPORTED_ARCHES=("linux/arm64")
 
   # NOTE: I can't surpress the warning from sub
   # when --output-delimiter is "", and I'm not
@@ -46,9 +48,15 @@ build_one() {
     exit 1
   fi
 
+  # Torch 2.9 no longer ships for python 3.9.
+  if [[ $torch_major -lt 29 ]]; then
+    py_versions+=(3.9)
+  fi
+
   for py in "${py_versions[@]}"; do
     for arch_tag in "${SUPPORTED_ARCHES[@]}";do
-      container_name_="${container_name}_${py}_${arch_tag}"
+      arch_tag_f=${arch_tag/\//-}
+      container_name_="${container_name}_${py}_${arch_tag_f}"
 
       docker run -itd --rm \
         --platform $arch_tag \
@@ -72,7 +80,8 @@ EOF
 
 build_one_and_capture_output ()
 {
-  build_one $1 $2 2>&1 > log_${1}_${2}.txt
+  echo "Building for torch $2, $1"
+  build_one $1 $2 &> log_${1}_${2}.txt
 }
 
 

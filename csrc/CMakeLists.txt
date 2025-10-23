@@ -85,8 +85,8 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -ftemplate-backtrace-limit=0")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-# Huuuuuge regression from device-side asserts (funny it happened to Ampere FNA and now Blackwell
-# FNA)
+# For disabling device-side asserts, which can cause huge perf regression.
+# TODO: guard all device-side asserts (if possible) with a macro instead?
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DNDEBUG")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std=c++${CXX_STD}")
 
@@ -112,6 +112,13 @@ if(${NATTEN_IS_WINDOWS})
   set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xcompiler /bigobj")
 endif()
 
+# Compress option so we can avoid linker errors, especially in the CTK 12.9
+# and 13.0 multiarch builds and 'fine' autogen setting.
+# See https://github.com/pytorch/pytorch/pull/155895#issuecomment-2982026180
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xfatbin -compress-all")
+set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -Xfatbin -compress-all")
+set(CMAKE_CUDA_FLAGS_RELEASE "${CMAKE_CUDA_FLAGS_RELEASE} -Xfatbin -compress-all")
+
 message("CUDA compiler: " ${CMAKE_CUDA_COMPILER})
 message("NVCC executable: " ${CUDA_NVCC_EXECUTABLE})
 
@@ -122,12 +129,6 @@ else()
   message("Building with -D_GLIBCXX_USE_CXX11_ABI=0")
   add_definitions("-D_GLIBCXX_USE_CXX11_ABI=0")
 endif()
-
-# CUDA flags
-#add_definitions("-D__CUDA_NO_HALF_OPERATORS__")
-#add_definitions("-D__CUDA_NO_HALF_CONVERSIONS__")
-#add_definitions("-D__CUDA_NO_BFLOAT16_CONVERSIONS__")
-#add_definitions("-D__CUDA_NO_HALF2_OPERATORS__")
 
 # Torch/pybind flags
 # Pybind specifically needs these to recognize the module being initialized.
@@ -157,8 +158,8 @@ list(APPEND COMMON_HEADER_DIRS ./autogen/include)
 file(GLOB MAIN_SOURCE  ./natten.cpp)
 file(GLOB TORCH_APIS  ./src/*.cpp ./src/*.cu)
 file(GLOB AUTOGEN_REFERENCE ./autogen/src/cuda/reference/*.cu)
-file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu ./src/cuda/fna/*.cu)
-file(GLOB AUTOGEN_FMHA ./autogen/src/cuda/fmha/*.cu ./src/cuda/fmha/*.cu)
+file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu)
+file(GLOB AUTOGEN_FMHA ./autogen/src/cuda/fmha/*.cu)
 if(${NATTEN_WITH_HOPPER_FNA})
   file(GLOB AUTOGEN_HOPPER_FNA ./autogen/src/cuda/hopper_fna/*.cu ./autogen/src/cuda/hopper_fna_bwd/*.cu)
   file(GLOB AUTOGEN_HOPPER_FMHA ./autogen/src/cuda/hopper_fmha/*.cu ./autogen/src/cuda/hopper_fmha_bwd/*.cu)
