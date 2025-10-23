@@ -201,6 +201,9 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Editor
+*.sw?
+
 # pytype static type analyzer
 .pytype/
 
