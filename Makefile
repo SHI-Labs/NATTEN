@@ -1,4 +1,6 @@
-.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test style serve-docs build-docs
+# Copyright (c) 2022-2025 Ali Hassani.
+
+.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test format serve-docs build-docs
 
 # build flags
 CUDA_ARCH=${NATTEN_CUDA_ARCH}
@@ -37,10 +39,14 @@ fetch-submodules:
 	$(GIT) submodule update --init --recursive
 
 build-wheels:
+	@echo "Building release wheels"
+	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
+	NATTEN_N_WORKERS="${WORKERS}" \
 	./scripts/packaging/build_all_wheels_parallel.sh
 
 build-dist:
 	@echo "Generating source dist"
+	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
 	$(PYTHON) -m build --sdist --no-isolation
 
 release:
@@ -84,7 +90,7 @@ install-dev:
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
-	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
+	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
 	$(PIP) install --verbose --no-build-isolation -e . 2>&1 | tee install.out
@@ -94,7 +100,7 @@ install:
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
-	NATTEN_AUTOGEN_POLICY=${AUTOGEN_POLICY} \
+	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
 	NATTEN_VERBOSE="${VERBOSE}" \
 	NATTEN_BUILD_DIR="$(PWD)/build_dir/" \
 	$(PIP) install --verbose --no-build-isolation . 2>&1 | tee install.out
@@ -109,7 +115,7 @@ test:
 	CUBLAS_WORKSPACE_CONFIG=":4096:8" \
 	$(PYTEST) -v -x ./tests
 
-style:
+format:
 	$(UFMT) format $(check_dirs)
 	$(FLAKE8) $(check_dirs)
 	$(MYPY) $(check_dirs)

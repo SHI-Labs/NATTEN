@@ -1,6 +1,7 @@
 #!/bin/bash
+# Copyright (c) 2022-2025 Ali Hassani.
 
-set -ex
+set -e
 
 ldconfig  # https://github.com/NVIDIA/nvidia-docker/issues/854
 
@@ -29,7 +30,8 @@ if [ -z "${NATTEN_AUTOGEN_POLICY}" ]; then
   echo "NATTEN_AUTOGEN_POLICY not set; setting to $NATTEN_AUTOGEN_POLICY"
 fi
 
-echo "Build Settings:\n"
+echo "Build Settings:"
+echo ""
 echo "CU_VERSION: $CU_VERSION"          
 echo "PYTHON_VERSION: $PYTHON_VERSION"  
 echo "PYTORCH_VERSION: $PYTORCH_VERSION"

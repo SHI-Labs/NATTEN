@@ -1,4 +1,5 @@
 #!/bin/bash -e
+# Copyright (c) 2022-2025 Ali Hassani.
 
 NATTEN_VERSION="0.21.1"
 WHEELS_FOUND=0
