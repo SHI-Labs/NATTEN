@@ -1,3 +1,1 @@
 torch
-# Optional: if OS doesn't have cmake
-# cmake==3.20.3

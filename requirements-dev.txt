@@ -28,4 +28,4 @@ rich==14.0.0
 tqdm==4.67.1
 
 # Optional: if OS doesn't have cmake
-# cmake==3.20.3
+# cmake==4.1.0
