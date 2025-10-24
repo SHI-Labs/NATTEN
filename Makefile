@@ -25,9 +25,6 @@ MYPY=mypy
 FLAKE8=flake8
 MKDOCS=mkdocs
 
-# dist release
-RELEASE=
-
 check_dirs := src/natten tests scripts setup.py
 
 all: clean uninstall fetch-submodules install
@@ -39,6 +36,7 @@ fetch-submodules:
 	$(GIT) submodule update --init --recursive
 
 build-wheels:
+	$(MAKE) fetch-submodules
 	@echo "Building release wheels"
 	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
 	NATTEN_N_WORKERS="${WORKERS}" \
@@ -49,12 +47,13 @@ build-wheel-index:
 	./scripts/wheel_index/gen_wheel_index.sh
 
 build-dist:
+	$(MAKE) fetch-submodules
 	@echo "Generating source dist"
 	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
 	$(PYTHON) -m build --sdist --no-isolation
 
 release:
-	$(TWINE) upload --repository ${RELEASE} dist/*
+	$(TWINE) upload --repository natten dist/*
 
 deep-clean: 
 	@echo "Cleaning up (deep clean)"
@@ -90,6 +89,7 @@ uninstall:
 	$(PIP) uninstall -y natten
 
 install-dev: 
+	$(MAKE) fetch-submodules
 	@echo "Installing NATTEN from source - development mode (editable)"
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
@@ -100,6 +100,7 @@ install-dev:
 	$(PIP) install --verbose --no-build-isolation -e . 2>&1 | tee install.out
 
 install: 
+	$(MAKE) fetch-submodules
 	@echo "Installing NATTEN from source"
 	mkdir -p $(PWD)/build_dir/
 	NATTEN_CUDA_ARCH="${CUDA_ARCH}" \
