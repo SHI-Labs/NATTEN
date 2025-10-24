@@ -14,12 +14,11 @@ check_one() {
   cu=$1
   pytorch_ver=$2
   torch_build="torch${pytorch_ver//./}${cu}"
+  torch_major=$(echo $pytorch_ver | awk -F"." '{print $1$2}')  # 29 (pytorch major version)
 
   # Torch started supporting python 3.13 since ~2.5
   # We are building wheels for 3.13 starting 0.21.1
   py_versions=(3.10 3.11 3.12 3.13 3.13t)
-
-  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
 
   if [[ $torch_major -lt 27 ]]; then
     echo "Only torch 2.7 and later are supported from now on."
@@ -33,7 +32,10 @@ check_one() {
 
   # Torch also started shipping arm builds since 2.8.
   SUPPORTED_ARCHES=("x86_64")
-  #SUPPORTED_ARCHES=("aarch64")
+
+  if [[ $torch_major -gt 28 ]]; then
+    SUPPORTED_ARCHES+=("aarch64")
+  fi
 
   for py in "${py_versions[@]}"; do
     pytag_a=${py//./}

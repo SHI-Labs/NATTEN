@@ -22,6 +22,8 @@ check_one() {
   pytorch_ver=$3
   URL_PREFIX=$4
   torch_build="torch${pytorch_ver//./}${cu}"
+  torch_major=$(echo $pytorch_ver | awk -F"." '{print $1$2}')      # 29 (pytorch major version)
+  natten_minor=$(echo $NATTEN_VERSION | awk -F"." '{print $2$3}')  # 211 (natten minor version)
 
   # Map stuff
   TORCH_VER_WHEEL_DICT_KEY="${cu}/torch${pytorch_ver}"
@@ -34,25 +36,29 @@ check_one() {
     TORCH_VER_WHEEL_DICT["$TORCH_VER_WHEEL_DICT_KEY"]=""
   fi
 
-  py_versions=(3.9 3.10 3.11 3.12)
+  py_versions=(3.10 3.11 3.12)
   SUPPORTED_ARCHES=("x86-64")
-
-  natten_minor=$(echo $NATTEN_VERSION | cut -d "." -f 2,3  --output-delimiter="")
-  torch_major=$(echo $pytorch_ver | cut -d "." -f 1,2  --output-delimiter="")
 
   if [[ $torch_major -lt 25 ]]; then
     echo "Only torch 2.5 and later are supported from now on."
     exit 1
   fi
 
+  # Torch 2.9 no longer ships for python 3.9.
+  if [[ $torch_major -lt 29 ]]; then
+    py_versions+=(3.9)
+  fi
+
   if [[ $natten_minor -ge 211 ]]; then
     # Torch started supporting python 3.13 since ~2.5
     # We are building wheels for 3.13 starting 0.21.1
-    py_versions=(3.13 3.13t)
+    py_versions+=(3.13 3.13t)
 
-    # Torch also started shipping arm builds since 2.8.
+    # Torch also started shipping arm CUDA builds since 2.9.
     # NATTEN started since 0.21.1
-    SUPPORTED_ARCHES+=("aarch64")
+    if [[ $torch_major -gt 28 ]]; then
+      SUPPORTED_ARCHES+=("aarch64")
+    fi
   fi
 
   for py in "${py_versions[@]}"; do

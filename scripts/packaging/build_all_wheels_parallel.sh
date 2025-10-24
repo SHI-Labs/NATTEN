@@ -43,10 +43,11 @@ build_target () {
     py_versions+=(3.9)
   fi
 
-  SUPPORTED_ARCHES=(
-    "linux/arm64:pytorch/manylinuxaarch64-builder"
-  )
-    #"linux/amd64:pytorch/manylinux2_28-builder"
+  SUPPORTED_ARCHES=("linux/amd64:pytorch/manylinux2_28-builder")
+
+  if [[ $torch_major -gt 28 ]]; then
+    SUPPORTED_ARCHES+=("linux/arm64:pytorch/manylinuxaarch64-builder")
+  fi
 
   for ARCH_CONTAINER in "${SUPPORTED_ARCHES[@]}";do
     arr=(${ARCH_CONTAINER//:/ });
@@ -56,10 +57,8 @@ build_target () {
 
     image_name="${arr[1]}:${ctk_full}-main"                    # manylinuxaarch64-builder:cuda13.0-main
 
-    container_name="natten_${ctk_full}_${pytorch_ver}_${arch_tag_f}"
-
     for py in "${py_versions[@]}"; do
-      container_name="${container_name}_${py}"
+      container_name="natten_${ctk_full}_${pytorch_ver}_${arch_tag_f}_${py}"
 
       # On interrupt or exit, kill dangling containers (if any)
       teardown() {
