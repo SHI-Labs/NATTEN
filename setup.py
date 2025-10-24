@@ -522,7 +522,10 @@ setup(
     },
     python_requires=">=3.9",
     install_requires=[
-        "torch",
+        "torch>=2.7.0",
+        "setuptools>=64",
+        "cmake>=4.0.0",
+        "build>=1.3.0",
     ],
     extras_require={},
     ext_modules=[Extension("natten.libnatten", [])] if BUILD_WITH_CUDA else [],
