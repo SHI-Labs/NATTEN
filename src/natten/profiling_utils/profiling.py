@@ -316,6 +316,7 @@ def _profile_na_with_torch(
                 "kv_tile_size": kv_tile_size,
                 "backward_q_tile_size": backward_q_tile_size,
                 "backward_kv_tile_size": backward_kv_tile_size,
+                "torch_compile": torch_compile,
             },
         )
 
