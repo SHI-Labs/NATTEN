@@ -44,6 +44,10 @@ build-wheels:
 	NATTEN_N_WORKERS="${WORKERS}" \
 	./scripts/packaging/build_all_wheels_parallel.sh
 
+build-wheel-index:
+	@echo "Building wheel index"
+	./scripts/wheel_index/gen_wheel_index.sh
+
 build-dist:
 	@echo "Generating source dist"
 	NATTEN_AUTOGEN_POLICY="${AUTOGEN_POLICY}" \
