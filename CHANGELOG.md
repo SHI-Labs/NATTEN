@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+
+## [0.21.1] - 2025-10-26
 * FP8 inference support for Blackwell DC-class ([#266](https://github.com/SHI-Labs/NATTEN/pull/266))
   * Blackwell FMHA and FNA now allow float_e4m3 and float_e5m2 tensors in forward pass
 * Blackwell Ultra (SM103) support ([#261](https://github.com/SHI-Labs/NATTEN/pull/261))

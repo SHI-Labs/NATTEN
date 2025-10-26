@@ -37,7 +37,7 @@ check_one() {
   fi
 
   py_versions=(3.10 3.11 3.12)
-  SUPPORTED_ARCHES=("x86-64")
+  SUPPORTED_ARCHES=("x86_64")
 
   if [[ $torch_major -lt 25 ]]; then
     echo "Only torch 2.5 and later are supported from now on."
@@ -120,6 +120,15 @@ check_one 0.20.1 cu126 2.7.0 $URL_PREFIX
 check_one 0.21.0 cu128 2.7.0 $URL_PREFIX
 check_one 0.21.0 cu126 2.7.0 $URL_PREFIX
 
+# v0.21.1
+check_one 0.21.1 cu129 2.8.0 $URL_PREFIX
+check_one 0.21.1 cu128 2.8.0 $URL_PREFIX
+check_one 0.21.1 cu126 2.8.0 $URL_PREFIX
+
+check_one 0.21.1 cu130 2.9.0 $URL_PREFIX
+check_one 0.21.1 cu128 2.9.0 $URL_PREFIX
+check_one 0.21.1 cu126 2.9.0 $URL_PREFIX
+
 ##################################
 ##################################
 ##################################
@@ -135,7 +144,7 @@ for key in "${!TORCH_VER_WHEEL_DICT[@]}"; do
   echo "Generating index for torch version $key"
   mkdir -p $TARGET_DIR
 
-  rm $TARGET_IDX
+  rm -f $TARGET_IDX
   echo $(gen_html_header) >> $TARGET_IDX
 
   # Add links to HTML
@@ -151,7 +160,7 @@ for key in "${!CTK_VER_WHEEL_DICT[@]}"; do
 
   echo "Generating index for CTK version $key"
 
-  rm $TARGET_IDX
+  rm -f $TARGET_IDX
   echo $(gen_html_header) >> $TARGET_IDX
 
   # Add links to HTML
@@ -165,7 +174,7 @@ done
 echo "Generating root index"
 TARGET_IDX="${TARGET_DIRECTORY}/index.html"
 
-rm $TARGET_IDX
+rm -f $TARGET_IDX
 echo $(gen_html_header "NATTEN Wheel Index") >> $TARGET_IDX
 
 # Add links to HTML
