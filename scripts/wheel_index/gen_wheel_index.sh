@@ -62,7 +62,8 @@ check_one() {
   fi
 
   for py in "${py_versions[@]}"; do
-    python_tag="cp${py//./}-cp${py//./}"
+    pytag_a=${py//./}
+    python_tag="cp${pytag_a/t/}-cp${py//./}"
 
     NATTEN_VERSION_WITH_TORCH_TAG="${NATTEN_VERSION}+${torch_build}"
 
