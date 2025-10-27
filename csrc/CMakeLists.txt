@@ -85,19 +85,6 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --use_fast_math")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -ftemplate-backtrace-limit=0")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-<<<<<<< HEAD
-<<<<<<< HEAD
-# For disabling device-side asserts, which can cause huge perf regression.
-# TODO: guard all device-side asserts (if possible) with a macro instead?
-=======
-# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --keep")
-# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --keep-dir /home/akane38/cuda_tmp")
-# set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --clean-targets")
-=======
->>>>>>> 19d0446 (Flash FMHA fwd bwd works)
-# Huuuuuge regression from device-side asserts (funny it happened to Ampere FNA and now Blackwell
-# FNA)
->>>>>>> 86e6f13 (Move devsetup to shi-01)
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DNDEBUG")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --std=c++${CXX_STD}")
 
