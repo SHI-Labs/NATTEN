@@ -67,9 +67,9 @@ void run_flash_bwd(Flash_bwd_params &params, cudaStream_t stream) {
         {params.do_row_stride, _1{}, params.do_head_stride, params.do_batch_stride},  // stride_dO
         static_cast<float*>(params.dsoftmax_sum),
         {seqlen_q_rounded, params.h, batch_q},  // shape_dPsum
-        {_1{}, seqlen_q_rounded, params.h},  // stride_dPsum
+        {_1{}, seqlen_q_rounded, seqlen_q_rounded * params.h},  // stride_dPsum
         static_cast<float*>(params.softmax_lse_ptr),
-        {_1{}, seqlen_q, params.h},  // stride_LSE
+        {_1{}, seqlen_q, seqlen_q * params.h},  // stride_LSE
         static_cast<float*>(params.softmax_lse_log2_ptr),
         {_1{}, seqlen_q_rounded, params.h * params.seqlen_q_rounded},  // stride_LSE_log2
         params.dq_accum_ptr == nullptr ? nullptr : static_cast<ElementAccum*>(params.dq_accum_ptr),

@@ -53,6 +53,7 @@ void flash_fmha_backward(
     const at::Tensor& logsumexp,
     float attn_scale,
     int query_tile_size,
-    int key_tile_size);
+    int key_tile_size,
+    bool deterministic);
 
 } // namespace natten

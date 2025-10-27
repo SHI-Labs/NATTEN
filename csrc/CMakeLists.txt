@@ -86,12 +86,15 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --extended-lambda")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -ftemplate-backtrace-limit=0")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 <<<<<<< HEAD
+<<<<<<< HEAD
 # For disabling device-side asserts, which can cause huge perf regression.
 # TODO: guard all device-side asserts (if possible) with a macro instead?
 =======
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --keep")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --keep-dir /home/akane38/cuda_tmp")
 # set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --clean-targets")
+=======
+>>>>>>> 19d0446 (Flash FMHA fwd bwd works)
 # Huuuuuge regression from device-side asserts (funny it happened to Ampere FNA and now Blackwell
 # FNA)
 >>>>>>> 86e6f13 (Move devsetup to shi-01)
@@ -169,6 +172,7 @@ file(GLOB AUTOGEN_REFERENCE ./autogen/src/cuda/reference/*.cu)
 file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu)
 file(GLOB AUTOGEN_FMHA ./autogen/src/cuda/fmha/*.cu)
 file(GLOB AUTOGEN_FLASH_FMHA ./autogen/src/cuda/flash_fmha/*.cu)
+file(GLOB AUTOGEN_FLASH_FMHA_BWD ./autogen/src/cuda/flash_fmha_bwd/*.cu)
 if(${NATTEN_WITH_HOPPER_FNA})
   file(GLOB AUTOGEN_HOPPER_FNA ./autogen/src/cuda/hopper_fna/*.cu ./autogen/src/cuda/hopper_fna_bwd/*.cu)
   file(GLOB AUTOGEN_HOPPER_FMHA ./autogen/src/cuda/hopper_fmha/*.cu ./autogen/src/cuda/hopper_fmha_bwd/*.cu)
@@ -183,6 +187,7 @@ file(GLOB ALL_SOURCES
   ${AUTOGEN_FNA} 
   ${AUTOGEN_FMHA} 
   ${AUTOGEN_FLASH_FMHA} 
+  ${AUTOGEN_FLASH_FMHA_BWD}
   ${AUTOGEN_BLACKWELL_FNA} 
   ${AUTOGEN_BLACKWELL_FMHA} 
   ${AUTOGEN_HOPPER_FNA} 
