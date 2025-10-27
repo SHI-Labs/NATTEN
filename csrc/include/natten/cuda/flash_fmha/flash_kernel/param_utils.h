@@ -14,28 +14,36 @@ namespace flash {
 
 struct FlashBwdWorkspaceSize {
 
-  int64_t softmax_lse_log2_size;
-  int64_t dsoftmax_sum_size;
-  int64_t dQ_accum_size;
-  int64_t dQ_semaphore_size;
+  int64_t softmax_lse_log2_size = 0;
+  int64_t dsoftmax_sum_size = 0;
+  int64_t dQ_accum_size = 0;
+  int64_t dQ_semaphore_size = 0;
+  int64_t dK_semaphore_size = 0;
+  int64_t dV_semaphore_size = 0;
 
-  int64_t softmax_lse_log2_bytes;
-  int64_t dsoftmax_sum_bytes;
-  int64_t dQ_accum_bytes;
-  int64_t dQ_semaphore_bytes;
+  int64_t softmax_lse_log2_bytes = 0;
+  int64_t dsoftmax_sum_bytes = 0;
+  int64_t dQ_accum_bytes = 0;
+  int64_t dQ_semaphore_bytes = 0;
+  int64_t dK_semaphore_bytes = 0;
+  int64_t dV_semaphore_bytes = 0;
 
-  int64_t total_bytes;
+  int64_t total_bytes = 0;
+
+  bool has_kv_semaphores = false;
 
 };
 
 
 struct FlashBwdWorkspacePtr {
 
-  void* softmax_lse_log2_ptr;
-  void* dsoftmax_sum_ptr;
-  void* dQ_accum_ptr;
-  void* dQ_semaphore_ptr;
-  void* total_ptr;
+  void* softmax_lse_log2_ptr = nullptr;
+  void* dsoftmax_sum_ptr = nullptr;
+  void* dQ_accum_ptr = nullptr;
+  int* dQ_semaphore_ptr = nullptr;
+  int* dK_semaphore_ptr = nullptr;
+  int* dV_semaphore_ptr = nullptr;
+  void* total_ptr = nullptr;
 
 };
 
@@ -130,28 +138,53 @@ FlashBwdWorkspaceSize get_flash_bwd_workspace_size(
     int H,
     int D,
     int Q_tile_size,
-    int K_tile_size
+    int K_tile_size,
+    bool deterministic
     ) {
 
-  static constexpr int64_t kFullBytes = 4;
-  static constexpr int64_t kIntBytes = 4;
+  static constexpr int64_t kFullBytes = sizeof(float);
+  static constexpr int64_t kIntBytes = sizeof(int);
 
   int Q_rounded = inline_round_up(Q, Q_tile_size);
+  int K_rounded = inline_round_up(K, K_tile_size);
 
   int64_t BHQr = B * H * (int64_t)Q_rounded;
+  int64_t BHKr = B * H * (int64_t)K_rounded;
 
   FlashBwdWorkspaceSize workspace_size;
+
   workspace_size.softmax_lse_log2_size = BHQr;
   workspace_size.dsoftmax_sum_size = BHQr;
   workspace_size.dQ_accum_size = BHQr * D;
-  workspace_size.dQ_semaphore_size = BHQr;
+  workspace_size.dQ_semaphore_size = BHQr / Q_tile_size;
 
   workspace_size.softmax_lse_log2_bytes = workspace_size.softmax_lse_log2_size * kFullBytes;
   workspace_size.dsoftmax_sum_bytes = workspace_size.dsoftmax_sum_size * kFullBytes;
   workspace_size.dQ_accum_bytes = workspace_size.dQ_accum_size * kFullBytes;
   workspace_size.dQ_semaphore_bytes = workspace_size.dQ_semaphore_size * kIntBytes;
-  workspace_size.total_bytes = workspace_size.softmax_lse_log2_bytes + workspace_size.dsoftmax_sum_bytes +
-    workspace_size.dQ_accum_bytes + workspace_size.dQ_semaphore_bytes;
+  workspace_size.total_bytes = (
+      workspace_size.softmax_lse_log2_bytes +
+      workspace_size.dsoftmax_sum_bytes +
+      workspace_size.dQ_accum_bytes +
+      workspace_size.dQ_semaphore_bytes
+  );
+
+  workspace_size.has_kv_semaphores = false;
+
+  if (deterministic) {
+    workspace_size.dK_semaphore_size = BHKr / K_tile_size;
+    workspace_size.dV_semaphore_size = BHKr / K_tile_size;
+
+    workspace_size.dK_semaphore_bytes = workspace_size.dK_semaphore_size * kIntBytes;
+    workspace_size.dV_semaphore_bytes = workspace_size.dV_semaphore_size * kIntBytes;
+
+    workspace_size.total_bytes += workspace_size.dK_semaphore_bytes;
+    workspace_size.total_bytes += workspace_size.dV_semaphore_bytes;
+
+    workspace_size.has_kv_semaphores = true;
+  }
+
+  // workspace_size.print_debug();
 
   return workspace_size;
 
@@ -160,25 +193,34 @@ FlashBwdWorkspaceSize get_flash_bwd_workspace_size(
 FlashBwdWorkspacePtr allocate_flash_bwd_workspace(
     void* workspace_ptr, FlashBwdWorkspaceSize workspace_size) {
 
-  int64_t offset = 0;
   FlashBwdWorkspacePtr workspace;
 
+  // Marks the start of workspace
   workspace.total_ptr = workspace_ptr;
 
-  workspace.softmax_lse_log2_ptr = workspace_ptr;
-  offset = offset + workspace_size.softmax_lse_log2_size; // increment offset by number of elements
-  workspace_ptr = (void*)((float*)workspace_ptr + offset); // move by number of elements
+  // Start pointing and moving workspace pointer after every allocation
+  workspace.softmax_lse_log2_ptr = static_cast<void*>(workspace_ptr);
+  workspace_ptr = static_cast<char*>(workspace_ptr) + workspace_size.softmax_lse_log2_bytes; // move by number of bytes
+
+  workspace.dsoftmax_sum_ptr = static_cast<void*>(workspace_ptr);
+  workspace_ptr = static_cast<char*>(workspace_ptr) + workspace_size.dsoftmax_sum_bytes;
+
+  workspace.dQ_accum_ptr = static_cast<void*>(workspace_ptr);
+  workspace_ptr = static_cast<char*>(workspace_ptr) + workspace_size.dQ_accum_bytes;
+
+  workspace.dQ_semaphore_ptr = static_cast<int*>(workspace_ptr);
+  workspace_ptr = static_cast<char*>(workspace_ptr) + workspace_size.dQ_semaphore_bytes;
   
-  workspace.dsoftmax_sum_ptr = workspace_ptr;
-  offset = offset + workspace_size.dsoftmax_sum_size; // increment offset by number of elements
-  workspace_ptr = (void*)((float*)workspace_ptr + offset); // move by number of elements
+  if (workspace_size.has_kv_semaphores) {
+    workspace.dK_semaphore_ptr = static_cast<int*>(workspace_ptr);
+    workspace_ptr = static_cast<char*>(workspace_ptr) + workspace_size.dK_semaphore_bytes;
 
-  workspace.dQ_accum_ptr = workspace_ptr;
-  offset = offset + workspace_size.dQ_accum_size; // increment offset by number of elements
-  workspace_ptr = (void*)((float*)workspace_ptr + offset); // move by number of elements
+    workspace.dV_semaphore_ptr = static_cast<int*>(workspace_ptr);
+    workspace_ptr = static_cast<char*>(workspace_ptr) + workspace_size.dV_semaphore_bytes;
 
-  workspace.dQ_semaphore_ptr = workspace_ptr;
-  offset = offset + workspace_size.dQ_semaphore_size; // increment offset by number of elements
+  }
+
+  // workspace.print_debug();
 
   return workspace;
 }
@@ -195,14 +237,17 @@ Flash_bwd_params set_flash_bwd_params(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::Tensor& out,
-    const at::optional<at::Tensor>& logsumexp,
+    const at::Tensor& logsumexp,
     void* softmax_lse_log2_ptr,
     void* dsoftmax_sum_ptr,
     void* dq_semaphore_ptr,
+    void* dk_semaphore_ptr,
+    void* dv_semaphore_ptr,
     void* dq_accum_ptr,
     int query_tile_size,
     int key_tile_size,
-    float attn_scale) {
+    float attn_scale,
+    bool deterministic) {
 
   // Allocate all pointers and dimensions.
   Flash_bwd_params params = {};
@@ -224,13 +269,22 @@ Flash_bwd_params set_flash_bwd_params(
   params.dv_ptr = static_cast<void*>(dv.data_ptr());
   params.do_ptr = static_cast<void*>(dout.data_ptr());
   // Softmax sum
-  params.softmax_lse_ptr = static_cast<void*>(logsumexp.value().data_ptr());
+  params.softmax_lse_ptr = static_cast<void*>(logsumexp.data_ptr());
   params.softmax_lse_log2_ptr = softmax_lse_log2_ptr;
   params.dsoftmax_sum = dsoftmax_sum_ptr;
   params.dq_semaphore = static_cast<int*>(dq_semaphore_ptr);
   params.dq_accum_ptr = dq_accum_ptr;
   params.dk_accum_ptr = nullptr;
   params.dv_accum_ptr = nullptr;
+
+  if (deterministic){
+    params.dk_semaphore = static_cast<int*>(dk_semaphore_ptr);
+    params.dv_semaphore = static_cast<int*>(dv_semaphore_ptr);
+  }
+  else {
+    params.dk_semaphore = nullptr;
+    params.dv_semaphore = nullptr;
+  }
 
 
   // All stride are in elements, not bytes.
@@ -292,7 +346,6 @@ Flash_bwd_params set_flash_bwd_params(
   params.p_dropout_in_uint8_t = uint8_t(std::floor(params.p_dropout * 255.0));
   params.rp_dropout = 1.f / params.p_dropout;
 
-  // Hardcoded for A100
   params.arch = cc;
   params.num_sm = num_sm;
 
