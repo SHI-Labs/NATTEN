@@ -35,6 +35,7 @@
 
 #if defined(NATTEN_WITH_CUTLASS)
 #include <natten_autogen/cuda/flash_fmha/interface.h>  // Dispatcher
+#include <natten_autogen/cuda/flash_fmha_bwd/interface.h>  // Dispatcher
 #include <natten/cuda/flash_fmha/flash_kernel/flash.h>              // Flash_fwd_params
 #include <natten/cuda/flash_fmha/flash_kernel/param_utils.h>   // Param conversion utils
 #endif
@@ -157,7 +158,8 @@ void flash_fmha_backward(
     const at::Tensor& logsumexp,
     float attn_scale,
     int query_tile_size,
-    int key_tile_size) {
+    int key_tile_size,
+    bool deterministic) {
 
 #ifdef NATTEN_WITH_CUTLASS
   // Here:
@@ -203,16 +205,11 @@ void flash_fmha_backward(
   CheckIfTensorShapesMatch<1>(grad_value, value);
   CheckIfTensorShapesMatch<1>(grad_out, out);
 
-  CheckLogSumExpHeadsFirst(out, logsumexp);
-
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
   int heads = query.size(2);
   int dim = query.size(3);
-
-  int seqlen_lse =
-      logsumexp.size(2); // LSE is heads first; [batch, heads, seqlen_Q_padded]
 
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat16 ||
@@ -220,9 +217,9 @@ void flash_fmha_backward(
       "Only FP16/BF16 is supported for now.");
 
   TORCH_CHECK(
-      not at::globalContext().deterministicAlgorithms(),
-      "Flash FMHA backward pass is non-deterministic, "
-      "but PyTorch's deterministic mode is enabled. "
+      not (deterministic ^ at::globalContext().deterministicAlgorithms()),
+      "The provided deterministic argument does not "
+      "match with PyTorch's global setting. "
       "NATTEN Python API should have avoided this; which means "
       "you're probably calling the C function directly.");
 
@@ -235,14 +232,14 @@ void flash_fmha_backward(
       heads,
       dim,
       query_tile_size,
-      key_tile_size
-      );
+      key_tile_size,
+      deterministic);
 
   int64_t bytes = workspace_size.total_bytes;
 
   auto workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
   auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
-
+  
   auto workspace_alloc = natten::cuda::flash::allocate_flash_bwd_workspace(workspace_ptr,
       workspace_size);
 
@@ -266,10 +263,13 @@ void flash_fmha_backward(
       workspace_alloc.softmax_lse_log2_ptr,
       workspace_alloc.dsoftmax_sum_ptr,
       workspace_alloc.dQ_semaphore_ptr,
+      workspace_alloc.dK_semaphore_ptr,
+      workspace_alloc.dV_semaphore_ptr,
       workspace_alloc.dQ_accum_ptr,
       query_tile_size,
       key_tile_size,
-      attn_scale
+      attn_scale,
+      deterministic
       );
 
   if (cc >= 80) {
@@ -279,10 +279,11 @@ void flash_fmha_backward(
     cudaDeviceProp* device_props = at::cuda::getDeviceProperties(device_id);
     const int cc = device_props->major * 10 + device_props->minor;
 
-    DISPATCH_FLASH_FMHA_BACKWARD (
+    DISPATCH_FLASH_FMHA_BACKWARD(
         query.scalar_type(),
         dim,
         cc,
+        deterministic,
         query_tile_size,
         key_tile_size,
         flash_bwd_params,

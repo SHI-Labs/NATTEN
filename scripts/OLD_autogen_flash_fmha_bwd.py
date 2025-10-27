@@ -11,7 +11,6 @@
 
 import argparse
 import os
-from enum import Enum
 from typing import List, Tuple
 
 
@@ -22,26 +21,57 @@ SUPPORTED_CONFIGS_BACKWARD = {
     16: {
         32: [
             (64, 128, 32),
-            (128, 64, 32),
+            (128, 128, 32),
         ],
         64: [
             (64, 128, 64),
-            (128, 64, 64),
         ],
         128: [
             (64, 128, 128),
         ],
-        256: [
-            (128, 64, 256)
-        ],
+    },
+}
+
+FLASH_CONFIGS_BACKWARD = {
+    # headdim -> arch -> config
+    # 32 is not in the flash attention repo, copying over from 64's entry
+    32: {
+        86: ["2", "2", "false", "false", "false", "2", "2", "4", "2", "true"],
+        89: ["2", "2", "false", "false", "false", "2", "2", "4", "2", "true"],
+        80: ["2", "2", "false", "false", "false", "2", "4", "4", "4", "false"],
+    },
+    64: {
+        86: ["2", "2", "false", "false", "false", "2", "2", "4", "2", "true"],
+        89: ["2", "2", "false", "false", "false", "2", "2", "4", "2", "true"],
+        80: ["2", "2", "false", "false", "false", "2", "4", "4", "4", "false"],
+    },
+    96: {
+        86: ["1", "2", "false", "false", "false", "2", "2", "4", "2", "true"],
+        89: ["1", "2", "false", "false", "false", "2", "2", "4", "2", "true"],
+        80: ["2", "2", "false", "false", "false", "2", "2", "4", "2", "false"],
+    },
+    128: {
+        86: ["1", "2", "false", "false", "false", "2", "2", "2", "2", "true"],
+        89: ["1", "2", "false", "false", "false", "2", "2", "2", "2", "true"],
+        80: ["2", "2", "false", "false", "false", "2", "2", "2", "2", "false"],
+    },
+    192: {
+        86: ["1", "1", "false", "false", "false", "2", "2", "2", "2", "true"],
+        89: ["1", "1", "false", "false", "false", "2", "2", "2", "2", "true"],
+        80: ["1", "2", "false", "true", "false", "2", "4", "2", "2", "false"],
+    },
+    256: {
+        86: ["1", "1", "false", "false", "false", "2", "2", "2", "1", "true"],
+        89: ["1", "1", "false", "false", "false", "2", "2", "2", "1", "true"],
+        80: ["1", "1", "false", "false", "false", "2", "4", "2", "2", "false"],
     },
 }
 
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
-    natten::cuda::flash::Flash_bwd_params params,
-    cudaStream_t stream);
+      natten::cuda::flash::Flash_bwd_params params,
+      cudaStream_t stream);
 """
 
 
@@ -56,12 +86,13 @@ void {kernel_name}(
       /* HeadDim= */ {GEMMShape[2]},
       /* kBlockM= */ {GEMMShape[0]},
       /* kBlockN= */ {GEMMShape[1]},
-      /* Deterministic= */ {deterministic_str}
+      /* Deterministic= */ {deterministic}
     >;
 
     Kernel flash_bwd_kernel;
 
     flash_bwd_kernel.run(params, stream);
+
 }}
 """
 
@@ -72,6 +103,7 @@ class DataType:
         self.bits = bits
         self.short_name = short_name
         self.torch_name = torch_name
+
 
 Half = DataType("cutlass::half_t", "float16", "torch::kFloat16", 16)
 BFloat = DataType("cutlass::bfloat16_t", "bfloat16", "torch::kBFloat16", 16)
@@ -87,25 +119,19 @@ class FlashFmhaInstance:
         self,
         dtype: DataType,
         gemm_shape: Tuple[int, int, int],
-        cc: int,
-        deterministic_str: str
     ):
         assert len(gemm_shape) == 3
         self.gemm_shape = gemm_shape
         self.dtype = dtype
         self.max_head_dim = gemm_shape[2]
-        self.cc = cc
-        self.deterministic_str = deterministic_str
 
     def get_gemm_shape_cute(self) -> str:
-        return self.gemm_shape
+        return iterable_to_static_cute_tuple(self.gemm_shape)
 
     def get_name(self) -> str:
-        name = "flash_fmha_bwd"
-        name += f"_sm{self.cc}"
+        name = "flash_fmha_backward"
         name += f"_{self.dtype.short_name}"
         name += "_" + "x".join([str(x) for x in self.gemm_shape])
-        name += f"_deterministic" if self.deterministic_str == "true" else "_nondeterministic"
         return name
 
     def get_decl(self) -> str:
@@ -115,11 +141,9 @@ class FlashFmhaInstance:
 
     def get_impl(self) -> str:
         return KERNEL_IMPL_TEMPLATE.format(
-            cc=self.cc,
             kernel_name=self.get_name(),
             GEMMShape=self.get_gemm_shape_cute(),
             dtype=self.dtype.name,
-            deterministic_str=self.deterministic_str
         )
 
 
@@ -146,7 +170,7 @@ def write_combined_source_file(path, filename, headers, kernels):
 
     source_head += ["namespace natten { \n"]
     source_head += ["namespace cuda { \n"]
-    source_head += ["namespace flash { \n\n"]
+    source_head += ["namespace flash_fmha { \n\n"]
 
     source_head = "".join(source_head)
 
@@ -157,7 +181,7 @@ def write_combined_source_file(path, filename, headers, kernels):
 
     source_foot = "".join(
         [
-            "} // namespace flash \n",
+            "} // namespace flash_fmha \n",
             "} // namespace cuda \n",
             "} // namespace natten \n",
             "#endif \n",
@@ -170,12 +194,6 @@ def write_combined_source_file(path, filename, headers, kernels):
         f.write(source_body)
         f.write(source_foot)
 
-# We need four dispatchers:
-#   1. Datatype: f16 or bf16
-#   2. Headdim: 32, 64, 128, 256
-#   3. Arch: 80, 86, 89
-#   4. Deterministic: T/F
-
 
 class DTypeDispatcher:
     def __init__(self):
@@ -187,7 +205,9 @@ class DTypeDispatcher:
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(dtype, dim, cc, deterministic, q_tile_size, kv_tile_size, ...) \\\n"
+        dispatcher_str += (
+            f"#define {self.name}(dtype, dim, q_tile_size, kv_tile_size, ...) \\\n"
+        )
         dispatcher_str += "  [&] { \\\n"
         for i, dtype in enumerate(self.dtypes):
             dispatcher_str += "    "
@@ -196,10 +216,10 @@ class DTypeDispatcher:
             dispatcher_str += f"if (dtype == {dtype.torch_name})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}_{dtype.short_name}(dim, cc, deterministic, q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
+            dispatcher_str += f"  {self.name}_{dtype.short_name}(dim, q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Flash FMHA backward kernel launch failed!" \\\n'
+        dispatcher_str += '      std::cerr << "Flash FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
             '                << "'
             + "Flash FMHA does not support this data type."
@@ -225,7 +245,9 @@ class HeadDimDispatcher:
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(dim, cc, deterministic, q_tile_size, kv_tile_size, ...) \\\n"
+        dispatcher_str += (
+            f"#define {self.name}(dim, q_tile_size, kv_tile_size, ...) \\\n"
+        )
         dispatcher_str += "  [&] { \\\n"
         for i, dim in enumerate(self.dims):
             dispatcher_str += "    "
@@ -234,93 +256,13 @@ class HeadDimDispatcher:
             dispatcher_str += f"if (dim == {dim})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}_headdim{dim}(cc, deterministic, q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
+            dispatcher_str += f"  {self.name}_headdim{dim}(q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Flash FMHA backward kernel launch failed!" \\\n'
+        dispatcher_str += '      std::cerr << "Flash FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
             '                << "'
-            + "Flash FMHA does not support this headdim."
-            + '" \\\n'
-        )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
-        dispatcher_str += "    } \\\n"
-        dispatcher_str += "}();"
-        dispatcher_str += "\n\n"
-        return dispatcher_str
-
-
-class ArchDispatcher:
-    def __init__(self, dtype: DataType, headdim: int):
-        self.dtype = dtype
-        self.headdim = headdim
-        self.name = f"DISPATCH_FLASH_FMHA_BACKWARD_{self.dtype.short_name}_headdim{self.headdim}"
-
-        self.ccs: List[int] = []
-
-    def append(self, cc: int):
-        self.ccs.append(cc)
-
-    def get_dispatcher(self):
-        dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(cc, deterministic, q_tile_size, kv_tile_size, ...) \\\n"
-        dispatcher_str += "  [&] { \\\n"
-        for i, cc in enumerate(self.ccs):
-            dispatcher_str += "    "
-            if i > 0:
-                dispatcher_str += "else "
-            dispatcher_str += f"if (cc == {cc})"
-            dispatcher_str += " { \\\n"
-            dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}_sm{cc}(deterministic, q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
-            dispatcher_str += "    } \\\n"
-        dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Flash FMHA backward kernel launch failed!" \\\n'
-        dispatcher_str += (
-            '                << "'
-            + "Flash FMHA does not support this architecture."
-            + '" \\\n'
-        )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
-        dispatcher_str += "    } \\\n"
-        dispatcher_str += "}();"
-        dispatcher_str += "\n\n"
-        return dispatcher_str
-
-
-class DeterministicDispatcher:
-    def __init__(self, dtype: DataType, headdim: int, cc: int):
-        self.dtype = dtype
-        self.headdim = headdim
-        self.cc = cc
-        self.name = f"DISPATCH_FLASH_FMHA_BACKWARD_{self.dtype.short_name}_headdim{self.headdim}_sm{cc}"
-
-        self.deterministics: List[int] = []
-
-    def append(self, d: int):
-        self.deterministics.append(d)
-
-    def get_dispatcher(self):
-        dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(deterministic, q_tile_size, kv_tile_size, ...) \\\n"
-        dispatcher_str += "  [&] { \\\n"
-        for i, d in enumerate(self.deterministics):
-            deterministic_str = "_deterministic" if d == "true" else "_nondeterministic"
-            dispatcher_str += "    "
-            if i > 0:
-                dispatcher_str += "else "
-            dispatcher_str += f"if (deterministic == {d})"
-            dispatcher_str += " { \\\n"
-            dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}{deterministic_str}(q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
-            dispatcher_str += "    } \\\n"
-        dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Flash FMHA backward kernel launch failed!" \\\n'
-        dispatcher_str += (
-            '                << "'
-            + "Flash FMHA does not support this architecture."
+            + "Flash FMHA does not support this data type."
             + '" \\\n'
         )
         dispatcher_str += "                << std::endl; \\\n"
@@ -336,18 +278,12 @@ class ConfigDispatcher:
         self,
         dtype: DataType,
         head_dim: int,
-        cc: int,
-        deterministic_str: str
     ):
         self.dtype = dtype
         self.head_dim = head_dim
-        self.cc = cc
-        self.deterministic = deterministic_str
-        self.deterministic_str = "deterministic" if deterministic_str == "true"\
-            else "nondeterministic"
 
         self.name = (
-            f"DISPATCH_FLASH_FMHA_BACKWARD_{self.dtype.short_name}_headdim{head_dim}_sm{cc}_{self.deterministic_str}"
+            f"DISPATCH_FLASH_FMHA_BACKWARD_{self.dtype.short_name}_headdim{head_dim}"
         )
 
         self.configs: List = []
@@ -363,32 +299,26 @@ class ConfigDispatcher:
         gemm_N = kv_tile_size
         gemm_K = self.head_dim
         gemm_shape = (gemm_M, gemm_N, gemm_K)
-        config = gemm_shape
 
         supported_configs = SUPPORTED_CONFIGS_BACKWARD[self.dtype.bits][self.head_dim]
         assert (
-            config in supported_configs
-        ), f"{config=} not in supported configs {supported_configs=}"
-        assert self.cc in (80, 86, 89), f"{cc=} not supported for flash attention."
+            gemm_shape in supported_configs
+        ), f"{gemm_shape=} not in supported configs {supported_configs=}"
 
         kernel = FlashFmhaInstance(
             dtype=self.dtype,
             gemm_shape=gemm_shape,
-            cc=self.cc,
-            deterministic_str=self.deterministic
         )
 
         return kernel
 
-    def get_target_name(self, q_tile_size, kv_tile_size, cc):
+    def get_target_name(self, q_tile_size, kv_tile_size):
         kernel = self.get_kernel_instance(q_tile_size, kv_tile_size)
         return kernel.get_name()
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += (
-            f"#define {self.name}(q_tile_size, kv_tile_size, ...) \\\n"
-        )
+        dispatcher_str += f"#define {self.name}(q_tile_size, kv_tile_size, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
         i = 0
         for q_tile_size, kv_tile_size in self.configs:
@@ -400,11 +330,10 @@ class ConfigDispatcher:
             dispatcher_str += f"q_tile_size == {q_tile_size}"
             dispatcher_str += " && "
             dispatcher_str += "\\\n"
-            dispatcher_str += f"kv_tile_size == {kv_tile_size}"
-            dispatcher_str += ")"
+            dispatcher_str += f"kv_tile_size == {kv_tile_size})"
             dispatcher_str += " { \\\n"
 
-            dispatcher_str += f"  natten::cuda::flash::{self.get_target_name(q_tile_size, kv_tile_size, self.cc)}(__VA_ARGS__); \\\n"
+            dispatcher_str += f"  natten::cuda::flash_fmha::{self.get_target_name(q_tile_size, kv_tile_size)}(__VA_ARGS__); \\\n"
 
             dispatcher_str += "} \\\n"
         dispatcher_str += "    else { \\\n"
@@ -412,7 +341,7 @@ class ConfigDispatcher:
         dispatcher_str += '      std::cerr << "Flash FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
             '                << "'
-            + "Flash FMHA got invalid Q tile, KV tile combination."
+            + "Flash FMHA got invalid Q tile and KV tile combination."
             + '" \\\n'
         )
         dispatcher_str += "                << std::endl; \\\n"
@@ -460,14 +389,26 @@ def generate_flash_fmha_kernels(path, num_splits=2):
         BFloat,
     ]
 
-    SUPPORTED_ARCHS = [80, 86, 89]
+    HEAD_DIMS = [32, 64, 128]
 
-    HEAD_DIMS = [32, 64, 128, 256]
+    CONFIGS = {
+        16: {
+            32: [
+                (64, 128),
+                (128, 128),
+            ],
+            64: [
+                (64, 128),
+                (128, 128),
+            ],
+            128: [
+                (64, 128),
+            ],
+        },
+    }
 
     head_dim_dispatchers = []
     config_dispatchers = []
-    arch_dispatchers = []
-    deterministic_dispatchers = []
     kernels = []
 
     dtype_dispatcher = DTypeDispatcher()
@@ -479,32 +420,20 @@ def generate_flash_fmha_kernels(path, num_splits=2):
         for head_dim in HEAD_DIMS:
             head_dim_dispatcher.append(head_dim)
 
-            arch_dispatcher = ArchDispatcher(dtype, head_dim)
-            for cc in SUPPORTED_ARCHS:
-                arch_dispatcher.append(cc)
+            config_dispatcher = ConfigDispatcher(
+                dtype=dtype,
+                head_dim=head_dim,
+            )
 
-                deterministic_dispatcher = DeterministicDispatcher(dtype, head_dim, cc)
-
-                for deterministic_str in ["true", "false"]:
-                    deterministic_dispatcher.append(deterministic_str)
-                    config_dispatcher = ConfigDispatcher(
-                        dtype=dtype,
-                        head_dim=head_dim,
-                        cc=cc,
-                        deterministic_str=deterministic_str
-                    )
-
-                    for q_tile_size, kv_tile_size, _ in SUPPORTED_CONFIGS_BACKWARD[dtype.bits][head_dim]:
-                        config_dispatcher.append((q_tile_size, kv_tile_size))
-                        kernels.append(
-                            config_dispatcher.get_kernel_instance(
-                                q_tile_size, kv_tile_size
-                            )
-                        )
-                    config_dispatchers.append(config_dispatcher)
-                deterministic_dispatchers.append(deterministic_dispatcher)
-            arch_dispatchers.append(arch_dispatcher)
+            for q_tile_size, kv_tile_size in CONFIGS[dtype.bits][head_dim]:
+                config_dispatcher.append((q_tile_size, kv_tile_size))
+                kernels.append(
+                    config_dispatcher.get_kernel_instance(q_tile_size, kv_tile_size)
+                )
+            config_dispatchers.append(config_dispatcher)
         head_dim_dispatchers.append(head_dim_dispatcher)
+
+    #
 
     path_to_sources = f"{path}/autogen/src/cuda/flash_fmha_bwd/"
     rel_header = "natten_autogen/cuda/flash_fmha_bwd/"
@@ -517,14 +446,10 @@ def generate_flash_fmha_kernels(path, num_splits=2):
     path_dtype = f"{path_to_header_dir}interface.h"
     path_head_dim = f"{path_to_header_dir}dispatch_head_dim.h"
     path_tile_size = f"{path_to_header_dir}dispatch_tile_size.h"
-    path_arch = f"{path_to_header_dir}dispatch_arch.h"
-    path_deterministic = f"{path_to_header_dir}dispatch_deterministic.h"
 
     rel_path_headers = f"{rel_header}kernels.h"
     rel_path_head_dim = f"{rel_header}dispatch_head_dim.h"
     rel_path_tile_size = f"{rel_header}dispatch_tile_size.h"
-    rel_path_arch = f"{rel_header}dispatch_arch.h"
-    rel_path_deterministic = f"{rel_header}dispatch_deterministic.h"
 
     dtype_disp = dtype_dispatcher.get_dispatcher()
 
@@ -535,14 +460,6 @@ def generate_flash_fmha_kernels(path, num_splits=2):
     config_disp = ""
     for dispatcher in config_dispatchers:
         config_disp += dispatcher.get_dispatcher()
-
-    arch_disp = ""
-    for dispatcher in arch_dispatchers:
-        arch_disp += dispatcher.get_dispatcher()
-
-    deterministic_disp = ""
-    for dispatcher in deterministic_dispatchers:
-        deterministic_disp += dispatcher.get_dispatcher()
 
     headers = ""
     for kernel in kernels:
@@ -582,7 +499,7 @@ def generate_flash_fmha_kernels(path, num_splits=2):
     ], f"{sorted(kernels_emitted)=}"
     assert all(len(x) > 0 for x in kernels_split)
 
-    namespaces = ["natten", "cuda", "flash"]
+    namespaces = ["natten", "cuda", "flash_fmha"]
     cuda_headers = [
         "natten/natten.h",
         "ATen/ATen.h",
@@ -598,13 +515,7 @@ def generate_flash_fmha_kernels(path, num_splits=2):
         dtype_disp, path_dtype, namespaces, cuda_headers + [rel_path_head_dim]
     )
     write_header_file(
-        head_dim_disp, path_head_dim, namespaces, cuda_headers + [rel_path_arch]
-    )
-    write_header_file(
-        arch_disp, path_arch, namespaces, cuda_headers + [rel_path_deterministic]
-    )
-    write_header_file(
-        deterministic_disp, path_deterministic, namespaces, cuda_headers + [rel_path_tile_size]
+        head_dim_disp, path_head_dim, namespaces, cuda_headers + [rel_path_tile_size]
     )
     write_header_file(
         config_disp, path_tile_size, namespaces, cuda_headers + [rel_path_headers]
