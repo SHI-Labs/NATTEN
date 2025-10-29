@@ -32,6 +32,10 @@ from natten.backends.configs.cutlass import (
     get_all_fmha_backward_configs,
     get_all_fmha_forward_configs,
 )
+from natten.backends.configs.flash import (
+    get_all_fmha_backward_configs as get_all_flash_fmha_backward_configs,
+    get_all_fmha_forward_configs as get_all_flash_fmha_forward_configs,
+)
 from natten.backends.configs.cutlass_blackwell import (
     get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
@@ -279,6 +283,7 @@ class FMHABackendTest(unittest.TestCase):
 
             out = out_.data.clone().float()
             lse = lse_.clone().float()
+            print(f"{torch.sum(lse)=}")
         else:
             assert isinstance(outputs, Tensor)
             out_ = outputs
@@ -596,6 +601,117 @@ class FMHABackendTest(unittest.TestCase):
                     torch_compile=False,
                 )
 
+    def _test_flash_fmha_against_torch_sdpa(
+        self,
+        batch,
+        heads,
+        head_dim,
+        seqlen_q,
+        seqlen_kv,
+    ):
+        torch.set_default_device("cuda")
+
+        ALLOWED_DTYPES = [
+            (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
+            (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
+        ]
+
+        for dtype, atol, rtol in ALLOWED_DTYPES:
+
+            dummy = torch.randn(
+                (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
+            )
+
+            forward_configs = get_all_flash_fmha_forward_configs(dummy)
+            backward_configs = get_all_flash_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
+
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                q_tile_size, kv_tile_size = forward_configs[
+                    i % len(forward_configs)
+                ]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                self._test_against_torch_sdpa(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    dtype=dtype,
+                    test_backprop=True,
+                    atol=atol,
+                    rtol=rtol,
+                    backend="flash-fmha",
+                    q_tile_size=q_tile_size,
+                    kv_tile_size=kv_tile_size,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
+                    torch_compile=False,
+                )
+
+    def _test_flash_fmha_against_cutlass_2x_fmha(
+        self,
+        batch,
+        heads,
+        head_dim,
+        seqlen_q,
+        seqlen_kv,
+    ):
+        torch.set_default_device("cuda")
+
+        ALLOWED_DTYPES = [
+            (torch.float16, 1e-2, 0),
+            (torch.bfloat16, 1e-1, 0),
+        ]
+
+        for dtype, atol, rtol in ALLOWED_DTYPES:
+
+            dummy = torch.randn(
+                (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
+            )
+
+            forward_configs = get_all_flash_fmha_forward_configs(dummy)
+            backward_configs = get_all_flash_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
+
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                q_tile_size, kv_tile_size = forward_configs[
+                    i % len(forward_configs)
+                ]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                self._test_against_natten_cutlass_fmha(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    dtype=dtype,
+                    test_backprop=True,
+                    test_lse=True,
+                    atol=atol,
+                    rtol=rtol,
+                    backend="flash-fmha",
+                    q_tile_size=q_tile_size,
+                    kv_tile_size=kv_tile_size,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
+                    torch_compile=False,
+                )
+
     def _test_cutlass_hopper_fmha_against_torch_sdpa(
         self,
         batch,
@@ -820,6 +936,18 @@ class FMHABackendTest(unittest.TestCase):
                 seqlen_kv=seqlen_kv,
                 is_causal=is_causal,
             )
+        elif backend == "flash-fmha":
+            assert (
+                head_dim_v is None or head_dim_v == head_dim
+            ), "Flash FMHA does not allow head_dim_v."
+
+            return self._test_flash_fmha_against_torch_sdpa(
+                batch=batch,
+                heads=heads,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
+            )
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
 
@@ -851,6 +979,14 @@ class FMHABackendTest(unittest.TestCase):
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
                 is_causal=is_causal,
+            )
+        elif backend == "flash-fmha":
+            return self._test_flash_fmha_against_cutlass_2x_fmha(
+                batch=batch,
+                heads=heads,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
             )
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
@@ -1026,6 +1162,55 @@ class FMHABackendTest(unittest.TestCase):
             )
 
     @skip_if_libnatten_is_not_supported()
+    def test_flash_fmha_fast(self):
+        problem_sizes = [
+            (1, 1, 128, 128, 128),
+            (2, 1, 128, 128, 128),
+            (1, 2, 128, 128, 128),
+            (2, 2, 128, 128, 128),
+            (2, 2, 64, 128, 128),
+            (1, 1, 32, 32, 32),
+            (1, 1, 32, 128, 128),
+            (1, 1, 128, 3584, 381),
+            (1, 1, 128, 12072, 1680),
+            (1, 1, 32, 128, 128),
+            (1, 1, 32, 128, 4096),
+            (1, 1, 32, 128, 258),
+            (1, 2, 64, 128, 15),
+            (1, 1, 32, 8, 17),
+            (1, 1, 64, 17, 49),
+            (2, 4, 32, 128, 237),
+            (4, 3, 64, 256, 33),
+            (1, 1, 128, 128, 75),
+            (1, 1, 32, 125, 444),
+            (1, 2, 64, 125, 231),
+            (1, 1, 128, 256, 10240),
+        ]
+        for (
+            batch,
+            heads,
+            head_dim,
+            seqlen_q,
+            seqlen_kv,
+        ) in problem_sizes:
+            self._test_backend_against_torch_sdpa(
+                batch=batch,
+                heads=heads,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
+                backend="flash-fmha",
+            )
+            self._test_backend_against_natten_cutlass_fmha(
+                batch=batch,
+                heads=heads,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
+                backend="flash-fmha",
+            )
+
+    @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_fast(self):
         problem_sizes = [
@@ -1120,6 +1305,13 @@ class FMHABackendTest(unittest.TestCase):
     def test_cutlass_hopper_fmha_randsweep_against_torch_sdpa(self):
         self._test_randsweep_against_torch_sdpa(
             backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS
+        )
+
+    @skip_if_not_running_extended_tests()
+    @skip_if_libnatten_is_not_supported()
+    def test_flash_fmha_randsweep_against_torch_sdpa(self):
+        self._test_randsweep_against_torch_sdpa(
+            backend="flash-fmha", max_tests=RAND_SWEEP_TESTS
         )
 
 

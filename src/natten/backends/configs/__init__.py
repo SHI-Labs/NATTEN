@@ -44,6 +44,10 @@ from ...types import (
     CutlassHopperFnaForwardConfigType,
     FlexFmhaForwardConfigType,
     FlexFnaForwardConfigType,
+    FlashFmhaForwardConfigType,
+    FlashFmhaBackwardConfigType,
+    FlashFnaForwardConfigType,
+    FlashFnaBackwardConfigType,
 )
 from .checks import (
     can_run_cutlass_blackwell_fmha,
@@ -53,6 +57,7 @@ from .checks import (
     can_run_cutlass_hopper_fmha,
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
+    can_run_flash_fmha,
 )
 from .cutlass import (
     get_all_tile_shapes_backward as get_all_cutlass_fna_backward_configs,
@@ -75,6 +80,11 @@ from .cutlass_hopper import (
 from .flex import (
     get_all_tile_shapes_forward as get_all_flex_fna_forward_configs,
     get_all_tile_sizes_forward as get_all_flex_fmha_forward_configs,
+)
+
+from .flash import (
+    get_all_fmha_forward_configs as get_all_flash_fmha_forward_configs,
+    get_all_fmha_backward_configs as get_all_flash_fmha_backward_configs
 )
 
 
@@ -581,3 +591,70 @@ def get_configs_for_flex_fna(
         return []
 
     return get_all_flex_fna_forward_configs(input_tensor=query)
+
+
+###  Flash kernels for Ampere
+
+def get_configs_for_flash_fmha(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+) -> List[FlashFmhaForwardConfigType]:
+    """Returns Hopper FMHA configurations compatible with input tensors, if any.
+
+    Checks first if a CUDA tensor, and on a Ampere GPU (SM80 / SM86 / SM89; compute capability 9.0 /
+    returns *forward pass* configurations compatible with the tensor dtype and head dim.
+
+    Each configuration for this operation is a tuple of one integer tuple:
+    `(q_tile_size, kv_tile_size)`. These are arguments to
+    [natten.attention][natten.attention].
+
+    Args:
+        query: Query tensor matching the shape, dtype, and device of your use case.
+        key:   Key tensor matching the shape, dtype, and device of your use case.
+        value: Value tensor matching the shape, dtype, and device of your use case.
+
+    Returns:
+        (List[Tuple[int, int]]): List of tuples of two integers
+            corresponding to query and KV tile sizes.
+    """
+    if not can_run_flash_fmha(
+        query=query, key=key, value=value, raise_error=False
+    ):
+        return []
+
+    return get_all_flash_fmha_forward_configs(input_tensor=query)
+
+
+def get_bwd_configs_for_cutlass_hopper_fmha(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+) -> List[FlashFmhaBackwardConfigType]:
+    """Returns Flash FMHA backward pass configurations compatible with input tensors, if any.
+
+    Checks first if a CUDA tensor, and on a Ampere GPU (SM80 / SM86 / SM89; compute capability 9.0 /
+    8.6 / 8.9), and if so,
+    returns *backward pass* configurations compatible with the tensor dtype and head dim.
+
+    Each configuration for this operation is an integer tuple:
+    `(backward_q_tile_size, backward_kv_tile_size)`. These are arguments to
+    [natten.attention][natten.attention].
+
+
+    Args:
+        query: Query tensor matching the shape, dtype, and device of your use case.
+        key:   Key tensor matching the shape, dtype, and device of your use case.
+        value: Value tensor matching the shape, dtype, and device of your use case.
+
+    Returns:
+        (List[Tuple[int, int]]): List of integer tuples corresponding to query and KV tile sizes.
+    """
+    if not can_run_flash_fmha(
+        query=query, key=key, value=value, raise_error=False
+    ):
+        return []
+
+    return get_all_flash_fmha_backward_configs(input_tensor=query)
+
+

@@ -221,6 +221,97 @@ def can_run_cutlass_blackwell_fna(
     return True
 
 
+### Flash FMHA/FNA
+
+def can_run_flash_fmha(
+    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+) -> bool:
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if not HAS_LIBNATTEN:
+        target_fn("Can't run Flash FMHA; NATTEN was not built with libnatten.")
+        return False
+
+    if not fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        raise_error=raise_error,
+        backend_name="Flash FMHA",
+    ):
+        return False
+
+    if query.dim() != 4:
+        target_fn(
+            f"Flash FMHA expects rank-4 input tensors, got {query.shape=}.",
+            exception=ValueError,
+        )
+        return False
+
+    if not is_cuda(query.device):
+        target_fn("Can't run Flash FMHA; not a CUDA tensor.")
+        return False
+
+    device_cc = get_device_cc(query.device)
+
+    if device_cc not in [80, 86, 90]:
+        target_fn(
+            "Can't run Flash FMHA; tensor was on CUDA device with "
+            f"compute capability {device_cc}, expected 80, 86 or 89."
+        )
+        return False
+
+    head_dim = query.shape[-1]
+    head_dim_v = value.shape[-1]
+
+    if head_dim != head_dim_v:
+        target_fn(
+            "Can't run Flash FMHA; it does not support different head dims for QK and V, "
+            f"got {head_dim=}, {head_dim_v=}.",
+            exception=ValueError,
+        )
+        return False
+
+    if query.requires_grad and head_dim not in [32, 64, 128]:
+        target_fn(
+            f"Can't run Flash FMHA; it does not support backpropagation for {head_dim=} yet; "
+            "only head dims 32, 64, and 128 are allowed.",
+            exception=NotImplementedError,
+        )
+        return False
+
+    ## Flash backward supports determinism
+    # if query.requires_grad and torch.are_deterministic_algorithms_enabled():
+    #     target_fn(
+    #         "Can't run Hopper FMHA; its backprop does not have a deterministic mode, but "
+    #         "PyTorch's deterministic mode was enabled.",
+    #         exception=NotImplementedError,
+    #     )
+    #     return False
+
+    if query.dtype not in [torch.float16, torch.bfloat16]:
+        target_fn(
+            "Can't run Flash FMHA; it only supports FP16 and BF16 for now.",
+            exception=ValueError,
+        )
+        return False
+
+    if head_dim not in [32, 64, 128, 256]:
+        target_fn(
+            "Can't run Flash FMHA; it only supports head dims 32, 64, 128, and 256 for now.",
+            exception=NotImplementedError,
+        )
+        return False
+
+    return True
+
+
+def can_run_cutlass_hopper_fna(
+    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+) -> bool:
+    raise NotImplementedError
+
 ### Hopper FMHA/FNA
 
 
