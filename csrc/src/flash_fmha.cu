@@ -99,7 +99,8 @@ void flash_fmha_forward(
   TORCH_CHECK(logsumexp.has_value(),
       "Logsumexp should not be a nullptr, it should be allocated by Python frontend.");
 
-  CheckLogSumExp<1>(out, logsumexp.value());
+  // NOTE (aditya): LSE with Flash has BHQ format
+  // CheckLogSumExp<1>(out, logsumexp.value());
   CHECK_CUDA(logsumexp.value());
 
   // 2. Init flash params

@@ -53,6 +53,8 @@ from .configs import (
     get_configs_for_cutlass_hopper_fna,
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
+    get_configs_for_flash_fmha,
+    # get_configs_for_flash_fna,
 )
 from .configs.checks import (
     can_run_cutlass_blackwell_fmha,
@@ -61,6 +63,7 @@ from .configs.checks import (
     can_run_cutlass_hopper_fmha,
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
+    can_run_flash_fmha,
 )
 from .flex import flex_fmha, flex_fna_generic, na1d_flex, na2d_flex, na3d_flex
 from .fmha import can_run_cutlass_fmha, cutlass_fmha
@@ -77,7 +80,7 @@ from .hopper_fna import (
     na2d_cutlass_hopper_fna,
     na3d_cutlass_hopper_fna,
 )
-
+from .flash_fmha import flash_fmha
 
 def choose_backend(
     query: Tensor, key: Tensor, value: Tensor, torch_compile: bool
@@ -129,6 +132,10 @@ def choose_fmha_backend(
     ):
         logger.debug("Backend not set; picked CUTLASS (2.X) FMHA kernel.")
         return "cutlass-fmha"
+
+    if can_run_flash_fmha(query, key, value):
+        logger.debug("Backend not set; picked Flash FMHA kernel.")
+        return "flash-fmha"
 
     if can_run_flex_attention(
         query,
@@ -184,6 +191,9 @@ def get_compatible_fmha_backends(
         query, key, value, is_causal=is_causal, is_varlen=is_varlen
     ):
         compatible_backends.append("hopper-fmha")
+
+    if can_run_flash_fmha(query, key, value):
+        compatible_backends.append("flash-fmha")
 
     if can_run_cutlass_fmha(
         query, key, value, is_causal=is_causal, is_varlen=is_varlen
@@ -245,4 +255,5 @@ __all__ = [
     "get_bwd_configs_for_cutlass_hopper_fna",
     "get_configs_for_flex_fmha",
     "get_configs_for_flex_fna",
+    "get_configs_for_flash_fmha"
 ]

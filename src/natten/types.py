@@ -89,3 +89,10 @@ CutlassBlackwellFmhaForwardConfigType = FmhaForwardConfigType
 CutlassBlackwellFmhaBackwardConfigType = FmhaForwardConfigType
 CutlassHopperFmhaForwardConfigType = Tuple[FmhaForwardConfigType, KernelSchedule]
 CutlassHopperFmhaBackwardConfigType = FmhaForwardConfigType
+
+# Flash forward: (q_tile_size, kv_tile_size)
+# Flash backward: ((q_tile_size, kv_tile_size), deterministic)
+FlashFmhaForwardConfigType = FmhaForwardConfigType
+FlashFmhaBackwardConfigType = Tuple[FmhaForwardConfigType, bool]
+FlashFnaForwardConfigType = QKTileShapeType
+FlashFnaBackwardConfigType = Tuple[QKTileShapeType, bool]

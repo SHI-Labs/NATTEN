@@ -19,24 +19,25 @@ DEFAULT_OUTPUT_DIR = "csrc/"
 
 
 SUPPORTED_CONFIGS_BACKWARD = {
-    16: {
-        32: [
-            (64, 128, 32),
-            (128, 64, 32),
-        ],
-        64: [
-            (64, 128, 64),
-            (128, 64, 64),
-        ],
-        128: [
-            (64, 128, 128),
-        ],
-        256: [
-            (128, 64, 256)
-        ],
-    },
+     80: {32: [(128, 128, 32)],
+          64: [(128, 128, 64)],
+          96: [(64, 128, 96)],
+          128: [(64, 128, 128)],
+          192: [(64, 80, 192)],
+          256: [(64, 64, 256)]},
+     86: {32: [(64, 128, 32)],
+          64: [(64, 128, 64)],
+          96: [(64, 128, 96)],
+          128: [(64, 96, 128)],
+          192: [(64, 64, 192)],
+          256: [(32, 64, 256)]},
+     89: {32: [(64, 128, 32)],
+          64: [(64, 128, 64)],
+          96: [(64, 128, 96)],
+          128: [(64, 96, 128)],
+          192: [(64, 64, 192)],
+          256: [(32, 64, 256)]}
 }
-
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
@@ -365,7 +366,7 @@ class ConfigDispatcher:
         gemm_shape = (gemm_M, gemm_N, gemm_K)
         config = gemm_shape
 
-        supported_configs = SUPPORTED_CONFIGS_BACKWARD[self.dtype.bits][self.head_dim]
+        supported_configs = SUPPORTED_CONFIGS_BACKWARD[self.cc][self.head_dim]
         assert (
             config in supported_configs
         ), f"{config=} not in supported configs {supported_configs=}"
@@ -494,7 +495,7 @@ def generate_flash_fmha_kernels(path, num_splits=2):
                         deterministic_str=deterministic_str
                     )
 
-                    for q_tile_size, kv_tile_size, _ in SUPPORTED_CONFIGS_BACKWARD[dtype.bits][head_dim]:
+                    for q_tile_size, kv_tile_size, _ in SUPPORTED_CONFIGS_BACKWARD[cc][head_dim]:
                         config_dispatcher.append((q_tile_size, kv_tile_size))
                         kernels.append(
                             config_dispatcher.get_kernel_instance(

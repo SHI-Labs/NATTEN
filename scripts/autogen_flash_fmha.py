@@ -19,24 +19,31 @@ DEFAULT_OUTPUT_DIR = "csrc/"
 
 
 SUPPORTED_CONFIGS_FORWARD = {
-    16: {
-        32: [
-            (64, 128, 32),
-            (128, 64, 32),
-        ],
-        64: [
-            (64, 128, 64),
-            (128, 64, 64),
-        ],
-        128: [
-            (128, 128, 128),
-        ],
-        256: [
-            (128, 64, 256)
-        ],
+    80: {
+        32: [(128, 112, 32)],
+        64: [(128, 112, 64)],
+        96: [(128, 64, 96)],
+        128: [(128, 128, 128), (128, 64, 128)],
+        192: [(128, 96, 192)],
+        256: [(128, 96, 256)],
+    },
+    86: {
+        32: [(128, 112, 32)],
+        64: [(128, 64, 64)],
+        96: [(128, 64, 96)],
+        128: [(128, 128, 128)],
+        192: [(128, 96, 192)],
+        256: [(128, 64, 256)],
+    },
+    89: {
+        32: [(128, 112, 32)],
+        64: [(128, 64, 64)],
+        96: [(128, 64, 96)],
+        128: [(128, 128, 128)],
+        192: [(128, 96, 192)],
+        256: [(128, 64, 256)],
     },
 }
-
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
@@ -314,7 +321,7 @@ class ConfigDispatcher:
         gemm_shape = (gemm_M, gemm_N, gemm_K)
         config = gemm_shape
 
-        supported_configs = SUPPORTED_CONFIGS_FORWARD[self.dtype.bits][self.head_dim]
+        supported_configs = SUPPORTED_CONFIGS_FORWARD[self.cc][self.head_dim]
         assert (
             config in supported_configs
         ), f"{config=} not in supported configs {supported_configs=}"
@@ -412,23 +419,6 @@ def generate_flash_fmha_kernels(path, num_splits=2):
 
     HEAD_DIMS = [32, 64, 128, 256]
 
-    CONFIGS = {
-        16: {
-            32: [
-                (64, 128),
-            ],
-            64: [
-                (64, 128),
-            ],
-            128: [
-                (128, 128),
-            ],
-            256: [
-                (128, 64),
-            ],
-        },
-    }
-
     head_dim_dispatchers = []
     config_dispatchers = []
     arch_dispatchers = []
@@ -453,7 +443,7 @@ def generate_flash_fmha_kernels(path, num_splits=2):
                     cc=cc
                 )
 
-                for q_tile_size, kv_tile_size in CONFIGS[dtype.bits][head_dim]:
+                for q_tile_size, kv_tile_size, _ in SUPPORTED_CONFIGS_FORWARD[cc][head_dim]:
                     config_dispatcher.append((q_tile_size, kv_tile_size))
                     kernels.append(
                         config_dispatcher.get_kernel_instance(
