@@ -385,7 +385,6 @@ class BuildExtension(build_ext):
             # Also because we want CMake to build everything elsewhere, otherwise pypi will package
             # build files.
             build_dir = self.build_lib if NATTEN_BUILD_DIR is None else NATTEN_BUILD_DIR
-            print(f"************************* BUILD_DIR: {build_dir}")
 
             try:
                 subprocess.check_output(["cmake", "--version"])
