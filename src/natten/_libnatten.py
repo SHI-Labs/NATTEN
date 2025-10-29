@@ -38,6 +38,8 @@ try:
         compute_delta,
         fmha_backward,
         fmha_forward,
+        flash_fmha_forward,
+        flash_fmha_backward,
         hopper_fmha_backward,
         hopper_fmha_forward,
         hopper_na1d_backward,
@@ -117,6 +119,13 @@ except ImportError:
         libnatten_import_error()
 
     def na3d_backward(*args, **kwargs):
+        libnatten_import_error()
+
+    # Flash kernels
+    def flash_fmha_forward(*args, **kwargs):
+        libnatten_import_error()
+
+    def flash_fmha_backward(*args, **kwargs):
         libnatten_import_error()
 
     # CUTLASS 3.X kernels
