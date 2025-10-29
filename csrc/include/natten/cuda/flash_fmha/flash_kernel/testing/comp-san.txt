@@ -1,3 +1,0 @@
-========= COMPUTE-SANITIZER
-###### B 1 H 24 Q 4096 K 4096 D 128 Backward Full Reference softmax scale: 0.088388
- Finished computing dQ reference!
