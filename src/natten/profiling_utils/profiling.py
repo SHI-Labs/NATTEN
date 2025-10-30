@@ -34,7 +34,7 @@ from natten.utils import log
 from natten.utils.checks import check_all_args
 
 from .formatting import convert_to_natten_profiler_ops, Result
-from .ops import sdpa
+from .ops import fmha
 
 from .problem import Problem
 
@@ -449,15 +449,19 @@ def _profile_fmha_with_torch(
         not problem.has_additional_kv
     ), "Profiling SDPA with additional KV is not supported."
 
+    is_flash_attn = backend == "fa"
+
+    # PyTorch SDPA expects heads first, like it's still 2021. Flash expects heads last, like NATTEN.
+    heads_last_layout = is_flash_attn
     query, key, value, d_out, additional_kv = init_tensors(
-        problem, flatten_sequence=True, heads_last=False  # torch SDPA is heads first :(
+        problem, flatten_sequence=True, heads_last=heads_last_layout
     )
 
     def run_ops(query, key, value, d_out, backend):
         query.requires_grad = not disable_backward
         key.requires_grad = not disable_backward
         value.requires_grad = not disable_backward
-        out = sdpa(query, key, value, backend=backend)
+        out = fmha(query, key, value, backend=backend)
         if not disable_backward:
             out.backward(d_out)
 
