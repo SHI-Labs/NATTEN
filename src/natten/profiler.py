@@ -351,7 +351,7 @@ def get_args():
         type=str,
         default=DEFAULT_DTYPE,
         choices=DTYPE_MAP.keys(),
-        help=f"Element (data) type. Choices: {", ".join(DTYPE_MAP.keys())}",
+        help=f"Element (data) type. Choices: {', '.join(DTYPE_MAP.keys())}",
     )
 
     parser.add_argument(
@@ -374,8 +374,8 @@ def get_args():
         choices=NATTEN_BACKENDS + SDPA_BACKENDS,
         help="Backend / kernel to run."
         "Choices: "
-        f"NATTEN backends: {", ".join(NATTEN_BACKENDS)}.\n"
-        f"Torch SDPA backends (can only perform self attention): {", ".join(SDPA_BACKENDS)}.",
+        f"NATTEN backends: {', '.join(NATTEN_BACKENDS)}.\n"
+        f"Torch SDPA backends (can only perform self attention): {', '.join(SDPA_BACKENDS)}.",
     )
 
     parser.add_argument(
@@ -385,7 +385,7 @@ def get_args():
         choices=NATTEN_FMHA_BACKENDS,
         help="Backend / kernel for cross-attention (additional KV) and fast-path self attention in NATTEN. "
         "Choices: "
-        f"{", ".join(NATTEN_FMHA_BACKENDS)}.",
+        f"{', '.join(NATTEN_FMHA_BACKENDS)}.",
     )
 
     parser.add_argument(
