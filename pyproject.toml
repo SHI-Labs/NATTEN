@@ -1,13 +1,18 @@
 [project]
 name = "NATTEN"
 description = "Neighborhood Attention Extension"
-dynamic = ["version"]
+readme = {file = "docs/README_pypi.md", content-type = "text/markdown"}
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
 authors = [
-  {name = "Ali Hassani"}
+  {name = "NATTEN Project", email="info@natten.org"}
 ]
 maintainers = [
-  {name = "Ali Hassani"}
+  {name = "NATTEN Project", email="info@natten.org"}
 ]
+
+dynamic = ["version"]
 keywords = [
   "attention",
   "sparse attention",
@@ -18,20 +23,39 @@ keywords = [
   "artificial intelligence",
   "ai",
 ]
-requires-python = ">=3.9"
-readme = {file = "docs/README_pypi.md", content-type = "text/markdown"}
+
+dependencies = [
+    "torch>=2.8.0",
+]
+
+# Classifiers for better searching pypi
+# https://pypi.org/classifiers/
+classifiers = [
+     "Development Status :: 4 - Beta",
+     "Environment :: GPU",
+     "Environment :: GPU :: NVIDIA CUDA",
+     "Intended Audience :: Science/Research",
+     "Intended Audience :: Developers",
+     "Operating System :: OS Independent",
+     "Programming Language :: Python",
+     "Programming Language :: Python :: 3",
+     "Topic :: Scientific/Engineering",
+     "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
 
 [project.urls]
 Homepage = "https://natten.org"
 Documentation = "https://natten.org"
 Repository = "https://github.com/SHI-Labs/NATTEN.git"
 Changelog = "https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md"
+Issues = "https://github.com/SHI-Labs/NATTEN/issues"
+Download = "https://whl.natten.org/"
 
 [build-system]
 requires = [
   "setuptools >= 64",
-  "torch >= 2.7",
-  "cmake >= 4.0",
+  "torch >= 2.8",
+  "cmake >= 3.2",
   "build >= 1.3.0"
 ]
 build-backend = "setuptools.build_meta"
