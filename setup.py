@@ -32,7 +32,7 @@ import sys
 from os import path
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, List
+from typing import List
 
 import torch
 from setuptools import Extension, setup  # type: ignore
@@ -90,7 +90,7 @@ def verify_env(env : dict) -> dict:
 
     try:
         env['LONG_DESC'] = env['CWD'].joinpath("docs/README_pypi.md").read_text()
-    except:
+    except Exception:
         env['LONG_DESC'] = "Neighborhood Attention Extension."
 
     #if env['OS_TYPE'] == "Windows" and _CUDA_VERSION >= MIN_WINDOWS_CUDA_VERSION:
@@ -187,7 +187,7 @@ def _get_torch_cuda_version() -> float:
     _version = None
     try:
         _version = float(".".join(torch.version.cuda.split(".")[:2]))
-    except exception as e:
+    except Exception as e:
         raise ValueError from e(
             "Could not get valid CUDA version from PyTorch "
             f"({torch.version.cuda=}"
@@ -474,20 +474,18 @@ class BuildExtension(build_ext):
                     "Could not find a CMake executable. Possibly you do not "
                     "have cmake installed or it is not part of the current "
                     "PATH environment. "
-                    f"When checking cmake version we received error:\n{e}"
+                    "When checking cmake version we received error:\n"
                 )
 
             # i.e. libnatten.cpython-VERSION-ARCH-OS.so
             #   output_so_name = output_bin_name[:-(len(LIB_EXT))]
             output_bin_name = self.get_ext_filename(ext.name)
 
-            max_sm = 0
             cuda_arch_list = []
             cuda_arch_list_str = ""
 
             cuda_arch_list = get_cuda_arch_list(env['CUDA_ARCH'])
             cuda_arch_list_str = _arch_list_to_cmake_tags(cuda_arch_list)
-            max_sm = max(cuda_arch_list)
             # We shouldn't need to check max version again because this should
             # have been done through get_cuda_arch_list
 
