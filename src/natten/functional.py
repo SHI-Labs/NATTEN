@@ -38,6 +38,7 @@ from .backends import (
     cutlass_hopper_fna_generic,
     flex_fmha,
     flex_fna_generic,
+    flash_fmha,
 )
 
 from .types import (
@@ -99,7 +100,7 @@ def attention(
     tokens).
 
     This operation does not call into PyTorch's SDPA, and only runs one of the NATTEN backends
-    (`cutlass-fmha`, `hopper-fmha`, `blackwell-fmha`, `flex-fmha`). Reasons for that include being
+    (`cutlass-fmha`, `hopper-fmha`, `blackwell-fmha`, `flex-fmha`, `flash-fmha`). Reasons for that include being
     able to control performance-related arguments, return logsumexp, and more.
     For more information refer to [backends](backends.md).
 
@@ -117,7 +118,8 @@ def attention(
 
     Other Parameters:
         backend (str): Backend implementation to run with. Choices are: `None` (pick the best
-            available one), `"cutlass-fmha"`, `"hopper-fmha"`, `"blackwell-fmha"`, `"flex-fmha"`.
+            available one), `"cutlass-fmha"`, `"hopper-fmha"`, `"blackwell-fmha"`, `"flex-fmha"`,
+            `"flash-fmha"`.
             Refer to [backends](backends.md) for more information.
 
         q_tile_size (int): Tile size along query sequence length in the forward pass kernel.
@@ -228,6 +230,19 @@ def attention(
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
             torch_compile=torch_compile,
+            return_lse=return_lse,
+        )
+
+    elif backend == "flash-fmha":
+        return flash_fmha(
+            query=query,
+            key=key,
+            value=value,
+            scale=scale,
+            q_tile_size=q_tile_size,
+            kv_tile_size=kv_tile_size,
+            backward_q_tile_size=backward_q_tile_size,
+            backward_kv_tile_size=backward_kv_tile_size,
             return_lse=return_lse,
         )
 
