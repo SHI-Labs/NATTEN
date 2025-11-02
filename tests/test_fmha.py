@@ -283,7 +283,6 @@ class FMHABackendTest(unittest.TestCase):
 
             out = out_.data.clone().float()
             lse = lse_.clone().float()
-            print(f"{torch.sum(lse)=}")
         else:
             assert isinstance(outputs, Tensor)
             out_ = outputs
