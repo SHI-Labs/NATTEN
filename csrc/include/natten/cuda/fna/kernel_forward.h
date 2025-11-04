@@ -200,6 +200,17 @@ struct FusedNeighborhoodAttentionKernel {
     bool is_fully_block_sparse = false;
     bool has_kv_padding = false;
 
+    // Optional dot product clipping -- all must be set explicitly for avoiding
+    // comparisons.
+    bool has_dot_product_clip = false;
+    bool has_dot_product_min = false;
+    bool has_dot_product_max = false;
+    accum_t dot_product_min =
+        -cutlass::platform::numeric_limits<accum_t>::infinity();
+    accum_t dot_product_max =
+        cutlass::platform::numeric_limits<accum_t>::infinity();
+    //
+
     // Moves pointers to what we should process
     // Returns "false" if there is no work to do
     CUTLASS_DEVICE bool advance_to_block() {
@@ -734,6 +745,34 @@ struct FusedNeighborhoodAttentionKernel {
         MM1::Mma::drain_cp_asyncs();
       }
 
+      // (Optional) clip dot products (mask off out of bound dot products)
+      if (p.has_dot_product_clip) {
+        if (not p.has_dot_product_max) {
+          for (int i = 0; i < MM0::Mma::FragmentC::kElements; ++i) {
+            accum[i] = accum[i] * p.scale;
+            accum[i] = accum[i] < p.dot_product_min
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
+          }
+        } else if (not p.has_dot_product_min) {
+          for (int i = 0; i < MM0::Mma::FragmentC::kElements; ++i) {
+            accum[i] = accum[i] * p.scale;
+            accum[i] = accum[i] > p.dot_product_max
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
+          }
+        } else {
+          // assert(p.has_dot_product_min && p.has_dot_product_max);
+          for (int i = 0; i < MM0::Mma::FragmentC::kElements; ++i) {
+            accum[i] = accum[i] * p.scale;
+            accum[i] =
+                (accum[i] < p.dot_product_min || accum[i] > p.dot_product_max)
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
+          }
+        }
+      }
+
       if (not p.is_fully_block_sparse) {
         // Neighborhood Attention masking
         Dim first_col, key_bound, row_idx;
@@ -791,7 +830,7 @@ struct FusedNeighborhoodAttentionKernel {
           last_kv_col,
           is_first_kv_iter,
           iteratorC_tile_offset,
-          p.scale);
+          p.has_dot_product_clip ? 1.0 : p.scale);
 
       // Output results to shared-memory
 
@@ -967,8 +1006,13 @@ struct FusedNeighborhoodAttentionKernel {
           map_index_to_coord((int32_t)thread_id(), problem_size_0_m);
       auto query_offset = (query_idx * p.lse_strideM).sum();
       if (is_coord_within_upper_bound(query_idx, problem_size_0_m)) {
-        p.logsumexp_ptr[query_offset] = accum_t(mi[thread_id()] / kLog2e) +
-            cutlass::fast_log(accum_t(s_prime[thread_id()]));
+        if (mi[thread_id()] ==
+            -cutlass::platform::numeric_limits<accum_t>::infinity()) {
+          p.logsumexp_ptr[query_offset] = 0.0f;
+        } else {
+          p.logsumexp_ptr[query_offset] = accum_t(mi[thread_id()] / kLog2e) +
+              cutlass::fast_log(accum_t(s_prime[thread_id()]));
+        }
         //} else if (query_offset < lse_dim) {
         //  p.logsumexp_ptr[query_offset] =
         //      cutlass::platform::numeric_limits<accum_t>::infinity();

@@ -73,7 +73,11 @@ void __global__ fna_reference_kernel(
     Causal is_causal,
     QKVLayout qkv_layout,
     float attn_scale,
-    int num_additional_kv) {
+    int num_additional_kv,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   auto attention_mask =
@@ -133,7 +137,27 @@ void __global__ fna_reference_kernel(
             ElementAccumulator eK = mK(idx_K + offset_K, idx_D, idx_L);
             acc += eQ * eK;
           }
+
           acc = acc * attn_scale;
+
+          // (Optional) clip dot products (mask off out of bound dot products)
+          if (has_dot_product_min || has_dot_product_max) {
+            if (not has_dot_product_max) {
+              acc = acc < dot_product_min ? -cutlass::platform::numeric_limits<
+                                                ElementAccumulator>::infinity()
+                                          : acc;
+            } else if (not has_dot_product_min) {
+              acc = acc > dot_product_max ? -cutlass::platform::numeric_limits<
+                                                ElementAccumulator>::infinity()
+                                          : acc;
+            } else {
+              acc = (acc < dot_product_min || acc > dot_product_max)
+                  ? -cutlass::platform::numeric_limits<
+                        ElementAccumulator>::infinity()
+                  : acc;
+            }
+          }
+
           auto frag = make_tensor<ElementAccumulator>(Shape<_1, _1>{});
           frag(0) = acc;
           attention_mask.apply_mask(
@@ -194,17 +218,17 @@ void __global__ fna_reference_kernel(
         __syncthreads();
       }
 
+      ElementAccumulator scale = sum == 0.0f ? 0.0f : 1.0f / sum;
       for (int i = 0; i < DimPerThread; ++i) {
         int idx_D = threadIdx.x + i * blockDim.x;
         if (idx_D < size<1>(mO)) {
-          ElementAccumulator scale = 1.0f / sum;
           mO(idx_Q + offset_Q, idx_D, idx_L) =
               static_cast<typename TensorO::value_type>(final_acc[i] * scale);
         }
       }
 
       if (threadIdx.x == 0) {
-        mLSE(idx_Q + offset_Q, idx_L) = log(sum) + maxS;
+        mLSE(idx_Q + offset_Q, idx_L) = sum == 0.0f ? 0.0f : (log(sum) + maxS);
       }
     }
   }
@@ -231,7 +255,11 @@ void fna_reference_forward(
     NADim dilation,
     Causal is_causal,
     float attn_scale,
-    cudaStream_t stream) {
+    cudaStream_t stream,
+    bool has_dot_product_min,
+    bool has_dot_product_max,
+    float dot_product_min,
+    float dot_product_max) {
   using namespace cute;
 
   // Only so that we don't oversubscribe shmem when seqlen is large.
@@ -317,7 +345,11 @@ void fna_reference_forward(
           Causal{},
           qkv_layout,
           attn_scale,
-          num_additional_kv);
+          num_additional_kv,
+          has_dot_product_min,
+          has_dot_product_max,
+          dot_product_min,
+          dot_product_max);
 
   NATTEN_CUDA_CHECK(cudaGetLastError());
 }

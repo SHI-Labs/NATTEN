@@ -94,6 +94,8 @@ def make_reference_fna_autograd_fn(na_dim):
             scale: float,
             qkv_shape: DimensionType,
             num_extra_kv: int,
+            dot_product_min: Optional[float] = None,
+            dot_product_max: Optional[float] = None,
         ) -> Tuple[Tensor, Tensor]:
             kernel_size, stride, dilation, is_causal = check_all_args(
                 na_dim, kernel_size, stride, dilation, is_causal
@@ -127,6 +129,10 @@ def make_reference_fna_autograd_fn(na_dim):
                 scale,
                 qkv_shape,
                 num_extra_kv,
+                dot_product_min is not None,
+                dot_product_max is not None,
+                dot_product_min or 0.0,
+                dot_product_max or 0.0,
             )
 
             ctx.save_for_backward(query, key, value, logsumexp, output)
@@ -137,6 +143,8 @@ def make_reference_fna_autograd_fn(na_dim):
             ctx.scale = scale
             ctx.qkv_shape = qkv_shape
             ctx.num_extra_kv = num_extra_kv
+            ctx.dot_product_min = dot_product_min
+            ctx.dot_product_max = dot_product_max
 
             return output, logsumexp
 
@@ -146,6 +154,8 @@ def make_reference_fna_autograd_fn(na_dim):
             Tensor,
             Tensor,
             Tensor,
+            NoneType,
+            NoneType,
             NoneType,
             NoneType,
             NoneType,
@@ -177,9 +187,26 @@ def make_reference_fna_autograd_fn(na_dim):
                 ctx.scale,
                 ctx.qkv_shape,
                 ctx.num_extra_kv,
+                ctx.dot_product_min is not None,
+                ctx.dot_product_max is not None,
+                ctx.dot_product_min or 0.0,
+                ctx.dot_product_max or 0.0,
             )
 
-            return d_query, d_key, d_value, None, None, None, None, None, None, None
+            return (
+                d_query,
+                d_key,
+                d_value,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
     return ReferenceFnaGenericAutogradFn
 
@@ -208,6 +235,8 @@ def reference_fna_generic(
     additional_keys: Optional[Tensor] = None,
     additional_values: Optional[Tensor] = None,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     na_tensor_checks(query, key, value, must_match_head_dims=False)
@@ -261,6 +290,8 @@ def reference_fna_generic(
         scale,
         qkv_shape,
         num_extra_kv,
+        dot_product_min,
+        dot_product_max,
     )
     output = output.reshape(
         query.shape[0], *qkv_shape, query.shape[-2], value.shape[-1]
@@ -285,6 +316,8 @@ def na1d_reference(
     additional_keys: Optional[Tensor] = None,
     additional_values: Optional[Tensor] = None,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     return reference_fna_generic(
         query=query,
@@ -298,6 +331,8 @@ def na1d_reference(
         additional_keys=additional_keys,
         additional_values=additional_values,
         return_lse=return_lse,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )
 
 
@@ -313,6 +348,8 @@ def na2d_reference(
     additional_keys: Optional[Tensor] = None,
     additional_values: Optional[Tensor] = None,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     return reference_fna_generic(
         query=query,
@@ -326,6 +363,8 @@ def na2d_reference(
         additional_keys=additional_keys,
         additional_values=additional_values,
         return_lse=return_lse,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )
 
 
@@ -341,6 +380,8 @@ def na3d_reference(
     additional_keys: Optional[Tensor] = None,
     additional_values: Optional[Tensor] = None,
     return_lse: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
     return reference_fna_generic(
         query=query,
@@ -354,4 +395,6 @@ def na3d_reference(
         additional_keys=additional_keys,
         additional_values=additional_values,
         return_lse=return_lse,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )

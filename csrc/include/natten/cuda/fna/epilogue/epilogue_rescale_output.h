@@ -179,7 +179,9 @@ class MemoryEfficientAttentionNormalize {
     multiplies<ComputeFragment> mul_add_source;
     multiply_add<ComputeFragment> mul_add_accumulator;
 
-    ElementCompute alpha = isLast ? (1 / s_prime_[row]) : 1;
+    auto s_prime = s_prime_[row];
+    auto scale = s_prime == 0 ? 0 : 1 / s_prime;
+    ElementCompute alpha = isLast ? scale : 1;
     ElementCompute beta = alpha * m_prime_[row];
 
     intermediate = mul_add_source(beta, converted_source); // X =  beta * C
@@ -209,7 +211,9 @@ class MemoryEfficientAttentionNormalize {
     ComputeFragment intermediate;
     multiplies<ComputeFragment> mul_accumulator;
 
-    ElementCompute alpha = isLast ? (1 / s_prime_[row]) : 1;
+    auto s_prime = s_prime_[row];
+    auto scale = s_prime == 0 ? 0 : 1 / s_prime;
+    ElementCompute alpha = isLast ? scale : 1;
 
     intermediate = mul_accumulator(
         alpha, converted_accumulator); // X =  alpha * C + uniform

@@ -86,6 +86,8 @@ class FNABackendTest(unittest.TestCase):
         is_causal=None,
         additional_kv_length=0,
         configs_to_test=5,
+        dot_product_min=None,
+        dot_product_max=None,
     ):
 
         torch.set_default_device("cuda")
@@ -108,6 +110,8 @@ class FNABackendTest(unittest.TestCase):
             reference_backend="reference",
             reference_fmha_backend="reference",
             dtype=torch.float32,
+            dot_product_min=dot_product_min,
+            dot_product_max=dot_product_max,
         )
 
         # TODO: write note on why backprop eps is different when additional_kv_length > 0
@@ -226,6 +230,20 @@ class FNABackendTest(unittest.TestCase):
                             is_causal=is_causal,
                             additional_kv_length=additional_kv_length,
                         )
+                        self._test_all_dtypes_against_reference(
+                            batch=batch,
+                            heads=heads,
+                            head_dim=head_dim,
+                            head_dim_v=head_dim_v,
+                            input_shape=input_shape,
+                            kernel_size=kernel_size,
+                            stride=stride,
+                            dilation=dilation,
+                            is_causal=is_causal,
+                            additional_kv_length=additional_kv_length,
+                            dot_product_min=-1.0,
+                            dot_product_max=1.0,
+                        )
 
     @skip_if_libnatten_is_not_supported()
     def test_2d_against_reference(self):
@@ -270,6 +288,20 @@ class FNABackendTest(unittest.TestCase):
                             dilation=dilation,
                             is_causal=is_causal,
                             additional_kv_length=additional_kv_length,
+                        )
+                        self._test_all_dtypes_against_reference(
+                            batch=batch,
+                            heads=heads,
+                            head_dim=head_dim,
+                            head_dim_v=head_dim_v,
+                            input_shape=input_shape,
+                            kernel_size=kernel_size,
+                            stride=stride,
+                            dilation=dilation,
+                            is_causal=is_causal,
+                            additional_kv_length=additional_kv_length,
+                            dot_product_min=-1.0,
+                            dot_product_max=1.0,
                         )
 
     @skip_if_not_running_extended_tests()
@@ -366,6 +398,20 @@ class FNABackendTest(unittest.TestCase):
                             dilation=dilation,
                             is_causal=is_causal,
                             additional_kv_length=additional_kv_length,
+                        )
+                        self._test_all_dtypes_against_reference(
+                            batch=batch,
+                            heads=heads,
+                            head_dim=head_dim,
+                            head_dim_v=head_dim_v,
+                            input_shape=input_shape,
+                            kernel_size=kernel_size,
+                            stride=stride,
+                            dilation=dilation,
+                            is_causal=is_causal,
+                            additional_kv_length=additional_kv_length,
+                            dot_product_min=-1.0,
+                            dot_product_max=1.0,
                         )
 
     @skip_if_not_running_extended_tests()
@@ -487,6 +533,16 @@ class FNABackendTest(unittest.TestCase):
                 random.choice(range(8, 513, 8)) if ENABLE_ADDITIONAL_KV_TESTS else 0
             )
 
+            dot_product_min = random.choice([None, random.uniform(-2.0, 2.0)])
+            dot_product_max = random.choice(
+                [
+                    None,
+                    random.uniform(
+                        (dot_product_min or -2.0) + 2.0, (dot_product_min or -2.0) + 4.0
+                    ),
+                ]
+            )
+
             self._test_all_dtypes_against_reference(
                 batch=batch,
                 heads=heads,
@@ -499,6 +555,8 @@ class FNABackendTest(unittest.TestCase):
                 is_causal=is_causal,
                 additional_kv_length=additional_kv_length,
                 configs_to_test=configs_to_test,
+                dot_product_min=dot_product_min,
+                dot_product_max=dot_product_max,
             )
 
     @skip_if_libnatten_is_not_supported()

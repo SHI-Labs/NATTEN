@@ -22,7 +22,7 @@
 #################################################################################################
 
 
-from typing import List
+from typing import List, Optional
 
 from ..utils import log
 
@@ -83,21 +83,37 @@ from .hopper_fna import (
 
 
 def choose_backend(
-    query: Tensor, key: Tensor, value: Tensor, torch_compile: bool
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    torch_compile: bool,
+    has_dot_product_clip: Optional[bool] = False,
 ) -> str:
-    if can_run_cutlass_blackwell_fna(query, key, value):
+    if can_run_cutlass_blackwell_fna(
+        query, key, value, has_dot_product_clip=has_dot_product_clip
+    ):
         logger.debug("Backend not set; picked Blackwell FNA kernel.")
         return "blackwell-fna"
 
-    if can_run_cutlass_hopper_fna(query, key, value):
+    if can_run_cutlass_hopper_fna(
+        query, key, value, has_dot_product_clip=has_dot_product_clip
+    ):
         logger.debug("Backend not set; picked Hopper FNA kernel.")
         return "hopper-fna"
 
-    if can_run_cutlass_fna(query, key, value):
+    if can_run_cutlass_fna(
+        query, key, value, has_dot_product_clip=has_dot_product_clip
+    ):
         logger.debug("Backend not set; picked CUTLASS (2.X) FNA kernel.")
         return "cutlass-fna"
 
-    if can_run_flex_attention(query, key, value, torch_compile=torch_compile):
+    if can_run_flex_attention(
+        query,
+        key,
+        value,
+        torch_compile=torch_compile,
+        has_dot_product_clip=has_dot_product_clip,
+    ):
         logger.debug("Backend not set; picked Flex Attention kernel.")
         return "flex-fna"
 

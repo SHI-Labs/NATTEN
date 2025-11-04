@@ -333,6 +333,8 @@ def neighborhood_attention_generic(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Tensor:
 
     na_tensor_checks(query, key, value)
@@ -355,7 +357,23 @@ def neighborhood_attention_generic(
         is_causal=is_causal,
     )
 
-    if is_self_attention(query, kernel_size=kernel_size, is_causal=is_causal):
+    has_dot_product_clip = dot_product_min is not None or dot_product_max is not None
+
+    if has_dot_product_clip:
+        if dot_product_min is not None and not isinstance(dot_product_min, float):
+            raise ValueError(
+                f"`dot_product_min` must be a float or None, got {type(dot_product_min)=}."
+            )
+        if dot_product_max is not None and not isinstance(dot_product_max, float):
+            raise ValueError(
+                f"`dot_product_max` must be a float or None, got {type(dot_product_max)=}."
+            )
+
+    # NOTE: FMHA backends don't support dot product clipping yet, so fast path must be disabled for
+    # those cases.
+    if not has_dot_product_clip and is_self_attention(
+        query, kernel_size=kernel_size, is_causal=is_causal
+    ):
         logger.debug(
             f"{query.shape=} with {kernel_size=} and {is_causal=} is self attention. "
             "Calling attention instead of neighborhood attention directly."
@@ -384,13 +402,20 @@ def neighborhood_attention_generic(
 
     scale = scale or query.shape[-1] ** -0.5
 
-    backend = backend or choose_backend(query, key, value, torch_compile=torch_compile)
+    backend = backend or choose_backend(
+        query,
+        key,
+        value,
+        torch_compile=torch_compile,
+        has_dot_product_clip=has_dot_product_clip,
+    )
 
     has_additional_attention = (
         additional_keys is not None and additional_values is not None
     )
 
     if backend == "blackwell-fna":
+        assert not has_dot_product_clip
         outputs = cutlass_blackwell_fna_generic(
             query=query,
             key=key,
@@ -409,6 +434,7 @@ def neighborhood_attention_generic(
         )
 
     elif backend == "hopper-fna":
+        assert not has_dot_product_clip
         outputs = cutlass_hopper_fna_generic(
             query=query,
             key=key,
@@ -443,9 +469,12 @@ def neighborhood_attention_generic(
             backward_kv_splits=backward_kv_splits,
             backward_use_pt_reduction=backward_use_pt_reduction,
             return_lse=has_additional_attention,
+            dot_product_min=dot_product_min,
+            dot_product_max=dot_product_max,
         )
 
     elif backend == "flex-fna":
+        assert not has_dot_product_clip
         outputs = flex_fna_generic(
             query=query,
             key=key,
@@ -513,6 +542,8 @@ def na1d(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Tensor:
     """Computes 1-D neighborhood attention.
 
@@ -665,6 +696,8 @@ def na1d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )
 
 
@@ -690,6 +723,8 @@ def na2d(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Tensor:
     """Computes 2-D neighborhood attention.
 
@@ -852,6 +887,8 @@ def na2d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )
 
 
@@ -877,6 +914,8 @@ def na3d(
     run_persistent_kernel: bool = True,
     kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
     torch_compile: bool = False,
+    dot_product_min: Optional[float] = None,
+    dot_product_max: Optional[float] = None,
 ) -> Tensor:
     """Computes 3-D neighborhood attention.
 
@@ -1039,4 +1078,6 @@ def na3d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
+        dot_product_min=dot_product_min,
+        dot_product_max=dot_product_max,
     )

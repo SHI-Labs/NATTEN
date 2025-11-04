@@ -692,6 +692,17 @@ struct FusedNeighborhoodAttentionBackwardKernel {
     bool is_fully_block_sparse = false;
     bool has_q_padding = false;
 
+    // Optional dot product clipping -- all must be set explicitly for avoiding
+    // comparisons.
+    bool has_dot_product_clip = false;
+    bool has_dot_product_min = false;
+    bool has_dot_product_max = false;
+    accum_t dot_product_min =
+        -cutlass::platform::numeric_limits<accum_t>::infinity();
+    accum_t dot_product_max =
+        cutlass::platform::numeric_limits<accum_t>::infinity();
+    //
+
     // Dimensions/strides
     int32_t head_dim = -1;
     int32_t head_dim_value = -1;
@@ -1615,7 +1626,6 @@ struct FusedNeighborhoodAttentionBackwardKernel {
       mma.set_prologue_done(kPrologueQK);
       mma.set_zero_outside_bounds(/*!skipBoundsChecks*/ true);
       mma(gemm_k_iterations, accum, iterator_A, iterator_B, accum);
-      accum = cutlass::multiplies<typename Mma::FragmentC>()(scale, accum);
 
       // Epilogue: add LSE + exp and store that to our shared memory buffer
       // shmem <- (matmul_result -
@@ -1628,6 +1638,34 @@ struct FusedNeighborhoodAttentionBackwardKernel {
 
       auto lane_offset = MatmulQK::AccumLambdaIterator::get_lane_offset(
           lane_id, warp_id, output_tile_coords);
+
+      // Dot product scale
+      accum = cutlass::multiplies<typename Mma::FragmentC>()(scale, accum);
+
+      // (Optional) clip dot products (mask off out of bound dot products)
+      if (p.has_dot_product_clip) {
+        if (not p.has_dot_product_max) {
+          for (int i = 0; i < Mma::FragmentC::kElements; ++i) {
+            accum[i] = accum[i] < p.dot_product_min
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
+          }
+        } else if (not p.has_dot_product_min) {
+          for (int i = 0; i < Mma::FragmentC::kElements; ++i) {
+            accum[i] = accum[i] > p.dot_product_max
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
+          }
+        } else {
+          // assert(p.has_dot_product_min && p.has_dot_product_max);
+          for (int i = 0; i < Mma::FragmentC::kElements; ++i) {
+            accum[i] =
+                (accum[i] < p.dot_product_min || accum[i] > p.dot_product_max)
+                ? -cutlass::platform::numeric_limits<accum_t>::infinity()
+                : accum[i];
+          }
+        }
+      }
 
       if (not p.is_fully_block_sparse) {
         // Neighborhood Attention masking
