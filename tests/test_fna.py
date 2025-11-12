@@ -27,7 +27,6 @@ import unittest
 from itertools import product
 
 import natten  # noqa: F401
-
 import torch
 from natten._environment import (
     _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
@@ -210,7 +209,7 @@ class FNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
+            for head_dim_v in [head_dim, random.choice(range(8, 193, 8))]:
                 for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                     for causal in [False, True]:
                         is_causal = (causal,)

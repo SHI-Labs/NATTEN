@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+* Extended Attention (FMHA) functionality: causal mask, variable length (varlen)
+  * Only for CUTLASS FMHA and Blackwell FMHA backends for now.
 
 ## [0.21.1] - 2025-10-26
 * FP8 inference support for Blackwell DC-class ([#266](https://github.com/SHI-Labs/NATTEN/pull/266))

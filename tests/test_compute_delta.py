@@ -24,7 +24,6 @@
 import unittest
 
 import torch
-
 from natten._libnatten import compute_delta  # type: ignore
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,

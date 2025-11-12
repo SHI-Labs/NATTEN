@@ -24,7 +24,6 @@
 import torch
 
 from .._environment import _IS_CUDA_AVAILABLE, _RUN_EXTENDED_TESTS, HAS_LIBNATTEN
-
 from ..backends.flex import _FLEX_COMPILE_SUPPORTED, _FLEX_SUPPORTED
 from .device import get_device_cc, is_cuda
 

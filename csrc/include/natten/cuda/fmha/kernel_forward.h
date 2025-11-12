@@ -82,6 +82,12 @@ template <
     // upperbound on `max(value.shape[-1], query.shape[-1])`
     int kMaxK_ = (int)cutlass::platform::numeric_limits<uint32_t>::max()>
 struct AttentionKernel {
+  enum CustomMaskType {
+    NoCustomMask = 0,
+    CausalFromTopLeft = 1,
+    CausalFromBottomRight = 2,
+    NumCustomMaskTypes,
+  };
   using scalar_t = scalar_t_;
   using accum_t = float;
   using lse_scalar_t = float;
@@ -121,6 +127,10 @@ struct AttentionKernel {
     const scalar_t* value_ptr =
         nullptr; // [num_keys, num_heads, head_dim_value]
 
+    const int32_t* ptr_cumulative_seqlen_Q = nullptr;
+    const int32_t* ptr_cumulative_seqlen_KV = nullptr;
+    uint32_t causal_diagonal_offset = 0;
+
     // Output tensors
     output_t* output_ptr = nullptr; // [num_queries, num_heads, head_dim_value]
     // [num_queries, num_heads, head_dim_value]
@@ -136,6 +146,8 @@ struct AttentionKernel {
     int32_t head_dim_value = 0;
     int32_t num_queries = 0;
     int32_t num_keys = 0;
+
+    uint8_t custom_mask_type = NoCustomMask;
 
     int32_t q_strideM = 0;
     int32_t k_strideM = 0;
@@ -163,25 +175,50 @@ struct AttentionKernel {
       auto head_id = blockIdx.y;
       auto query_start = blockIdx.x * kQueriesPerBlock;
 
-      query_ptr += batch_id * q_strideB;
-      key_ptr += batch_id * k_strideB;
-      value_ptr += batch_id * v_strideB;
-      output_ptr += int64_t(batch_id * num_queries) * o_strideM;
-      if (output_accum_ptr != nullptr) {
-        output_accum_ptr +=
-            int64_t(batch_id * num_queries) * (head_dim_value * num_heads);
+      int32_t q_start = 0, k_start = 0;
+      if (ptr_cumulative_seqlen_Q != nullptr &&
+          ptr_cumulative_seqlen_KV != nullptr) {
+        // Varlen
+        ptr_cumulative_seqlen_Q += batch_id;
+        ptr_cumulative_seqlen_KV += batch_id;
+
+        q_start = ptr_cumulative_seqlen_Q[0];
+        k_start = ptr_cumulative_seqlen_KV[0];
+        auto q_end = ptr_cumulative_seqlen_Q[1];
+        auto k_end = ptr_cumulative_seqlen_KV[1];
+
+        num_queries = q_end - q_start;
+        num_keys = k_end - k_start;
+
+        if (query_start >= num_queries) {
+          return false;
+        }
+
+        batch_id = 0;
+      } else {
+        query_ptr += batch_id * q_strideB;
+        key_ptr += batch_id * k_strideB;
+        value_ptr += batch_id * v_strideB;
+        output_ptr += int64_t(batch_id * num_queries) * o_strideM;
+        if (output_accum_ptr != nullptr) {
+          output_accum_ptr +=
+              int64_t(batch_id * num_queries) * (head_dim_value * num_heads);
+        }
+        q_start = 0;
+        k_start = 0;
       }
 
       // Advance to the current batch / head / query_start
-      query_ptr += (query_start)*q_strideM + head_id * q_strideH;
-      key_ptr += head_id * k_strideH;
+      query_ptr += (q_start + query_start) * q_strideM + head_id * q_strideH;
+      key_ptr += k_start * k_strideM + head_id * k_strideH;
 
-      value_ptr += head_id * v_strideH;
-      output_ptr += int64_t(query_start) * o_strideM + head_id * head_dim_value;
+      value_ptr += k_start * v_strideM + head_id * v_strideH;
+      output_ptr +=
+          int64_t(q_start + query_start) * o_strideM + head_id * head_dim_value;
 
       if (output_accum_ptr != nullptr) {
         output_accum_ptr +=
-            int64_t(query_start) * (head_dim_value * num_heads) +
+            int64_t(q_start + query_start) * (head_dim_value * num_heads) +
             head_id * head_dim_value;
       } else {
         // Accumulate directly in the destination buffer (eg for f32)
@@ -191,7 +228,22 @@ struct AttentionKernel {
       if (logsumexp_ptr != nullptr) {
         // lse[batch_id, query_start, head_id]
         logsumexp_ptr += batch_id * num_queries * num_heads + head_id +
-            query_start * num_heads;
+            (q_start + query_start) * num_heads;
+      }
+
+      // Custom masking
+      if (custom_mask_type == CausalFromBottomRight) {
+        causal_diagonal_offset = num_keys - num_queries;
+      }
+      if (custom_mask_type == CausalFromTopLeft ||
+          custom_mask_type == CausalFromBottomRight) {
+        // the bottom row of the current block is query_start + kQueriesPerBlock
+        // the last active key is then query_start + causal_diagonal_offset +
+        // kQueriesPerBlock so num_keys is the min between actual num_keys and
+        // this to avoid extra computations
+        num_keys = cutlass::fast_min(
+            int32_t(query_start + causal_diagonal_offset + kQueriesPerBlock),
+            num_keys);
       }
 
       num_queries -= query_start;
@@ -209,6 +261,9 @@ struct AttentionKernel {
         q_strideM = q_strideH;
         num_queries = num_heads;
         num_heads = 1; // unused but here for intent
+        // remove causal since n_query = 1
+        // otherwise, offset would change with head !
+        custom_mask_type = NoCustomMask;
         o_strideM = head_dim_value;
       }
 
@@ -225,6 +280,7 @@ struct AttentionKernel {
       num_keys = warp_uniform(num_keys);
       num_heads = warp_uniform(num_heads);
       o_strideM = warp_uniform(o_strideM);
+      custom_mask_type = warp_uniform(custom_mask_type);
       return true;
     }
 
@@ -477,6 +533,9 @@ struct AttentionKernel {
     NATTEN_CHECK(
         p.num_heads <= 1 || p.v_strideH % kAlignmentV == 0,
         "value is not correctly aligned (strideH)");
+    NATTEN_CHECK(
+        p.custom_mask_type < NumCustomMaskTypes,
+        "invalid value for `custom_mask_type`");
     return true;
   }
 
@@ -491,7 +550,7 @@ struct AttentionKernel {
     auto& s_prime = shared_storage.s_prime;
     auto& mi = shared_storage.mi;
     auto& out_rescale = shared_storage.out_rescale;
-    // const uint32_t query_start = blockIdx.x * kQueriesPerBlock;
+    const uint32_t query_start = blockIdx.x * kQueriesPerBlock;
 
     static_assert(kQueriesPerBlock < kNumWarpsPerBlock * kWarpSize, "");
     if (thread_id() < kQueriesPerBlock) {
@@ -621,6 +680,38 @@ struct AttentionKernel {
                   (my_warp_id % MM0::Mma::WarpCount::kM),
               (tb_tile_offset.n() * MM0::Mma::WarpCount::kN) +
                   (my_warp_id / MM0::Mma::WarpCount::kM)};
+
+      // Mask out last if causal
+      // This is only needed if upper-right corner of current query / key block
+      // intersects the mask Coordinates of upper-right corner of current block
+      // is y=query_start x=min(iter_key_start + kKeysPerBlock, num_keys)) The
+      // first masked element is x = y + offset -> query_start + offset There is
+      // intersection (and we need to mask) if min(iter_key_start +
+      // kKeysPerBlock, num_keys)) >= query_start + offset
+      if (p.custom_mask_type &&
+          cutlass::fast_min(iter_key_start + kKeysPerBlock, p.num_keys) >=
+              (query_start + p.causal_diagonal_offset)) {
+        auto query_start = blockIdx.x * kQueriesPerBlock;
+        auto lane_offset = MM0::AccumLambdaIterator::get_lane_offset(
+            my_lane_id, my_warp_id, iteratorC_tile_offset);
+        int32_t last_col;
+        MM0::AccumLambdaIterator::iterateRows(
+            lane_offset,
+            [&](int accum_m) {
+              // last absolute col is (last absolute query + offset)
+              // last local col is (last absolute query + offset -
+              // iter_key_start)
+              last_col = query_start + accum_m + p.causal_diagonal_offset -
+                  iter_key_start;
+            },
+            [&](int accum_m, int accum_n, int idx) {
+              if (accum_n > last_col) {
+                accum[idx] =
+                    -cutlass::platform::numeric_limits<accum_t>::infinity();
+              }
+            },
+            [&](int accum_m) {});
+      }
 
       // Update `mi` from accum stored in registers
       // Also does accum[i] <- exp(accum[i] - mi)

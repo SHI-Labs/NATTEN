@@ -24,7 +24,6 @@
 import unittest
 
 import torch
-
 from natten.token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
 from natten.utils import log
 from natten.utils.testing import skip_if_cuda_is_not_supported, supports_float16

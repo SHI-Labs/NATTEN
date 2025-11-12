@@ -26,7 +26,6 @@ import torch
 from torch import Tensor
 
 from .attn_merge import merge_attentions_compile, merge_attentions_fn
-
 from .backends import (
     choose_backend,
     choose_fmha_backend,
@@ -39,7 +38,6 @@ from .backends import (
     flex_fmha,
     flex_fna_generic,
 )
-
 from .types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
@@ -64,6 +62,7 @@ from .utils.checks import (
     fmha_tensor_checks,
     is_self_attention,
     na_tensor_checks,
+    varlen_tensor_checks,
 )
 
 logger = log.get_logger(__name__)
@@ -76,7 +75,18 @@ def attention(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool = False,
     scale: Optional[float] = None,
+    # varlen parameters
+    seqlens_Q: Optional[Tensor] = None,
+    seqlens_KV: Optional[Tensor] = None,
+    cumulative_seqlen_Q: Optional[Tensor] = None,
+    cumulative_seqlen_KV: Optional[Tensor] = None,
+    max_seqlen_Q: Optional[int] = None,
+    max_seqlen_KV: Optional[int] = None,
+    total_seqlen_Q: Optional[int] = None,
+    total_seqlen_KV: Optional[int] = None,
+    # backend parameters
     backend: Optional[str] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -112,6 +122,8 @@ def attention(
 
         value (Tensor): 4-D value tensor, with the heads last layout
             (`[batch, seqlen_kv, heads, head_dim_v]`)
+
+        is_causal (bool): Toggle causal masking. Defaults to `False` (bi-directional).
 
         scale (float): Attention scale. Defaults to `head_dim ** -0.5`.
 
@@ -168,12 +180,39 @@ def attention(
 
     fmha_tensor_checks(query, key, value)
 
+    (
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
+        total_seqlen_Q,
+        total_seqlen_KV,
+    ) = varlen_tensor_checks(
+        query=query,
+        key=key,
+        value=value,
+        seqlens_Q=seqlens_Q,
+        seqlens_KV=seqlens_KV,
+        cumulative_seqlen_Q=cumulative_seqlen_Q,
+        cumulative_seqlen_KV=cumulative_seqlen_KV,
+        max_seqlen_Q=max_seqlen_Q,
+        max_seqlen_KV=max_seqlen_KV,
+        total_seqlen_Q=total_seqlen_Q,
+        total_seqlen_KV=total_seqlen_KV,
+    )
+    is_varlen = cumulative_seqlen_Q is not None
+
     scale = scale or query.shape[-1] ** -0.5
 
     kernel_schedule = check_kernel_schedule(kernel_schedule)
 
     backend = backend or choose_fmha_backend(
-        query, key, value, torch_compile=torch_compile
+        query,
+        key,
+        value,
+        is_causal=is_causal,
+        is_varlen=is_varlen,
+        torch_compile=torch_compile,
     )
 
     if backend == "blackwell-fmha":
@@ -181,7 +220,14 @@ def attention(
             query=query,
             key=key,
             value=value,
+            is_causal=is_causal,
             scale=scale,
+            cumulative_seqlen_Q=cumulative_seqlen_Q,
+            cumulative_seqlen_KV=cumulative_seqlen_KV,
+            max_seqlen_Q=max_seqlen_Q,
+            max_seqlen_KV=max_seqlen_KV,
+            total_seqlen_Q=total_seqlen_Q,
+            total_seqlen_KV=total_seqlen_KV,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
             backward_q_tile_size=backward_q_tile_size,
@@ -195,6 +241,7 @@ def attention(
             query=query,
             key=key,
             value=value,
+            is_causal=is_causal,
             scale=scale,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
@@ -202,6 +249,12 @@ def attention(
             backward_kv_tile_size=backward_kv_tile_size,
             kernel_schedule=kernel_schedule,
             return_lse=return_lse,
+            cumulative_seqlen_Q=cumulative_seqlen_Q,
+            cumulative_seqlen_KV=cumulative_seqlen_KV,
+            max_seqlen_Q=max_seqlen_Q,
+            max_seqlen_KV=max_seqlen_KV,
+            total_seqlen_Q=total_seqlen_Q,
+            total_seqlen_KV=total_seqlen_KV,
         )
 
     elif backend == "cutlass-fmha":
@@ -209,6 +262,7 @@ def attention(
             query=query,
             key=key,
             value=value,
+            is_causal=is_causal,
             scale=scale,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
@@ -217,6 +271,12 @@ def attention(
             backward_kv_splits=backward_kv_splits,
             backward_use_pt_reduction=backward_use_pt_reduction,
             return_lse=return_lse,
+            cumulative_seqlen_Q=cumulative_seqlen_Q,
+            cumulative_seqlen_KV=cumulative_seqlen_KV,
+            max_seqlen_Q=max_seqlen_Q,
+            max_seqlen_KV=max_seqlen_KV,
+            total_seqlen_Q=total_seqlen_Q,
+            total_seqlen_KV=total_seqlen_KV,
         )
 
     elif backend == "flex-fmha":
@@ -224,11 +284,18 @@ def attention(
             query=query,
             key=key,
             value=value,
+            is_causal=is_causal,
             scale=scale,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
             torch_compile=torch_compile,
             return_lse=return_lse,
+            cumulative_seqlen_Q=cumulative_seqlen_Q,
+            cumulative_seqlen_KV=cumulative_seqlen_KV,
+            max_seqlen_Q=max_seqlen_Q,
+            max_seqlen_KV=max_seqlen_KV,
+            total_seqlen_Q=total_seqlen_Q,
+            total_seqlen_KV=total_seqlen_KV,
         )
 
     raise NotImplementedError(f"Unrecognized NATTEN FMHA backend {backend}.")
@@ -355,10 +422,19 @@ def neighborhood_attention_generic(
         is_causal=is_causal,
     )
 
-    if is_self_attention(query, kernel_size=kernel_size, is_causal=is_causal):
+    has_additional_attention = (
+        additional_keys is not None and additional_values is not None
+    )
+
+    if is_self_attention(
+        query,
+        kernel_size=kernel_size,
+        is_causal=is_causal,
+        has_additional_attention=has_additional_attention,
+    ):
         logger.debug(
-            f"{query.shape=} with {kernel_size=} and {is_causal=} is self attention. "
-            "Calling attention instead of neighborhood attention directly."
+            f"{query.shape=} with {kernel_size=}, {has_additional_attention=} and {is_causal=} is "
+            "self attention. Calling attention instead of neighborhood attention directly."
         )
 
         query_shape = query.shape
@@ -366,7 +442,9 @@ def neighborhood_attention_generic(
         key = key.flatten(1, na_dim)
         value = value.flatten(1, na_dim)
 
-        if additional_keys is not None and additional_values is not None:
+        if has_additional_attention:
+            assert additional_keys is not None
+            assert additional_values is not None
             key = torch.cat([key, additional_keys], dim=1)
             value = torch.cat([value, additional_values], dim=1)
 
@@ -375,6 +453,7 @@ def neighborhood_attention_generic(
             query,
             key,
             value,
+            is_causal=is_causal[0],  # NOTE: special case
             scale=scale,
             return_lse=False,
             **attn_kwargs,
@@ -385,10 +464,6 @@ def neighborhood_attention_generic(
     scale = scale or query.shape[-1] ** -0.5
 
     backend = backend or choose_backend(query, key, value, torch_compile=torch_compile)
-
-    has_additional_attention = (
-        additional_keys is not None and additional_values is not None
-    )
 
     if backend == "blackwell-fna":
         outputs = cutlass_blackwell_fna_generic(
@@ -475,6 +550,7 @@ def neighborhood_attention_generic(
             query.flatten(1, na_dim),
             additional_keys,
             additional_values,
+            is_causal=False,
             scale=scale,
             return_lse=True,
             **attention_kwargs,

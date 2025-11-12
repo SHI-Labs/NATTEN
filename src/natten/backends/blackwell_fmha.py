@@ -25,7 +25,6 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
-
 from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
 
@@ -39,8 +38,7 @@ from ..types import (
     NoneType,
 )
 from ..utils import log
-from ..utils.checks import fmha_tensor_checks
-
+from ..utils.checks import fmha_tensor_checks, varlen_tensor_checks
 from .configs.checks import can_run_cutlass_blackwell_fmha
 from .configs.cutlass_blackwell import (
     check_cutlass_blackwell_fmha_backward_config,
@@ -58,10 +56,17 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         query: Tensor,
         key: Tensor,
         value: Tensor,
+        is_causal: bool,
         scale: float,
         forward_config: CutlassBlackwellFmhaForwardConfigType,
         backward_config: CutlassBlackwellFmhaBackwardConfigType,
         run_persistent_kernel: bool,
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
+        total_seqlen_Q: int,
+        total_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor]:
         query = query.contiguous()
         key = key.contiguous()
@@ -79,14 +84,34 @@ class CutlassBlackwellFmhaAutogradFn(Function):
             key,
             value,
             logsumexp,
+            is_causal,
             scale,
             q_tile_size,
             kv_tile_size,
             run_persistent_kernel,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            max_seqlen_Q,
+            max_seqlen_KV,
+            total_seqlen_Q,
+            total_seqlen_KV,
         )
 
-        ctx.save_for_backward(query, key, value, logsumexp, output)
+        ctx.save_for_backward(
+            query,
+            key,
+            value,
+            logsumexp,
+            output,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        )
         ctx.scale = scale
+        ctx.is_causal = is_causal
+        ctx.max_seqlen_Q = max_seqlen_Q
+        ctx.max_seqlen_KV = max_seqlen_KV
+        ctx.total_seqlen_Q = total_seqlen_Q
+        ctx.total_seqlen_KV = total_seqlen_KV
         ctx.backward_config = backward_config
 
         return output, logsumexp
@@ -101,35 +126,27 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         NoneType,
         NoneType,
         NoneType,
+        NoneType,
+        # varlen
+        NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
     ]:
-        query, key, value, logsumexp, output = ctx.saved_tensors
+        (
+            query,
+            key,
+            value,
+            logsumexp,
+            output,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        ) = ctx.saved_tensors
         d_output = grad_out.contiguous()  # noqa: F841
 
         q_tile_size, k_tile_size = ctx.backward_config
-
-        seqlen_Q = query.shape[1]
-
-        if seqlen_Q % q_tile_size != 0:
-            padding = q_tile_size - (seqlen_Q % q_tile_size)
-            old_shape = query.shape
-            query = torch.nn.functional.pad(
-                query, (0, 0, 0, 0, 0, padding), "constant", 0
-            )
-            output = torch.nn.functional.pad(
-                output, (0, 0, 0, 0, 0, padding), "constant", 0
-            )
-            d_output = torch.nn.functional.pad(
-                d_output, (0, 0, 0, 0, 0, padding), "constant", 0
-            )
-            logsumexp = torch.nn.functional.pad(
-                logsumexp, (0, 0, 0, padding), "constant", 0
-            )
-            seqlen_Q_aligned = query.shape[1]
-            assert seqlen_Q_aligned % q_tile_size == 0
-            assert logsumexp.shape[1] == seqlen_Q_aligned
-            logger.debug(
-                f"Padded q, dQ, o, dO, and lse with shape {old_shape} to {query.shape}."
-            )
 
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
@@ -153,23 +170,41 @@ class CutlassBlackwellFmhaAutogradFn(Function):
             output,
             d_output,
             logsumexp,
+            ctx.is_causal,
             ctx.scale,
             q_tile_size,
             k_tile_size,
-            seqlen_Q,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            ctx.max_seqlen_Q,
+            ctx.max_seqlen_KV,
+            ctx.total_seqlen_Q,
+            ctx.total_seqlen_KV,
         )
 
-        if seqlen_Q % q_tile_size != 0:
-            d_query = d_query[:, :seqlen_Q, :, :]
-            assert d_query.shape[1] == seqlen_Q
-
-        return d_query, d_key, d_value, None, None, None, None
+        return (
+            d_query,
+            d_key,
+            d_value,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
 
 
 def cutlass_blackwell_fmha(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool = False,
     scale: Optional[float] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -177,11 +212,40 @@ def cutlass_blackwell_fmha(
     backward_q_tile_size: Optional[int] = None,
     backward_kv_tile_size: Optional[int] = None,
     return_lse: bool = False,
+    # varlen parameters
+    cumulative_seqlen_Q: Optional[Tensor] = None,
+    cumulative_seqlen_KV: Optional[Tensor] = None,
+    max_seqlen_Q: int = 0,
+    max_seqlen_KV: int = 0,
+    total_seqlen_Q: int = 0,
+    total_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     fmha_tensor_checks(query, key, value, must_match_head_dims=True)
 
-    assert can_run_cutlass_blackwell_fmha(query, key, value, raise_error=True)
+    (
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
+        total_seqlen_Q,
+        total_seqlen_KV,
+    ) = varlen_tensor_checks(
+        query=query,
+        key=key,
+        value=value,
+        cumulative_seqlen_Q=cumulative_seqlen_Q,
+        cumulative_seqlen_KV=cumulative_seqlen_KV,
+        max_seqlen_Q=max_seqlen_Q,
+        max_seqlen_KV=max_seqlen_KV,
+        total_seqlen_Q=total_seqlen_Q,
+        total_seqlen_KV=total_seqlen_KV,
+    )
+    is_varlen = cumulative_seqlen_Q is not None
+
+    assert can_run_cutlass_blackwell_fmha(
+        query, key, value, is_causal=is_causal, is_varlen=is_varlen, raise_error=True
+    )
 
     forward_config = check_cutlass_blackwell_fmha_forward_config(
         input_tensor=query, q_tile_size=q_tile_size, kv_tile_size=kv_tile_size
@@ -198,10 +262,17 @@ def cutlass_blackwell_fmha(
         query,
         key,
         value,
+        is_causal,
         scale,
         forward_config,
         backward_config,
         run_persistent_kernel,
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
+        total_seqlen_Q,
+        total_seqlen_KV,
     )
 
     if return_lse:

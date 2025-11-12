@@ -25,7 +25,6 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
-
 from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
 
@@ -39,8 +38,7 @@ from ..types import (
     NoneType,
 )
 from ..utils import log
-from ..utils.checks import fmha_tensor_checks
-
+from ..utils.checks import fmha_tensor_checks, varlen_tensor_checks
 from .configs.checks import can_run_cutlass_fmha
 from .configs.cutlass import (
     check_cutlass_fmha_backward_config,
@@ -58,9 +56,14 @@ class CutlassFmhaAutogradFn(Function):
         query: Tensor,
         key: Tensor,
         value: Tensor,
+        is_causal: bool,
         scale: float,
         forward_config: CutlassFmhaForwardConfigType,
         backward_config: CutlassFmhaBackwardConfigType,
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor]:
 
         query = query.contiguous()
@@ -86,13 +89,29 @@ class CutlassFmhaAutogradFn(Function):
             key,
             value,
             logsumexp,
+            is_causal,
             scale,
             q_tile_size,
             kv_tile_size,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            max_seqlen_Q,
+            max_seqlen_KV,
         )
 
-        ctx.save_for_backward(query, key, value, logsumexp, output)
+        ctx.save_for_backward(
+            query,
+            key,
+            value,
+            logsumexp,
+            output,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        )
         ctx.scale = scale
+        ctx.is_causal = is_causal
+        ctx.max_seqlen_Q = max_seqlen_Q
+        ctx.max_seqlen_KV = max_seqlen_KV
         ctx.backward_config = backward_config
 
         return output, logsumexp
@@ -106,8 +125,22 @@ class CutlassFmhaAutogradFn(Function):
         NoneType,
         NoneType,
         NoneType,
+        NoneType,
+        # varlen
+        NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
     ]:
-        query, key, value, logsumexp, output = ctx.saved_tensors
+        (
+            query,
+            key,
+            value,
+            logsumexp,
+            output,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        ) = ctx.saved_tensors
         d_output = grad_out.contiguous()
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
@@ -124,6 +157,13 @@ class CutlassFmhaAutogradFn(Function):
                 f"Overriding {kv_splits=} to {num_kv_splits}."
             )
 
+        num_kv_tiles = (key.shape[1] + k_tile_size - 1) // k_tile_size
+        if num_kv_splits > num_kv_tiles:
+            raise ValueError(
+                "Number of KV splits cannot exceed number of KV tiles, got "
+                f"{num_kv_splits=}, {num_kv_tiles=}."
+            )
+
         fmha_backward(
             d_query,
             d_key,
@@ -134,20 +174,26 @@ class CutlassFmhaAutogradFn(Function):
             output,
             d_output,
             logsumexp,
+            ctx.is_causal,
             ctx.scale,
             q_tile_size,
             k_tile_size,
             num_kv_splits,
             compute_delta_with_pt,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            ctx.max_seqlen_Q,
+            ctx.max_seqlen_KV,
         )
 
-        return d_query, d_key, d_value, None, None, None
+        return d_query, d_key, d_value, None, None, None, None, None, None, None, None
 
 
 def cutlass_fmha(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool = False,
     scale: Optional[float] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -156,11 +202,40 @@ def cutlass_fmha(
     backward_kv_splits: Optional[int] = None,
     backward_use_pt_reduction: bool = False,
     return_lse: bool = False,
+    # varlen parameters
+    cumulative_seqlen_Q: Optional[Tensor] = None,
+    cumulative_seqlen_KV: Optional[Tensor] = None,
+    max_seqlen_Q: int = 0,
+    max_seqlen_KV: int = 0,
+    total_seqlen_Q: int = 0,
+    total_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     fmha_tensor_checks(query, key, value, must_match_head_dims=False)
 
-    assert can_run_cutlass_fmha(query, key, value, raise_error=True)
+    (
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
+        total_seqlen_Q,
+        total_seqlen_KV,
+    ) = varlen_tensor_checks(
+        query=query,
+        key=key,
+        value=value,
+        cumulative_seqlen_Q=cumulative_seqlen_Q,
+        cumulative_seqlen_KV=cumulative_seqlen_KV,
+        max_seqlen_Q=max_seqlen_Q,
+        max_seqlen_KV=max_seqlen_KV,
+        total_seqlen_Q=total_seqlen_Q,
+        total_seqlen_KV=total_seqlen_KV,
+    )
+    is_varlen = cumulative_seqlen_Q is not None
+
+    assert can_run_cutlass_fmha(
+        query, key, value, is_causal=is_causal, is_varlen=is_varlen, raise_error=True
+    )
 
     forward_config = check_cutlass_fmha_forward_config(
         input_tensor=query if value.shape[-1] <= query.shape[-1] else value,
@@ -178,13 +253,30 @@ def cutlass_fmha(
 
     scale = scale or query.shape[-1] ** -0.5
 
+    if is_varlen and total_seqlen_Q != query.shape[1]:
+        raise ValueError(
+            "Total sequence length must match tensor sequence length, got "
+            f"{total_seqlen_Q=}, {query.shape[1]=}."
+        )
+
+    if is_varlen and total_seqlen_KV != key.shape[1]:
+        raise ValueError(
+            "Total sequence length must match tensor sequence length, got "
+            f"{total_seqlen_KV=}, {key.shape[1]=}."
+        )
+
     output, lse = CutlassFmhaAutogradFn.apply(
         query,
         key,
         value,
+        is_causal,
         scale,
         forward_config,
         backward_config,
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
     )
 
     if return_lse:

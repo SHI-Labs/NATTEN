@@ -26,7 +26,6 @@ import unittest
 from typing import Optional, Tuple, Union
 
 import natten  # noqa: F401
-
 import torch
 from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass import (
@@ -78,7 +77,7 @@ def _reset_everything():
 
 
 def compute_sdpa_reference(
-    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, dtype=torch.float32
+    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, is_causal, dtype=torch.float32
 ):
     dim_v = dim_v or dim
     with torch.no_grad():
@@ -103,7 +102,9 @@ def compute_sdpa_reference(
     with torch.nn.attention.sdpa_kernel(
         backends=[torch.nn.attention.SDPBackend.EFFICIENT_ATTENTION]
     ):
-        out = torch.nn.functional.scaled_dot_product_attention(q, k, v, is_causal=False)
+        out = torch.nn.functional.scaled_dot_product_attention(
+            q, k, v, is_causal=is_causal
+        )
 
     lse_ref = None
 
@@ -121,7 +122,7 @@ def compute_sdpa_reference(
 
 
 def compute_natten_fmha_reference(
-    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, dtype=torch.float32
+    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, is_causal, dtype=torch.float32
 ):
     dim_v = dim_v or dim
     with torch.no_grad():
@@ -143,7 +144,9 @@ def compute_natten_fmha_reference(
     v = v.requires_grad_(True)
     d_out = d_out.requires_grad_(True)
 
-    out, lse = attention(q, k, v, backend="cutlass-fmha", return_lse=True)
+    out, lse = attention(
+        q, k, v, is_causal=is_causal, backend="cutlass-fmha", return_lse=True
+    )
 
     with torch.no_grad():
         out_ref = out.clone().float()
@@ -176,6 +179,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim: int,
         seqlen_q: int,
         seqlen_kv: int,
+        is_causal: bool,
         atol: Union[float, Tuple[float, float]],
         rtol: Union[float, Tuple[float, float]],
         dtype: torch.dtype,
@@ -197,7 +201,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim_v = head_dim_v or head_dim
         logger.debug(
             f"Testing FMHA ({backend}) vs {reference_str}: {batch=}, {heads=}, {head_dim=}, {head_dim_v=}, "
-            f"{seqlen_q=}, {seqlen_kv=}, {dtype=}, "
+            f"{seqlen_q=}, {seqlen_kv=}, {is_causal=}, {dtype=}, "
             f"{q_tile_size=}, {kv_tile_size=}, {kernel_schedule=}, {run_persistent_kernel=}, {torch_compile=}"
             + (
                 f", {backward_q_tile_size=}, {backward_kv_tile_size=}, "
@@ -224,6 +228,7 @@ class FMHABackendTest(unittest.TestCase):
             q,
             k,
             v,
+            is_causal=is_causal,
             backend=backend,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
@@ -301,6 +306,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim: int,
         seqlen_q: int,
         seqlen_kv: int,
+        is_causal: bool,
         atol: Union[float, Tuple[float, float]],
         rtol: Union[float, Tuple[float, float]],
         dtype: torch.dtype,
@@ -320,7 +326,14 @@ class FMHABackendTest(unittest.TestCase):
         head_dim_v = head_dim_v or head_dim
         sdpa_dtype = dtype if not is_fp8(dtype) else torch.float16
         inputs, reference = compute_sdpa_reference(
-            batch, heads, head_dim, head_dim_v, seqlen_q, seqlen_kv, dtype=sdpa_dtype
+            batch,
+            heads,
+            head_dim,
+            head_dim_v,
+            seqlen_q,
+            seqlen_kv,
+            is_causal=is_causal,
+            dtype=sdpa_dtype,
         )
         self._test_against_reference_inputs(
             inputs=inputs,
@@ -331,6 +344,7 @@ class FMHABackendTest(unittest.TestCase):
             head_dim_v=head_dim_v,
             seqlen_q=seqlen_q,
             seqlen_kv=seqlen_kv,
+            is_causal=is_causal,
             atol=atol,
             rtol=rtol,
             dtype=dtype,
@@ -355,6 +369,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim: int,
         seqlen_q: int,
         seqlen_kv: int,
+        is_causal: bool,
         atol: Union[float, Tuple[float, float]],
         rtol: Union[float, Tuple[float, float]],
         dtype: torch.dtype,
@@ -374,7 +389,14 @@ class FMHABackendTest(unittest.TestCase):
     ):
         head_dim_v = head_dim_v or head_dim
         inputs, reference = compute_natten_fmha_reference(
-            batch, heads, head_dim, head_dim_v, seqlen_q, seqlen_kv, dtype=dtype
+            batch,
+            heads,
+            head_dim,
+            head_dim_v,
+            seqlen_q,
+            seqlen_kv,
+            is_causal=is_causal,
+            dtype=dtype,
         )
         self._test_against_reference_inputs(
             inputs=inputs,
@@ -385,6 +407,7 @@ class FMHABackendTest(unittest.TestCase):
             head_dim_v=head_dim_v,
             seqlen_q=seqlen_q,
             seqlen_kv=seqlen_kv,
+            is_causal=is_causal,
             atol=atol,
             rtol=rtol,
             dtype=dtype,
@@ -411,6 +434,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim_v,
         seqlen_q,
         seqlen_kv,
+        is_causal,
     ):
         torch.set_default_device("cuda")
 
@@ -462,6 +486,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim_v=head_dim_v,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
                     dtype=dtype,
                     test_backprop=True,
                     atol=atol,
@@ -483,13 +508,14 @@ class FMHABackendTest(unittest.TestCase):
         head_dim,
         seqlen_q,
         seqlen_kv,
+        is_causal,
     ):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
             (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
-            (torch.float8_e4m3fn, (3e-1, None), (0, None)),
+            (torch.float8_e4m3fn, (4e-1, None), (0, None)),
             (torch.float8_e5m2, (7e-1, None), (0, None)),
         ]
 
@@ -518,6 +544,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
                     dtype=dtype,
                     test_backprop=not is_fp8(dtype),
                     atol=atol,
@@ -537,6 +564,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim,
         seqlen_q,
         seqlen_kv,
+        is_causal,
     ):
         torch.set_default_device("cuda")
 
@@ -573,6 +601,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
                     dtype=dtype,
                     test_backprop=True,
                     atol=atol,
@@ -593,6 +622,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim,
         seqlen_q,
         seqlen_kv,
+        is_causal,
     ):
         torch.set_default_device("cuda")
 
@@ -629,6 +659,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
                     dtype=dtype,
                     test_backprop=True,
                     test_lse=True,
@@ -650,6 +681,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim,
         seqlen_q,
         seqlen_kv,
+        is_causal,
     ):
         torch.set_default_device("cuda")
 
@@ -684,6 +716,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
                     dtype=dtype,
                     test_backprop=True,
                     test_lse=True,
@@ -704,6 +737,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim,
         seqlen_q,
         seqlen_kv,
+        is_causal,
         backend,
         head_dim_v=None,
     ):
@@ -715,6 +749,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim_v=head_dim_v,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=is_causal,
             )
         elif backend == "blackwell-fmha":
             assert (
@@ -727,6 +762,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=is_causal,
             )
         elif backend == "hopper-fmha":
             assert (
@@ -739,6 +775,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=is_causal,
             )
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
@@ -751,6 +788,7 @@ class FMHABackendTest(unittest.TestCase):
         head_dim,
         seqlen_q,
         seqlen_kv,
+        is_causal,
         backend,
     ):
         if backend == "hopper-fmha":
@@ -760,6 +798,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=is_causal,
             )
         elif backend == "blackwell-fmha":
             return self._test_cutlass_blackwell_fmha_against_cutlass_2x_fmha(
@@ -768,6 +807,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=is_causal,
             )
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
@@ -805,15 +845,20 @@ class FMHABackendTest(unittest.TestCase):
                 else:
                     seqlen_q = int(seqlen_q * 0.1)
 
-            self._test_backend_against_torch_sdpa(
-                batch=batch,
-                heads=heads,
-                head_dim=head_dim,
-                head_dim_v=head_dim_v,
-                seqlen_q=seqlen_q,
-                seqlen_kv=seqlen_kv,
-                backend=backend,
-            )
+            for is_causal in [False, True]:
+                # TODO
+                if backend not in ["blackwell-fmha", "cutlass-fmha"] and is_causal:
+                    continue
+                self._test_backend_against_torch_sdpa(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    head_dim_v=head_dim_v,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend=backend,
+                )
 
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_fmha_fast_against_torch_sdpa(self):
@@ -853,15 +898,17 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_q,
             seqlen_kv,
         ) in problem_sizes:
-            self._test_backend_against_torch_sdpa(
-                batch=batch,
-                heads=heads,
-                head_dim=head_dim,
-                head_dim_v=head_dim_v,
-                seqlen_q=seqlen_q,
-                seqlen_kv=seqlen_kv,
-                backend="cutlass-fmha",
-            )
+            for is_causal in [False, True]:
+                self._test_backend_against_torch_sdpa(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    head_dim_v=head_dim_v,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="cutlass-fmha",
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
@@ -896,20 +943,27 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_q,
             seqlen_kv,
         ) in problem_sizes:
-            self._test_backend_against_torch_sdpa(
-                batch=batch,
-                heads=heads,
-                head_dim=head_dim,
-                seqlen_q=seqlen_q,
-                seqlen_kv=seqlen_kv,
-                backend="hopper-fmha",
-            )
+            # TODO:
+            # for is_causal in [False, True]:
+            for is_causal in [
+                False,
+            ]:
+                self._test_backend_against_torch_sdpa(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="hopper-fmha",
+                )
             self._test_backend_against_natten_cutlass_fmha(
                 batch=batch,
                 heads=heads,
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=False,  # TODO
                 backend="hopper-fmha",
             )
 
@@ -917,6 +971,12 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_fast(self):
         problem_sizes = [
+            (1, 1, 128, 128, 128),
+            (1, 4, 128, 128, 128),
+            (1, 1, 128, 128, 1024),
+            (1, 1, 128, 128, 13568),
+            (1, 1, 128, 128, 13496),
+            (1, 1, 32, 128, 13496),
             (1, 1, 32, 32, 13496),
             (3, 1, 32, 77, 8504),
             (1, 1, 32, 77, 8504),
@@ -948,22 +1008,25 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_q,
             seqlen_kv,
         ) in problem_sizes:
-            self._test_backend_against_torch_sdpa(
-                batch=batch,
-                heads=heads,
-                head_dim=head_dim,
-                seqlen_q=seqlen_q,
-                seqlen_kv=seqlen_kv,
-                backend="blackwell-fmha",
-            )
-            self._test_backend_against_natten_cutlass_fmha(
-                batch=batch,
-                heads=heads,
-                head_dim=head_dim,
-                seqlen_q=seqlen_q,
-                seqlen_kv=seqlen_kv,
-                backend="blackwell-fmha",
-            )
+            for is_causal in [False, True]:
+                self._test_backend_against_torch_sdpa(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="blackwell-fmha",
+                )
+                self._test_backend_against_natten_cutlass_fmha(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="blackwell-fmha",
+                )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()

@@ -54,6 +54,7 @@ namespace cutlass::fna::device {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <
+    class ProblemShape,
     class Element,
     class ElementAccumulator,
     class TileShape,
@@ -65,30 +66,39 @@ class FnaBwdSm100 {
  public:
   /// Argument structure: User API
   struct Arguments {
-    // Q K D HB
-    cute::tuple<int, int, int, cute::tuple<int, int>> problem_size;
+    // Q K D D_VO HB
+    ProblemShape problem_shape;
 
     const Element* ptr_Q;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_Q;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+        stride_Q;
     const Element* ptr_K;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_K;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+        stride_K;
     const Element* ptr_V;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_V;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+        stride_V;
 
     const Element* ptr_O;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_O;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+        stride_O;
     const ElementAccumulator* ptr_LSE;
-    cute::tuple<int, cute::tuple<cute::_1, int>> stride_LSE;
+    // NATTEN has a different LSE layout
+    cute::tuple<int, cute::tuple<cute::tuple<_1, int>, int>> stride_LSE;
 
     const Element* ptr_dO;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_dO;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+        stride_dO;
 
     Element* ptr_dQ;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_dQ;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+        stride_dQ;
     Element* ptr_dK;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_dK;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+        stride_dK;
     Element* ptr_dV;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> stride_dV;
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+        stride_dV;
 
     // (F)NA parameters
     NADim q_shape;
@@ -105,12 +115,15 @@ class FnaBwdSm100 {
   };
 
   using OperationSumOdO = cutlass::fna::device::FnaSm100<
-      cutlass::fmha::kernel::FmhaKernelBwdSumOdO<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdSumOdO<ProblemShape, Element, ElementAccumulator>>;
   using OperationConvert = cutlass::fna::device::FnaSm100<
-      cutlass::fmha::kernel::FmhaKernelBwdConvert<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdConvert<ProblemShape, Element, ElementAccumulator>>;
 
   using Operation = cutlass::fna::device::FnaSm100<
       cutlass::fna::kernel::Sm100FnaBwdKernelTmaWarpSpecialized<
+          ProblemShape,
           Element,
           ElementAccumulator,
           TileShape,
@@ -136,15 +149,18 @@ class FnaBwdSm100 {
       ElementAccumulator* sum_odo = nullptr,
       ElementAccumulator* scaled_lse = nullptr) {
     using namespace cute;
-    auto [Q, K, D, HB] = args.problem_size;
+    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
     auto [H, B] = HB;
-    // D = cutlass::round_up(D, 8);  // Alignment
-    // Q = cutlass::round_up(Q, 8);  // Alignment
-    auto stride_sum_OdO = make_stride(_1{}, make_stride(Q, Q * H));
-    auto stride_scaled_lse = make_stride(_1{}, make_stride(Q, Q * H));
+    auto [H_R, H_K] = H;
+    D = cutlass::round_up(D, 8); // Alignment
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
+    auto stride_sum_OdO = make_stride(
+        _1{}, make_stride(make_stride(Q, Q * H_R), B == 1 ? 0 : Q * H_R * H_K));
+    auto stride_scaled_lse = make_stride(
+        _1{}, make_stride(make_stride(Q, Q * H_R), B == 1 ? 0 : Q * H_R * H_K));
     auto log2_e = log2f(expf(1.0f));
     return typename OperationSumOdO::Arguments{
-        args.problem_size,
+        args.problem_shape,
         args.ptr_O,
         args.stride_O,
         args.ptr_dO,
@@ -163,19 +179,24 @@ class FnaBwdSm100 {
       Arguments const& args,
       ElementAccumulator* src = nullptr) {
     using namespace cute;
-    auto [Q, K, D, HB] = args.problem_size;
+    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
     auto [H, B] = HB;
-    // D = cutlass::round_up(D, 8);  // Alignment
-    // Q = cutlass::round_up(Q, 8);  // Alignment
-    auto stride_src_dQ = make_stride(D, _1{}, make_stride(D * Q, D * Q * H));
+    auto [H_R, H_K] = H;
+    D = cutlass::round_up(D, 8); // Alignment
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
+    auto stride_src_dQ = make_stride(
+        D,
+        _1{},
+        make_stride(
+            make_stride(D * Q, D * Q * H_R), B == 1 ? 0 : D * Q * H_R * H_K));
     return typename OperationConvert::Arguments{
-        args.problem_size,
+        args.problem_shape,
         src,
         stride_src_dQ,
         nullptr,
-        stride_src_dQ,
+        args.stride_dK,
         nullptr,
-        stride_src_dQ,
+        args.stride_dV,
         args.ptr_dQ,
         args.stride_dQ,
         nullptr,
@@ -188,14 +209,16 @@ class FnaBwdSm100 {
   static typename Operation::Arguments to_bwd_arguments(
       Arguments const& args,
       ElementAccumulator* sum_OdO = nullptr,
-      cute::tuple<cute::_1, cute::tuple<int, int>> const& stride_sum_OdO = {},
+      cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int>> const&
+          stride_sum_OdO = {},
       ElementAccumulator* scaled_lse = nullptr,
-      cute::tuple<cute::_1, cute::tuple<int, int>> const& stride_scaled_lse =
-          {},
+      cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int>> const&
+          stride_scaled_lse = {},
       ElementAccumulator* dQ_acc = nullptr,
-      cute::tuple<int, cute::_1, cute::tuple<int, int>> const& stride_dQ = {}) {
+      cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>> const&
+          stride_dQ = {}) {
     return typename Operation::Arguments{
-        args.problem_size,
+        args.problem_shape,
         // FNA args
         {args.q_shape,
          args.kv_shape,
@@ -248,10 +271,10 @@ class FnaBwdSm100 {
 
   /// Gets the workspace size
   static size_t get_workspace_size(Arguments const& args) {
-    auto [Q, K, D, HB] = args.problem_size;
-    auto [H, B] = HB;
-    // D = cutlass::round_up(D, 8);  // Alignment
-    // Q = cutlass::round_up(Q, 8);  // Alignment
+    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
+    auto [H, B] = product_each(HB);
+    D = cutlass::round_up(D, 8); // Alignment
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
     size_t workspace_bytes = 0;
     // OdO vector
     workspace_bytes += B * H * Q * sizeof(ElementAccumulator);
@@ -274,10 +297,10 @@ class FnaBwdSm100 {
         << workspace_dQ << ", workspace_sum_OdO=" << workspace_sum_OdO
         << "stream: " << (stream ? "non-null" : "null"));
 
-    auto [Q, K, D, HB] = args.problem_size;
-    auto [H, B] = HB;
-    // D = cutlass::round_up(D, 8);  // Alignment
-    // Q = cutlass::round_up(Q, 8);  // Alignment
+    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
+    auto [H, B] = product_each(HB);
+    D = cutlass::round_up(D, 8); // Alignment
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_sum_OdO);
     ElementAccumulator* scaled_lse =
@@ -312,10 +335,10 @@ class FnaBwdSm100 {
         "FnaDeviceBwd::initialize() - workspace "
         << workspace << ", stream: " << (stream ? "non-null" : "null"));
 
-    auto [Q, K, D, HB] = args.problem_size;
-    auto [H, B] = HB;
-    // D = cutlass::round_up(D, 8);  // Alignment
-    // Q = cutlass::round_up(Q, 8);  // Alignment
+    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
+    auto [H, B] = product_each(HB);
+    D = cutlass::round_up(D, 8); // Alignment
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
     char* workspace_chr = reinterpret_cast<char*>(workspace);
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_chr);

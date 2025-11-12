@@ -36,12 +36,21 @@ void {kernel_name}(
       void* ptr_dO,
       int batch_size,
       int seqlen_q,
-      int seqlen_q_aligned,
       int seqlen_k,
       int heads,
       int dim,
-      int device_id,
+      bool is_causal,
       float attn_scale,
+      // varlen parameters
+      bool is_varlen,
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      int total_seqlen_Q,
+      int total_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      // init/launch params
+      int device_id,
       cudaStream_t stream,
       at::TensorOptions tensor_options);
 """
@@ -60,72 +69,99 @@ void {kernel_name}(
       void* ptr_dO,
       int batch_size,
       int seqlen_q,
-      int seqlen_q_aligned,
       int seqlen_k,
       int heads,
       int dim,
-      int device_id,
+      bool is_causal,
       float attn_scale,
+      // varlen parameters
+      bool is_varlen,
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      int total_seqlen_Q,
+      int total_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      // init/launch params
+      int device_id,
       cudaStream_t stream,
       at::TensorOptions tensor_options) {{
 
   using GemmShape = {GEMMShape};
   using Kernel = natten::cuda::fmha_blackwell::KernelBackward<
-    {dtype}, GemmShape, false>;
+    {dtype}, GemmShape, cutlass::fmha::collective::NoMask, /* kIsVarlen= */ false>;
   using KernelWithResidualMask = natten::cuda::fmha_blackwell::KernelBackward<
-    {dtype}, GemmShape, true>;
+    {dtype}, GemmShape, cutlass::fmha::collective::ResidualMaskForBackward, /* kIsVarlen= */ false>;
+  using KernelWithCausalMask = natten::cuda::fmha_blackwell::KernelBackward<
+    {dtype}, GemmShape, cutlass::fmha::collective::CausalForBackwardMask<true>, /* kIsVarlen= */ false>;
 
-  bool no_mask_required = seqlen_q % get<0>(GemmShape{{}}) == 0 && seqlen_k % get<1>(GemmShape{{}}) == 0;
+  // Varlen kernels
+  using VarlenKernelWithResidualMask = natten::cuda::fmha_blackwell::KernelBackward<
+    {dtype},
+    GemmShape,
+    cutlass::fmha::collective::ResidualMaskForBackward,
+    /* kIsVarlen= */ true>;
+  using VarlenKernelWithCausalMask = natten::cuda::fmha_blackwell::KernelBackward<
+    {dtype},
+    GemmShape,
+    cutlass::fmha::collective::CausalForBackwardMask<true>,
+    /* kIsVarlen= */ true>;
+
+  auto launch_kernel = [&](auto& kernel) {{
+    auto args = kernel.initialize(
+        ptr_Q,
+        ptr_K,
+        ptr_V,
+        ptr_O,
+        ptr_LSE,
+        ptr_dQ,
+        ptr_dK,
+        ptr_dV,
+        ptr_dO,
+        batch_size,
+        seqlen_q,
+        seqlen_k,
+        heads,
+        dim,
+        attn_scale,
+        // varlen
+        max_seqlen_Q,
+        max_seqlen_KV,
+        total_seqlen_Q,
+        total_seqlen_KV,
+        ptr_cumulative_seqlen_Q,
+        ptr_cumulative_seqlen_KV,
+        //
+        device_id);
+
+    auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
+    auto workspace = at::empty({{bytes}}, tensor_options.dtype(at::ScalarType::Byte));
+    auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
+    kernel.run(args, workspace_ptr, stream);
+  }};
+
+  bool no_mask_required = not is_varlen && not is_causal &&
+      seqlen_q % get<0>(GemmShape{{}}) == 0 && seqlen_k % get<1>(GemmShape{{}}) == 0;
+
   if (no_mask_required) {{
     Kernel kernel;
-    auto args = kernel.initialize(
-        ptr_Q,
-        ptr_K,
-        ptr_V,
-        ptr_O,
-        ptr_LSE,
-        ptr_dQ,
-        ptr_dK,
-        ptr_dV,
-        ptr_dO,
-        batch_size,
-        seqlen_q,
-        seqlen_q_aligned,
-        seqlen_k,
-        heads,
-        dim,
-        device_id,
-        attn_scale);
-
-    auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
-    auto workspace = at::empty({{bytes}}, tensor_options.dtype(at::ScalarType::Byte));
-    auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
-    kernel.run(args, workspace_ptr, stream);
-  }} else {{
+    launch_kernel(kernel);
+  }}
+  else if (is_varlen && is_causal) {{
+    VarlenKernelWithCausalMask kernel;
+    launch_kernel(kernel);
+  }}
+  else if (is_varlen && not is_causal) {{
+    VarlenKernelWithResidualMask kernel;
+    launch_kernel(kernel);
+  }}
+  else if (not is_varlen && is_causal) {{
+    KernelWithCausalMask kernel;
+    launch_kernel(kernel);
+  }}
+  else {{
     KernelWithResidualMask kernel;
-    auto args = kernel.initialize(
-        ptr_Q,
-        ptr_K,
-        ptr_V,
-        ptr_O,
-        ptr_LSE,
-        ptr_dQ,
-        ptr_dK,
-        ptr_dV,
-        ptr_dO,
-        batch_size,
-        seqlen_q,
-        seqlen_q_aligned,
-        seqlen_k,
-        heads,
-        dim,
-        device_id,
-        attn_scale);
-
-    auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
-    auto workspace = at::empty({{bytes}}, tensor_options.dtype(at::ScalarType::Byte));
-    auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
-    kernel.run(args, workspace_ptr, stream);
+    launch_kernel(kernel);
   }}
 }}
 """
