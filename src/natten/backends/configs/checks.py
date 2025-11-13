@@ -558,6 +558,14 @@ def can_run_flex_attention(
         target_fn("Can't run NATTEN with Flex Attention with torch < 2.7.")
         return False
 
+    # XPU requires PyTorch 2.9+
+    if is_xpu(query.device) and _TORCH_VERSION < [2, 9]:
+        target_fn(
+            f"Can't run Flex Attention on XPU; requires PyTorch >= 2.9, "
+            f"got {_TORCH_VERSION[0]}.{_TORCH_VERSION[1]}."
+        )
+        return False
+
     if torch_compile and not _FLEX_COMPILE_SUPPORTED:
         target_fn("Can't run NATTEN with Flex Attention (compiled).)")
         return False
