@@ -157,7 +157,8 @@ class CutlassFmhaAutogradFn(Function):
                 f"Overriding {kv_splits=} to {num_kv_splits}."
             )
 
-        num_kv_tiles = (key.shape[1] + k_tile_size - 1) // k_tile_size
+        seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else ctx.max_seqlen_KV
+        num_kv_tiles = (seqlen_kv + k_tile_size - 1) // k_tile_size
         if num_kv_splits > num_kv_tiles:
             raise ValueError(
                 "Number of KV splits cannot exceed number of KV tiles, got "

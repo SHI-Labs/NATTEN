@@ -209,7 +209,7 @@ class FNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for head_dim_v in [head_dim, random.choice(range(8, 193, 8))]:
+            for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
                 for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                     for causal in [False, True]:
                         is_causal = (causal,)
