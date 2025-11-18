@@ -26,7 +26,6 @@ import time
 from typing import Optional, Tuple, Union
 
 import torch
-
 from natten.backends.reference import reference_fna_generic
 from natten.functional import neighborhood_attention_generic
 from natten.types import CausalArgType, DimensionType, KernelSchedule

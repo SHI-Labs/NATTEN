@@ -187,8 +187,8 @@ NUM_SPLITS = {
         "hopper-fmha-bwd": 1,
         "blackwell-fna": 28,
         "blackwell-fna-bwd": 14,
-        "blackwell-fmha": 1,
-        "blackwell-fmha-bwd": 1,
+        "blackwell-fmha": 4,
+        "blackwell-fmha-bwd": 4,
     },
     "fine": {
         "reference": 4,
@@ -200,8 +200,8 @@ NUM_SPLITS = {
         "hopper-fmha-bwd": 1,
         "blackwell-fna": 56,
         "blackwell-fna-bwd": 28,
-        "blackwell-fmha": 1,
-        "blackwell-fmha-bwd": 1,
+        "blackwell-fmha": 2,
+        "blackwell-fmha-bwd": 2,
     },
     "coarse": {
         "reference": 1,

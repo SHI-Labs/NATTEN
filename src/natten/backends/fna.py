@@ -25,7 +25,6 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
-
 from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
 
@@ -60,7 +59,6 @@ from ..types import (
 )
 from ..utils import log
 from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
-
 from .configs.checks import can_run_cutlass_fna
 from .configs.cutlass import (
     check_cutlass_fna_backward_config,

@@ -40,21 +40,29 @@ namespace fmha_blackwell {
 using namespace cute;
 using namespace cutlass::fmha;
 
-template <typename Element, class TileShape, bool kIsResidual>
+template <typename Element, class TileShape, class Mask, bool kIsVarlen>
 struct KernelBackward {
   using ElementAccumulator = float;
-  using ElementOut = Element;
+  using VariableLength = cutlass::fmha::collective::VariableLength;
 
-  // Q K D (B H)
-  using ProblemShapeType = cute::tuple<int, int, int, cute::tuple<int, int>>;
+  // Q K D ((H_R, H_K) B)
+  using ProblemShapeRegular =
+      cute::tuple<int, int, int, int, cute::tuple<cute::tuple<int, int>, int>>;
+  using ProblemShapeVarlen = cute::tuple<
+      VariableLength,
+      VariableLength,
+      int,
+      int,
+      cute::tuple<cute::tuple<int, int>, int>>;
+  using ProblemShapeType =
+      std::conditional_t<kIsVarlen, ProblemShapeVarlen, ProblemShapeRegular>;
 
-  using Mask = std::conditional_t<
-      kIsResidual,
-      cutlass::fmha::collective::ResidualMask,
-      cutlass::fmha::collective::NoMask>;
-
-  using Operation = cutlass::fmha::device::
-      FmhaBwdSm100<Element, ElementAccumulator, TileShape, Mask>;
+  using Operation = cutlass::fmha::device::FmhaBwdSm100<
+      ProblemShapeType,
+      Element,
+      ElementAccumulator,
+      TileShape,
+      Mask>;
 
   using Arguments = typename Operation::Arguments;
 
@@ -72,37 +80,82 @@ struct KernelBackward {
       void* ptr_dO,
       int batch,
       int seqlen_Q,
-      int seqlen_Q_aligned,
       int seqlen_KV,
       int heads,
       int dim,
-      int device_id,
-      float attn_scale) {
-    auto dim_aligned = cutlass::round_up(dim, 8); // alignment
-
-    ProblemShapeType problem_shape = cute::make_tuple(
-        seqlen_Q_aligned,
+      float attn_scale,
+      // varlen parameters
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      // init/launch params
+      int device_id) {
+    auto problem_shape_regular = cute::make_tuple(
+        seqlen_Q,
         seqlen_KV,
-        dim_aligned,
-        cute::make_tuple(heads, batch));
+        // head dim is always either 32, 64, or 128 in natten, but it should
+        // always meet the 128-bit alignment constraint
+        dim,
+        dim, // dim_value -- if different from dim, needs the MLA kernel
+        cute::make_tuple(
+            make_tuple(1, heads), // gqa/mqa is supported, just disabled for now
+            batch));
 
-    ProblemShapeType problem_shape_actual = cute::make_tuple(
-        seqlen_Q, seqlen_KV, dim_aligned, cute::make_tuple(heads, batch));
+    ProblemShapeType problem_shape_launch;
+    decltype(problem_shape_regular) problem_shape_memory;
 
-    int SQ = size<0>(problem_shape);
-    int SK = size<1>(problem_shape);
-    int D = size<2>(problem_shape);
-    int H = size<3, 0>(problem_shape);
-    int B = size<3, 1>(problem_shape);
+    if constexpr (kIsVarlen) {
+      problem_shape_memory = problem_shape_regular;
+      get<4, 1>(problem_shape_memory) = 1;
+
+      get<0>(problem_shape_launch) = VariableLength{
+          max_seqlen_Q,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_Q),
+          seqlen_Q};
+      get<1>(problem_shape_launch) = VariableLength{
+          max_seqlen_KV,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_KV),
+          seqlen_KV};
+      get<2>(problem_shape_launch) = get<2>(problem_shape_regular);
+      get<3>(problem_shape_launch) = get<3>(problem_shape_regular);
+      get<4>(problem_shape_launch) = get<4>(problem_shape_regular);
+    } else {
+      problem_shape_memory = problem_shape_regular;
+      problem_shape_launch = problem_shape_regular;
+    }
+
+    int SQ = size<0>(problem_shape_memory);
+    int SK = size<1>(problem_shape_memory);
+    int D = size<2>(problem_shape_memory);
+    int D_VO = size<3>(problem_shape_memory);
+    auto HB = get<4, 0>(problem_shape_memory);
+    auto [H_R, H_K] = HB;
+    int B = size<4, 1>(problem_shape_memory);
 
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, seqlen, heads, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
-    auto stride_Q = make_stride(H * D, _1{}, make_stride(D, H * D * SQ));
-    auto stride_O = stride_Q;
-    auto stride_K = make_stride(H * D, _1{}, make_stride(D, H * D * SK));
-    auto stride_V = stride_K;
-    auto stride_LSE = make_stride(H, make_stride(_1{}, SQ * H));
+    auto stride_Q = make_stride(
+        H_R * H_K * D,
+        _1{},
+        make_stride(make_stride(D, D * H_R), B == 1 ? 0 : D * SQ * H_R * H_K));
+    auto stride_K = make_stride(
+        H_K * D,
+        _1{},
+        make_stride(make_stride(_0{}, D), B == 1 ? 0 : D * SK * H_K));
+    auto stride_V = make_stride(
+        H_K * D_VO,
+        _1{},
+        make_stride(make_stride(_0{}, D_VO), B == 1 ? 0 : D_VO * SK * H_K));
+    auto stride_O = make_stride(
+        H_R * H_K * D_VO,
+        _1{},
+        make_stride(
+            make_stride(D_VO, D_VO * H_R), B == 1 ? 0 : D_VO * SQ * H_R * H_K));
+    auto stride_LSE = make_stride(
+        H_K * H_R,
+        make_stride(make_stride(_1{}, H_R), B == 1 ? 0 : SQ * H_R * H_K));
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;
@@ -111,8 +164,7 @@ struct KernelBackward {
             hw_info.device_id);
 
     Arguments arguments{
-        problem_shape,
-        problem_shape_actual,
+        problem_shape_launch,
         reinterpret_cast<Element*>(ptr_Q),
         stride_Q,
         reinterpret_cast<Element*>(ptr_K),

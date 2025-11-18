@@ -38,7 +38,12 @@ from ...utils.dtype import is_fp8
 
 
 def can_run_cutlass_blackwell_fmha(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    is_causal: bool,
+    is_varlen: bool,
+    raise_error: bool = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
@@ -218,7 +223,12 @@ def can_run_cutlass_blackwell_fna(
 
 
 def can_run_cutlass_hopper_fmha(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    is_causal: bool,
+    is_varlen: bool,
+    raise_error: bool = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
@@ -234,6 +244,14 @@ def can_run_cutlass_hopper_fmha(
         raise_error=raise_error,
         backend_name="Hopper FMHA",
     ):
+        return False
+
+    if is_causal:
+        target_fn("Hopper FMHA doesn't support causal mask yet.")
+        return False
+
+    if is_varlen:
+        target_fn("Hopper FMHA doesn't support variable length inputs (varlen).")
         return False
 
     if query.dim() != 4:
@@ -388,7 +406,12 @@ def can_run_cutlass_hopper_fna(
 
 
 def can_run_cutlass_fmha(
-    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    is_causal: bool,
+    is_varlen: bool,
+    raise_error: bool = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
 
@@ -550,9 +573,19 @@ def can_run_flex_attention(
     key: Tensor,
     value: Tensor,
     torch_compile: bool,
+    is_causal: bool = False,
+    is_varlen: bool = False,
     raise_error: bool = False,
 ) -> bool:
     target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if is_causal:
+        target_fn("Flex FMHA doesn't support causal mask yet.")
+        return False
+
+    if is_varlen:
+        target_fn("Flex FMHA doesn't support variable length inputs (varlen).")
+        return False
 
     if not _FLEX_SUPPORTED:
         target_fn("Can't run NATTEN with Flex Attention with torch < 2.7.")

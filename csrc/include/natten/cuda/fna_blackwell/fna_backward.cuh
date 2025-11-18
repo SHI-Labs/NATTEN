@@ -62,10 +62,12 @@ struct KernelBackward {
 
   using ElementAccumulator = float;
 
-  // Q K D (B H)
-  using ProblemShapeType = cute::tuple<int, int, int, cute::tuple<int, int>>;
+  // Q K D D_VO ((H_R, H_K) B)
+  using ProblemShapeType =
+      cute::tuple<int, int, int, int, cute::tuple<cute::tuple<int, int>, int>>;
 
   using Operation = cutlass::fna::device::FnaBwdSm100<
+      ProblemShapeType,
       Element,
       ElementAccumulator,
       TileShape,
@@ -104,24 +106,47 @@ struct KernelBackward {
     auto dim_aligned = cutlass::round_up(dim, 8); // alignment
 
     ProblemShapeType problem_shape = cute::make_tuple(
-        seqlen_Q, seqlen_KV, dim_aligned, cute::make_tuple(heads, batch));
+        seqlen_Q,
+        seqlen_KV,
+        dim_aligned,
+        dim_aligned, // dim_value -- if different from dim, needs the MLA kernel
+        cute::make_tuple(
+            make_tuple(1, heads), // gqa/mqa is supported, just disabled for now
+            batch));
 
     int SQ = size<0>(problem_shape);
     int SK = size<1>(problem_shape);
     int D = size<2>(problem_shape);
-    int H = size<3, 0>(problem_shape);
-    int B = size<3, 1>(problem_shape);
+    int D_VO = size<3>(problem_shape);
+    auto HB = get<4, 0>(problem_shape);
+    auto [H_R, H_K] = HB;
+    int B = size<4, 1>(problem_shape);
 
     int num_heads_actual = heads / size(dilation);
 
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, seqlen, heads, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
-    auto stride_Q = make_stride(H * D, _1{}, make_stride(D, H * D * SQ));
-    auto stride_O = stride_Q;
-    auto stride_K = make_stride(H * D, _1{}, make_stride(D, H * D * SK));
-    auto stride_V = stride_K;
-    auto stride_LSE = make_stride(H, make_stride(_1{}, SQ * H));
+    auto stride_Q = make_stride(
+        H_R * H_K * D,
+        _1{},
+        make_stride(make_stride(D, D * H_R), B == 1 ? 0 : D * SQ * H_R * H_K));
+    auto stride_K = make_stride(
+        H_K * D,
+        _1{},
+        make_stride(make_stride(_0{}, D), B == 1 ? 0 : D * SK * H_K));
+    auto stride_V = make_stride(
+        H_K * D_VO,
+        _1{},
+        make_stride(make_stride(_0{}, D_VO), B == 1 ? 0 : D_VO * SK * H_K));
+    auto stride_O = make_stride(
+        H_R * H_K * D_VO,
+        _1{},
+        make_stride(
+            make_stride(D_VO, D_VO * H_R), B == 1 ? 0 : D_VO * SQ * H_R * H_K));
+    auto stride_LSE = make_stride(
+        H_K * H_R,
+        make_stride(make_stride(_1{}, H_R), B == 1 ? 0 : SQ * H_R * H_K));
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;

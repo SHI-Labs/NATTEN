@@ -22,7 +22,6 @@
 #################################################################################################
 
 from ._environment import HAS_LIBNATTEN
-
 from .backends import (
     get_bwd_configs_for_cutlass_blackwell_fmha,
     get_bwd_configs_for_cutlass_blackwell_fna,
@@ -39,7 +38,6 @@ from .backends import (
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
 )
-
 from .context import (
     allow_flex_compile,
     allow_flex_compile_backprop,
@@ -57,15 +55,12 @@ from .context import (
     use_deterministic_algorithms,
     use_kv_parallelism_in_fused_na,
 )
-
 from .functional import attention, merge_attentions, na1d, na2d, na3d
-
 from .modules import (
     NeighborhoodAttention1D,
     NeighborhoodAttention2D,
     NeighborhoodAttention3D,
 )
-
 from .version import __version__
 
 __all__ = [

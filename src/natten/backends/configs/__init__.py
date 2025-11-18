@@ -45,7 +45,6 @@ from ...types import (
     FlexFmhaForwardConfigType,
     FlexFnaForwardConfigType,
 )
-
 from .checks import (
     can_run_cutlass_blackwell_fmha,
     can_run_cutlass_blackwell_fna,
@@ -55,28 +54,24 @@ from .checks import (
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
 )
-
 from .cutlass import (
     get_all_tile_shapes_backward as get_all_cutlass_fna_backward_configs,
     get_all_tile_shapes_forward as get_all_cutlass_fna_forward_configs,
     get_all_tile_sizes_backward as get_all_cutlass_fmha_backward_configs,
     get_all_tile_sizes_forward as get_all_cutlass_fmha_forward_configs,
 )
-
 from .cutlass_blackwell import (
     get_all_backward_configs as get_all_blackwell_fna_backward_configs,
     get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
     get_all_forward_configs as get_all_blackwell_fna_forward_configs,
 )
-
 from .cutlass_hopper import (
     get_all_backward_configs as get_all_hopper_fna_backward_configs,
     get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
     get_all_forward_configs as get_all_hopper_fna_forward_configs,
 )
-
 from .flex import (
     get_all_tile_shapes_forward as get_all_flex_fna_forward_configs,
     get_all_tile_sizes_forward as get_all_flex_fmha_forward_configs,
@@ -111,7 +106,12 @@ def get_configs_for_cutlass_blackwell_fmha(
     """
 
     if not can_run_cutlass_blackwell_fmha(
-        query=query, key=key, value=value, raise_error=False
+        query=query,
+        key=key,
+        value=value,
+        is_causal=False,
+        is_varlen=False,
+        raise_error=False,
     ):
         return []
 
@@ -143,7 +143,12 @@ def get_bwd_configs_for_cutlass_blackwell_fmha(
     """
 
     if not can_run_cutlass_blackwell_fmha(
-        query=query, key=key, value=value, raise_error=False
+        query=query,
+        key=key,
+        value=value,
+        is_causal=False,
+        is_varlen=False,
+        raise_error=False,
     ):
         return []
 
@@ -242,7 +247,12 @@ def get_configs_for_cutlass_hopper_fmha(
             corresponding to query and KV tile sizes, and a kernel schedule enum type.
     """
     if not can_run_cutlass_hopper_fmha(
-        query=query, key=key, value=value, raise_error=False
+        query=query,
+        key=key,
+        value=value,
+        is_causal=False,
+        is_varlen=False,
+        raise_error=False,
     ):
         return []
 
@@ -277,7 +287,12 @@ def get_bwd_configs_for_cutlass_hopper_fmha(
         (List[Tuple[int, int]]): List of integer tuples corresponding to query and KV tile sizes.
     """
     if not can_run_cutlass_hopper_fmha(
-        query=query, key=key, value=value, raise_error=False
+        query=query,
+        key=key,
+        value=value,
+        is_causal=False,
+        is_varlen=False,
+        raise_error=False,
     ):
         return []
 
@@ -380,7 +395,14 @@ def get_configs_for_cutlass_fmha(
         (List[Tuple[int, int]]): List of tuples of two integers corresponding to query and KV tile
             sizes.
     """
-    if not can_run_cutlass_fmha(query=query, key=key, value=value, raise_error=False):
+    if not can_run_cutlass_fmha(
+        query=query,
+        key=key,
+        value=value,
+        is_causal=False,
+        is_varlen=False,
+        raise_error=False,
+    ):
         return []
 
     return get_all_cutlass_fmha_forward_configs(input_tensor=query)
@@ -409,7 +431,14 @@ def get_bwd_configs_for_cutlass_fmha(
         (List[Tuple[int, int]]): List of tuples of two integers corresponding to query and KV tile
             sizes in the *backward pass*.
     """
-    if not can_run_cutlass_fmha(query=query, key=key, value=value, raise_error=False):
+    if not can_run_cutlass_fmha(
+        query=query,
+        key=key,
+        value=value,
+        is_causal=False,
+        is_varlen=False,
+        raise_error=False,
+    ):
         return []
 
     return get_all_cutlass_fmha_backward_configs(

@@ -42,7 +42,6 @@ from ....types import (
 )
 from ....utils.checks import check_dilation_arg, check_tile_shape
 from ....utils.device import get_device_cc, is_cuda
-
 from ....utils.tuples import ceil_div_int, ceil_div_tuple
 
 # FNA/FMHA forward supports 64x64 and 32x128 GEMM configs in all
@@ -499,7 +498,11 @@ def get_all_backward_configs(
         # Potential duplicates
         if math.prod(max_kv_splits) > 1:
             for kv_splits in _get_possible_kv_splits(min_kv_splits, max_kv_splits):
-                for use_pt_reduction in [False, True]:
+                # for use_pt_reduction in [False, True]:
+                # NOTE (ali, 11/17/2025): non-PT reduction can introduce some slight non-determinism
+                for use_pt_reduction in [
+                    True,
+                ]:
                     possible_configs.append(
                         (
                             query_tile_shape,
@@ -510,7 +513,11 @@ def get_all_backward_configs(
                     )
         else:
             # min_kv_splits == max_kv_splits
-            for use_pt_reduction in [False, True]:
+            # for use_pt_reduction in [False, True]:
+            # NOTE (ali, 11/17/2025): non-PT reduction can introduce some slight non-determinism
+            for use_pt_reduction in [
+                True,
+            ]:
                 possible_configs.append(
                     (query_tile_shape, kv_tile_shape, min_kv_splits, use_pt_reduction)
                 )

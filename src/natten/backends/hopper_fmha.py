@@ -25,7 +25,6 @@ from typing import Optional, Tuple, Union
 
 import torch
 from torch import Tensor
-
 from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
 
@@ -40,8 +39,7 @@ from ..types import (
     NoneType,
 )
 from ..utils import log
-from ..utils.checks import fmha_tensor_checks
-
+from ..utils.checks import fmha_tensor_checks, varlen_tensor_checks
 from .configs.checks import can_run_cutlass_hopper_fmha
 from .configs.cutlass_hopper import (
     check_cutlass_hopper_fmha_backward_config,
@@ -161,6 +159,7 @@ def cutlass_hopper_fmha(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool = False,
     scale: Optional[float] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -168,11 +167,34 @@ def cutlass_hopper_fmha(
     backward_q_tile_size: Optional[int] = None,
     backward_kv_tile_size: Optional[int] = None,
     return_lse: bool = False,
+    # varlen parameters
+    cumulative_seqlen_Q: Optional[Tensor] = None,
+    cumulative_seqlen_KV: Optional[Tensor] = None,
+    max_seqlen_Q: int = 0,
+    max_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     fmha_tensor_checks(query, key, value, must_match_head_dims=True)
 
-    assert can_run_cutlass_hopper_fmha(query, key, value, raise_error=True)
+    (
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
+    ) = varlen_tensor_checks(
+        query=query,
+        key=key,
+        value=value,
+        cumulative_seqlen_Q=cumulative_seqlen_Q,
+        cumulative_seqlen_KV=cumulative_seqlen_KV,
+        max_seqlen_Q=max_seqlen_Q,
+        max_seqlen_KV=max_seqlen_KV,
+    )
+    is_varlen = cumulative_seqlen_Q is not None
+
+    assert can_run_cutlass_hopper_fmha(
+        query, key, value, is_causal=is_causal, is_varlen=is_varlen, raise_error=True
+    )
 
     forward_config = check_cutlass_hopper_fmha_forward_config(
         input_tensor=query,
@@ -188,6 +210,8 @@ def cutlass_hopper_fmha(
 
     scale = scale or query.shape[-1] ** -0.5
 
+    # NOTE: is_causal is not supported
+    # NOTE: varlen is not supported
     output, lse = CutlassHopperFmhaAutogradFn.apply(
         query,
         key,
