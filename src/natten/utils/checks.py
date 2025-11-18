@@ -30,6 +30,7 @@ from torch import Tensor
 
 from ..types import CausalArgType, DimensionType, KernelSchedule, NoneType
 from ..utils.tuples import create_causal_arg_from_bool, create_dim_from_int
+from ..utils.varlen import generate_varlen_parameters
 from . import log
 
 logger = log.get_logger(__name__)
@@ -467,104 +468,6 @@ def check_kernel_schedule(kernel_schedule: Any) -> Optional[KernelSchedule]:
 # Varlen FMHA Checks
 
 
-def generate_varlen_parameters(
-    query: Tensor,
-    key: Tensor,
-    value: Tensor,
-    seqlens_Q: Optional[Tensor] = None,
-    seqlens_KV: Optional[Tensor] = None,
-) -> Union[
-    Tuple[NoneType, NoneType, int, int, int, int],
-    Tuple[Tensor, Tensor, int, int, int, int],
-]:
-    if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
-        raise ValueError(
-            "Q, K, and V must match in batch size, got "
-            f"{query.shape[0]=}, {key.shape[0]=}, {value.shape[0]=}."
-        )
-
-    if (seqlens_Q is None) ^ (seqlens_KV is None):
-        raise ValueError(
-            "Variable length Attention requires both of seqlens_Q and seqlens_KV to be set, got "
-            f"{seqlens_Q=}, {seqlens_KV=}."
-        )
-
-    if seqlens_Q is None and seqlens_KV is None:
-        # Not varlen
-        return None, None, 0, 0, 0, 0
-
-    assert seqlens_Q is not None
-    assert seqlens_KV is not None
-
-    if not isinstance(seqlens_Q, Tensor) or not isinstance(seqlens_KV, Tensor):
-        raise ValueError("seqlens_Q and seqlens_KV must both be tensors.")
-
-    if seqlens_Q.device != query.device or seqlens_KV.device != query.device:
-        raise ValueError(
-            "seqlens_Q and seqlens_KV must be on the same device as QKV, but "
-            f"{seqlens_Q.device=}, {seqlens_KV.device=}, {query.device=}."
-        )
-
-    if seqlens_Q.dtype != torch.int32 or seqlens_KV.dtype != torch.int32:
-        raise ValueError(
-            "seqlens_Q and seqlens_KV must both be torch.int32 tensors, got "
-            f"{seqlens_Q.dtype=}, {seqlens_KV.dtype=}."
-        )
-
-    if seqlens_Q.dim() != 1 or seqlens_KV.dim() != 1:
-        raise ValueError(
-            "seqlens_Q and seqlens_KV must both be 1-D tensors, got "
-            f"{seqlens_Q.dim()=}, {seqlens_KV.dim()=}."
-        )
-
-    if seqlens_Q.shape[0] != seqlens_KV.shape[0]:
-        raise ValueError(
-            "seqlens_Q and seqlens_KV must match in size, got "
-            f"{seqlens_Q.shape=}, {seqlens_KV.shape=}."
-        )
-
-    if seqlens_Q.shape[0] < 1:
-        raise ValueError(
-            "seqlens_Q and seqlens_KV must contain at least one element, got "
-            f"{seqlens_Q.shape=}, {seqlens_KV.shape=}."
-        )
-
-    if query.shape[0] != 1:
-        raise ValueError(
-            "Variable length attention only supports sequence-packed memory layout "
-            f"(batch = 1), got {query.shape[0]=}."
-        )
-
-    assert seqlens_Q.dim() == seqlens_KV.dim() == 1
-    assert seqlens_Q.shape[0] == seqlens_KV.shape[0] >= 1
-    assert seqlens_Q.dtype == seqlens_KV.dtype == torch.int32
-
-    total_seqlen_Q = seqlens_Q.sum().item()  # type: ignore
-    total_seqlen_KV = seqlens_KV.sum().item()  # type: ignore
-
-    max_seqlen_Q = seqlens_Q.max().item()  # type: ignore
-    max_seqlen_KV = seqlens_KV.max().item()  # type: ignore
-
-    # NOTE: we have to prepend with 0 manually :(
-    z = torch.tensor([0], dtype=torch.int32, device=seqlens_Q.device)
-    cumulative_seqlen_Q = torch.cat([z, seqlens_Q.cumsum(0).to(torch.int32)], dim=0)
-    cumulative_seqlen_KV = torch.cat([z, seqlens_KV.cumsum(0).to(torch.int32)], dim=0)
-
-    assert isinstance(total_seqlen_Q, int)
-    assert isinstance(total_seqlen_KV, int)
-    assert isinstance(max_seqlen_Q, int)
-    assert isinstance(max_seqlen_KV, int)
-
-    return (
-        cumulative_seqlen_Q,
-        cumulative_seqlen_KV,
-        max_seqlen_Q,
-        max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
-    )
-
-
 def varlen_tensor_checks(
     query: Tensor,
     key: Tensor,
@@ -575,11 +478,9 @@ def varlen_tensor_checks(
     cumulative_seqlen_KV: Optional[Tensor] = None,
     max_seqlen_Q: Optional[int] = None,
     max_seqlen_KV: Optional[int] = None,
-    total_seqlen_Q: Optional[int] = None,
-    total_seqlen_KV: Optional[int] = None,
 ) -> Union[
-    Tuple[NoneType, NoneType, int, int, int, int],
-    Tuple[Tensor, Tensor, int, int, int, int],
+    Tuple[NoneType, NoneType, int, int],
+    Tuple[Tensor, Tensor, int, int],
 ]:
     if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
         raise ValueError(
@@ -600,12 +501,10 @@ def varlen_tensor_checks(
         for x in [
             max_seqlen_Q,
             max_seqlen_KV,
-            total_seqlen_Q,
-            total_seqlen_KV,
         ]
     ):
         # Not varlen
-        return None, None, 0, 0, 0, 0
+        return None, None, 0, 0
 
     if seqlens_Q is not None or seqlens_KV is not None:
         # Generate cumulative_seqlen_{Q,KV}, max_seqlen_{Q,KV}, total_seqlen_{Q,KV}
@@ -626,16 +525,12 @@ def varlen_tensor_checks(
             cumulative_seqlen_KV,
             max_seqlen_Q,
             max_seqlen_KV,
-            total_seqlen_Q,
-            total_seqlen_KV,
         ]
     ) or any(
         x == 0
         for x in [
             max_seqlen_Q,
             max_seqlen_KV,
-            total_seqlen_Q,
-            total_seqlen_KV,
         ]
     ):
         raise ValueError(
@@ -653,8 +548,6 @@ def varlen_tensor_checks(
     assert cumulative_seqlen_KV is not None
     assert max_seqlen_Q is not None
     assert max_seqlen_KV is not None
-    assert total_seqlen_Q is not None
-    assert total_seqlen_KV is not None
 
     if not isinstance(max_seqlen_Q, int) or not isinstance(max_seqlen_KV, int):
         raise ValueError(
@@ -662,12 +555,8 @@ def varlen_tensor_checks(
             f"{type(max_seqlen_Q)=}, {type(max_seqlen_KV)=}."
         )
 
-    if not isinstance(total_seqlen_Q, int) or not isinstance(total_seqlen_KV, int):
-        raise ValueError(
-            "total_seqlen_Q and total_seqlen_KV must be ints, got "
-            f"{type(total_seqlen_Q)=}, {type(total_seqlen_KV)=}."
-        )
-
+    total_seqlen_Q = query.shape[1]
+    total_seqlen_KV = key.shape[1]
     if max_seqlen_Q > total_seqlen_Q:
         raise ValueError(
             "Maximum sequence length cannot exceed total, got "
@@ -684,24 +573,6 @@ def varlen_tensor_checks(
         raise ValueError(
             "Maximum sequence length cannot be less than 1, got "
             f"{max_seqlen_Q=}, {max_seqlen_KV=}."
-        )
-
-    if total_seqlen_Q > query.shape[1]:
-        raise ValueError(
-            "Total sequence length cannot exceed tensor sequence length, got "
-            f"{total_seqlen_Q=}, {query.shape[1]=}."
-        )
-
-    if total_seqlen_KV > key.shape[1]:
-        raise ValueError(
-            "Total sequence length cannot exceed tensor sequence length, got "
-            f"{total_seqlen_KV=}, {key.shape[1]=}."
-        )
-
-    if total_seqlen_Q < 1 or total_seqlen_KV < 1:
-        raise ValueError(
-            "Total sequence length cannot be less than 1, got "
-            f"{total_seqlen_Q=}, {total_seqlen_KV=}."
         )
 
     if not isinstance(cumulative_seqlen_Q, Tensor) or not isinstance(
@@ -752,6 +623,4 @@ def varlen_tensor_checks(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
     )

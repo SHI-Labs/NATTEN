@@ -84,8 +84,6 @@ def attention(
     cumulative_seqlen_KV: Optional[Tensor] = None,
     max_seqlen_Q: Optional[int] = None,
     max_seqlen_KV: Optional[int] = None,
-    total_seqlen_Q: Optional[int] = None,
-    total_seqlen_KV: Optional[int] = None,
     # backend parameters
     backend: Optional[str] = None,
     q_tile_size: Optional[int] = None,
@@ -113,6 +111,33 @@ def attention(
     able to control performance-related arguments, return logsumexp, and more.
     For more information refer to [backends](backends.md).
 
+    Causal mask, and Variable length (varlen) Attention are also supported in some backends
+    (`cutlass-fmha` and `blackwell-fmha`).
+
+    Varlen Attention is only supported for the sequence-packed layout: QKV tensors have batch size
+    1, and tokens from different batches are concatenated without any padding along the sequence
+    dimension. Sequence lengths for different batches can be provided in two ways:
+        1. `seqlens_Q` and `seqlens_KV` (less efficient): only provide the sequence lengths as
+            integer tensors (must be on the same device as QKV), and NATTEN will compute cumulative
+            and maximum sequence lengths on each call.
+        2. `cumulative_seqlen_{Q,KV}` and `max_seqlen_{Q,KV}` (more efficient):
+            compute cumulative and maximum sequence lengths. `cumulative_seqlen_{Q,KV}` are integer
+            tensors on the same device as QKV containing the cumulative sum of `seqlens_{Q,KV}`,
+            with an additional `0` element in the beginning, therefore sized `batch+1`.
+            `max_seqlen_{Q,KV}` are integers (not Tensors) that represent the maximum sequence
+            lengths for Q and KV among all sequence batches.
+            You can use `natten.utils.varlen.generate_varlen_parameters` to generate these
+            parameters:
+                ```python3
+                from natten.utils.varlen import generate_varlen_parameters
+                (
+                    cumulative_seqlen_Q,
+                    cumulative_seqlen_KV,
+                    max_seqlen_Q,
+                    max_seqlen_KV,
+                ) = generate_varlen_parameters(q, k, v, seqlens_Q, seqlens_KV)
+                ```
+
     Parameters:
         query (Tensor): 4-D query tensor, with the heads last layout
             (`[batch, seqlen, heads, head_dim]`)
@@ -126,6 +151,32 @@ def attention(
         is_causal (bool): Toggle causal masking. Defaults to `False` (bi-directional).
 
         scale (float): Attention scale. Defaults to `head_dim ** -0.5`.
+
+        seqlens_Q (Optional[Tensor]): (varlen) Optional 1-D tensor with size `batch`
+            indicating the number of query tokens in each batch. Must be passed together with
+            `seqlens_KV`.
+
+        seqlens_KV (Optional[Tensor]): (varlen) Optional 1-D tensor with size `batch`
+            indicating the number of key/value tokens in each batch. Must be passed together with
+            `seqlens_Q`.
+
+        cumulative_seqlen_Q (Optional[Tensor]): (varlen) Optional 1-D tensor with size `batch + 1`
+            indicating the cumulative sum of number of query tokens in each batch, with an
+            additional 0 element in the beginning. Must be passed together with
+            `cumulative_seqlen_KV` and `max_seqlen_{Q,KV}`.
+
+        cumulative_seqlen_KV (Optional[Tensor]): (varlen) Optional 1-D tensor with size `batch + 1`
+            indicating the cumulative sum of number of key/value tokens in each batch, with an
+            additional 0 element in the beginning. Must be passed together with
+            `cumulative_seqlen_Q` and `max_seqlen_{Q,KV}`.
+
+        max_seqlen_Q (Optional[int]): (varlen) Optional integer indicating the maximum query
+            sequence length in all batches. Must be passed together with `cumulative_seqlen_{Q,KV}`
+            and `max_seqlen_KV`.
+
+        max_seqlen_KV (Optional[int]): (varlen) Optional integer indicating the maximum key/value
+            sequence length in all batches. Must be passed together with `cumulative_seqlen_{Q,KV}`
+            and `max_seqlen_Q`.
 
     Other Parameters:
         backend (str): Backend implementation to run with. Choices are: `None` (pick the best
@@ -185,8 +236,6 @@ def attention(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
     ) = varlen_tensor_checks(
         query=query,
         key=key,
@@ -197,8 +246,6 @@ def attention(
         cumulative_seqlen_KV=cumulative_seqlen_KV,
         max_seqlen_Q=max_seqlen_Q,
         max_seqlen_KV=max_seqlen_KV,
-        total_seqlen_Q=total_seqlen_Q,
-        total_seqlen_KV=total_seqlen_KV,
     )
     is_varlen = cumulative_seqlen_Q is not None
 
@@ -226,8 +273,6 @@ def attention(
             cumulative_seqlen_KV=cumulative_seqlen_KV,
             max_seqlen_Q=max_seqlen_Q,
             max_seqlen_KV=max_seqlen_KV,
-            total_seqlen_Q=total_seqlen_Q,
-            total_seqlen_KV=total_seqlen_KV,
             q_tile_size=q_tile_size,
             kv_tile_size=kv_tile_size,
             backward_q_tile_size=backward_q_tile_size,
@@ -253,8 +298,6 @@ def attention(
             cumulative_seqlen_KV=cumulative_seqlen_KV,
             max_seqlen_Q=max_seqlen_Q,
             max_seqlen_KV=max_seqlen_KV,
-            total_seqlen_Q=total_seqlen_Q,
-            total_seqlen_KV=total_seqlen_KV,
         )
 
     elif backend == "cutlass-fmha":
@@ -275,8 +318,6 @@ def attention(
             cumulative_seqlen_KV=cumulative_seqlen_KV,
             max_seqlen_Q=max_seqlen_Q,
             max_seqlen_KV=max_seqlen_KV,
-            total_seqlen_Q=total_seqlen_Q,
-            total_seqlen_KV=total_seqlen_KV,
         )
 
     elif backend == "flex-fmha":
@@ -294,8 +335,6 @@ def attention(
             cumulative_seqlen_KV=cumulative_seqlen_KV,
             max_seqlen_Q=max_seqlen_Q,
             max_seqlen_KV=max_seqlen_KV,
-            total_seqlen_Q=total_seqlen_Q,
-            total_seqlen_KV=total_seqlen_KV,
         )
 
     raise NotImplementedError(f"Unrecognized NATTEN FMHA backend {backend}.")

@@ -184,8 +184,6 @@ def flex_fmha(
     cumulative_seqlen_KV: Optional[Tensor] = None,
     max_seqlen_Q: int = 0,
     max_seqlen_KV: int = 0,
-    total_seqlen_Q: int = 0,
-    total_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     fmha_tensor_checks(query, key, value, must_match_head_dims=True)
@@ -195,8 +193,6 @@ def flex_fmha(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
     ) = varlen_tensor_checks(
         query=query,
         key=key,
@@ -205,8 +201,6 @@ def flex_fmha(
         cumulative_seqlen_KV=cumulative_seqlen_KV,
         max_seqlen_Q=max_seqlen_Q,
         max_seqlen_KV=max_seqlen_KV,
-        total_seqlen_Q=total_seqlen_Q,
-        total_seqlen_KV=total_seqlen_KV,
     )
     is_varlen = cumulative_seqlen_Q is not None
 

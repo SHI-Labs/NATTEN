@@ -207,8 +207,6 @@ def cutlass_fmha(
     cumulative_seqlen_KV: Optional[Tensor] = None,
     max_seqlen_Q: int = 0,
     max_seqlen_KV: int = 0,
-    total_seqlen_Q: int = 0,
-    total_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     fmha_tensor_checks(query, key, value, must_match_head_dims=False)
@@ -218,8 +216,6 @@ def cutlass_fmha(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
     ) = varlen_tensor_checks(
         query=query,
         key=key,
@@ -228,8 +224,6 @@ def cutlass_fmha(
         cumulative_seqlen_KV=cumulative_seqlen_KV,
         max_seqlen_Q=max_seqlen_Q,
         max_seqlen_KV=max_seqlen_KV,
-        total_seqlen_Q=total_seqlen_Q,
-        total_seqlen_KV=total_seqlen_KV,
     )
     is_varlen = cumulative_seqlen_Q is not None
 
@@ -252,18 +246,6 @@ def cutlass_fmha(
     )
 
     scale = scale or query.shape[-1] ** -0.5
-
-    if is_varlen and total_seqlen_Q != query.shape[1]:
-        raise ValueError(
-            "Total sequence length must match tensor sequence length, got "
-            f"{total_seqlen_Q=}, {query.shape[1]=}."
-        )
-
-    if is_varlen and total_seqlen_KV != key.shape[1]:
-        raise ValueError(
-            "Total sequence length must match tensor sequence length, got "
-            f"{total_seqlen_KV=}, {key.shape[1]=}."
-        )
 
     output, lse = CutlassFmhaAutogradFn.apply(
         query,

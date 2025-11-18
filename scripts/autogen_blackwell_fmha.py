@@ -42,8 +42,6 @@ void {kernel_name}(
       bool is_varlen,
       int max_seqlen_Q,
       int max_seqlen_KV,
-      int total_seqlen_Q,
-      int total_seqlen_KV,
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       // init/launch params
@@ -71,8 +69,6 @@ void {kernel_name}(
       bool is_varlen,
       int max_seqlen_Q,
       int max_seqlen_KV,
-      int total_seqlen_Q,
-      int total_seqlen_KV,
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       // init/launch params
@@ -118,8 +114,6 @@ void {kernel_name}(
         // varlen
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
         ptr_cumulative_seqlen_Q,
         ptr_cumulative_seqlen_KV,
         //

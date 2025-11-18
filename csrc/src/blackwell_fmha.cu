@@ -58,9 +58,7 @@ void blackwell_fmha_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
     int max_seqlen_Q,
-    int max_seqlen_KV,
-    int total_seqlen_Q,
-    int total_seqlen_KV) {
+    int max_seqlen_KV) {
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
@@ -201,8 +199,6 @@ void blackwell_fmha_forward(
       is_varlen,
       max_seqlen_Q,
       max_seqlen_KV,
-      total_seqlen_Q,
-      total_seqlen_KV,
       ptr_cumulative_seqlen_Q,
       ptr_cumulative_seqlen_KV,
       // init/launch params
@@ -241,9 +237,7 @@ void blackwell_fmha_backward(
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
     int max_seqlen_Q,
-    int max_seqlen_KV,
-    int total_seqlen_Q,
-    int total_seqlen_KV) {
+    int max_seqlen_KV) {
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
@@ -395,8 +389,6 @@ void blackwell_fmha_backward(
       is_varlen,
       max_seqlen_Q,
       max_seqlen_KV,
-      total_seqlen_Q,
-      total_seqlen_KV,
       ptr_cumulative_seqlen_Q,
       ptr_cumulative_seqlen_KV,
       // init/launch params

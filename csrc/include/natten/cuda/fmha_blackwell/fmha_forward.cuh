@@ -127,8 +127,6 @@ struct KernelForward {
       // varlen parameters
       int max_seqlen_Q,
       int max_seqlen_KV,
-      int total_seqlen_Q,
-      int total_seqlen_KV,
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       // init/launch params
@@ -148,17 +146,15 @@ struct KernelForward {
     if constexpr (kIsVarlen) {
       problem_shape_memory = problem_shape_regular;
       get<3, 1>(problem_shape_memory) = 1;
-      get<0>(problem_shape_memory) = total_seqlen_Q;
-      get<1>(problem_shape_memory) = total_seqlen_KV;
 
       get<0>(problem_shape_launch) = VariableLength{
           max_seqlen_Q,
           reinterpret_cast<int*>(ptr_cumulative_seqlen_Q),
-          total_seqlen_Q};
+          seqlen_Q};
       get<1>(problem_shape_launch) = VariableLength{
           max_seqlen_KV,
           reinterpret_cast<int*>(ptr_cumulative_seqlen_KV),
-          total_seqlen_KV};
+          seqlen_KV};
       get<2>(problem_shape_launch) = get<2>(problem_shape_regular);
       get<3>(problem_shape_launch) = get<3>(problem_shape_regular);
     } else {

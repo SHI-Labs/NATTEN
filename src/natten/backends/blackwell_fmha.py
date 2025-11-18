@@ -65,8 +65,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         cumulative_seqlen_KV: Optional[Tensor],
         max_seqlen_Q: int,
         max_seqlen_KV: int,
-        total_seqlen_Q: int,
-        total_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor]:
         query = query.contiguous()
         key = key.contiguous()
@@ -93,8 +91,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
             cumulative_seqlen_KV,
             max_seqlen_Q,
             max_seqlen_KV,
-            total_seqlen_Q,
-            total_seqlen_KV,
         )
 
         ctx.save_for_backward(
@@ -110,8 +106,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         ctx.is_causal = is_causal
         ctx.max_seqlen_Q = max_seqlen_Q
         ctx.max_seqlen_KV = max_seqlen_KV
-        ctx.total_seqlen_Q = total_seqlen_Q
-        ctx.total_seqlen_KV = total_seqlen_KV
         ctx.backward_config = backward_config
 
         return output, logsumexp
@@ -128,8 +122,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         NoneType,
         NoneType,
         # varlen
-        NoneType,
-        NoneType,
         NoneType,
         NoneType,
         NoneType,
@@ -178,16 +170,12 @@ class CutlassBlackwellFmhaAutogradFn(Function):
             cumulative_seqlen_KV,
             ctx.max_seqlen_Q,
             ctx.max_seqlen_KV,
-            ctx.total_seqlen_Q,
-            ctx.total_seqlen_KV,
         )
 
         return (
             d_query,
             d_key,
             d_value,
-            None,
-            None,
             None,
             None,
             None,
@@ -217,8 +205,6 @@ def cutlass_blackwell_fmha(
     cumulative_seqlen_KV: Optional[Tensor] = None,
     max_seqlen_Q: int = 0,
     max_seqlen_KV: int = 0,
-    total_seqlen_Q: int = 0,
-    total_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     fmha_tensor_checks(query, key, value, must_match_head_dims=True)
@@ -228,8 +214,6 @@ def cutlass_blackwell_fmha(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
     ) = varlen_tensor_checks(
         query=query,
         key=key,
@@ -238,8 +222,6 @@ def cutlass_blackwell_fmha(
         cumulative_seqlen_KV=cumulative_seqlen_KV,
         max_seqlen_Q=max_seqlen_Q,
         max_seqlen_KV=max_seqlen_KV,
-        total_seqlen_Q=total_seqlen_Q,
-        total_seqlen_KV=total_seqlen_KV,
     )
     is_varlen = cumulative_seqlen_Q is not None
 
@@ -271,8 +253,6 @@ def cutlass_blackwell_fmha(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
-        total_seqlen_Q,
-        total_seqlen_KV,
     )
 
     if return_lse:
