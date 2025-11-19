@@ -81,7 +81,8 @@ struct KernelBackward {
       int batch,
       int seqlen_Q,
       int seqlen_KV,
-      int heads,
+      int heads_q,
+      int heads_kv,
       int dim,
       float attn_scale,
       // varlen parameters
@@ -98,9 +99,7 @@ struct KernelBackward {
         // always meet the 128-bit alignment constraint
         dim,
         dim, // dim_value -- if different from dim, needs the MLA kernel
-        cute::make_tuple(
-            make_tuple(1, heads), // gqa/mqa is supported, just disabled for now
-            batch));
+        cute::make_tuple(make_tuple(heads_q / heads_kv, heads_kv), batch));
 
     ProblemShapeType problem_shape_launch;
     decltype(problem_shape_regular) problem_shape_memory;

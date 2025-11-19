@@ -135,6 +135,7 @@ def fmha_tensor_checks(
     key: Tensor,
     value: Tensor,
     must_match_head_dims: bool = False,
+    supports_gqa_mqa: bool = True,
     raise_error: bool = True,
     backend_name: Optional[str] = None,
 ) -> bool:
@@ -189,13 +190,35 @@ def fmha_tensor_checks(
         )
         return False
 
-    if query.shape[2] != key.shape[2] or query.shape[2] != value.shape[2]:
+    if not supports_gqa_mqa and (
+        query.shape[2] != key.shape[2] or query.shape[2] != value.shape[2]
+    ):
         target_fn(
-            "NATTEN operations do not support GQA/MQA, therefore number of heads in Q, K, and V "
+            f"{backend_name} does not support GQA/MQA, therefore number of heads in Q, K, and V "
             f"must match, got {query.shape[2]=}, {key.shape[2]=}, {value.shape[2]=}.",
             exception=ValueError,
         )
         return False
+
+    if supports_gqa_mqa:
+        if key.shape[2] != value.shape[2]:
+            target_fn(
+                "Key and value must always have the same number of heads, got "
+                f"{key.shape[2]=}, {value.shape[2]=}.",
+                exception=ValueError,
+            )
+            return False
+
+        heads_q = query.shape[2]
+        heads_kv = key.shape[2]
+
+        if heads_q < heads_kv or heads_q % heads_kv != 0:
+            target_fn(
+                "Key/value heads must evenly divide query heads, got "
+                f"{heads_q=}, {heads_kv=}.",
+                exception=ValueError,
+            )
+            return False
 
     return True
 

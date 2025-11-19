@@ -77,6 +77,7 @@ def compute_split_reference(
     backend: str,
     test_backprop: bool,
     dtype: torch.dtype = torch.float32,
+    heads_kv: Optional[int] = None,
     head_dim_v: Optional[int] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
@@ -86,6 +87,7 @@ def compute_split_reference(
     backward_use_pt_reduction: bool = False,
     run_persistent_kernel: bool = True,
 ):
+    heads_kv = heads_kv or heads
     head_dim_v = head_dim_v or head_dim
 
     assert len(seqlens_Q_list) == len(seqlens_KV_list) == batch
@@ -99,10 +101,14 @@ def compute_split_reference(
                 (1, seqlen_q_total, heads, head_dim), device="cuda", dtype=dtype_safe
             ).to(dtype),
             torch.randn(
-                (1, seqlen_kv_total, heads, head_dim), device="cuda", dtype=dtype_safe
+                (1, seqlen_kv_total, heads_kv, head_dim),
+                device="cuda",
+                dtype=dtype_safe,
             ).to(dtype),
             torch.randn(
-                (1, seqlen_kv_total, heads, head_dim_v), device="cuda", dtype=dtype_safe
+                (1, seqlen_kv_total, heads_kv, head_dim_v),
+                device="cuda",
+                dtype=dtype_safe,
             ).to(dtype),
             torch.randn(
                 (1, seqlen_q_total, heads, head_dim_v), device="cuda", dtype=dtype_safe
@@ -229,12 +235,14 @@ class FMHABackendTest(unittest.TestCase):
         reference_backward_kv_splits: Optional[int] = None,
         reference_backward_use_pt_reduction: bool = False,
         reference_run_persistent_kernel: bool = True,
+        heads_kv: Optional[int] = None,
         head_dim_v: Optional[int] = None,
     ):
+        heads_kv = heads_kv or heads
         head_dim_v = head_dim_v or head_dim
 
         logger.debug(
-            f"Testing FMHA varlen ({backend}) vs {reference_backend}: {batch=}, {heads=}, {head_dim=}, {head_dim_v=}, "
+            f"Testing FMHA varlen ({backend}) vs {reference_backend}: {batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, "
             f"{seqlens_Q_list=}, {seqlens_KV_list=}, {is_causal=}, {dtype=}, "
             f"{q_tile_size=}, {kv_tile_size=}, {run_persistent_kernel=}"
             + (
@@ -248,6 +256,7 @@ class FMHABackendTest(unittest.TestCase):
         inputs, reference = compute_split_reference(
             batch=batch,
             heads=heads,
+            heads_kv=heads_kv,
             head_dim=head_dim,
             head_dim_v=head_dim_v,
             seqlens_Q_list=seqlens_Q_list,
@@ -417,6 +426,7 @@ class FMHABackendTest(unittest.TestCase):
         seqlens_Q_list,
         seqlens_KV_list,
         is_causal,
+        heads_kv: Optional[int] = None,
     ):
         torch.set_default_device("cuda")
 
@@ -456,6 +466,7 @@ class FMHABackendTest(unittest.TestCase):
                     self._test_against_manual_varlen(
                         batch=batch,
                         heads=heads,
+                        heads_kv=heads_kv,
                         head_dim=head_dim,
                         seqlens_Q_list=seqlens_Q_list,
                         seqlens_KV_list=seqlens_KV_list,
@@ -482,9 +493,11 @@ class FMHABackendTest(unittest.TestCase):
         seqlens_KV_list,
         is_causal,
         backend,
+        heads_kv=None,
         head_dim_v=None,
     ):
         if backend == "cutlass-fmha":
+            assert heads_kv is None or heads_kv == heads
             return self._test_cutlass_fmha_varlen(
                 batch=batch,
                 heads=heads,
@@ -502,6 +515,7 @@ class FMHABackendTest(unittest.TestCase):
             return self._test_cutlass_blackwell_fmha_varlen(
                 batch=batch,
                 heads=heads,
+                heads_kv=heads_kv,
                 head_dim=head_dim,
                 seqlens_Q_list=seqlens_Q_list,
                 seqlens_KV_list=seqlens_KV_list,
@@ -516,17 +530,31 @@ class FMHABackendTest(unittest.TestCase):
         max_qk = 2**17
         for i in range(max_tests):
             batch = random.choice(range(1, 12))
-            heads = random.choice(range(1, 8))
 
             supports_dim_v = False
+            supports_gqa_mqa = False
             if backend == "blackwell-fmha":
                 head_dim_choices = [32, 64, 128]
+                heads_choices = range(1, 8 + 1)
+                supports_gqa_mqa = True
             elif backend == "hopper-fmha":
                 head_dim_choices = [32, 64, 128]
+                heads_choices = range(1, 4)
             else:
                 assert backend == "cutlass-fmha"
                 head_dim_choices = range(8, 256 + 1, 8)
+                heads_choices = range(1, 4)
                 supports_dim_v = True
+
+            heads = random.choice(heads_choices)
+            heads_kv = (
+                heads
+                if not supports_gqa_mqa
+                else random.choice(
+                    [1] + [i for i in range(1, heads + 1) if heads % i == 0]
+                )
+            )
+            assert heads >= heads_kv and heads % heads_kv == 0
 
             head_dim = random.choice(head_dim_choices)
             head_dim_v = (
@@ -551,6 +579,7 @@ class FMHABackendTest(unittest.TestCase):
                 self._test_varlen_backend(
                     batch=batch,
                     heads=heads,
+                    heads_kv=heads_kv,
                     head_dim=head_dim,
                     head_dim_v=head_dim_v,
                     seqlens_Q_list=seqlens_Q_list,

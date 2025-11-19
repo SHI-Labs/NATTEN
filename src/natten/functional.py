@@ -138,15 +138,18 @@ def attention(
                 ) = generate_varlen_parameters(q, k, v, seqlens_Q, seqlens_KV)
                 ```
 
+    Limited GQA/MQA support (`heads != heads_kv`) is available. For now, only the `blackwell-fmha`
+    backend supports GQA/MQA, in both forward and backward pass.
+
     Parameters:
         query (Tensor): 4-D query tensor, with the heads last layout
             (`[batch, seqlen, heads, head_dim]`)
 
         key (Tensor): 4-D key tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`)
+            (`[batch, seqlen_kv, heads_kv, head_dim]`)
 
         value (Tensor): 4-D value tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim_v]`)
+            (`[batch, seqlen_kv, heads_kv, head_dim_v]`)
 
         is_causal (bool): Toggle causal masking. Defaults to `False` (bi-directional).
 

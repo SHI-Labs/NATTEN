@@ -121,7 +121,8 @@ struct KernelForward {
       int batch,
       int seqlen_Q,
       int seqlen_KV,
-      int heads,
+      int heads_q,
+      int heads_kv,
       int dim,
       float attn_scale,
       // varlen parameters
@@ -131,14 +132,14 @@ struct KernelForward {
       void* ptr_cumulative_seqlen_KV,
       // init/launch params
       int device_id) {
-    // No GQA/MQA for now
     auto problem_shape_regular = cute::make_tuple(
         seqlen_Q,
         seqlen_KV,
         // head dim is always either 32, 64, or 128 in natten, but it should
         // always meet the 128-bit alignment constraint
         dim,
-        cute::make_tuple(cute::make_tuple(1, heads), batch));
+        cute::make_tuple(
+            cute::make_tuple(heads_q / heads_kv, heads_kv), batch));
 
     ProblemShapeType problem_shape_launch;
     decltype(problem_shape_regular) problem_shape_memory;
