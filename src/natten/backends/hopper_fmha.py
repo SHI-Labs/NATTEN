@@ -174,7 +174,14 @@ def cutlass_hopper_fmha(
     max_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    fmha_tensor_checks(query, key, value, must_match_head_dims=True)
+    fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        supports_gqa_mqa=False,
+        backend_name="Hopper FMHA",
+    )
 
     (
         cumulative_seqlen_Q,

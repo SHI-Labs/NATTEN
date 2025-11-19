@@ -210,7 +210,14 @@ def cutlass_fmha(
     max_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    fmha_tensor_checks(query, key, value, must_match_head_dims=False)
+    fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=False,
+        supports_gqa_mqa=False,
+        backend_name="CUTLASS FMHA",
+    )
 
     (
         cumulative_seqlen_Q,

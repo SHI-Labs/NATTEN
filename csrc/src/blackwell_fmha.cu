@@ -75,18 +75,51 @@ void blackwell_fmha_forward(
   at::cuda::OptionalCUDAGuard device_guard(query.device());
 
   CheckIfPropertiesMatch(query, key, value);
-  CheckIfTensorShapesMatch<1>(key, value);
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfBatchHeadsHeadDimMatch(query, key);
+  CheckIfTensorShapesMatch<1>(key, value); // head_dim == head_dim_value
+  CheckIfTensorShapesMatch<1>(query, out); // head_dim == head_dim_value
 
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
   TORCH_CHECK(key.dim() == 4, "Tensors must be 4-D.");
   TORCH_CHECK(value.dim() == 4, "Tensors must be 4-D.");
 
+  TORCH_CHECK(
+      query.size(0) == key.size(0),
+      "Blackwell FMHA forward: Query and key must match in batch size, got ",
+      "query.shape[0]=",
+      query.size(0),
+      ", key.shape[0]=",
+      key.size(0));
+
+  TORCH_CHECK(
+      query.size(3) == key.size(3),
+      "Blackwell FMHA forward: Query and key must match in head dim, got ",
+      "query.shape[3]=",
+      query.size(3),
+      ", key.shape[3]=",
+      key.size(3));
+
+  // GQA/MQA is supported
+  TORCH_CHECK(
+      query.size(2) >= key.size(2),
+      "Blackwell FMHA forward: Query heads must be greater than or equal to key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
+  TORCH_CHECK(
+      query.size(2) % key.size(2) == 0,
+      "Blackwell FMHA forward: Query heads must evenly divide key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
-  int heads = query.size(2);
+  int heads_q = query.size(2);
+  int heads_kv = key.size(2);
   int dim = query.size(3);
 
   if (logsumexp.has_value()) {
@@ -191,7 +224,8 @@ void blackwell_fmha_forward(
       batch_size,
       seqlen_q,
       seqlen_kv,
-      heads,
+      heads_q,
+      heads_kv,
       dim,
       is_causal,
       attn_scale,
@@ -268,9 +302,9 @@ void blackwell_fmha_backward(
   CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
   CheckIfPropertiesMatch(grad_query, query, value);
 
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
-  CheckIfBatchHeadsHeadDimMatch(query, key);
+  CheckIfTensorShapesMatch<1>(query, out); // head_dim == head_dim_value
+  CheckIfTensorShapesMatch<1>(key, value); // head_dim == head_dim_value
+
   CheckIfHeadDimsMatch(out, value);
   CheckIfTensorShapesMatch<1>(grad_query, query);
   CheckIfTensorShapesMatch<1>(grad_key, key);
@@ -279,10 +313,44 @@ void blackwell_fmha_backward(
 
   CheckLogSumExp<1>(out, logsumexp);
 
+  TORCH_CHECK(
+      query.size(0) == key.size(0),
+      "Blackwell FMHA forward: Query and key must match in batch size, got ",
+      "query.shape[0]=",
+      query.size(0),
+      ", key.shape[0]=",
+      key.size(0));
+
+  TORCH_CHECK(
+      query.size(3) == key.size(3),
+      "Blackwell FMHA forward: Query and key must match in head dim, got ",
+      "query.shape[3]=",
+      query.size(3),
+      ", key.shape[3]=",
+      key.size(3));
+
+  // GQA/MQA is supported
+  TORCH_CHECK(
+      query.size(2) >= key.size(2),
+      "Blackwell FMHA forward: Query heads must be greater than or equal to key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
+  TORCH_CHECK(
+      query.size(2) % key.size(2) == 0,
+      "Blackwell FMHA forward: Query heads must evenly divide key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
-  int heads = query.size(2);
+  int heads_q = query.size(2);
+  int heads_kv = key.size(2);
   int dim = query.size(3);
 
   TORCH_CHECK(
@@ -381,7 +449,8 @@ void blackwell_fmha_backward(
       batch_size,
       seqlen_q,
       seqlen_kv,
-      heads,
+      heads_q,
+      heads_kv,
       dim,
       is_causal,
       attn_scale,
