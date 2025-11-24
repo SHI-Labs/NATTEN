@@ -171,7 +171,7 @@ public:
         int const bidh = blockIdx.y;
         int const bidb = blockIdx.z;
 
-        flash::SeqlenInfo<false /*Varlen*/, kBlockM> seqlen_info(bidb, size<0>(params.shape_dQ)); // params.cu_seqlens, params.seqused);
+        flash_fna::SeqlenInfo<false /*Varlen*/, kBlockM> seqlen_info(bidb, size<0>(params.shape_dQ)); // params.cu_seqlens, params.seqused);
         // bool const is_varlen = false; // params.cu_seqlens;
         // if (is_varlen && m_block * kBlockM >= seqlen_info.seqlen) { return; }
 
@@ -217,7 +217,7 @@ public:
         for (int i = 0; i < size(taccdQrdQaccum); ++i) { taccdQrdQaccum(i) *= params.softmax_scale; }
         // Convert tdQrdQ from fp32 to fp16
         Tensor rdQ = make_tensor_like<Element>(taccdQrdQaccum);
-        flash::convert_type_out(taccdQrdQaccum, rdQ);
+        flash_fna::convert_type_out(taccdQrdQaccum, rdQ);
 
         // Step 3: Copy dQ from register to smem
         auto smem_tiled_copy_dQ = make_tiled_copy_C(SmemCopyAtomdQ{}, tiled_mma_dQ);
@@ -245,12 +245,12 @@ public:
         for (int k = 0; k < size(tdQpdQ); ++k) { tdQpdQ(k) = get<1>(tdQcdQ(_0{}, _0{}, k)) < get<1>(params.shape_dQ); }
         // Need to check OOB when reading from smem if kBlockM isn't evenly tiled
         static constexpr bool EvenM = kBlockM % CUTE_STATIC_V(size<0>(GmemLayoutAtom{})) == 0;
-        flash::copy</*Is_even_MN=*/EvenM, /*Is_even_K=*/true, /*Clear_OOB_MN=*/false>(
+        flash_fna::copy</*Is_even_MN=*/EvenM, /*Is_even_K=*/true, /*Clear_OOB_MN=*/false>(
             gmem_tiled_copy_dQ, tdQsdQ, tdQrdQ, tdQcdQ, tdQpdQ, kBlockM);
 
         // Step 5: Copy dQ from register to gmem
         // Clear_OOB_K must be false since we don't want to write zeros to gmem
-        flash::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/false>(
+        flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/false>(
             gmem_tiled_copy_dQ, tdQrdQ, tdQgdQ, tdQcdQ, tdQpdQ, std::min(seqlen_info.seqlen - m_block * kBlockM, kBlockM)
         );
     }

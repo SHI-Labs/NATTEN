@@ -27,6 +27,7 @@
 #include "natten/compute_delta.h"
 #include "natten/reference.h"
 #include "natten/fna.h"
+#include "natten/flash_fna.h"
 #include "natten/blackwell_fna.h"
 #include "natten/hopper_fna.h"
 #include "natten/fmha.h"
@@ -116,6 +117,18 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "flash_fmha_forward", &natten::flash_fmha_forward, "Flash FMHA forward");
   m.def(
       "flash_fmha_backward", &natten::flash_fmha_backward, "Flash FMHA backward");
+
+  //// SM80/SM86/SM89 - Flash FNA
+  m.def(
+      "flash_na1d_forward", &natten::flash_na1d_forward, "Flash FNA forward");
+  m.def(
+      "flash_na2d_forward", &natten::flash_na2d_forward, "Flash FNA forward");
+  m.def(
+      "flash_na3d_forward", &natten::flash_na3d_forward, "Flash FNA forward");
+
+  // NOTE (aditya): Not yet implemented
+  // m.def(
+  //     "flash_fna_backward", &natten::flash_fna_backward, "Flash FNA backward");
   
   //// SM50/SM70/SM75/SM80 - Original FNA
   m.def(
