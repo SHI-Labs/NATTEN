@@ -54,7 +54,7 @@ inline int inline_round_up(int spatial_ext, int tile_size) {
 
 
 template<class NADim>
-Flash_fna_fwd_params set_flash_fna_fwd_params(
+Flash_fna_fwd_params<NADim> set_flash_fna_fwd_params(
     int cc,
     int num_sm,
     at::Tensor& out,
@@ -75,7 +75,6 @@ Flash_fna_fwd_params set_flash_fna_fwd_params(
 
   int B = query.size(0);
   int Q = query.size(1);
-  int Q_rounded = Q;
   int K = key.size(1);
   int H = query.size(2);
   int D = query.size(3);
@@ -240,7 +239,8 @@ FlashBwdWorkspacePtr allocate_flash_bwd_workspace(
 }
 
 
-Flash_fna_bwd_params set_flash_fna_bwd_params(
+template<class NADim>
+Flash_fna_bwd_params<NADim> set_flash_fna_bwd_params(
     int cc,
     int num_sm,
     at::Tensor& dq,
@@ -264,7 +264,7 @@ Flash_fna_bwd_params set_flash_fna_bwd_params(
     bool deterministic) {
 
   // Allocate all pointers and dimensions.
-  Flash_fna_bwd_params params = {};
+  Flash_fna_bwd_params<NADim> params = {};
 
   int B = query.size(0);
   int Q = query.size(1);

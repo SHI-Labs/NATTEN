@@ -152,7 +152,7 @@ public:
         int const bidh = blockIdx.y;
         int const bidb = blockIdx.z;
 
-        flash::SeqlenInfo</* Varlen= */false, kBlockM> seqlen_info(bidb, size<0>(params.shape_O)); //, params.cu_seqlens, params.seqused);
+        flash_fna::SeqlenInfo</* Varlen= */false, kBlockM> seqlen_info(bidb, size<0>(params.shape_O)); //, params.cu_seqlens, params.seqused);
         // bool const is_varlen = Varlen; // && params.cu_seqlens;
         int const seqlen_o = seqlen_info.seqlen;
         // if (is_varlen && m_block * kBlockM >= seqlen_o) { return; }
@@ -185,10 +185,10 @@ public:
         // (8, kBlockM / 32, kHeadDim / 64) or (8, kBlockM / 16, kHeadDim / 128)
         Tensor tOrO = make_fragment_like(tOgO);
         Tensor tOrdO = make_fragment_like(tOgdO);
-        flash::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/true, /*Clearn_OOB_K=*/true>(
+        flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/true, /*Clearn_OOB_K=*/true>(
             gmem_tiled_copy_O, tOgO, tOrO, tOcO, tOpO, seqlen_o - m_block * kBlockM
         );
-        flash::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/true, /*Clearn_OOB_K=*/true>(
+        flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/true, /*Clearn_OOB_K=*/true>(
             gmem_tiled_copy_O, tOgdO, tOrdO, tOcO, tOpO, seqlen_o - m_block * kBlockM
         );
         // if (threadIdx.x == 222) { printf("bidx = %d, bidy = %d, bidz = %d, seqlen_o = %d, m_block = %d, seqlen_o - m_block * kBlockM = %d, tOgO addr = %p\n", blockIdx.x, blockIdx.y, blockIdx.z, seqlen_o, m_block, seqlen_o - m_block * kBlockM, &tOgO(0));}
@@ -197,10 +197,10 @@ public:
         Layout l = make_layout(get<1>(tOrO.layout()), make_layout(get<0>(tOrO.layout()), get<2>(tOrO.layout())));
         Tensor tOrO_l = make_tensor(tOrO.data(), l);
         Tensor o_fp32 = make_tensor_like<float>(tOrO_l);
-        flash::convert_type_out(tOrO_l, o_fp32);
+        flash_fna::convert_type_out(tOrO_l, o_fp32);
         Tensor tOrdO_l = make_tensor(tOrdO.data(), l);
         Tensor do_fp32 = make_tensor_like<float>(tOrdO_l);
-        flash::convert_type_out(tOrdO_l, do_fp32);
+        flash_fna::convert_type_out(tOrdO_l, do_fp32);
         // Sum across the last dimension
         Tensor dP_sum = make_tensor<float>(make_shape(size<0>(o_fp32)));
         #pragma unroll
@@ -210,8 +210,8 @@ public:
             for (int ni = 1; ni < size<1>(o_fp32); ni++) {
                 dP_sum_cur += do_fp32(mi, ni) * o_fp32(mi, ni);
             }
-            flash::SumOp<float> sum_op;
-            dP_sum(mi) = flash::Allreduce<kGmemThreadsPerRow>::run(dP_sum_cur, sum_op);
+            flash_fna::SumOp<float> sum_op;
+            dP_sum(mi) = flash_fna::Allreduce<kGmemThreadsPerRow>::run(dP_sum_cur, sum_op);
         }
 
         Tensor mdPsum = make_tensor(make_gmem_ptr(params.ptr_dPsum), params.shape_dPsum, params.stride_dPsum)(_, bidh, bidb);

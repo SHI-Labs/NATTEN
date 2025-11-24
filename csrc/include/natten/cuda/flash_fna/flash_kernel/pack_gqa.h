@@ -137,7 +137,7 @@ struct PackGQAManager {
         Tensor caccO = cute::make_identity_tensor(Shape<Int<kBlockM>, Int<kHeadDim>>{});
         auto thread_mma = tiled_mma.get_thread_slice(thread_idx);
         Tensor taccOcO = thread_mma.partition_C(caccO);                           // (MMA,MMA_M,MMA_K)
-        Tensor taccOcO_row = make_tensor(taccOcO.data(), flash::convert_layout_acc_rowcol(taccOcO.layout()))(_, _0{});
+        Tensor taccOcO_row = make_tensor(taccOcO.data(), flash_fna::convert_layout_acc_rowcol(taccOcO.layout()))(_, _0{});
         CUTE_STATIC_ASSERT_V(size(tLSErLSE) == size(taccOcO_row));                     // MMA_M
 
         // If PackGQA, we split the work of compute divmod among threads in the same row
@@ -213,13 +213,13 @@ struct PackGQAManager {
         static constexpr int kGmemElemsPerStoreDirect = 2;
         cute::Copy_Atom<AutoVectorizingCopyWithAssumedAlignment<128>, Element> gmem_copy_direct;
         // Reshape acc from ((2, 2, V), MMA_M, MMA_N) to (nrow=(2, MMA_M), ncol=(2, V, MMA_N))
-        Tensor tOrO_rowcol = make_tensor(tOrO.data(), flash::convert_layout_acc_rowcol(tOrO.layout()));
+        Tensor tOrO_rowcol = make_tensor(tOrO.data(), flash_fna::convert_layout_acc_rowcol(tOrO.layout()));
         Tensor tOrO_copy = cute::tiled_divide(tOrO_rowcol, Shape<_1, Int<kGmemElemsPerStoreDirect>>{});
 
         Tensor caccO = cute::make_identity_tensor(Shape<Int<kBlockM>, Int<kHeadDim>>{});
         auto thread_mma = tiled_mma.get_thread_slice(thread_idx);
         Tensor taccOcO = thread_mma.partition_C(caccO);                           // (MMA,MMA_M,MMA_K)
-        Tensor taccOcO_rowcol = make_tensor(taccOcO.data(), flash::convert_layout_acc_rowcol(taccOcO.layout()));
+        Tensor taccOcO_rowcol = make_tensor(taccOcO.data(), flash_fna::convert_layout_acc_rowcol(taccOcO.layout()));
         Tensor taccOcO_row = taccOcO_rowcol(_, _0{});
         Tensor taccOcO_col = taccOcO_rowcol(_0{}, _);
 
