@@ -237,14 +237,14 @@ struct CollectiveEpilogueFwd {
         // If we will possibly need tOrO in FP32, we'd want to permute tOrO before type conversion.
         // Otherwise we can permute after conversion.
         Tensor tOrO_out = make_tensor_like<Element>(tOrO);
-        flash::convert_type_out(tOrO, tOrO_out);
-        if constexpr (NeedFP8Permute) { flash::permute_output_fp8_Vcolmajor(tOrO_out); }
+        flash_fna::convert_type_out(tOrO, tOrO_out);
+        if constexpr (NeedFP8Permute) { flash_fna::permute_output_fp8_Vcolmajor(tOrO_out); }
 
         // Make sure all WGs have finished reading V
         // Technically we don't need this if we're not using smem, but the mainloop makes the assumption that
         // all epilogue threads sync at least once during the epilogue (so that we can start loading Q with
         // cp.async if we need).
-        flash::named_barrier_sync(NumEpilogueThreads, cutlass::arch::ReservedNamedBarriers::EpilogueBarrier);
+        flash_fna::named_barrier_sync(NumEpilogueThreads, cutlass::arch::ReservedNamedBarriers::EpilogueBarrier);
 
         // Step 1: Write O from rmem -> smem
         if constexpr (Use_smem) {
@@ -259,7 +259,7 @@ struct CollectiveEpilogueFwd {
                 cutlass::arch::NamedBarrier::arrive(NumEpilogueThreads + cutlass::NumThreadsPerWarp,
                                                     cutlass::arch::ReservedNamedBarriers::EpilogueBarrier);
             } else {
-                flash::named_barrier_sync(NumEpilogueThreads, cutlass::arch::ReservedNamedBarriers::EpilogueBarrier);
+                flash_fna::named_barrier_sync(NumEpilogueThreads, cutlass::arch::ReservedNamedBarriers::EpilogueBarrier);
             }
         } else {
             if constexpr (ArchTag::kMinComputeCapability >= 90) {
@@ -270,7 +270,7 @@ struct CollectiveEpilogueFwd {
             }
         }
 
-        flash::SeqlenInfo<false, kBlockM> seqlen_info{bidb, size<0>(params.shape_O)}; 
+        flash_fna::SeqlenInfo<false, kBlockM> seqlen_info{bidb, size<0>(params.shape_O)}; 
         // , params.cu_seqlens, params.seqused};
         int offset_o = seqlen_info.offset;
         int seqlen_o = seqlen_info.seqlen;
@@ -282,12 +282,12 @@ struct CollectiveEpilogueFwd {
         Tensor taccOcO = thread_mma.partition_C(cute::make_identity_tensor(select<0, 1>(TileShape_MNK_PV{})));
         static_assert(decltype(size<0, 0>(taccOcO))::value == 2);
         static_assert(decltype(size<0, 1>(taccOcO))::value == 2);
-        Tensor taccOcO_rowcol = make_tensor(taccOcO.data(), flash::convert_layout_acc_rowcol(taccOcO.layout()));
+        Tensor taccOcO_rowcol = make_tensor(taccOcO.data(), flash_fna::convert_layout_acc_rowcol(taccOcO.layout()));
         Tensor taccOcO_row = taccOcO_rowcol(_, _0{});
         CUTE_STATIC_ASSERT_V(size(lse) == size(taccOcO_row));                     // MMA_M
 
-        using PackGQA_t = flash::PackGQAManager<get<0>(TileShape_MNK_PV{}), get<1>(TileShape_MNK_PV{}), NumEpilogueThreads, Element>;
-        using PackGQApartial_t = flash::PackGQAManager<get<0>(TileShape_MNK_PV{}), get<1>(TileShape_MNK_PV{}), NumEpilogueThreads, ElementPartial>;
+        using PackGQA_t = flash_fna::PackGQAManager<get<0>(TileShape_MNK_PV{}), get<1>(TileShape_MNK_PV{}), NumEpilogueThreads, Element>;
+        using PackGQApartial_t = flash_fna::PackGQAManager<get<0>(TileShape_MNK_PV{}), get<1>(TileShape_MNK_PV{}), NumEpilogueThreads, ElementPartial>;
 
         Tensor mLSE = make_tensor(make_gmem_ptr(params.ptr_LSE + offset_o * get<0>(params.stride_LSE)),
                                   params.shape_LSE_packed,
@@ -352,7 +352,7 @@ struct CollectiveEpilogueFwd {
                 for (int k = 0; k < size(tOpO); ++k) { tOpO(k) = get<1>(tOcO(_0{}, _0{}, k)) < get<1>(params.shape_O); }
                 Tensor tOgO = gmem_thr_copy_O.partition_D(gO);
                 // Clear_OOB_K must be false since we don't want to write zeros to gmem
-                flash::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/false>(
+                flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/false>(
                     gmem_tiled_copy_O, tOrO, tOgO, tOcO, tOpO, seqlen_o - m_block * kBlockM
                 );
             } else {
@@ -375,10 +375,10 @@ struct CollectiveEpilogueFwd {
             //         static constexpr int kGmemElemsPerStoreDirect = 2;
             //         cute::Copy_Atom<AutoVectorizingCopyWithAssumedAlignment<128>, ElementPartial> gmem_copy_direct;
             //         // Reshape acc from ((2, 2, V), MMA_M, MMA_N) to (nrow=(2, MMA_M), ncol=(2, V, MMA_N))
-            //         Tensor tOrO_rowcol = make_tensor(tOrO.data(), flash::convert_layout_acc_rowcol(tOrO.layout()));
+            //         Tensor tOrO_rowcol = make_tensor(tOrO.data(), flash_fna::convert_layout_acc_rowcol(tOrO.layout()));
             //         Tensor tOrO_copy = cute::tiled_divide(tOrO_rowcol, Shape<_1, Int<kGmemElemsPerStoreDirect>>{});
             //         Tensor tOgO = thread_mma.partition_C(gOpartial);
-            //         Tensor tOgO_rowcol = make_tensor(tOgO.data(), flash::convert_layout_acc_rowcol(tOgO.layout()));
+            //         Tensor tOgO_rowcol = make_tensor(tOgO.data(), flash_fna::convert_layout_acc_rowcol(tOgO.layout()));
             //         Tensor tOgO_copy = cute::tiled_divide(tOgO_rowcol, Shape<_1, Int<kGmemElemsPerStoreDirect>>{});
             //         Tensor taccOcO_col = taccOcO_rowcol(_0{}, _);
             //         #pragma unroll
@@ -415,7 +415,7 @@ struct CollectiveEpilogueFwd {
         auto [m_block, bidh, bidb, split_idx] = block_coord;
         int num_splits = get<4>(params.shape_O_packed);
 
-        flash::SeqlenInfo<false, kBlockM> seqlen_info{bidb, size<0>(params.shape_O)};
+        flash_fna::SeqlenInfo<false, kBlockM> seqlen_info{bidb, size<0>(params.shape_O)};
         int offset_o = seqlen_info.offset;
         int seqlen_o = seqlen_info.seqlen;
         int qhead_per_khead = !PackGQA ? 1 : params.qhead_per_khead_divmod.divisor;
@@ -456,12 +456,12 @@ struct CollectiveEpilogueFwd {
             Tensor tOrO = make_fragment_like(tOgO);
             cute::clear(tOrO);
             // Clear_OOB_K must be false since we don't want to write zeros to gmem
-            flash::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/false>(
+            flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/false>(
                 gmem_tiled_copy_O, tOrO, tOgO, tOcO, tOpO, seqlen_o - m_block * kBlockM
             );
         } else {
             // If PackGQA, we split the work of compute O_ptr among threads in the same row
-            using PackGQA_t = flash::PackGQAManager<get<0>(TileShape_MNK_PV{}), get<1>(TileShape_MNK_PV{}), NumEpilogueThreads, Element>;
+            using PackGQA_t = flash_fna::PackGQAManager<get<0>(TileShape_MNK_PV{}), get<1>(TileShape_MNK_PV{}), NumEpilogueThreads, Element>;
             Tensor tOrO = make_tensor<Element>(make_shape(Shape<_1, Int<kGmemElemsPerStore>>{}, size<1>(tOcO), size<2>(tOcO)));
             cute::clear(tOrO);
             PackGQA_t::store_O(mO, tOrO, params.qhead_per_khead_divmod, thread_idx, seqlen_o, m_block);

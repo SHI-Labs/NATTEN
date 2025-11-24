@@ -73,8 +73,6 @@ void flash_fna_generic_forward(
     const StdNADim& dilation_,
     const StdCausal& is_causal_,
     float attn_scale,
-    // int query_tile_size,
-    // int key_tile_size,
     const StdNADim& q_shape_, // after token permute and padding
     const StdNADim& kv_shape_, // after token permute and padding
     const StdNADim& qkv_shape_, // before token permute and padding
@@ -197,11 +195,13 @@ void flash_fna_generic_forward(
     auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
 
     DISPATCH_FLASH_FNA_FORWARD(
+      kNADim,
       query.scalar_type(), // dtype
       query.size(3),       // dim
+      is_causal,
       cc,
-      query_tile_size,
-      key_tile_size,
+      query_tile_shape,
+      key_tile_shape,
       flash_fna_fwd_params,
       cuda_stream);
   } else {
@@ -221,7 +221,7 @@ void flash_na1d_forward(
     const at::Tensor& query,
     const at::Tensor& key,
     const at::Tensor& value,
-    const at::optional<at::Tensor>& logsumexp,
+    at::optional<at::Tensor>& logsumexp,
     const std::tuple<int32_t>& kernel_size,
     const std::tuple<int32_t>& stride,
     const std::tuple<int32_t>& dilation,
@@ -249,8 +249,7 @@ void flash_na1d_forward(
       kv_shape,
       qkv_shape,
       query_tile_shape,
-      key_tile_shape,
-      kernel_type);
+      key_tile_shape);
 }
 
 void flash_na2d_forward(
@@ -258,7 +257,7 @@ void flash_na2d_forward(
     const at::Tensor& query,
     const at::Tensor& key,
     const at::Tensor& value,
-    const at::optional<at::Tensor>& logsumexp,
+    at::optional<at::Tensor>& logsumexp,
     const std::tuple<int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t>& stride,
     const std::tuple<int32_t, int32_t>& dilation,
@@ -268,8 +267,7 @@ void flash_na2d_forward(
     const std::tuple<int32_t, int32_t>& kv_shape,
     const std::tuple<int32_t, int32_t>& qkv_shape,
     const std::tuple<int32_t, int32_t>& query_tile_shape,
-    const std::tuple<int32_t, int32_t>& key_tile_shape,
-    int kernel_type) {
+    const std::tuple<int32_t, int32_t>& key_tile_shape) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   flash_fna_generic_forward(
@@ -295,7 +293,7 @@ void flash_na3d_forward(
     const at::Tensor& query,
     const at::Tensor& key,
     const at::Tensor& value,
-    const at::optional<at::Tensor>& logsumexp,
+    at::optional<at::Tensor>& logsumexp,
     const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
     const std::tuple<int32_t, int32_t, int32_t>& stride,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
@@ -305,8 +303,7 @@ void flash_na3d_forward(
     const std::tuple<int32_t, int32_t, int32_t>& kv_shape,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape,
-    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape,
-    int kernel_type) {
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   flash_fna_generic_forward(
@@ -324,8 +321,7 @@ void flash_na3d_forward(
       kv_shape,
       qkv_shape,
       query_tile_shape,
-      key_tile_shape,
-      kernel_type);
+      key_tile_shape);
 }
 
 
@@ -347,138 +343,138 @@ void flash_fna_backward(
   TORCH_CHECK(false, "Flash FNA backward not implemented yet.");
 
 #ifdef NATTEN_WITH_CUTLASS
-  // Here:
-  //  1. Do all host-side checks.
-  //  2. Initialize flash params object.
-  //  3. Allocate workspace.
-  //  4. Call the dispatcher.
-  AssertDimsAre128BitAligned(query, value);
-
-  CHECK_CUDA(query);
-  CHECK_CUDA(key);
-  CHECK_CUDA(value);
-  CHECK_CUDA(out);
-  CHECK_CUDA(grad_query);
-  CHECK_CUDA(grad_key);
-  CHECK_CUDA(grad_value);
-  CHECK_CUDA(grad_out);
-  CHECK_CUDA(logsumexp);
-
-  at::cuda::OptionalCUDAGuard device_guard(query.device());
-
-  CHECK_CONTIGUOUS(query);
-  CHECK_CONTIGUOUS(key);
-  CHECK_CONTIGUOUS(value);
-  CHECK_CONTIGUOUS(grad_query);
-  CHECK_CONTIGUOUS(grad_key);
-  CHECK_CONTIGUOUS(grad_value);
-  CHECK_CONTIGUOUS(out);
-  CHECK_CONTIGUOUS(grad_out);
-  CHECK_CONTIGUOUS(logsumexp);
-
-  CheckIfPropertiesMatch(query, key, value);
-  CheckIfPropertiesMatch(grad_value, grad_out, out);
-  CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
-  CheckIfPropertiesMatch(grad_query, query, value);
-
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
-  CheckIfBatchHeadsHeadDimMatch(query, key);
-  CheckIfHeadDimsMatch(out, value);
-  CheckIfTensorShapesMatch<1>(grad_query, query);
-  CheckIfTensorShapesMatch<1>(grad_key, key);
-  CheckIfTensorShapesMatch<1>(grad_value, value);
-  CheckIfTensorShapesMatch<1>(grad_out, out);
-
-  int batch_size = query.size(0);
-  int seqlen_q = query.size(1);
-  int seqlen_kv = key.size(1);
-  int heads = query.size(2);
-  int dim = query.size(3);
-
-  TORCH_CHECK(
-      query.scalar_type() == torch::kFloat16 ||
-          query.scalar_type() == torch::kBFloat16,
-      "Only FP16/BF16 is supported for now.");
-
-  TORCH_CHECK(
-      not (deterministic ^ at::globalContext().deterministicAlgorithms()),
-      "The provided deterministic argument does not "
-      "match with PyTorch's global setting. "
-      "NATTEN Python API should have avoided this; which means "
-      "you're probably calling the C function directly.");
-
-  // NOTE (aditya): Caution!! Here workspace_size is a struct, and NOT a native int/int64.
-  // Use workspace_size.total_bytes to fetch the number of workspace bytes needed.
-  auto workspace_size = natten::cuda::flash::get_flash_bwd_workspace_size(
-      batch_size,
-      seqlen_q,
-      seqlen_kv,
-      heads,
-      dim,
-      query_tile_size,
-      key_tile_size,
-      deterministic);
-
-  int64_t bytes = workspace_size.total_bytes;
-
-  auto workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
-  auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
-  
-  auto workspace_alloc = natten::cuda::flash::allocate_flash_bwd_workspace(workspace_ptr,
-      workspace_size);
-
-  cudaDeviceProp* device_props =
-      at::cuda::getDeviceProperties(query.device().index());
-  const int cc = device_props->major * 10 + device_props->minor;
-  const int num_sm = at::cuda::getCurrentDeviceProperties()->multiProcessorCount;
-
-  auto flash_bwd_params = natten::cuda::flash::set_flash_bwd_params(
-      cc,
-      num_sm,
-      grad_query,
-      grad_key,
-      grad_value,
-      grad_out,
-      query,
-      key,
-      value,
-      out,
-      logsumexp,
-      workspace_alloc.softmax_lse_log2_ptr,
-      workspace_alloc.dsoftmax_sum_ptr,
-      workspace_alloc.dQ_semaphore_ptr,
-      workspace_alloc.dK_semaphore_ptr,
-      workspace_alloc.dV_semaphore_ptr,
-      workspace_alloc.dQ_accum_ptr,
-      query_tile_size,
-      key_tile_size,
-      attn_scale,
-      deterministic
-      );
-
-  if (cc >= 80) {
-
-    int device_id = query.device().index();
-    auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
-    cudaDeviceProp* device_props = at::cuda::getDeviceProperties(device_id);
-    const int cc = device_props->major * 10 + device_props->minor;
-
-    DISPATCH_FLASH_FMHA_BACKWARD(
-        query.scalar_type(),
-        dim,
-        cc,
-        deterministic,
-        query_tile_size,
-        key_tile_size,
-        flash_bwd_params,
-        cuda_stream);
-
-  } else {
-    NATTEN_FAILURE(
-        "Flash FMHA kernels are only available on devices with "
-        "compute capability >= 80 for BF16 and FP16 inputs.");
-  }
+//  // Here:
+//  //  1. Do all host-side checks.
+//  //  2. Initialize flash params object.
+//  //  3. Allocate workspace.
+//  //  4. Call the dispatcher.
+//  AssertDimsAre128BitAligned(query, value);
+//
+//  CHECK_CUDA(query);
+//  CHECK_CUDA(key);
+//  CHECK_CUDA(value);
+//  CHECK_CUDA(out);
+//  CHECK_CUDA(grad_query);
+//  CHECK_CUDA(grad_key);
+//  CHECK_CUDA(grad_value);
+//  CHECK_CUDA(grad_out);
+//  CHECK_CUDA(logsumexp);
+//
+//  at::cuda::OptionalCUDAGuard device_guard(query.device());
+//
+//  CHECK_CONTIGUOUS(query);
+//  CHECK_CONTIGUOUS(key);
+//  CHECK_CONTIGUOUS(value);
+//  CHECK_CONTIGUOUS(grad_query);
+//  CHECK_CONTIGUOUS(grad_key);
+//  CHECK_CONTIGUOUS(grad_value);
+//  CHECK_CONTIGUOUS(out);
+//  CHECK_CONTIGUOUS(grad_out);
+//  CHECK_CONTIGUOUS(logsumexp);
+//
+//  CheckIfPropertiesMatch(query, key, value);
+//  CheckIfPropertiesMatch(grad_value, grad_out, out);
+//  CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
+//  CheckIfPropertiesMatch(grad_query, query, value);
+//
+//  CheckIfTensorShapesMatch<1>(query, out);
+//  CheckIfTensorShapesMatch<1>(key, value);
+//  CheckIfBatchHeadsHeadDimMatch(query, key);
+//  CheckIfHeadDimsMatch(out, value);
+//  CheckIfTensorShapesMatch<1>(grad_query, query);
+//  CheckIfTensorShapesMatch<1>(grad_key, key);
+//  CheckIfTensorShapesMatch<1>(grad_value, value);
+//  CheckIfTensorShapesMatch<1>(grad_out, out);
+//
+//  int batch_size = query.size(0);
+//  int seqlen_q = query.size(1);
+//  int seqlen_kv = key.size(1);
+//  int heads = query.size(2);
+//  int dim = query.size(3);
+//
+//  TORCH_CHECK(
+//      query.scalar_type() == torch::kFloat16 ||
+//          query.scalar_type() == torch::kBFloat16,
+//      "Only FP16/BF16 is supported for now.");
+//
+//  TORCH_CHECK(
+//      not (deterministic ^ at::globalContext().deterministicAlgorithms()),
+//      "The provided deterministic argument does not "
+//      "match with PyTorch's global setting. "
+//      "NATTEN Python API should have avoided this; which means "
+//      "you're probably calling the C function directly.");
+//
+//  // NOTE (aditya): Caution!! Here workspace_size is a struct, and NOT a native int/int64.
+//  // Use workspace_size.total_bytes to fetch the number of workspace bytes needed.
+//  auto workspace_size = natten::cuda::flash_fna::get_flash_bwd_workspace_size(
+//      batch_size,
+//      seqlen_q,
+//      seqlen_kv,
+//      heads,
+//      dim,
+//      query_tile_size,
+//      key_tile_size,
+//      deterministic);
+//
+//  int64_t bytes = workspace_size.total_bytes;
+//
+//  auto workspace = at::empty({bytes}, query.options().dtype(at::ScalarType::Byte));
+//  auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
+//  
+//  auto workspace_alloc = natten::cuda::flash_fna::allocate_flash_bwd_workspace(workspace_ptr,
+//      workspace_size);
+//
+//  cudaDeviceProp* device_props =
+//      at::cuda::getDeviceProperties(query.device().index());
+//  const int cc = device_props->major * 10 + device_props->minor;
+//  const int num_sm = at::cuda::getCurrentDeviceProperties()->multiProcessorCount;
+//
+//  auto flash_bwd_params = natten::cuda::flash_fna::set_flash_fna_bwd_params(
+//      cc,
+//      num_sm,
+//      grad_query,
+//      grad_key,
+//      grad_value,
+//      grad_out,
+//      query,
+//      key,
+//      value,
+//      out,
+//      logsumexp,
+//      workspace_alloc.softmax_lse_log2_ptr,
+//      workspace_alloc.dsoftmax_sum_ptr,
+//      workspace_alloc.dQ_semaphore_ptr,
+//      workspace_alloc.dK_semaphore_ptr,
+//      workspace_alloc.dV_semaphore_ptr,
+//      workspace_alloc.dQ_accum_ptr,
+//      query_tile_size,
+//      key_tile_size,
+//      attn_scale,
+//      deterministic
+//      );
+//
+//  if (cc >= 80) {
+//
+//    int device_id = query.device().index();
+//    auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
+//    cudaDeviceProp* device_props = at::cuda::getDeviceProperties(device_id);
+//    const int cc = device_props->major * 10 + device_props->minor;
+//
+//    DISPATCH_FLASH_FMHA_BACKWARD(
+//        query.scalar_type(),
+//        dim,
+//        cc,
+//        deterministic,
+//        query_tile_size,
+//        key_tile_size,
+//        flash_bwd_params,
+//        cuda_stream);
+//
+//  } else {
+//    NATTEN_FAILURE(
+//        "Flash FMHA kernels are only available on devices with "
+//        "compute capability >= 80 for BF16 and FP16 inputs.");
+//  }
 
 #else
   TORCH_CHECK(false, "libnatten not compiled with CUTLASS.");

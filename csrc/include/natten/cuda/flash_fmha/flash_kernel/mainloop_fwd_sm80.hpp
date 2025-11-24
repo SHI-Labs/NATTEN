@@ -10,6 +10,7 @@
 #include <cutlass/numeric_conversion.h>
 
 #include "cute/tensor.hpp"
+#include "cute/util/print.hpp"
 
 #include "seqlen.h"
 #include "block.h"
@@ -262,6 +263,7 @@ struct CollectiveMainloopFwdSm80 {
             params.qhead_per_khead_divmod);
         int const n_block_min = get<0>(n_block_min_max);
         int const n_block_max = get<1>(n_block_min_max);
+        
         // It's possible to have n_block_max <= n_block_min. We don't want to load Q or change any barrier
 
         Tensor sQ = make_tensor(make_smem_ptr(shared_storage.tensors.mainloop.smem_q.data()), SmemLayoutQ{});
@@ -288,26 +290,6 @@ struct CollectiveMainloopFwdSm80 {
 
         TiledMma tiled_mma;
         auto thr_mma = tiled_mma.get_slice(thread_idx);
-
-        // if (thread0()){
-        //   print("\n");
-        //   print("MMA atom"); print(MMA_Atom_Arch{}); print("\n");
-        //   print("tiled_mma"); print(tiled_mma); print("\n");
-        //   print("thr_mma"); print(thr_mma); print("\n");
-        //   print("TileShape_MNK"); print(TileShape_MNK{}); print("\n");
-        //   print("SmemLayoutAtomQKV"); print(SmemLayoutAtomQKV{}); print("\n");
-        //   print("SmemLayoutQ"); print(SmemLayoutQ{}); print("\n");
-        //   print("SmemLayoutK"); print(SmemLayoutK{}); print("\n");
-        //   print("mK "); print(mK); print("\n");
-        //   print("gK "); print(gK); print("\n");
-        //   print("sK "); print(sK); print("\n");
-        //   // print("tKgK "); print(tKgK); print("\n");
-        //   // print("tKsK "); print(tKsK); print("\n");
-        //   // print_latex(MMA_Atom_Arch{});
-        //   // print_latex(tiled_mma);
-        //   // print_latex(thr_mma);
-        //   // print("\n");
-        // }
 
         // Allocate "fragments/descriptors"
         Tensor tSrQ = thr_mma.partition_fragment_A(sQ);
@@ -374,7 +356,22 @@ struct CollectiveMainloopFwdSm80 {
         //     0 /*bidb_kv_idx, not used since we don't use TMA for Sm8x*/
         // );
 
+        if (thread0()) {
+          printf("n_block_min: %d \n", n_block_min);
+          printf("n_block_max: %d \n", n_block_max);
+          print("mK: ");
+          print(mK);
+          print("\n");
+          print("gK: ");
+          print(gK);
+          print("\n");
+          print("tKgK: ");
+          print(tKgK);
+          print("\n");
+        }
+
         auto load_K = [&] (int const n_block, int const smem_pipe_write, auto need_seqlenk_masking_type) {
+            // NOTE (aditya): Add n_block mapping logic here
             static constexpr bool Seqlenk_mask = decltype(need_seqlenk_masking_type)::value;
             // Do we need bound check to make sure the row doesn't go above kBlockN
             static constexpr bool EvenN = kBlockN % CUTE_STATIC_V(shape<0>(GmemLayoutAtom{})) == 0;
@@ -390,6 +387,7 @@ struct CollectiveMainloopFwdSm80 {
         };
 
         auto load_V = [&] (int const n_block, int const smem_pipe_write, auto need_seqlenk_masking_type) {
+            // NOTE (aditya): Add n_block mapping logic here
             static constexpr bool Seqlenk_mask = decltype(need_seqlenk_masking_type)::value;
             // Do we need bound check to make sure the row doesn't go above kBlockN
             static constexpr bool EvenN = kBlockN % CUTE_STATIC_V(shape<0>(GmemLayoutAtom{})) == 0;
@@ -479,18 +477,9 @@ struct CollectiveMainloopFwdSm80 {
         };
 
         clear(tOrO);
-        // Tensor debug_tSrS = partition_fragment_C(tiled_mma, select<0, 1>(TileShape_MNK{}));
-        // Tensor debug_tSrQ_cur = cute::conditional_return<Q_in_regs>(tSrQ, thr_mma.partition_fragment_A(sQ));
-        // Tensor debug_tSrK = thr_mma.partition_fragment_B(sK(_, _, _0{}));
-        // if (thread0()) {
-        //   print("\n");
-        //   print("debug_tSrS"); print(debug_tSrS); print("\n");
-        //   print("sQ"); print(sQ); print("\n");
-        //   print("debug_tSrQ_curr"); print(debug_tSrQ_cur); print("\n");
-        //   print("debug_tSrK"); print(debug_tSrK); print("\n");
-        // }     
 
         auto fwd_step = [&](int const n_block, auto mask_fn, auto is_first_iter_type, auto check_inf_type) {
+
             static constexpr bool Is_first_iter = decltype(is_first_iter_type)::value;
             static constexpr bool Check_inf = decltype(check_inf_type)::value;
             Tensor tSrS = partition_fragment_C(tiled_mma, select<0, 1>(TileShape_MNK{}));
@@ -529,9 +518,21 @@ struct CollectiveMainloopFwdSm80 {
             smem_pipe_read = smem_pipe_read < kStages - 1 ? smem_pipe_read + 1 : 0;
         };
 
+        if (thread0()) {
+          printf("================ \n");
+          printf("Before first iter \n");
+          printf("n_block: %d \n", n_block);
+          printf("\n");
+        }
         auto first_iter_mask_fn = [&](auto& tSrS, int n_block) { mask.template apply<true /*Seqlenk_mask*/>(tSrS, m_block, n_block); };
         fwd_step(n_block, first_iter_mask_fn, cute::true_type{} /*is_first_iter*/, cute::true_type{} /*check_inf*/);
         --n_block;
+        if (thread0()) {
+          printf("================ \n");
+          printf("After first iter \n");
+          printf("n_block: %d \n", n_block);
+          printf("\n");
+        }
         int const n_block_min_before_local_mask = BlockMN_t::get_n_block_min_before_local_mask(
             seqlen_info, m_block, n_block_min, 
             // params.window_size_left, params.attention_chunk_divmod,
@@ -540,6 +541,12 @@ struct CollectiveMainloopFwdSm80 {
         #pragma unroll 1
         for (; n_block >= n_block_min_before_local_mask; --n_block) {
             fwd_step(n_block, no_mask_fn, cute::false_type{} /*is_first_iter*/, cute::false_type{} /*check_inf*/);
+        }
+        if (thread0()) {
+          printf("================ \n");
+          printf("after loop \n");
+          printf("n_block: %d \n", n_block);
+          printf("\n");
         }
         // Separate masking iterations on the left for local attention
         float const v_descale = !Is_FP8 || params.ptr_v_descale == nullptr ? 1.0f : params.ptr_v_descale[bidb * get<0>(params.stride_v_descale) + bidh_kv * get<1>(params.stride_v_descale)];

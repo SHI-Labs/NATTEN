@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Hopper FMHA interface
+    \brief Flash FMHA interface
 */
 
 #pragma once

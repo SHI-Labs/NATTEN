@@ -49,7 +49,7 @@ public:
     static_assert(ArchTag::kMinComputeCapability >= 80);
 
     using TileScheduler = TileScheduler_;
-    using TileSchedulerArguments = typename flash::TileSchedulerArguments;
+    using TileSchedulerArguments = typename flash_fna::TileSchedulerArguments;
     using TileSchedulerParams = typename TileScheduler::Params;
 
     static constexpr uint32_t NumThreads = CUTE_STATIC_V(size(TiledMmaSdP{}));

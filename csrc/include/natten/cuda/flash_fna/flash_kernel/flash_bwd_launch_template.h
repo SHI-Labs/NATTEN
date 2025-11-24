@@ -59,7 +59,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     int batch_k = params.b;
 
     using TileShape_MK = cute::Shape<Int<kBlockM>, Int<kHeadDim>>;
-    using PreprocessKernel = flash::FlashAttnBwdPreprocess<TileShape_MK, Element, ElementAccum, ArchTag, /*Clear_dQaccum=*/true>;
+    using PreprocessKernel = flash_fna::FlashAttnBwdPreprocess<TileShape_MK, Element, ElementAccum, ArchTag, /*Clear_dQaccum=*/true>;
     typename PreprocessKernel::Arguments preprocess_args {
         static_cast<Element const*>(params.o_ptr),
         {seqlen_q, params.dv, params.h, batch_q},  // shape_O
@@ -96,34 +96,34 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     // static constexpr int Stages_dS = Arch >= 90 ? Stages_dS_or_QSm80 : 1;
     // using CollectiveMainloop = std::conditional_t<
     //     Arch >= 90,
-    //     flash::CollectiveMainloopBwdSm90<Stages, Stages_dO, Stages_dS, ClusterShape, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm90,
+    //     flash_fna::CollectiveMainloopBwdSm90<Stages, Stages_dO, Stages_dS, ClusterShape, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm90,
     //         Is_causal, Is_local, Has_softcap, Varlen, Deterministic,
     //         SdP_swapAB, dKV_swapAB, dQ_swapAB, NumMmaWarpGroups, AtomLayoutMSdP, AtomLayoutNdKV, AtomLayoutMdQ, V_in_regs>,
-    //     flash::CollectiveMainloopBwdSm80<Stages, Stages_dO, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm80,
+    //     flash_fna::CollectiveMainloopBwdSm80<Stages, Stages_dO, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm80,
     //         Is_causal, Is_local, Has_softcap, Varlen, Deterministic,
     //         SdP_swapAB, dKV_swapAB, dQ_swapAB, NumMmaWarpGroups, AtomLayoutMSdP, AtomLayoutNdKV, AtomLayoutMdQ, V_in_regs>
     // >;
-    using CollectiveMainloop = flash::CollectiveMainloopBwdSm80<Stages, Stages_dO, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm80,
+    using CollectiveMainloop = flash_fna::CollectiveMainloopBwdSm80<Stages, Stages_dO, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm80,
             Deterministic,
             SdP_swapAB, dKV_swapAB, dQ_swapAB, NumMmaWarpGroups, AtomLayoutMSdP, AtomLayoutNdKV, AtomLayoutMdQ, V_in_regs>;
     using CollectiveEpilogue = std::conditional_t<
         !GQA,
-        flash::CollectiveEpilogueBwd<TileShape_MNK, Element, ArchTag, CollectiveMainloop::NumMmaThreads, dKV_swapAB, NumMmaWarpGroups * (Arch >= 90 ? 1 : cutlass::NumWarpsPerWarpGroup) / AtomLayoutNdKV>,
-        flash::CollectiveEpilogueBwdGQA<TileShape_MNK, ElementAccum, ArchTag, CollectiveMainloop::NumMmaThreads, Deterministic>
+        flash_fna::CollectiveEpilogueBwd<TileShape_MNK, Element, ArchTag, CollectiveMainloop::NumMmaThreads, dKV_swapAB, NumMmaWarpGroups * (Arch >= 90 ? 1 : cutlass::NumWarpsPerWarpGroup) / AtomLayoutNdKV>,
+        flash_fna::CollectiveEpilogueBwdGQA<TileShape_MNK, ElementAccum, ArchTag, CollectiveMainloop::NumMmaThreads, Deterministic>
     >;
     // using Scheduler = std::conditional_t<
     //     Is_causal && !Varlen,
-    //     flash::SingleTileBwdLPTScheduler,
-    //     // flash::SingleTileScheduler<Varlen, false /*Split*/, false /*PackGQA*/, kBlockN>
-    //     flash::SingleTileScheduler</* PackGQA= */ false, kBlockN>
+    //     flash_fna::SingleTileBwdLPTScheduler,
+    //     // flash_fna::SingleTileScheduler<Varlen, false /*Split*/, false /*PackGQA*/, kBlockN>
+    //     flash_fna::SingleTileScheduler</* PackGQA= */ false, kBlockN>
     // >;
-    using Scheduler = flash::SingleTileScheduler</* PackGQA= */ false, kBlockN>;
+    using Scheduler = flash_fna::SingleTileScheduler</* PackGQA= */ false, kBlockN>;
     // using AttnKernel = std::conditional_t<
     //     Arch >= 90,
-    //     flash::enable_sm90_or_later<flash::FlashAttnBwdSm90<CollectiveMainloop, CollectiveEpilogue, Scheduler>>,
-    //     flash::enable_sm80_to_sm89<flash::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>
+    //     flash_fna::enable_sm90_or_later<flash_fna::FlashAttnBwdSm90<CollectiveMainloop, CollectiveEpilogue, Scheduler>>,
+    //     flash_fna::enable_sm80_to_sm89<flash_fna::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>
     // >;
-    using AttnKernel = flash::enable_sm80_to_sm89<flash::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>;
+    using AttnKernel = flash_fna::enable_sm80_to_sm89<flash_fna::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>;
 
     typename CollectiveMainloop::Arguments mainloop_args {
         static_cast<Element const*>(params.q_ptr),
@@ -191,7 +191,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
 
     int num_blocks_n = cutlass::ceil_div(params.seqlen_k, get<1>(TileShape_MNK{}));
     num_blocks_n = cutlass::round_up(num_blocks_n, size<1>(ClusterShape{}));
-    typename flash::TileSchedulerArguments scheduler_args {
+    typename flash_fna::TileSchedulerArguments scheduler_args {
         num_blocks_n, params.h, params.b, 1 /*num_splits*/,
         params.h / params.h_k,
         params.seqlen_k,
@@ -252,7 +252,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     }
     FLASH_CHECK_CUDA_KERNEL_LAUNCH();
 
-    using PostprocessKernel = flash::FlashAttnBwdPostprocessConvertdQ<TileShape_MK, Element, ElementAccum, ArchTag,
+    using PostprocessKernel = flash_fna::FlashAttnBwdPostprocessConvertdQ<TileShape_MK, Element, ElementAccum, ArchTag,
         AttnKernel::CollectiveMainloop::NumMmaThreads,
         typename AttnKernel::CollectiveMainloop::TiledMmadQ,
         AttnKernel::CollectiveMainloop::dQ_swapAB
@@ -278,7 +278,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
 
     if constexpr (GQA) {
         using TileShape_NK = cute::Shape<Int<kBlockN>, Int<kHeadDim>>;
-        using PostprocessKerneldKV = flash::FlashAttnBwdPostprocessConvertdQ<TileShape_NK, Element, ElementAccum, ArchTag,
+        using PostprocessKerneldKV = flash_fna::FlashAttnBwdPostprocessConvertdQ<TileShape_NK, Element, ElementAccum, ArchTag,
             AttnKernel::CollectiveEpilogue::NumEpilogueThreads,
             typename AttnKernel::CollectiveMainloop::TiledMmadKV,
             AttnKernel::CollectiveMainloop::dKV_swapAB

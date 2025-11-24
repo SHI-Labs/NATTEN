@@ -36,9 +36,9 @@ template <int Arch, typename Element, int HeadDim, int kBlockM, int kBlockN,
           class NADim, class QTileShape, class KVTileShape, class Causal>
 struct FlashFnaForwardKernel {
 
-  void run(Flash_fna_fwd_params params, cudaStream_t stream){
+  void run(Flash_fna_fwd_params<NADim> params, cudaStream_t stream){
 
-    auto flash_fwd = run_flash_fwd<
+    auto flash_fna_fwd = run_flash_fwd<
         /* Arch= */ Arch,
         /* kHeadDim= */ HeadDim,
         /* kHeadDimV= */ HeadDim,
@@ -54,7 +54,7 @@ struct FlashFnaForwardKernel {
         /* Causal= */ Causal 
     >;
 
-    flash_fwd(params, stream);
+    flash_fna_fwd(params, stream);
   }
 };
 
