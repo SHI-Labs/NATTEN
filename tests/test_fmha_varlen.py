@@ -94,7 +94,7 @@ def compute_split_reference(
 
     seqlen_q_total = sum(seqlens_Q_list)
     seqlen_kv_total = sum(seqlens_KV_list)
-    dtype_safe = torch.float32
+    dtype_safe = torch.float16
     with torch.no_grad():
         q_ref, k_ref, v_ref, d_out_ref = (
             torch.randn(
@@ -345,6 +345,7 @@ class FMHABackendTest(unittest.TestCase):
         is_causal,
         max_configs=5,
     ):
+        head_dim_v = head_dim_v or head_dim
         torch.set_default_device("cuda")
 
         # We're testing against the same backend and same dtype,
@@ -363,10 +364,14 @@ class FMHABackendTest(unittest.TestCase):
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
             dummy_fwd = torch.empty(
-                (1, min(seqlens_Q_list), heads, head_dim), device="cuda", dtype=dtype
+                (1, min(seqlens_Q_list), heads, max(head_dim, head_dim_v)),
+                device="cuda",
+                dtype=dtype,
             )
             dummy_bwd = torch.empty(
-                (1, min(seqlens_KV_list), heads, head_dim), device="cuda", dtype=dtype
+                (1, min(seqlens_KV_list), heads, max(head_dim, head_dim_v)),
+                device="cuda",
+                dtype=dtype,
             )
 
             forward_configs = get_all_fmha_forward_configs(dummy_fwd)
@@ -638,14 +643,19 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_varlen_fmha_extended(self):
-        self._test_varlen_randsweep(
-            backend="cutlass-fmha", max_tests=max(1, RAND_SWEEP_TESTS // 2)
-        )
+        self._test_varlen_randsweep(backend="cutlass-fmha", max_tests=RAND_SWEEP_TESTS)
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_varlen_fmha_fast(self):
         problem_sizes = [
+            (
+                9,
+                4,
+                128,
+                [2669, 2240, 910, 2421, 3323, 34, 3308, 2867, 1401],
+                [2880, 1726, 1847, 1147, 3568, 3116, 661, 1739, 1146],
+            ),
             (6, 1, 128, [128, 128, 135, 121, 128, 128], [128, 128, 135, 121, 128, 128]),
             (5, 1, 128, [128, 128, 135, 128, 128], [128, 128, 135, 128, 128]),
             (2, 1, 128, [135, 200], [128, 768]),
