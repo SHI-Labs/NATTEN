@@ -807,7 +807,7 @@ class FMHABackendTest(unittest.TestCase):
                 is_causal=is_causal,
             )
         elif backend == "hopper-fmha":
-            assert heads_kv is None
+            assert heads_kv is None or heads_kv == heads
             assert (
                 head_dim_v is None or head_dim_v == head_dim
             ), "Hopper FMHA does not allow head_dim_v."
