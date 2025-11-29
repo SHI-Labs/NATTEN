@@ -77,7 +77,7 @@ struct NAMask {
 
         // TODO (aditya): This doesn't consider SwapAB, fix.
         tScS_rowcol.data() = tScS_rowcol.data() + E<0>{} * m_block * kBlockM;
-        tScS_rowcol.data() = tScS_rowcol.data() + E<1>{} * n_block * kBlockN;
+        tScS_rowcol.data() = tScS_rowcol.data() + E<1>{} * n_block * kBlockN + E<1>{} * size(kv_blk_offset);
 
         // NOTE (aditya): Copied over with minor modifications from Hopper FNA
         auto q_tile_shape = QTileShape{};
@@ -90,36 +90,46 @@ struct NAMask {
 
         // Q coord remap
         int q_tile_idx = q_idx_first / size(q_tile_shape);
-        int q_tile_res = q_idx_first % size(q_tile_shape);
+        int q_idx_first_in_tile = q_tile_idx * size(q_tile_shape);
 
-        auto q_tile_coord = idx2crd(q_tile_idx, q_tiled);
-        auto q_tile_offset = idx2crd(q_tile_res, q_tile_shape);
-        auto q_thread_offset =
-            tuple_add(q_tile_offset, tuple_mul(q_tile_coord, q_tile_shape));
-
-        auto q_ctr = make_identity_tensor(q_tile_shape);
-        auto q_ctr_offset = domain_offset(q_thread_offset, q_ctr);
+        int kv_tile_idx = n_block;
+        int kv_idx_first_in_tile = (kv_tile_idx * size(kv_tile_shape)) + size(kv_blk_offset);
+        //int q_tile_res = q_idx_first % size(q_tile_shape);
 
         // KV coord remap
-        int kv_tile_idx = n_block;
-        int kv_tile_res = kv_idx_first % size(kv_tile_shape);
+        // int kv_tile_idx = n_block;
+        // //int kv_tile_res = kv_idx_first % size(kv_tile_shape);
+        // int kv_tile_res = 0;
 
-        auto kv_tile_coord = idx2crd(kv_tile_idx, kv_diff_tiles);
-        auto kv_tile_offset = idx2crd(kv_tile_res, kv_tile_shape);
-        auto kv_thread_offset = tuple_add(
-            kv_tile_offset,
-            tuple_add(kv_blk_offset, tuple_mul(kv_tile_coord, kv_tile_shape)));
+        // auto kv_tile_coord = idx2crd(kv_tile_idx, kv_diff_tiles);
+        // auto kv_tile_offset = idx2crd(kv_tile_res, kv_tile_shape);
+        // auto kv_thread_offset = tuple_add(
+        //     kv_tile_offset,
+        //     tuple_add(kv_blk_offset, tuple_mul(kv_tile_coord, kv_tile_shape)));
 
+        // auto kv_ctr = make_identity_tensor(kv_tile_shape);
+        // auto kv_ctr_offset = domain_offset(kv_thread_offset, kv_ctr);
+
+        // auto kv_tile_offset = idx2crd(kv_tile_res, kv_tile_shape);
+        auto q_tile_coord = idx2crd(q_tile_idx, q_tiled);
+        //                              Offset from origin
+        auto q_tile_offset = tuple_mul(q_tile_coord, q_tile_shape);
+        auto q_ctr = make_identity_tensor(q_tile_shape);
+        auto q_ctr_offset = domain_offset(q_tile_offset, q_ctr);
+
+        auto kv_tile_coord = idx2crd(n_block, kv_diff_tiles);
+        //                              Offset from origin + offset from start of KVs for this Q
+        auto kv_tile_offset = tuple_add(kv_blk_offset, tuple_mul(kv_tile_coord, kv_tile_shape));
         auto kv_ctr = make_identity_tensor(kv_tile_shape);
-        auto kv_ctr_offset = domain_offset(kv_thread_offset, kv_ctr);
+        auto kv_ctr_offset = domain_offset(kv_tile_offset, kv_ctr);
 
         CUTLASS_PRAGMA_UNROLL
         for (int i = 0; i < size<0>(tSrS_rowcol); i++) {
-          // auto [q_idx, _] = tScS_rowcol(crd2idx(make_coord(i, 0), tScS_rowcol.layout()));
+          // auto [q_idx, _] = tScS_rowcol(crd2idx(make_coord(i, 0), tSrS_rowcol.layout()));
           auto [q_idx, _] = tScS_rowcol(i, 0);
 
-          auto q_coord = q_ctr_offset(q_idx - q_idx_first);
-          // auto q_coord = q_ctr_offset(q_idx);
+          auto q_coord = q_ctr_offset(q_idx - q_idx_first_in_tile);
+          //auto q_coord = q_ctr_offset(q_idx);
 
           auto kv_start = get_window_start<Causal>(
               q_coord, window_left, window_right, stride, qkv_shape);
@@ -132,12 +142,55 @@ struct NAMask {
           CUTLASS_PRAGMA_UNROLL
           for (int j = 0; j < size<1>(tSrS_rowcol); j++) {
 
+            // auto [_, kv_idx] = tScS_rowcol(crd2idx(make_coord(i, j), tSrS_rowcol.layout()));
             auto [_, kv_idx] = tScS_rowcol(i, j);
-            auto kv_coord = kv_ctr_offset(kv_idx - kv_idx_first);
+            //auto kv_coord = kv_ctr_offset(kv_idx - kv_idx_first);
+            auto kv_coord = kv_ctr_offset(kv_idx - kv_idx_first_in_tile);
 
-            if (not is_neighbor(kv_coord, kv_start, kv_end)) {
+            bool is_neigh = is_neighbor(kv_coord, kv_start, kv_end);
+
+            if (not is_neigh) {
               tSrS_rowcol(i, j) = -INFINITY;
             }
+
+#if 0
+printf(
+"\n[block: <%d, %d, %d>,  thrd: <%d, %d, %d>] thread_idx: %d, m_block: %d, n_block: %d, q_idx_first: %d, kv_idx_first: %d, i: %d, j: %d, q_idx: %d, kv_idx: %d, q_coord<%d, %d, %d>, kv_coord<%d, %d, %d>, kv_start<%d, %d, %d>, kv_end<%d, %d, %d>, is_neighbor: %d\n",
+static_cast<int>(blockIdx.x),
+static_cast<int>(blockIdx.y),
+static_cast<int>(blockIdx.z),
+static_cast<int>(threadIdx.x),
+static_cast<int>(threadIdx.y),
+static_cast<int>(threadIdx.z),
+static_cast<int>(thread_idx),
+static_cast<int>(m_block),
+static_cast<int>(n_block),
+static_cast<int>(q_idx_first),
+static_cast<int>(kv_idx_first),
+i,j,
+static_cast<int>(q_idx),
+static_cast<int>(kv_idx),
+static_cast<int>(get<0>(q_coord)),
+static_cast<int>(get<1>(q_coord)),
+static_cast<int>(get<2>(q_coord)),
+static_cast<int>(get<0>(kv_coord)),
+static_cast<int>(get<1>(kv_coord)),
+static_cast<int>(get<2>(kv_coord)),
+static_cast<int>(get<0>(kv_start)),
+static_cast<int>(get<1>(kv_start)),
+static_cast<int>(get<2>(kv_start)),
+static_cast<int>(get<0>(kv_end)),
+static_cast<int>(get<1>(kv_end)),
+static_cast<int>(get<2>(kv_end)),
+static_cast<int>(is_neigh)
+);
+#endif
+            //if (thread(1, 0)) {
+            //bool neighbor = is_neighbor(kv_coord, kv_start, kv_end);
+            //// One-liner print
+            //  print("Q: "); print(q_coord); print(", KV: "); print(kv_coord);
+            //  print(", neighbor? "); print(neighbor); print("\n");
+            //}
           }
         }
 
@@ -157,33 +210,42 @@ struct NAMask {
 
       // TODO (aditya): This doesn't consider SwapAB, fix.
       tScS_rowcol.data() = tScS_rowcol.data() + E<0>{} * m_block * kBlockM;
-      tScS_rowcol.data() = tScS_rowcol.data() + E<1>{} * n_block * kBlockN;
+      tScS_rowcol.data() = tScS_rowcol.data() + E<1>{} * n_block * kBlockN + E<1>{} * size(kv_blk_offset);
 
-      // NOTE (aditya): Copied over with minor modifications from Hopper FNA
       auto q_tile_shape = QTileShape{};
       auto kv_tile_shape = KVTileShape{};
 
-      // KV coord remap
-      auto [_, kv_idx_first] =
-        tScS_rowcol(crd2idx(make_coord(0, 0), tSrS_rowcol.layout()));
-      int kv_tile_idx = kv_idx_first / size(kv_tile_shape);
-      int kv_tile_res = kv_idx_first % size(kv_tile_shape);
-
-      auto kv_tile_coord = idx2crd(kv_tile_idx, kv_diff_tiles);
-      auto kv_tile_offset = idx2crd(kv_tile_res, kv_tile_shape);
-      auto kv_thread_offset = tuple_add(
-          kv_tile_offset,
-          tuple_add(kv_blk_offset, tuple_mul(kv_tile_coord, kv_tile_shape)));
-
+      auto kv_tile_coord = idx2crd(n_block, kv_diff_tiles);
+      auto kv_tile_offset = tuple_add(kv_blk_offset, tuple_mul(kv_tile_coord, kv_tile_shape));
       auto kv_ctr = make_identity_tensor(kv_tile_shape);
-      auto kv_ctr_offset = domain_offset(kv_thread_offset, kv_ctr);
+      auto kv_ctr_offset = domain_offset(kv_tile_offset, kv_ctr);
+
+      int kv_tile_idx = n_block;
+      int kv_idx_first_in_tile = (kv_tile_idx * size(kv_tile_shape)) + size(kv_blk_offset);
+
+      // NOTE (aditya): Copied over with minor modifications from Hopper FNA
+
+      // KV coord remap
+      // auto [_, kv_idx_first] =
+      //   tScS_rowcol(crd2idx(make_coord(0, 0), tSrS_rowcol.layout()));
+      // int kv_tile_idx = kv_idx_first / size(kv_tile_shape);
+      // int kv_tile_res = kv_idx_first % size(kv_tile_shape);
+
+      // auto kv_tile_coord = idx2crd(kv_tile_idx, kv_diff_tiles);
+      // auto kv_tile_offset = idx2crd(kv_tile_res, kv_tile_shape);
+      // auto kv_thread_offset = tuple_add(
+      //     kv_tile_offset,
+      //     tuple_add(kv_blk_offset, tuple_mul(kv_tile_coord, kv_tile_shape)));
+
+      // auto kv_ctr = make_identity_tensor(kv_tile_shape);
+      // auto kv_ctr_offset = domain_offset(kv_thread_offset, kv_ctr);
 
 
       CUTLASS_PRAGMA_UNROLL
       for (int j = 0; j < size<1>(tSrS_rowcol); j++) {
         auto [_, kv_idx] = tScS_rowcol(0, j);
 
-        int iter_offset = kv_idx - kv_idx_first; // % size(kv_tile_shape);
+        int iter_offset = kv_idx - kv_idx_first_in_tile; // % size(kv_tile_shape);
         auto kv_coord = kv_ctr_offset(iter_offset);
 
         if (not is_within_bounds(kv_coord, qkv_shape)) {

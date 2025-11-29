@@ -10,7 +10,6 @@
 #include <cutlass/numeric_conversion.h>
 
 #include "cute/tensor.hpp"
-#include "cute/util/print.hpp"
 
 #include "seqlen.h"
 #include "block.h"
@@ -356,20 +355,6 @@ struct CollectiveMainloopFwdSm80 {
         //     0 /*bidb_kv_idx, not used since we don't use TMA for Sm8x*/
         // );
 
-        if (thread0()) {
-          printf("n_block_min: %d \n", n_block_min);
-          printf("n_block_max: %d \n", n_block_max);
-          print("mK: ");
-          print(mK);
-          print("\n");
-          print("gK: ");
-          print(gK);
-          print("\n");
-          print("tKgK: ");
-          print(tKgK);
-          print("\n");
-        }
-
         auto load_K = [&] (int const n_block, int const smem_pipe_write, auto need_seqlenk_masking_type) {
             // NOTE (aditya): Add n_block mapping logic here
             static constexpr bool Seqlenk_mask = decltype(need_seqlenk_masking_type)::value;
@@ -518,21 +503,9 @@ struct CollectiveMainloopFwdSm80 {
             smem_pipe_read = smem_pipe_read < kStages - 1 ? smem_pipe_read + 1 : 0;
         };
 
-        if (thread0()) {
-          printf("================ \n");
-          printf("Before first iter \n");
-          printf("n_block: %d \n", n_block);
-          printf("\n");
-        }
         auto first_iter_mask_fn = [&](auto& tSrS, int n_block) { mask.template apply<true /*Seqlenk_mask*/>(tSrS, m_block, n_block); };
         fwd_step(n_block, first_iter_mask_fn, cute::true_type{} /*is_first_iter*/, cute::true_type{} /*check_inf*/);
         --n_block;
-        if (thread0()) {
-          printf("================ \n");
-          printf("After first iter \n");
-          printf("n_block: %d \n", n_block);
-          printf("\n");
-        }
         int const n_block_min_before_local_mask = BlockMN_t::get_n_block_min_before_local_mask(
             seqlen_info, m_block, n_block_min, 
             // params.window_size_left, params.attention_chunk_divmod,
@@ -541,12 +514,6 @@ struct CollectiveMainloopFwdSm80 {
         #pragma unroll 1
         for (; n_block >= n_block_min_before_local_mask; --n_block) {
             fwd_step(n_block, no_mask_fn, cute::false_type{} /*is_first_iter*/, cute::false_type{} /*check_inf*/);
-        }
-        if (thread0()) {
-          printf("================ \n");
-          printf("after loop \n");
-          printf("n_block: %d \n", n_block);
-          printf("\n");
         }
         // Separate masking iterations on the left for local attention
         float const v_descale = !Is_FP8 || params.ptr_v_descale == nullptr ? 1.0f : params.ptr_v_descale[bidb * get<0>(params.stride_v_descale) + bidh_kv * get<1>(params.stride_v_descale)];

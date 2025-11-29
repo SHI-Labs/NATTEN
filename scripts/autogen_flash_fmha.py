@@ -417,7 +417,7 @@ def generate_flash_fmha_kernels(path, num_splits=2):
 
     SUPPORTED_ARCHS = [80, 86, 89]
 
-    HEAD_DIMS = [32, 64, 128, 256]
+    HEAD_DIMS = [32, 64, 96, 128, 192, 256]
 
     head_dim_dispatchers = []
     config_dispatchers = []

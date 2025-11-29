@@ -608,14 +608,25 @@ struct CollectiveMainloopFwdSm80 {
 
         // auto first_iter_mask_fn = [&](auto& tSrS, int n_block) { mask.template apply<true /*Seqlenk_mask*/>(tSrS, m_block, n_block); };
         auto no_mask_fn = [&](auto& tSrS, int n_block) {};
+        // if (thread0()) {
+        //   if (not is_fully_block_sparse) {
+        //     print("############# This problem has NA mask"); print("\n");
+        //   } else if (has_kv_padding) {
+        //     print("============= This problem has KV padding"); print("\n");
+        //   } else {
+        //     print("------------- This problem is fully block-sparse"); print("\n");
+        //   }
+        // }
 
+        // auto na_mask_fn = [&](auto& tSrS, int n_block) { 
+        //   na_mask.apply(tSrS, m_block, n_block);
+        // };
         auto na_mask_fn = [&](auto& tSrS, int n_block) { 
           if (not is_fully_block_sparse) {
             na_mask.apply(tSrS, m_block, n_block);
           } else if (has_kv_padding) {
             na_mask.apply_padding(tSrS, m_block, n_block);
-          } else {
-          }
+          } else {}
         };
         fwd_step(n_block, na_mask_fn, cute::true_type{} /*is_first_iter*/, cute::true_type{} /*check_inf*/);
         --n_block;

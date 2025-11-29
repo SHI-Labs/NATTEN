@@ -36,6 +36,10 @@ from ....types import (
 from ....utils.checks import check_tile_shape
 from ....utils.device import get_device_cc
 
+from .flash_fmha_forward import get_flash_fmha_fwd_configs
+from .flash_fmha_backward import get_flash_fmha_bwd_configs
+from .flash_fna_forward import get_flash_fna_fwd_configs
+from .flash_fna_backward import get_flash_fna_bwd_configs
 
 DTYPE_TO_BITS = {
     torch.float16: 16,
@@ -50,142 +54,16 @@ DTYPE_TO_BITS = {
 #           ]
 #       }
 #   }
-FLASH_FMHA_FORWARD_CONFIGS = {
-    1: {
-        80 : {
-            32: [
-                ((128,), (112,)),
-            ],
-            64: [
-                ((128,), (112,)),
-            ],
-            96: [
-                ((128,), (64,)),
-            ],
-            128: [
-                ((128,), (128,)),
-                ((128,), (64,)),
-            ],
-            192: [
-                ((128,), (96,)),
-            ],
-            256: [
-                ((128,), (96,)),
-            ],
-        },
-        86 : {
-            32: [
-                ((128,), (112,)),
-            ],
-            64: [
-                ((128,), (64,)),
-            ],
-            96: [
-                ((128,), (64,)),
-            ],
-            128: [
-                ((128,), (128,)),
-            ],
-            192: [
-                ((128,), (96,)),
-            ],
-            256: [
-                ((128,), (64,)),
-            ],
-        },
-        89 : {
-            32: [
-                ((128,), (112,)),
-            ],
-            64: [
-                ((128,), (64,)),
-            ],
-            96: [
-                ((128,), (64,)),
-            ],
-            128: [
-                ((128,), (128,)),
-            ],
-            192: [
-                ((128,), (96,)),
-            ],
-            256: [
-                ((128,), (64,)),
-            ],
-        },
-    },
 
-}
-
-FLASH_FMHA_BACKWARD_CONFIGS = {
-    1: {
-        80: {
-            32: [
-                ((128,), (128,)),
-            ],
-            64: [
-                ((128,), (128,)),
-            ],
-            96: [
-                ((64,), (128,)),
-            ],
-            128: [
-                ((64,), (128,)),
-            ],
-            192: [
-                ((64,), (80,)),
-            ],
-            256: [
-                ((64,), (64,)),
-            ],
-        },
-        86: {
-            32: [
-                ((64,), (128,)),
-            ],
-            64: [
-                ((64,), (128,)),
-            ],
-            96: [
-                ((64,), (128,)),
-            ],
-            128: [
-                ((64,), (96,)),
-            ],
-            192: [
-                ((64,), (64,)),
-            ],
-            256: [
-                ((32,), (64,)),
-            ],
-        },
-        89: {
-            32: [
-                ((64,), (128,)),
-            ],
-            64: [
-                ((64,), (128,)),
-            ],
-            96: [
-                ((64,), (128,)),
-            ],
-            128: [
-                ((64,), (96,)),
-            ],
-            192: [
-                ((64,), (64,)),
-            ],
-            256: [
-                ((32,), (64,)),
-            ],
-        },
-    },
-}
+FLASH_FMHA_FORWARD_CONFIGS = get_flash_fmha_fwd_configs()
+FLASH_FMHA_BACKWARD_CONFIGS = get_flash_fmha_bwd_configs()
+FLASH_FNA_FORWARD_CONFIGS = get_flash_fna_fwd_configs()
+FLASH_FNA_BACKWARD_CONFIGS = get_flash_fna_bwd_configs()
 
 
 def get_all_forward_configs(
     input_tensor: Tensor,
-) -> List[FlashFmhaForwardConfigType]:
+) -> List[FlashFnaForwardConfigType]:
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
@@ -202,10 +80,10 @@ def get_all_forward_configs(
         return []
 
     # if head_dim not in [32, 64, 128, 256]:
-    if head_dim not in FLASH_FMHA_FORWARD_CONFIGS[na_dim][cc]:  # type: ignore
+    if head_dim not in FLASH_FNA_FORWARD_CONFIGS[na_dim][cc]:  # type: ignore
         return []
 
-    return FLASH_FMHA_FORWARD_CONFIGS[na_dim][cc][head_dim]  # type: ignore
+    return FLASH_FNA_FORWARD_CONFIGS[na_dim][cc][head_dim]  # type: ignore
 
 
 def get_all_backward_configs(
@@ -222,12 +100,11 @@ def get_all_backward_configs(
 
     head_dim = input_tensor.shape[-1]
 
-    # if dtype_bits not in FLASH_FMHA_FORWARD_CONFIGS[na_dim]:  # type: ignore
     if dtype not in [torch.float16, torch.bfloat16]:
         return []
 
     # if head_dim not in [32, 64, 128, 256]:
-    if head_dim not in FLASH_FMHA_FORWARD_CONFIGS[na_dim][cc]:  # type: ignore
+    if head_dim not in FLASH_FMHA_BACKWARD_CONFIGS[na_dim][cc]:  # type: ignore
         return []
 
 
@@ -318,65 +195,64 @@ def get_default_fmha_backward_config(
     return q_t[0], kv_t[0]
 
 
-def check_cutlass_flash_fna_forward_config(
+def check_flash_fna_forward_config(
     input_tensor: Tensor,
     q_tile_shape: Optional[DimensionType] = None,
     kv_tile_shape: Optional[DimensionType] = None,
 ) -> FlashFnaForwardConfigType:
-    raise NotImplementedError
-    # assert input_tensor.dim() in [4, 5, 6]
-    # na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
+    assert input_tensor.dim() in [4, 5, 6]
+    na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
-    # if (q_tile_shape is None) ^ (kv_tile_shape is None):
-    #     raise ValueError(
-    #         "Please specify both q_tile_shape and kv_tile_shape, or neither one. "
-    #         f"Got {q_tile_shape=}, {kv_tile_shape=}."
-    #     )
+    if (q_tile_shape is None) ^ (kv_tile_shape is None):
+        raise ValueError(
+            "Please specify both q_tile_shape and kv_tile_shape, or neither one. "
+            f"Got {q_tile_shape=}, {kv_tile_shape=}."
+        )
 
-    # default_q_tile_shape, default_kv_tile_shape = (
-    #     get_default_forward_config(input_tensor=input_tensor)
-    # )
-    # if q_tile_shape is None and kv_tile_shape is None:
-    #     return default_q_tile_shape, default_kv_tile_shape  # type: ignore[return-value]
+    default_q_tile_shape, default_kv_tile_shape = (
+        get_default_forward_config(input_tensor=input_tensor)
+    )
+    if q_tile_shape is None and kv_tile_shape is None:
+        return default_q_tile_shape, default_kv_tile_shape  # type: ignore[return-value]
 
-    # elif q_tile_shape is None and kv_tile_shape is None:
-    #     q_tile_shape = default_q_tile_shape
-    #     kv_tile_shape = default_kv_tile_shape
+    elif q_tile_shape is None and kv_tile_shape is None:
+        q_tile_shape = default_q_tile_shape
+        kv_tile_shape = default_kv_tile_shape
 
-    # q_tile_shape = check_tile_shape(q_tile_shape)
-    # kv_tile_shape = check_tile_shape(kv_tile_shape)
+    q_tile_shape = check_tile_shape(q_tile_shape)
+    kv_tile_shape = check_tile_shape(kv_tile_shape)
 
-    # configs = get_all_forward_configs(input_tensor=input_tensor)
+    configs = get_all_forward_configs(input_tensor=input_tensor)
 
-    # for q_t, kv_t in configs:
-    #     if (
-    #         q_t == q_tile_shape
-    #         and kv_t == kv_tile_shape
-    #     ):
-    #         return q_t, kv_t  # type: ignore
+    for q_t, kv_t in configs:
+        if (
+            q_t == q_tile_shape
+            and kv_t == kv_tile_shape
+        ):
+            return q_t, kv_t  # type: ignore
 
-    # # Fail and make suggestions
-    # MAX_EXAMPLES = 3
-    # examples = ""
-    # for i, (q_t, kv_t) in enumerate(configs):
-    #     examples += f"\n  q_tile_shape={q_t}, kv_tile_shape={kv_t}"
-    #     if i > MAX_EXAMPLES:
-    #         break
+    # Fail and make suggestions
+    MAX_EXAMPLES = 3
+    examples = ""
+    for i, (q_t, kv_t) in enumerate(configs):
+        examples += f"\n  q_tile_shape={q_t}, kv_tile_shape={kv_t}"
+        if i > MAX_EXAMPLES:
+            break
 
-    # raise ValueError(
-    #     f"Invalid configuration for Flash FNA-{na_dim}D. "
-    #     f"Q tile shape {q_tile_shape}, KV tile shape {kv_tile_shape} "
-    #     f"are not among the {len(configs)} configurations implementable "
-    #     f"with Flash FNA. "
-    #     "Try selecting a combination from: \n"
-    #     "  natten.get_configs_for_flash_fna(q, k, v)"
-    #     "\n"
-    #     "Here's a few examples of available combinations for your use case:\n"
-    #     f"{examples}"
-    # )
+    raise ValueError(
+        f"Invalid configuration for Flash FNA-{na_dim}D. "
+        f"Q tile shape {q_tile_shape}, KV tile shape {kv_tile_shape} "
+        f"are not among the {len(configs)} configurations implementable "
+        f"with Flash FNA. "
+        "Try selecting a combination from: \n"
+        "  natten.get_configs_for_flash_fna(q, k, v)"
+        "\n"
+        "Here's a few examples of available combinations for your use case:\n"
+        f"{examples}"
+    )
 
 
-def check_cutlass_flash_fna_backward_config(
+def check_flash_fna_backward_config(
     input_tensor: Tensor,
     q_tile_shape: Optional[DimensionType] = None,
     kv_tile_shape: Optional[DimensionType] = None,
