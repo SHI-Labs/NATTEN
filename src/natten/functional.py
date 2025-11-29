@@ -38,6 +38,7 @@ from .backends import (
     flex_fmha,
     flex_fna_generic,
     flash_fmha,
+    flash_fna_generic
 )
 from .types import (
     CausalArg1DTypeOrDed,
@@ -496,6 +497,23 @@ def neighborhood_attention_generic(
             backward_kv_tile_shape=backward_kv_tile_shape,
             kernel_schedule=kernel_schedule,
             return_lse=True,
+        )
+
+    elif backend == "flash-fna":
+        outputs = flash_fna_generic(
+            query=query,
+            key=key,
+            value=value,
+            kernel_size=kernel_size,
+            stride=stride,
+            dilation=dilation,
+            is_causal=is_causal,
+            scale=scale,
+            q_tile_shape=q_tile_shape,
+            kv_tile_shape=kv_tile_shape,
+            backward_q_tile_shape=backward_q_tile_shape,
+            backward_kv_tile_shape=backward_kv_tile_shape,
+            return_lse=has_additional_attention,
         )
 
     elif backend == "cutlass-fna":
