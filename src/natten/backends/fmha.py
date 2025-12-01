@@ -157,13 +157,22 @@ class CutlassFmhaAutogradFn(Function):
                 f"Overriding {kv_splits=} to {num_kv_splits}."
             )
 
+        if not compute_delta_with_pt and torch.are_deterministic_algorithms_enabled():
+            compute_delta_with_pt = True
+            logger.warning(
+                "You enabled PyTorch's deterministic mode, but tried to use backward_use_pt_reduction "
+                ", which is non-deterministic. Overriding."
+            )
+
         seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else ctx.max_seqlen_KV
         num_kv_tiles = (seqlen_kv + k_tile_size - 1) // k_tile_size
+        assert num_kv_tiles > 0
         if num_kv_splits > num_kv_tiles:
-            raise ValueError(
+            logger.warning(
                 "Number of KV splits cannot exceed number of KV tiles, got "
                 f"{num_kv_splits=}, {num_kv_tiles=}."
             )
+            num_kv_splits = num_kv_tiles
 
         fmha_backward(
             d_query,
@@ -251,6 +260,7 @@ def cutlass_fmha(
         kv_tile_size=backward_kv_tile_size,
         kv_splits=backward_kv_splits,
         use_pt_reduction=backward_use_pt_reduction,
+        max_seqlen=max_seqlen_KV if is_varlen else None,
     )
 
     scale = scale or query.shape[-1] ** -0.5
