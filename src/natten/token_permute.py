@@ -24,7 +24,8 @@ import math
 
 import torch
 
-from .utils import log
+from natten.utils import log
+from natten.utils.environment import is_torch_compiling
 
 logger = log.get_logger(__name__)
 
@@ -157,11 +158,13 @@ def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = Tru
 
     # View, not copy
     tensor_tiled = tensor.view(batch, *logical_divide_dims, heads, dim)
-    assert tensor_tiled.data_ptr() == tensor.data_ptr()
+    if not is_torch_compiling():
+        assert tensor_tiled.data_ptr() == tensor.data_ptr()
 
     # View, not copy
     tensor_permuted = tensor_tiled.permute(*permutation_idxes)
-    assert tensor_permuted.data_ptr() == tensor_tiled.data_ptr()
+    if not is_torch_compiling():
+        assert tensor_permuted.data_ptr() == tensor_tiled.data_ptr()
 
     # Reshape back and copy
     tensor_flatten = tensor_permuted.reshape(
@@ -226,7 +229,8 @@ def token_unpermute(
     tensor_tiled = tensor.view(
         batch, *rest_shape_, *tile_shape_, *dilation_, heads_actual, dim
     )
-    assert tensor_tiled.data_ptr() == tensor.data_ptr()
+    if not is_torch_compiling():
+        assert tensor_tiled.data_ptr() == tensor.data_ptr()
 
     # Undo permutation
     permutation_idxes = [0]
@@ -240,7 +244,8 @@ def token_unpermute(
 
     # View, not copy
     tensor_permuted = tensor_tiled.permute(*permutation_idxes)
-    assert tensor_permuted.data_ptr() == tensor_tiled.data_ptr()
+    if not is_torch_compiling():
+        assert tensor_permuted.data_ptr() == tensor_tiled.data_ptr()
 
     # Reshape back and copy
     out = tensor_permuted.reshape(
