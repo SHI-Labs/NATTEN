@@ -23,7 +23,6 @@
 import functools
 from typing import Optional, Tuple, Union
 
-import torch
 from torch import Tensor
 from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
@@ -129,18 +128,11 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
             query_perm = query_perm.contiguous()
             key_perm = key_perm.contiguous()
             value_perm = value_perm.contiguous()
-            output_perm = torch.empty_like(query_perm)
 
-            logsumexp_perm = torch.empty(
-                query_perm.shape[:-1], dtype=torch.float32, device=query_perm.device
-            )
-
-            FORWARD_OPS[na_dim](
-                output_perm,
+            output_perm, logsumexp_perm = FORWARD_OPS[na_dim](
                 query_perm,
                 key_perm,
                 value_perm,
-                logsumexp_perm,
                 kernel_size,
                 stride,
                 dilation,
@@ -258,15 +250,9 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
             value_perm = value_perm.contiguous()
             output_perm = output_perm.contiguous()
             d_output_perm = d_output_perm.contiguous()
-            d_query_perm = torch.empty_like(query_perm)
-            d_key_perm = torch.empty_like(key_perm)
-            d_value_perm = torch.empty_like(value_perm)
             logsumexp_perm = logsumexp_perm.squeeze(-1)
 
-            BACKWARD_OPS[na_dim](
-                d_query_perm,
-                d_key_perm,
-                d_value_perm,
+            d_query_perm, d_key_perm, d_value_perm = BACKWARD_OPS[na_dim](
                 query_perm,
                 key_perm,
                 value_perm,

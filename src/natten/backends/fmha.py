@@ -74,21 +74,11 @@ class CutlassFmhaAutogradFn(Function):
         assert query.shape[0] == value.shape[0]
         assert query.shape[2] == value.shape[2]
 
-        output_shape = [query.shape[0], query.shape[1], query.shape[2], value.shape[3]]
-        output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
-
-        # TODO: logsumexp should be conditional
-        logsumexp = torch.empty(
-            query.shape[:-1], dtype=torch.float32, device=query.device
-        )
-
         q_tile_size, kv_tile_size = forward_config
-        fmha_forward(
-            output,
+        output, logsumexp = fmha_forward(
             query,
             key,
             value,
-            logsumexp,
             is_causal,
             scale,
             q_tile_size,
@@ -142,9 +132,6 @@ class CutlassFmhaAutogradFn(Function):
             cumulative_seqlen_KV,
         ) = ctx.saved_tensors
         d_output = grad_out.contiguous()
-        d_query = torch.empty_like(query)
-        d_key = torch.empty_like(key)
-        d_value = torch.empty_like(value)
 
         q_tile_size, k_tile_size, kv_splits, compute_delta_with_pt = ctx.backward_config
 
@@ -174,10 +161,7 @@ class CutlassFmhaAutogradFn(Function):
             )
             num_kv_splits = num_kv_tiles
 
-        fmha_backward(
-            d_query,
-            d_key,
-            d_value,
+        d_query, d_key, d_value = fmha_backward(
             query,
             key,
             value,

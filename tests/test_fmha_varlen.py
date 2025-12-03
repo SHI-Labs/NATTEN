@@ -200,7 +200,7 @@ def compute_split_reference(
     return (q, k, v, d_out), (out_ref, lse_ref, dq_ref, dk_ref, dv_ref)
 
 
-class FMHABackendTest(unittest.TestCase):
+class FMHAVarlenTest(unittest.TestCase):
     def setUp(self):
         _reset_everything()
 

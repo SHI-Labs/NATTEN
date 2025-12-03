@@ -111,21 +111,12 @@ def make_cutlass_fna_autograd_fn(na_dim):
             assert query.shape[0] == value.shape[0]
             assert query.shape[-2] == value.shape[-2]
 
-            output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
-            output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
-
-            # TODO: logsumexp should be conditional
-            logsumexp = torch.empty(
-                query.shape[:-1], dtype=torch.float32, device=query.device
-            )
-
             q_tile_shape, kv_tile_shape = forward_config
-            FORWARD_OPS[na_dim](
-                output,
+
+            output, logsumexp = FORWARD_OPS[na_dim](
                 query,
                 key,
                 value,
-                logsumexp,
                 kernel_size,
                 stride,
                 dilation,
@@ -161,9 +152,6 @@ def make_cutlass_fna_autograd_fn(na_dim):
         ]:
             query, key, value, logsumexp, output = ctx.saved_tensors
             d_output = grad_out.contiguous()
-            d_query = torch.empty_like(query)
-            d_key = torch.empty_like(key)
-            d_value = torch.empty_like(value)
 
             q_tile_shape, k_tile_shape, kv_splits, compute_delta_with_pt = (
                 ctx.backward_config
@@ -181,10 +169,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
                     f"Overriding {kv_splits} to {num_kv_splits}."
                 )
 
-            BACKWARD_OPS[na_dim](
-                d_query,
-                d_key,
-                d_value,
+            d_query, d_key, d_value = BACKWARD_OPS[na_dim](
                 query,
                 key,
                 value,
