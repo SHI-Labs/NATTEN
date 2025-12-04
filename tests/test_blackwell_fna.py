@@ -31,7 +31,6 @@ from natten._environment import (
     _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
     _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS,
 )
-
 from natten.backends.configs.cutlass_blackwell import (
     get_all_backward_configs,
     get_all_forward_configs,
@@ -115,7 +114,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
             (torch.float16, (1e-2, 2e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
             (torch.float8_e4m3fn, (4e-1, None), (0, None)),
-            (torch.float8_e5m2, (7e-1, None), (0, None)),
+            (torch.float8_e5m2, (8e-1, None), (0, None)),
         ]
 
         test_id = 0

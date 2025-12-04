@@ -24,7 +24,6 @@
 
 from torch import Tensor
 from torch.nn.attention import sdpa_kernel, SDPBackend
-
 from torch.nn.functional import scaled_dot_product_attention
 
 

@@ -28,7 +28,6 @@ import torch
 from torch import Tensor
 
 from natten.types import CausalArgType, DimensionType
-
 from natten.utils.dtype import is_fp8
 
 

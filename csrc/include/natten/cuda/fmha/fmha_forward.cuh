@@ -68,8 +68,16 @@ void fmha_forward_generic(
     int32_t heads,
     int32_t dim,
     int32_t dim_value,
+    bool is_causal,
     float attn_scale,
     void* logsumexp_ptr,
+    // varlen parameters
+    bool is_varlen,
+    int max_seqlen_Q,
+    int max_seqlen_KV,
+    void* ptr_cumulative_seqlen_Q,
+    void* ptr_cumulative_seqlen_KV,
+    // init/launch params
     int query_tile_size,
     int key_tile_size) {
   bool kernel_launched = false;
@@ -131,6 +139,16 @@ void fmha_forward_generic(
     p.num_queries = seqlen_q;
     p.num_keys = seqlen_kv;
     p.num_batches = batch_size;
+    p.custom_mask_type = is_causal ? 1 : 0;
+
+    if (is_varlen) {
+      p.num_queries = max_seqlen_Q;
+      p.num_keys = max_seqlen_KV;
+      p.ptr_cumulative_seqlen_Q =
+          static_cast<const int32_t*>(ptr_cumulative_seqlen_Q);
+      p.ptr_cumulative_seqlen_KV =
+          static_cast<const int32_t*>(ptr_cumulative_seqlen_KV);
+    }
 
     p.scale = attn_scale;
 

@@ -55,9 +55,7 @@ from ..backends import (
 )
 from ..types import DimensionType, KernelSchedule
 from ..utils import log
-
 from . import print_table
-
 from .pretty_printer import opt_progress_bar
 from .problem import Problem
 from .profiling import measure_natten_runtime
@@ -116,7 +114,10 @@ def dry_run_for_backend(
         selected_backend = fmha_backend
 
         if fmha_backend == "blackwell-fmha":
-            assert can_run_cutlass_blackwell_fmha(q, k, v, raise_error=True)
+            # TODO: causal fmha and varlen support
+            assert can_run_cutlass_blackwell_fmha(
+                q, k, v, is_causal=False, is_varlen=False, raise_error=True
+            )
             fwd_configs = get_configs_for_cutlass_blackwell_fmha(q, k, v)  # type: ignore[assignment]
             bwd_configs = get_bwd_configs_for_cutlass_blackwell_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
@@ -126,7 +127,10 @@ def dry_run_for_backend(
             )
 
         elif fmha_backend == "hopper-fmha":
-            assert can_run_cutlass_hopper_fmha(q, k, v, raise_error=True)
+            # TODO: causal fmha and varlen support
+            assert can_run_cutlass_hopper_fmha(
+                q, k, v, is_causal=False, is_varlen=False, raise_error=True
+            )
             fwd_configs = get_configs_for_cutlass_hopper_fmha(q, k, v)  # type: ignore[assignment]
             bwd_configs = get_bwd_configs_for_cutlass_hopper_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = (("q_tile_size", "kv_tile_size"), "kernel_schedule")  # type: ignore[assignment]
@@ -136,7 +140,10 @@ def dry_run_for_backend(
             )
 
         elif fmha_backend == "cutlass-fmha":
-            assert can_run_cutlass_fmha(q, k, v, raise_error=True)
+            # TODO: causal fmha and varlen support
+            assert can_run_cutlass_fmha(
+                q, k, v, is_causal=False, is_varlen=False, raise_error=True
+            )
             fwd_configs = get_configs_for_cutlass_fmha(q, k, v)  # type: ignore[assignment]
             bwd_configs = get_bwd_configs_for_cutlass_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
@@ -286,7 +293,12 @@ def dry_run(
         )
 
         fmha_backends = get_compatible_fmha_backends(
-            q_flat, k_flat, v_flat, torch_compile=torch_compile
+            q_flat,
+            k_flat,
+            v_flat,
+            torch_compile=torch_compile,
+            is_causal=False,  # TODO: add causal fmha support to profiler
+            is_varlen=False,  # TODO: add varlen support to profiler
         )
     else:
         fmha_backends = [fmha_backend]
@@ -330,7 +342,12 @@ def find_configs(
 
     backend = backend or choose_backend(q, k, v, torch_compile=torch_compile)
     fmha_backend = fmha_backend or choose_fmha_backend(
-        q_flat, k_flat, v_flat, torch_compile=torch_compile
+        q_flat,
+        k_flat,
+        v_flat,
+        torch_compile=torch_compile,
+        is_causal=False,  # TODO: add causal fmha support to profiler
+        is_varlen=False,  # TODO: add varlen support to profiler
     )
 
     result, fwd_configs, bwd_configs = dry_run_for_backend(

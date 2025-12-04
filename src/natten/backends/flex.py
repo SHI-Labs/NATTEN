@@ -57,8 +57,8 @@ from ..utils.checks import (
     check_input_size_arg,
     fmha_tensor_checks,
     na_tensor_checks,
+    varlen_tensor_checks,
 )
-
 from .configs.checks import (  # noqa: F401
     _FLEX_COMPILE_SUPPORTED,
     _FLEX_SUPPORTED,
@@ -173,14 +173,53 @@ def flex_fmha(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool = False,
     scale: Optional[float] = None,
     q_tile_size: Optional[int] = None,
     kv_tile_size: Optional[int] = None,
     torch_compile: bool = False,
     return_lse: bool = False,
+    # varlen parameters
+    cumulative_seqlen_Q: Optional[Tensor] = None,
+    cumulative_seqlen_KV: Optional[Tensor] = None,
+    max_seqlen_Q: int = 0,
+    max_seqlen_KV: int = 0,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    fmha_tensor_checks(query, key, value, must_match_head_dims=True)
+    fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=True,
+        supports_gqa_mqa=False,
+        backend_name="Flex FMHA",
+    )
+
+    (
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
+    ) = varlen_tensor_checks(
+        query=query,
+        key=key,
+        value=value,
+        cumulative_seqlen_Q=cumulative_seqlen_Q,
+        cumulative_seqlen_KV=cumulative_seqlen_KV,
+        max_seqlen_Q=max_seqlen_Q,
+        max_seqlen_KV=max_seqlen_KV,
+    )
+    is_varlen = cumulative_seqlen_Q is not None
+
+    assert can_run_flex_attention(
+        query,
+        key,
+        value,
+        is_causal=is_causal,
+        is_varlen=is_varlen,
+        torch_compile=torch_compile,
+        raise_error=True,
+    )
 
     q_tile_size, kv_tile_size = check_flex_fmha_forward_config(
         input_tensor=query,
@@ -189,10 +228,6 @@ def flex_fmha(
     )
 
     scale = scale or query.shape[-1] ** -0.5
-
-    assert can_run_flex_attention(
-        query, key, value, torch_compile=torch_compile, raise_error=True
-    )
 
     batch_size, seqlen_q, num_heads, head_dim = query.shape
     seqlen_kv = key.shape[1]
