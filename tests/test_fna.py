@@ -27,7 +27,6 @@ import unittest
 from itertools import product
 
 import natten  # noqa: F401
-
 import torch
 from natten._environment import (
     _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,

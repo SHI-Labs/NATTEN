@@ -25,7 +25,6 @@ import torch  # noqa: F401
 
 try:
     from natten import libnatten  # noqa: F401
-
     from natten.libnatten import (  # type: ignore[import-untyped]
         blackwell_fmha_backward,
         blackwell_fmha_forward,

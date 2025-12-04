@@ -23,14 +23,14 @@
 
 import functools
 from collections.abc import Sequence
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, Union
 
 import torch  # noqa: F401
 from torch import Tensor
 
-from ..types import CausalArgType, DimensionType, KernelSchedule
+from ..types import CausalArgType, DimensionType, KernelSchedule, NoneType
 from ..utils.tuples import create_causal_arg_from_bool, create_dim_from_int
-
+from ..utils.varlen import generate_varlen_parameters
 from . import log
 
 logger = log.get_logger(__name__)
@@ -135,6 +135,7 @@ def fmha_tensor_checks(
     key: Tensor,
     value: Tensor,
     must_match_head_dims: bool = False,
+    supports_gqa_mqa: bool = True,
     raise_error: bool = True,
     backend_name: Optional[str] = None,
 ) -> bool:
@@ -189,13 +190,35 @@ def fmha_tensor_checks(
         )
         return False
 
-    if query.shape[2] != key.shape[2] or query.shape[2] != value.shape[2]:
+    if not supports_gqa_mqa and (
+        query.shape[2] != key.shape[2] or query.shape[2] != value.shape[2]
+    ):
         target_fn(
-            "NATTEN operations do not support GQA/MQA, therefore number of heads in Q, K, and V "
+            f"{backend_name} does not support GQA/MQA, therefore number of heads in Q, K, and V "
             f"must match, got {query.shape[2]=}, {key.shape[2]=}, {value.shape[2]=}.",
             exception=ValueError,
         )
         return False
+
+    if supports_gqa_mqa:
+        if key.shape[2] != value.shape[2]:
+            target_fn(
+                "Key and value must always have the same number of heads, got "
+                f"{key.shape[2]=}, {value.shape[2]=}.",
+                exception=ValueError,
+            )
+            return False
+
+        heads_q = query.shape[2]
+        heads_kv = key.shape[2]
+
+        if heads_q < heads_kv or heads_q % heads_kv != 0:
+            target_fn(
+                "Key/value heads must evenly divide query heads, got "
+                f"{heads_q=}, {heads_kv=}.",
+                exception=ValueError,
+            )
+            return False
 
     return True
 
@@ -411,11 +434,19 @@ def check_args_against_input(
 
 
 def is_self_attention(
-    input_tensor: Tensor, kernel_size: DimensionType, is_causal: CausalArgType
+    input_tensor: Tensor,
+    kernel_size: DimensionType,
+    is_causal: CausalArgType,
+    has_additional_attention: bool,
 ):
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3
     input_size = input_tensor.shape[1 : 1 + na_dim]
+
+    # Special case: 1-D causal with full window is equivalent to standard 1-D causal
+    # as long as there isn't any additional context (non causal)
+    if na_dim == 1 and not has_additional_attention:
+        return kernel_size[0] == input_size[0]
 
     return all(k == x and not c for x, k, c in zip(input_size, kernel_size, is_causal))
 
@@ -454,4 +485,165 @@ def check_kernel_schedule(kernel_schedule: Any) -> Optional[KernelSchedule]:
         f"Kernel schedule {kernel_schedule} is invalid; choices are: "
         "`non` (non-persistent), `coop` (warp-specialized cooperative), and "
         "`pp` (warp-specialized ping-ponging)."
+    )
+
+
+# Varlen FMHA Checks
+
+
+def varlen_tensor_checks(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    seqlens_Q: Optional[Tensor] = None,
+    seqlens_KV: Optional[Tensor] = None,
+    cumulative_seqlen_Q: Optional[Tensor] = None,
+    cumulative_seqlen_KV: Optional[Tensor] = None,
+    max_seqlen_Q: Optional[int] = None,
+    max_seqlen_KV: Optional[int] = None,
+) -> Union[
+    Tuple[NoneType, NoneType, int, int],
+    Tuple[Tensor, Tensor, int, int],
+]:
+    if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
+        raise ValueError(
+            "Q, K, and V must match in batch size, got "
+            f"{query.shape[0]=}, {key.shape[0]=}, {value.shape[0]=}."
+        )
+
+    if all(
+        x is None
+        for x in [
+            seqlens_Q,
+            seqlens_KV,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        ]
+    ) and all(
+        x is None or x == 0
+        for x in [
+            max_seqlen_Q,
+            max_seqlen_KV,
+        ]
+    ):
+        # Not varlen
+        return None, None, 0, 0
+
+    if seqlens_Q is not None or seqlens_KV is not None:
+        # Generate cumulative_seqlen_{Q,KV}, max_seqlen_{Q,KV}, total_seqlen_{Q,KV}
+        # based on user input
+        return generate_varlen_parameters(
+            query=query,
+            key=key,
+            value=value,
+            seqlens_Q=seqlens_Q,
+            seqlens_KV=seqlens_KV,
+        )
+
+    # Validate user-input cumulative_seqlen_{Q,KV}, max_seqlen_{Q,KV}, total_seqlen_{Q,KV}
+    if any(
+        x is None
+        for x in [
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            max_seqlen_Q,
+            max_seqlen_KV,
+        ]
+    ) or any(
+        x == 0
+        for x in [
+            max_seqlen_Q,
+            max_seqlen_KV,
+        ]
+    ):
+        raise ValueError(
+            "Variable length Attention requires all 6 of "
+            "cumulative_seqlen_{Q,KV}, max_seqlen_{Q,KV}, total_seqlen_{Q,KV} to be set."
+        )
+
+    if query.shape[0] != 1:
+        raise ValueError(
+            "Variable length Attention only supports sequence-packed memory layout "
+            f"(batch = 1), got {query.shape[0]=}."
+        )
+
+    assert cumulative_seqlen_Q is not None
+    assert cumulative_seqlen_KV is not None
+    assert max_seqlen_Q is not None
+    assert max_seqlen_KV is not None
+
+    if not isinstance(max_seqlen_Q, int) or not isinstance(max_seqlen_KV, int):
+        raise ValueError(
+            "max_seqlen_Q and max_seqlen_KV must be ints, got "
+            f"{type(max_seqlen_Q)=}, {type(max_seqlen_KV)=}."
+        )
+
+    total_seqlen_Q = query.shape[1]
+    total_seqlen_KV = key.shape[1]
+    if max_seqlen_Q > total_seqlen_Q:
+        raise ValueError(
+            "Maximum sequence length cannot exceed total, got "
+            f"{max_seqlen_Q=}, {total_seqlen_Q=}."
+        )
+
+    if max_seqlen_KV > total_seqlen_KV:
+        raise ValueError(
+            "Maximum sequence length cannot exceed total, got "
+            f"{max_seqlen_KV=}, {total_seqlen_KV=}."
+        )
+
+    if max_seqlen_Q < 1 or max_seqlen_KV < 1:
+        raise ValueError(
+            "Maximum sequence length cannot be less than 1, got "
+            f"{max_seqlen_Q=}, {max_seqlen_KV=}."
+        )
+
+    if not isinstance(cumulative_seqlen_Q, Tensor) or not isinstance(
+        cumulative_seqlen_KV, Tensor
+    ):
+        raise ValueError(
+            "cumulative_seqlen_Q and cumulative_seqlen_KV must both be tensors."
+        )
+
+    if (
+        cumulative_seqlen_Q.device != query.device
+        or cumulative_seqlen_KV.device != query.device
+    ):
+        raise ValueError(
+            "cumulative_seqlen_Q and cumulative_seqlen_KV must be on the same device as QKV, but "
+            f"{cumulative_seqlen_Q.device=}, {cumulative_seqlen_KV.device=}, {query.device=}."
+        )
+
+    if (
+        cumulative_seqlen_Q.dtype != torch.int32
+        or cumulative_seqlen_KV.dtype != torch.int32
+    ):
+        raise ValueError(
+            "cumulative_seqlen_Q and cumulative_seqlen_KV must both be torch.int32 tensors, got "
+            f"{cumulative_seqlen_Q.dtype=}, {cumulative_seqlen_KV.dtype=}."
+        )
+
+    if cumulative_seqlen_Q.dim() != 1 or cumulative_seqlen_KV.dim() != 1:
+        raise ValueError(
+            "cumulative_seqlen_Q and cumulative_seqlen_KV must both be 1-D tensors, got "
+            f"{cumulative_seqlen_Q.dim()=}, {cumulative_seqlen_KV.dim()=}."
+        )
+
+    if cumulative_seqlen_Q.shape[0] != cumulative_seqlen_KV.shape[0]:
+        raise ValueError(
+            "cumulative_seqlen_Q and cumulative_seqlen_KV must match in size, got "
+            f"{cumulative_seqlen_Q.shape=}, {cumulative_seqlen_KV.shape=}."
+        )
+
+    if cumulative_seqlen_Q.shape[0] < 2:
+        raise ValueError(
+            "cumulative_seqlen_Q and cumulative_seqlen_KV must contain at least 2 elements, got "
+            f"{cumulative_seqlen_Q.shape=}, {cumulative_seqlen_KV.shape=}."
+        )
+
+    return (
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
     )

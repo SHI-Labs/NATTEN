@@ -40,9 +40,8 @@ from ....types import (
     CutlassFnaForwardConfigType,
     DimensionType,
 )
-from ....utils.checks import check_dilation_arg, check_tile_shape
+from ....utils.checks import check_dilation_arg, check_input_size_arg, check_tile_shape
 from ....utils.device import get_device_cc, is_cuda
-
 from ....utils.tuples import ceil_div_int, ceil_div_tuple
 
 # FNA/FMHA forward supports 64x64 and 32x128 GEMM configs in all
@@ -267,7 +266,10 @@ def get_all_tile_shapes_backward(
 
     assert dtype in [torch.float32, torch.float16, torch.bfloat16]
 
-    if dtype == torch.float32 and compute_cap not in [80, 90]:
+    # DC-class cards have extra shmem which allows larger tile sizes
+    dc_class_arches = [80, 90, 100, 103]
+
+    if dtype == torch.float32 and compute_cap not in dc_class_arches:
         return _FNA_BACKWARD_64x64_TILE_SIZES[na_dim]
 
     elif dtype == torch.float32:
@@ -282,12 +284,12 @@ def get_all_tile_shapes_backward(
             + _FNA_BACKWARD_128x64_TILE_SIZES[na_dim]
         )
 
-    if compute_cap in [80, 90] and dim_per_head <= 128:
+    if compute_cap in dc_class_arches and dim_per_head <= 128:
         return (
             _FNA_BACKWARD_64x64_TILE_SIZES[na_dim]
             + _FNA_BACKWARD_128x128_TILE_SIZES[na_dim]
         )
-    elif compute_cap in [80, 90]:
+    elif compute_cap in dc_class_arches:
         return (
             _FNA_BACKWARD_64x64_TILE_SIZES[na_dim]
             + _FNA_BACKWARD_128x64_TILE_SIZES[na_dim]
@@ -399,11 +401,14 @@ def get_default_kv_splits_backward(
     input_tensor: Tensor,
     kv_tile_shape: DimensionType,
     dilation: Optional[DimensionType] = None,
+    max_seqlen: Optional[DimensionType] = None,
 ) -> DimensionType:
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
     dilation = check_dilation_arg(na_dim, dilation)
     input_shape: DimensionType = tuple(int(x) for x in input_tensor.shape[1 : na_dim + 1])  # type: ignore
+    if max_seqlen is not None:
+        input_shape = check_input_size_arg(na_dim, max_seqlen)
 
     assert na_dim in [1, 2, 3]
     if na_dim == 1:
@@ -499,7 +504,11 @@ def get_all_backward_configs(
         # Potential duplicates
         if math.prod(max_kv_splits) > 1:
             for kv_splits in _get_possible_kv_splits(min_kv_splits, max_kv_splits):
-                for use_pt_reduction in [False, True]:
+                # for use_pt_reduction in [False, True]:
+                # NOTE (ali, 11/17/2025): non-PT reduction can introduce some slight non-determinism
+                for use_pt_reduction in [
+                    True,
+                ]:
                     possible_configs.append(
                         (
                             query_tile_shape,
@@ -510,7 +519,11 @@ def get_all_backward_configs(
                     )
         else:
             # min_kv_splits == max_kv_splits
-            for use_pt_reduction in [False, True]:
+            # for use_pt_reduction in [False, True]:
+            # NOTE (ali, 11/17/2025): non-PT reduction can introduce some slight non-determinism
+            for use_pt_reduction in [
+                True,
+            ]:
                 possible_configs.append(
                     (query_tile_shape, kv_tile_shape, min_kv_splits, use_pt_reduction)
                 )
@@ -601,14 +614,20 @@ def check_cutlass_fna_backward_config(
 
 
 def check_fmha_kv_splits(
-    kv_splits: Optional[int], input_tensor: Tensor, kv_tile_size: int
+    kv_splits: Optional[int],
+    input_tensor: Tensor,
+    kv_tile_size: int,
+    max_seqlen: Optional[int] = None,
 ) -> int:
     if kv_splits is not None and isinstance(kv_splits, int):
         return kv_splits
 
     if kv_splits is None:
+        max_seqlen_tuple = None if max_seqlen is None else (max_seqlen,)
         default_kv_splits: DimensionType = get_default_kv_splits_backward(
-            input_tensor=input_tensor, kv_tile_shape=(kv_tile_size,)
+            input_tensor=input_tensor,
+            kv_tile_shape=(kv_tile_size,),
+            max_seqlen=max_seqlen_tuple,
         )
         assert len(default_kv_splits) == 1
         return default_kv_splits[0]
@@ -622,6 +641,7 @@ def check_cutlass_fmha_backward_config(
     kv_tile_size: Optional[int] = None,
     kv_splits: Optional[int] = None,
     use_pt_reduction: bool = False,
+    max_seqlen: Optional[int] = None,
 ) -> CutlassFmhaBackwardConfigType:
     assert input_tensor.dim() == 4
 
@@ -643,7 +663,10 @@ def check_cutlass_fmha_backward_config(
     for q_t, kv_t in tile_sizes:
         if q_t == q_tile_size and kv_t == kv_tile_size:
             kvs = check_fmha_kv_splits(
-                kv_splits, input_tensor=input_tensor, kv_tile_size=kv_t
+                kv_splits,
+                input_tensor=input_tensor,
+                kv_tile_size=kv_t,
+                max_seqlen=max_seqlen,
             )
             return (q_t, kv_t, kvs, use_pt_reduction)
 

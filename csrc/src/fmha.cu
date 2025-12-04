@@ -48,9 +48,16 @@ void fmha_forward(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::optional<at::Tensor>& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
-    int key_tile_size) {
+    int key_tile_size,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
 #ifdef NATTEN_WITH_CUTLASS
   AssertDimsAre128BitAligned(query, value);
 
@@ -88,6 +95,58 @@ void fmha_forward(
     CHECK_CUDA(logsumexp.value());
   }
 
+  // varlen
+  bool is_varlen =
+      cumulative_seqlen_Q.has_value() || cumulative_seqlen_KV.has_value();
+
+  void* ptr_cumulative_seqlen_Q = nullptr;
+  void* ptr_cumulative_seqlen_KV = nullptr;
+  if (is_varlen) {
+    TORCH_CHECK(
+        cumulative_seqlen_Q.has_value() && cumulative_seqlen_KV.has_value(),
+        "CUTLASS FMHA: Both cumulative_seqlen_Q and cumulative_seqlen_KV must be specified when using varlen.");
+
+    TORCH_CHECK(
+        batch_size == 1,
+        "CUTLASS FMHA: Tensor batch size must be 1 (packed sequence layout), got ",
+        batch_size);
+
+    auto& cumulative_seqlen_Q_tensor = cumulative_seqlen_Q.value();
+    auto& cumulative_seqlen_KV_tensor = cumulative_seqlen_KV.value();
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.dim() == 1,
+        "CUTLASS FMHA: cumulative_seqlen_Q is expected to be a 1-D tensor.");
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.dim() == 1,
+        "CUTLASS FMHA: cumulative_seqlen_KV is expected to be a 1-D tensor.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) ==
+            cumulative_seqlen_KV_tensor.size(0),
+        "CUTLASS FMHA: cumulative_seqlen_Q and cumulative_seqlen_KV must be the same size.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) > 1,
+        "CUTLASS FMHA: cumulative_seqlen_Q and cumulative_seqlen_KV size must be greater than 1.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.scalar_type() == torch::kInt,
+        "CUTLASS FMHA: cumulative_seqlen_Q is expected to be an int32 tensor, got ",
+        cumulative_seqlen_Q_tensor.scalar_type());
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.scalar_type() == torch::kInt,
+        "CUTLASS FMHA: cumulative_seqlen_KV is expected to be an int32 tensor, got ",
+        cumulative_seqlen_KV_tensor.scalar_type());
+
+    batch_size = cumulative_seqlen_Q_tensor.size(0) - 1;
+    ptr_cumulative_seqlen_Q =
+        static_cast<void*>(cumulative_seqlen_Q_tensor.data_ptr());
+    ptr_cumulative_seqlen_KV =
+        static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
+  }
+  //
+
   at::Tensor workspace;
   auto alloc_bytes = [&workspace, &query](
                          void** ptr, int64_t bytes, bool zfill) {
@@ -120,9 +179,17 @@ void fmha_forward(
         heads,
         dim,
         dim_value,
+        is_causal,
         attn_scale,
         logsumexp.has_value() ? static_cast<void*>(logsumexp.value().data_ptr())
                               : nullptr,
+        // varlen parameters
+        is_varlen,
+        max_seqlen_Q,
+        max_seqlen_KV,
+        ptr_cumulative_seqlen_Q,
+        ptr_cumulative_seqlen_KV,
+        // init/launch params
         query_tile_size,
         key_tile_size);
   } else {
@@ -146,11 +213,18 @@ void fmha_backward(
     const at::Tensor& out,
     const at::Tensor& grad_out,
     const at::Tensor& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
     int key_tile_size,
     int num_splits_key,
-    bool compute_delta_with_torch) {
+    bool compute_delta_with_torch,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
 #ifdef NATTEN_WITH_CUTLASS
   AssertDimsAre128BitAligned(query, value);
 
@@ -222,12 +296,74 @@ void fmha_backward(
   if (at::globalContext().deterministicAlgorithms()) {
     TORCH_CHECK(
         num_splits_key <= 1,
-        "FNA-backward was called with KV parallelism, "
+        "CUTLASS FMHA backward was called with KV parallelism, "
         "which makes it algorithm non-deterministic, "
         "but PyTorch's deterministic mode is enabled. "
         "NATTEN Python API should have avoided this; which means "
         "you're probably calling the C function directly.");
   }
+
+  auto num_kv_tiles = (seqlen_kv + key_tile_size - 1) / key_tile_size;
+  TORCH_CHECK(
+      num_splits_key <= num_kv_tiles,
+      "CUTLASS FMHA backward: backward_kv_splits must be less than or equal to ",
+      "KV sequence length divided by tile size, got backward_kv_splits=",
+      num_splits_key,
+      ", ceil_div(seqlen_kv, key_tile_size)=",
+      num_kv_tiles,
+      ".");
+
+  // varlen
+  bool is_varlen =
+      cumulative_seqlen_Q.has_value() || cumulative_seqlen_KV.has_value();
+
+  void* ptr_cumulative_seqlen_Q = nullptr;
+  void* ptr_cumulative_seqlen_KV = nullptr;
+  if (is_varlen) {
+    TORCH_CHECK(
+        cumulative_seqlen_Q.has_value() && cumulative_seqlen_KV.has_value(),
+        "CUTLASS FMHA: Both cumulative_seqlen_Q and cumulative_seqlen_KV must be specified when using varlen.");
+
+    TORCH_CHECK(
+        batch_size == 1,
+        "CUTLASS FMHA: Tensor batch size must be 1 (packed sequence layout), got ",
+        batch_size);
+
+    auto& cumulative_seqlen_Q_tensor = cumulative_seqlen_Q.value();
+    auto& cumulative_seqlen_KV_tensor = cumulative_seqlen_KV.value();
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.dim() == 1,
+        "CUTLASS FMHA: cumulative_seqlen_Q is expected to be a 1-D tensor.");
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.dim() == 1,
+        "CUTLASS FMHA: cumulative_seqlen_KV is expected to be a 1-D tensor.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) ==
+            cumulative_seqlen_KV_tensor.size(0),
+        "CUTLASS FMHA: cumulative_seqlen_Q and cumulative_seqlen_KV must be the same size.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) > 1,
+        "CUTLASS FMHA: cumulative_seqlen_Q and cumulative_seqlen_KV size must be greater than 1.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.scalar_type() == torch::kInt,
+        "CUTLASS FMHA: cumulative_seqlen_Q is expected to be an int32 tensor, got ",
+        cumulative_seqlen_Q_tensor.scalar_type());
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.scalar_type() == torch::kInt,
+        "CUTLASS FMHA: cumulative_seqlen_KV is expected to be an int32 tensor, got ",
+        cumulative_seqlen_KV_tensor.scalar_type());
+
+    batch_size = cumulative_seqlen_Q_tensor.size(0) - 1;
+    ptr_cumulative_seqlen_Q =
+        static_cast<void*>(cumulative_seqlen_Q_tensor.data_ptr());
+    ptr_cumulative_seqlen_KV =
+        static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
+  }
+  //
 
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());
@@ -257,7 +393,15 @@ void fmha_backward(
         heads,
         dim,
         dim_value,
+        is_causal,
         attn_scale,
+        // varlen parameters
+        is_varlen,
+        max_seqlen_Q,
+        max_seqlen_KV,
+        ptr_cumulative_seqlen_Q,
+        ptr_cumulative_seqlen_KV,
+        // init/launch params
         query_tile_size,
         key_tile_size,
         num_splits_key);

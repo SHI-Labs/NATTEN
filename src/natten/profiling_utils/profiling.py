@@ -32,10 +32,8 @@ from natten.functional import neighborhood_attention_generic
 from natten.types import DimensionType, KernelSchedule
 from natten.utils import log
 from natten.utils.checks import check_all_args
-
 from .formatting import convert_to_natten_profiler_ops, Result
 from .ops import sdpa
-
 from .problem import Problem
 
 logger = log.get_logger(__name__)

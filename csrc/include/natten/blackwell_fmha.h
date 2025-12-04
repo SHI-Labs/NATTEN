@@ -37,10 +37,17 @@ void blackwell_fmha_forward(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::optional<at::Tensor>& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
     int key_tile_size,
-    bool run_persistent);
+    bool run_persistent,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV);
 
 void blackwell_fmha_backward(
     at::Tensor& grad_query,
@@ -52,9 +59,15 @@ void blackwell_fmha_backward(
     const at::Tensor& out,
     const at::Tensor& grad_out,
     const at::Tensor& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
     int key_tile_size,
-    int seqlen_q_actual);
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV);
 
 } // namespace natten
