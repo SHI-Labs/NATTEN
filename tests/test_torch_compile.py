@@ -337,6 +337,7 @@ class TorchCompileTests(unittest.TestCase):
             )
             y_ref.backward(dy_ref)
             dx_ref = x_ref.grad
+            dc_ref = c_ref.grad
 
             # compile on first attempt
             x = x.requires_grad_(True)
@@ -353,9 +354,11 @@ class TorchCompileTests(unittest.TestCase):
             )
             y.backward(dy)
             dx = x.grad
+            dc = c.grad
 
             torch.testing.assert_close(y, y_ref, atol=atol, rtol=0)
             torch.testing.assert_close(dx, dx_ref, atol=atol, rtol=0)
+            torch.testing.assert_close(dc, dc_ref, atol=atol, rtol=0)
 
             # Second run, just to make sure it doesn't crash
             y = model_compiled(
@@ -370,6 +373,7 @@ class TorchCompileTests(unittest.TestCase):
             )
             y.backward(dy)
             dx = x.grad
+            dc = c.grad
 
     @skip_if_libnatten_is_not_supported()
     def test_compiled_na(self):

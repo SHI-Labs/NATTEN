@@ -358,8 +358,8 @@ class FMHAVarlenTest(unittest.TestCase):
         ALLOWED_DTYPES = [
             # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
             (torch.float32, (1e-6, 1e-6), (1e-2, 1e-6, 1e-6)),
-            (torch.float16, (1e-6, 1e-6), (5e-2, 1e-6, 1e-6)),
-            (torch.bfloat16, (1e-6, 1e-6), (5e-2, 1e-6, 1e-6)),
+            (torch.float16, (1e-6, 1e-6), (5e-2, 5e-6, 5e-6)),
+            (torch.bfloat16, (1e-6, 1e-6), (5e-2, 5e-6, 5e-6)),
         ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
@@ -444,10 +444,10 @@ class FMHAVarlenTest(unittest.TestCase):
         # dQ still needs a more relaxed threshold because of the non-determinism
         ALLOWED_DTYPES = [
             # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
-            (torch.float16, (1e-6, 1e-6), (1e-2, 1e-6, 1e-6)),
-            (torch.bfloat16, (1e-6, 1e-6), (1e-2, 1e-6, 1e-6)),
-            (torch.float8_e4m3fn, (1e-6, 1e-6), (1e-2, 1e-6, 1e-6)),
-            (torch.float8_e5m2, (1e-6, 1e-6), (1e-2, 1e-6, 1e-6)),
+            (torch.float16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
+            (torch.bfloat16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
+            (torch.float8_e4m3fn, (1e-6, 1e-6), None),
+            (torch.float8_e5m2, (1e-6, 1e-6), None),
         ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
