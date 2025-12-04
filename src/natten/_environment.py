@@ -29,6 +29,7 @@ from ._libnatten import HAS_LIBNATTEN  # noqa: F401
 from .utils.device import get_device_cc
 
 _IS_CUDA_AVAILABLE = torch.cuda.is_available()
+_IS_XPU_AVAILABLE = torch.xpu.is_available()
 
 _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
 
