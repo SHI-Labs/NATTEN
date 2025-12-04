@@ -61,12 +61,6 @@ from natten.libnatten import (  # type: ignore[import-untyped]
 )
 from natten.utils.environment import DISABLE_TORCH_OPS
 
-tags = [
-    torch._C.Tag.needs_exact_strides,
-    torch._C.Tag.needs_contiguous_strides,
-    torch._C.Tag.needs_fixed_stride_order,
-]
-
 
 def maybe_contiguous(x):
     return x.contiguous() if x is not None and x.stride(-1) != 1 else x
@@ -74,7 +68,7 @@ def maybe_contiguous(x):
 
 # https://github.com/Dao-AILab/flash-attention/blob/v2.7.4/flash_attn/flash_attn_interface.py#L65-L78
 def disabled_register_op(
-    name, fn=None, /, *, mutates_args, device_types=None, schema=None, tags=None
+    name, fn=None, /, *, mutates_args, device_types=None, schema=None
 ):
     def wrap(func):
         return func
@@ -106,9 +100,7 @@ else:
 
 
 # blackwell_fmha_forward
-@register_op(
-    "natten::blackwell_fmha_forward", mutates_args=(), device_types="cuda", tags=tags
-)
+@register_op("natten::blackwell_fmha_forward", mutates_args=(), device_types="cuda")
 def blackwell_fmha_forward_torch_op(
     query: Tensor,
     key: Tensor,
@@ -179,7 +171,6 @@ def blackwell_fmha_forward_torch_fake_op(
     "natten::blackwell_fmha_backward",
     mutates_args=(),
     device_types="cuda",
-    tags=tags,
 )
 def blackwell_fmha_backward_torch_op(
     query: Tensor,
@@ -258,9 +249,7 @@ def blackwell_fmha_backward_torch_fake_op(
 
 
 # hopper_fmha_forward
-@register_op(
-    "natten::hopper_fmha_forward", mutates_args=(), device_types="cuda", tags=tags
-)
+@register_op("natten::hopper_fmha_forward", mutates_args=(), device_types="cuda")
 def hopper_fmha_forward_torch_op(
     query: Tensor,
     key: Tensor,
@@ -317,7 +306,6 @@ def hopper_fmha_forward_torch_fake_op(
     "natten::hopper_fmha_backward",
     mutates_args=(),
     device_types="cuda",
-    tags=tags,
 )
 def hopper_fmha_backward_torch_op(
     query: Tensor,
@@ -386,7 +374,6 @@ def hopper_fmha_backward_torch_fake_op(
     "natten::fmha_forward",
     mutates_args=(),
     device_types="cuda",
-    tags=tags,
 )
 def fmha_forward_torch_op(
     query: Tensor,
@@ -455,7 +442,6 @@ def fmha_forward_torch_fake_op(
     "natten::fmha_backward",
     mutates_args=(),
     device_types="cuda",
-    tags=tags,
 )
 def fmha_backward_torch_op(
     query: Tensor,
@@ -556,7 +542,6 @@ def make_blackwell_fna_ops(na_dim):
         f"natten::blackwell_na{na_dim}d_forward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def blackwell_fna_forward_torch_op(
         query: Tensor,
@@ -640,7 +625,6 @@ def make_blackwell_fna_ops(na_dim):
         f"natten::blackwell_na{na_dim}d_backward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def blackwell_fna_backward_torch_op(
         query: Tensor,
@@ -743,7 +727,6 @@ def make_hopper_fna_ops(na_dim):
         f"natten::hopper_na{na_dim}d_forward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def hopper_fna_forward_torch_op(
         query: Tensor,
@@ -824,7 +807,6 @@ def make_hopper_fna_ops(na_dim):
         f"natten::hopper_na{na_dim}d_backward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def hopper_fna_backward_torch_op(
         query: Tensor,
@@ -927,7 +909,6 @@ def make_fna_ops(na_dim):
         f"natten::na{na_dim}d_forward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def fna_forward_torch_op(
         query: Tensor,
@@ -996,7 +977,6 @@ def make_fna_ops(na_dim):
         f"natten::na{na_dim}d_backward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def fna_backward_torch_op(
         query: Tensor,
@@ -1096,7 +1076,6 @@ def make_reference_fna_ops(na_dim):
         f"natten::reference_na{na_dim}d_forward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def reference_fna_forward_torch_op(
         query: Tensor,
@@ -1165,7 +1144,6 @@ def make_reference_fna_ops(na_dim):
         f"natten::reference_na{na_dim}d_backward",
         mutates_args=(),
         device_types="cuda",
-        tags=tags,
     )
     def reference_fna_backward_torch_op(
         query: Tensor,

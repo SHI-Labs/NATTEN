@@ -48,7 +48,6 @@ class FMHABlock(nn.Module):
         embed_dim: int,
         num_heads: int,
         mlp_ratio: int,
-        is_causal: bool,
         qkv_bias: bool = True,
     ):
         super().__init__()
@@ -59,7 +58,6 @@ class FMHABlock(nn.Module):
         self.num_heads = num_heads
         self.head_dim = self.embed_dim // self.num_heads
         self.scale = self.head_dim**-0.5
-        self.is_causal = is_causal
 
         self.q = nn.Linear(self.embed_dim, self.embed_dim, bias=qkv_bias)
         self.kv = nn.Linear(self.embed_dim, self.embed_dim * 2, bias=qkv_bias)
@@ -303,7 +301,6 @@ class TorchCompileTests(unittest.TestCase):
                     embed_dim=embed_dim,
                     mlp_ratio=2,
                     num_heads=num_heads,
-                    is_causal=is_causal,
                 )
                 .to(dtype)
                 .to(device)
@@ -328,6 +325,7 @@ class TorchCompileTests(unittest.TestCase):
             y_ref = model_eager(
                 x_ref,
                 c_ref,
+                is_causal=is_causal,
                 cumulative_seqlen_Q=cumulative_seqlen_Q,
                 cumulative_seqlen_KV=cumulative_seqlen_KV,
                 max_seqlen_Q=max_seqlen_Q,
@@ -345,6 +343,7 @@ class TorchCompileTests(unittest.TestCase):
             y = model_compiled(
                 x,
                 c,
+                is_causal=is_causal,
                 cumulative_seqlen_Q=cumulative_seqlen_Q,
                 cumulative_seqlen_KV=cumulative_seqlen_KV,
                 max_seqlen_Q=max_seqlen_Q,
@@ -364,6 +363,7 @@ class TorchCompileTests(unittest.TestCase):
             y = model_compiled(
                 x,
                 c,
+                is_causal=is_causal,
                 cumulative_seqlen_Q=cumulative_seqlen_Q,
                 cumulative_seqlen_KV=cumulative_seqlen_KV,
                 max_seqlen_Q=max_seqlen_Q,
