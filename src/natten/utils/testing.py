@@ -47,8 +47,8 @@ def skip_if_libnatten_is_not_supported():
 def skip_if_cuda_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if not _IS_CUDA_AVAILABLE and not _IS_XPU_AVAILABLE:
-                self.skipTest("CUDA or XPU is not available.")
+            if not _IS_CUDA_AVAILABLE:
+                self.skipTest("CUDA is not available.")
             else:
                 return f(self, *args, **kwargs)
 
