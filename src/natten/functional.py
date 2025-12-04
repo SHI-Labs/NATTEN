@@ -120,6 +120,8 @@ def attention(
         1. `seqlens_Q` and `seqlens_KV` (less efficient): only provide the sequence lengths as
             integer tensors (must be on the same device as QKV), and NATTEN will compute cumulative
             and maximum sequence lengths on each call.
+            This is **incompatible** with full-graph `torch.compile` since it requires a
+            synchronization.
         2. `cumulative_seqlen_{Q,KV}` and `max_seqlen_{Q,KV}` (more efficient):
             compute cumulative and maximum sequence lengths. `cumulative_seqlen_{Q,KV}` are integer
             tensors on the same device as QKV containing the cumulative sum of `seqlens_{Q,KV}`,
@@ -137,6 +139,8 @@ def attention(
                     max_seqlen_KV,
                 ) = generate_varlen_parameters(q, k, v, seqlens_Q, seqlens_KV)
                 ```
+            As long as `generate_varlen_parameters` is called ahead of torch.compiling the model, it
+            is supported without any graph breaks.
 
     Limited GQA/MQA support (`heads != heads_kv`) is available. For now, only the `blackwell-fmha`
     backend supports GQA/MQA, in both forward and backward pass.

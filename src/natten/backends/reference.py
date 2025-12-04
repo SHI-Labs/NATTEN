@@ -106,19 +106,10 @@ def make_reference_fna_autograd_fn(na_dim):
             assert query.shape[0] == value.shape[0]
             assert query.shape[-2] == value.shape[-2]
 
-            output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
-            output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
-
-            logsumexp = torch.empty(
-                query.shape[:-1], dtype=torch.float32, device=query.device
-            )
-
-            FORWARD_OPS[na_dim](
-                output,
+            output, logsumexp = FORWARD_OPS[na_dim](
                 query,
                 key,
                 value,
-                logsumexp,
                 kernel_size,
                 stride,
                 dilation,
@@ -155,14 +146,8 @@ def make_reference_fna_autograd_fn(na_dim):
         ]:
             query, key, value, logsumexp, output = ctx.saved_tensors
             d_output = grad_out.contiguous()
-            d_query = torch.empty_like(query)
-            d_key = torch.empty_like(key)
-            d_value = torch.empty_like(value)
 
-            BACKWARD_OPS[na_dim](
-                d_query,
-                d_key,
-                d_value,
+            d_query, d_key, d_value = BACKWARD_OPS[na_dim](
                 query,
                 key,
                 value,

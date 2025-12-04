@@ -20,7 +20,7 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import Optional
+from typing import Dict, Optional, Union
 
 import torch  # noqa: F401
 from torch import nn, Tensor
@@ -34,7 +34,9 @@ from .types import (
     Dimension1DTypeOrDed,
     Dimension2DTypeOrDed,
     Dimension3DTypeOrDed,
+    DimensionType,
     DimensionTypeOrDed,
+    KernelSchedule,
 )
 from .utils.checks import check_all_args
 
@@ -80,7 +82,23 @@ class NeighborhoodAttentionGeneric(nn.Module):
         self.proj = nn.Linear(self.embed_dim, self.embed_dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(
+        self,
+        x: Tensor,
+        # SDPA fast path
+        attention_kwargs: Optional[Dict] = None,
+        # Optional perf-related args
+        backend: Optional[str] = None,
+        q_tile_shape: Optional[DimensionType] = None,
+        kv_tile_shape: Optional[DimensionType] = None,
+        backward_q_tile_shape: Optional[DimensionType] = None,
+        backward_kv_tile_shape: Optional[DimensionType] = None,
+        backward_kv_splits: Optional[DimensionType] = None,
+        backward_use_pt_reduction: bool = False,
+        run_persistent_kernel: bool = True,
+        kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
+        torch_compile: bool = False,
+    ) -> Tensor:
         if x.dim() != self.expected_input_tensor_rank:
             raise ValueError(
                 f"NeighborhoodAttention{self.na_dim}D expected a tensor with rank "
@@ -116,6 +134,19 @@ class NeighborhoodAttentionGeneric(nn.Module):
             dilation=self.dilation,
             is_causal=self.is_causal,
             scale=self.scale,
+            #
+            attention_kwargs=attention_kwargs,
+            # perf-related args
+            backend=backend,
+            q_tile_shape=q_tile_shape,
+            kv_tile_shape=kv_tile_shape,
+            backward_q_tile_shape=backward_q_tile_shape,
+            backward_kv_tile_shape=backward_kv_tile_shape,
+            backward_kv_splits=backward_kv_splits,
+            backward_use_pt_reduction=backward_use_pt_reduction,
+            run_persistent_kernel=run_persistent_kernel,
+            kernel_schedule=kernel_schedule,
+            torch_compile=torch_compile,
         )
         x = x.reshape(B, *input_shape, C)
 

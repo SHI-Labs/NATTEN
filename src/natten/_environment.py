@@ -21,44 +21,14 @@
 #
 #################################################################################################
 
-import os
-
-import torch
-
-from ._libnatten import HAS_LIBNATTEN  # noqa: F401
-from .utils.device import get_device_cc
-
-_IS_CUDA_AVAILABLE = torch.cuda.is_available()
-
-_TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
-
-# NOTE: Triton does not recognize SM103 yet.
-# TODO: remove the extra condition once Triton adds SM103 support.
-_IS_TORCH_COMPILE_SUPPORTED = (
-    _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70 and get_device_cc() not in [103]
+from natten._libnatten import HAS_LIBNATTEN  # noqa: F401
+from natten.utils.environment import (
+    _IS_CUDA_AVAILABLE,
+    _IS_TORCH_COMPILE_SUPPORTED,
+    _TORCH_VERSION,
+    parse_env_flag,
+    parse_env_int,
 )
-
-
-def parse_env_flag(env_var: str, default: bool) -> bool:
-    default_str = "1" if default else "0"
-    out_str = os.getenv(env_var, default_str)
-    if out_str.strip() == "":
-        return default
-    if out_str == "0":
-        return False
-    if out_str == "1":
-        return True
-    return default
-
-
-def parse_env_int(env_var: str, default: int) -> int:
-    out_str = os.getenv(env_var, str(default))
-    if out_str.strip() == "":
-        return default
-    try:
-        return int(out_str)
-    except ValueError:
-        return default
 
 
 # Unit tests
@@ -69,3 +39,16 @@ _NUM_RAND_SWEEP_TESTS = parse_env_int("NATTEN_RAND_SWEEP_TESTS", 1000)
 
 # Profiler
 DISABLE_TQDM = parse_env_flag("NATTEN_DISABLE_TQDM", False)
+
+
+__all__ = [
+    "HAS_LIBNATTEN",
+    "_IS_CUDA_AVAILABLE",
+    "_IS_TORCH_COMPILE_SUPPORTED",
+    "DISABLE_TQDM",
+    "_RUN_FLEX_TESTS",
+    "_RUN_ADDITIONAL_KV_TESTS",
+    "_RUN_FLEX_TESTS",
+    "_NUM_RAND_SWEEP_TESTS",
+    "_TORCH_VERSION",
+]

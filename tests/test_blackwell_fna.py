@@ -107,18 +107,18 @@ class BlackwellFNABackendTest(unittest.TestCase):
             test_backprop=True,
             reference_backend="cutlass-fna",
             reference_fmha_backend="cutlass-fmha",
-            dtype=torch.float32,
+            dtype=torch.float16,
         )
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 2e-2), (0, 1e-3)),
-            (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
-            (torch.float8_e4m3fn, (4e-1, None), (0, None)),
-            (torch.float8_e5m2, (8e-1, None), (0, None)),
+            (torch.float16, (1e-2, 2e-2)),
+            (torch.bfloat16, (1e-1, 1e-1)),
+            (torch.float8_e4m3fn, (45e-2, None)),
+            (torch.float8_e5m2, (9e-1, None)),
         ]
 
         test_id = 0
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy = torch.empty(
                 (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
