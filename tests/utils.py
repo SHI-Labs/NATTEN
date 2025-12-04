@@ -36,6 +36,13 @@ from natten.utils.checks import check_all_args
 logger = log.get_logger(__name__)
 
 
+def _synchronize(device: str):
+    if device == "cuda":
+        torch.cuda.synchronize()
+    elif device == "xpu":
+        torch.xpu.synchronize()
+
+
 def reset_torch_compile(cache_size_limit):
     # Torch compile reset and sensible settings for unit testing
     logger.debug(
@@ -66,6 +73,8 @@ class NattenBackendTester:
         reference_fmha_backend: str,
         dtype: torch.dtype,
         head_dim_v: Optional[int] = None,
+        device: str = "cuda",
+        target_device: Optional[str] = None,
     ):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)
@@ -84,6 +93,7 @@ class NattenBackendTester:
         self.test_backprop = test_backprop
         self.reference_backend = reference_backend
         self.reference_fmha_backend = reference_fmha_backend
+        self.target_device = target_device or device
 
         with torch.no_grad():
             orig_dtype = dtype
@@ -93,22 +103,22 @@ class NattenBackendTester:
             q_ref, k_ref, v_ref, d_out_ref = (
                 torch.randn(
                     (self.batch, *self.input_shape, self.heads, self.head_dim),
-                    device="cuda",
+                    device=device,
                     dtype=dtype,
                 ),
                 torch.randn(
                     (self.batch, *self.input_shape, self.heads, self.head_dim),
-                    device="cuda",
+                    device=device,
                     dtype=dtype,
                 ),
                 torch.randn(
                     (self.batch, *self.input_shape, self.heads, self.head_dim_v),
-                    device="cuda",
+                    device=device,
                     dtype=dtype,
                 ),
                 torch.randn(
                     (self.batch, *self.input_shape, self.heads, self.head_dim_v),
-                    device="cuda",
+                    device=device,
                     dtype=dtype,
                 )
                 * 0.05,
@@ -132,7 +142,7 @@ class NattenBackendTester:
             if self.additional_kv_length > 0:
                 additional_k_ref = torch.randn(
                     (self.batch, self.additional_kv_length, self.heads, self.head_dim),
-                    device="cuda",
+                    device=device,
                     dtype=dtype,
                 )
                 additional_v_ref = torch.randn(
@@ -142,7 +152,7 @@ class NattenBackendTester:
                         self.heads,
                         self.head_dim_v,
                     ),
-                    device="cuda",
+                    device=device,
                     dtype=dtype,
                 )
 
@@ -156,7 +166,7 @@ class NattenBackendTester:
                 self.additional_v = additional_v_ref.clone()
 
         # Reference
-        torch.cuda.synchronize()
+        _synchronize(device)
         start_time = time.time()
 
         q_ref.requires_grad_(True)
@@ -223,7 +233,7 @@ class NattenBackendTester:
                     self.d_additional_k_ref = additional_k_ref.grad.clone().float()
                     self.d_additional_v_ref = additional_v_ref.grad.clone().float()
 
-        torch.cuda.synchronize()
+        _synchronize(device)
         reference_time = time.time() - start_time
         logger.debug(
             f"Reference ({reference_backend}/{reference_fmha_backend}) ran in {reference_time:.2f} seconds."
@@ -276,10 +286,10 @@ class NattenBackendTester:
         )
 
         q, k, v, d_out = (
-            self.q.clone().to(dtype),
-            self.k.clone().to(dtype),
-            self.v.clone().to(dtype),
-            self.d_out.clone().to(dtype),
+            self.q.clone().to(device=self.target_device, dtype=dtype),
+            self.k.clone().to(device=self.target_device, dtype=dtype),
+            self.v.clone().to(device=self.target_device, dtype=dtype),
+            self.d_out.clone().to(device=self.target_device, dtype=dtype),
         )
         q.requires_grad_(test_backprop_safe)
         k.requires_grad_(test_backprop_safe)
@@ -290,13 +300,13 @@ class NattenBackendTester:
         if additional_kv_length > 0:
             assert self.additional_k is not None
             assert self.additional_v is not None
-            additional_k = self.additional_k.clone().to(dtype)
-            additional_v = self.additional_v.clone().to(dtype)
+            additional_k = self.additional_k.clone().to(device=self.target_device, dtype=dtype)
+            additional_v = self.additional_v.clone().to(device=self.target_device, dtype=dtype)
 
             additional_k = additional_k.requires_grad_(test_backprop_safe)
             additional_v = additional_v.requires_grad_(test_backprop_safe)
 
-        torch.cuda.synchronize()
+        _synchronize(self.target_device)
         start_time = time.time()
 
         out_ = neighborhood_attention_generic(
@@ -350,24 +360,24 @@ class NattenBackendTester:
         else:
             eps_forward, eps_backward = eps, eps
 
-        torch.cuda.synchronize()
+        _synchronize(self.target_device)
         runtime = time.time() - start_time
         logger.debug(
             f"Backend ({target_backend}/{target_fmha_backend}) ran in {runtime:.2f} seconds."
         )
 
-        torch.testing.assert_close(out, self.out_ref, atol=eps_forward, rtol=0)
+        torch.testing.assert_close(out.to(self.out_ref.device), self.out_ref, atol=eps_forward, rtol=0)
 
         if test_backprop_safe:
-            torch.testing.assert_close(dq, self.dq_ref, atol=eps_backward, rtol=0)
-            torch.testing.assert_close(dk, self.dk_ref, atol=eps_backward, rtol=0)
-            torch.testing.assert_close(dv, self.dv_ref, atol=eps_backward, rtol=0)
+            torch.testing.assert_close(dq.to(self.dq_ref.device), self.dq_ref, atol=eps_backward, rtol=0)
+            torch.testing.assert_close(dk.to(self.dk_ref.device), self.dk_ref, atol=eps_backward, rtol=0)
+            torch.testing.assert_close(dv.to(self.dv_ref.device), self.dv_ref, atol=eps_backward, rtol=0)
             if additional_kv_length > 0:
                 torch.testing.assert_close(
-                    d_additional_k, self.d_additional_k_ref, atol=eps_backward, rtol=0
+                    d_additional_k.to(self.d_additional_k_ref.device), self.d_additional_k_ref, atol=eps_backward, rtol=0
                 )
                 torch.testing.assert_close(
-                    d_additional_v, self.d_additional_v_ref, atol=eps_backward, rtol=0
+                    d_additional_v.to(self.d_additional_v_ref.device), self.d_additional_v_ref, atol=eps_backward, rtol=0
                 )
 
 

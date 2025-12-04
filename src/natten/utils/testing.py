@@ -23,17 +23,17 @@
 
 import torch
 
-from .._environment import _IS_CUDA_AVAILABLE, _RUN_EXTENDED_TESTS, HAS_LIBNATTEN
+from .._environment import _IS_CUDA_AVAILABLE, _IS_XPU_AVAILABLE, _RUN_EXTENDED_TESTS, HAS_LIBNATTEN
 
 from ..backends.flex import _FLEX_COMPILE_SUPPORTED, _FLEX_SUPPORTED
-from .device import get_device_cc, is_cuda
+from .device import get_device_cc, is_cuda, is_xpu
 
 
 def skip_if_libnatten_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if not _IS_CUDA_AVAILABLE:
-                self.skipTest("CUDA is not available.")
+            if not _IS_CUDA_AVAILABLE and not _IS_XPU_AVAILABLE:
+                self.skipTest("CUDA or XPU is not available.")
             elif not HAS_LIBNATTEN:
                 self.skipTest("Libnatten is not available.")
             else:
@@ -47,8 +47,8 @@ def skip_if_libnatten_is_not_supported():
 def skip_if_cuda_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if not _IS_CUDA_AVAILABLE:
-                self.skipTest("CUDA is not available.")
+            if not _IS_CUDA_AVAILABLE and not _IS_XPU_AVAILABLE:
+                self.skipTest("CUDA or XPU is not available.")
             else:
                 return f(self, *args, **kwargs)
 
@@ -60,7 +60,9 @@ def skip_if_cuda_is_not_supported():
 def skip_if_flex_is_not_supported():
     def decorator(f):
         def wrapper(self, *args, **kwargs):
-            if not _FLEX_SUPPORTED or get_device_cc() < 70:
+            if not _FLEX_SUPPORTED:
+                self.skipTest("Flex backend is not supported.")
+            elif not _IS_XPU_AVAILABLE and get_device_cc() < 70:
                 self.skipTest("Flex backend is not supported.")
             else:
                 return f(self, *args, **kwargs)
@@ -144,6 +146,9 @@ def supports_bfloat16(device: torch.device) -> bool:
         if device_cc < 80:
             return False
 
+        return True
+
+    if is_xpu(device):
         return True
 
     # TODO:
