@@ -143,7 +143,7 @@ struct NAMask {
           for (int j = 0; j < size<1>(tSrS_rowcol); j++) {
 
             // auto [_, kv_idx] = tScS_rowcol(crd2idx(make_coord(i, j), tSrS_rowcol.layout()));
-            auto [_, kv_idx] = tScS_rowcol(i, j);
+            auto [_, kv_idx] = tScS_rowcol(0, j);
             //auto kv_coord = kv_ctr_offset(kv_idx - kv_idx_first);
             auto kv_coord = kv_ctr_offset(kv_idx - kv_idx_first_in_tile);
 
