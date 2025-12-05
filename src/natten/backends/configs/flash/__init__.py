@@ -342,7 +342,7 @@ def check_flash_fmha_forward_config(
     # Fail and make suggestions
     MAX_EXAMPLES = 3
     examples = ""
-    for i, q_t, kv_t in enumerate(configs):
+    for i, (q_t, kv_t) in enumerate(configs):
         examples += f"\n  q_tile_size={q_t}, kv_tile_size={kv_t}"
         if i > MAX_EXAMPLES:
             break
