@@ -104,6 +104,7 @@ def make_flash_fna_autograd_fn(na_dim):
                 na_dim, kernel_size, stride, dilation, is_causal
             )
 
+
             q_tile_shape, kv_tile_shape = forward_config
 
             # Token permute begin
@@ -123,6 +124,17 @@ def make_flash_fna_autograd_fn(na_dim):
             value_perm, v_shape, vR = token_permute(
                 value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
+
+
+            # print("---- Debug Info ----")
+            # print(f"kernel_size={kernel_size}, stride={stride}, dilation={dilation}, is_causal={is_causal}")
+            # print(f"qkv_shape={qkv_shape}")
+            # print(f"q_tile_shape={q_tile_shape}")
+            # print(f"kv_tile_shape={kv_tile_shape}")
+            # print(f"q_perm: shape={tuple(query_perm.shape)}, dtype={query_perm.dtype}")
+            # print(f"k_perm: shape={tuple(key_perm.shape)}, dtype={key_perm.dtype}")
+            # print(f"v_perm: shape={tuple(value_perm.shape)}, dtype={value_perm.dtype}")
+            # print("---------------------")
 
             assert k_shape == v_shape
             kv_shape = k_shape

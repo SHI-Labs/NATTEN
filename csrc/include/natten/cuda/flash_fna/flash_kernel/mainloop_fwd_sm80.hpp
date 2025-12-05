@@ -624,9 +624,14 @@ struct CollectiveMainloopFwdSm80 {
         auto na_mask_fn = [&](auto& tSrS, int n_block) { 
           if (not is_fully_block_sparse) {
             na_mask.apply(tSrS, m_block, n_block);
+            // if(thread0()) printf("############# This problem has NA mask\n");
           } else if (has_kv_padding) {
             na_mask.apply_padding(tSrS, m_block, n_block);
-          } else {}
+            // if(thread0()) printf("============= This problem has KV padding\n");
+          }
+          // else {
+          //   if(thread0()) printf("------------- This problem is block-sparse\n");
+          // }
         };
         fwd_step(n_block, na_mask_fn, cute::true_type{} /*is_first_iter*/, cute::true_type{} /*check_inf*/);
         --n_block;
