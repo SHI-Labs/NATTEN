@@ -118,9 +118,17 @@ def blackwell_fmha_forward_torch_op(
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
     output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
-    output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
-    logsumexp = torch.empty(query.shape[:-1], dtype=torch.float32, device=query.device)
+    # NOTE: always zero-init outputs when doing varlen for safety
+    is_varlen = cumulative_seqlen_Q is not None
+    init_fn = torch.zeros if is_varlen else torch.empty
+
+    output = init_fn(
+        output_shape, device=query.device, dtype=query.dtype
+    )  # type: ignore[operator]
+    logsumexp = init_fn(
+        query.shape[:-1], dtype=torch.float32, device=query.device
+    )  # type: ignore[operator]
 
     blackwell_fmha_forward_cxx(
         output,
@@ -193,9 +201,13 @@ def blackwell_fmha_backward_torch_op(
         maybe_contiguous(x) for x in (output, d_output, logsumexp)
     ]
 
-    d_query = torch.empty_like(query)
-    d_key = torch.empty_like(key)
-    d_value = torch.empty_like(value)
+    # NOTE: always zero-init outputs when doing varlen for safety
+    is_varlen = cumulative_seqlen_Q is not None
+    init_fn = torch.zeros_like if is_varlen else torch.empty_like
+
+    d_query = init_fn(query)
+    d_key = init_fn(key)
+    d_value = init_fn(value)
 
     blackwell_fmha_backward_cxx(
         d_query,
@@ -391,9 +403,17 @@ def fmha_forward_torch_op(
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
     output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
-    output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
-    logsumexp = torch.empty(query.shape[:-1], dtype=torch.float32, device=query.device)
+    # NOTE: always zero-init outputs when doing varlen for safety
+    is_varlen = cumulative_seqlen_Q is not None
+    init_fn = torch.zeros if is_varlen else torch.empty
+
+    output = init_fn(
+        output_shape, device=query.device, dtype=query.dtype
+    )  # type: ignore[operator]
+    logsumexp = init_fn(
+        query.shape[:-1], dtype=torch.float32, device=query.device
+    )  # type: ignore[operator]
 
     fmha_forward_cxx(
         output,
@@ -466,9 +486,13 @@ def fmha_backward_torch_op(
         maybe_contiguous(x) for x in (output, d_output, logsumexp)
     ]
 
-    d_query = torch.empty_like(query)
-    d_key = torch.empty_like(key)
-    d_value = torch.empty_like(value)
+    # NOTE: always zero-init outputs when doing varlen for safety
+    is_varlen = cumulative_seqlen_Q is not None
+    init_fn = torch.zeros_like if is_varlen else torch.empty_like
+
+    d_query = init_fn(query)
+    d_key = init_fn(key)
+    d_value = init_fn(value)
 
     fmha_backward_cxx(
         d_query,
