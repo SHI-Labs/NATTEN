@@ -46,6 +46,7 @@ DISABLE_TQDM = parse_env_flag("NATTEN_DISABLE_TQDM", False)
 __all__ = [
     "HAS_LIBNATTEN",
     "_IS_CUDA_AVAILABLE",
+    "_IS_XPU_AVAILABLE",
     "_IS_TORCH_COMPILE_SUPPORTED",
     "DISABLE_TQDM",
     "_RUN_FLEX_TESTS",
