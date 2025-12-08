@@ -64,19 +64,13 @@ class CutlassHopperFmhaAutogradFn(Function):
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()
-        output = torch.empty_like(query)
-
-        logsumexp = torch.empty(
-            query.shape[:-1], dtype=torch.float32, device=query.device
-        )
 
         (q_tile_size, kv_tile_size), kernel_schedule = forward_config
-        hopper_fmha_forward(
-            output,
+
+        output, logsumexp = hopper_fmha_forward(
             query,
             key,
             value,
-            logsumexp,
             scale,
             q_tile_size,
             kv_tile_size,
@@ -101,9 +95,6 @@ class CutlassHopperFmhaAutogradFn(Function):
     ]:
         query, key, value, logsumexp, output = ctx.saved_tensors
         d_output = grad_out.contiguous()  # noqa: F841
-        d_query = torch.empty_like(query)
-        d_key = torch.empty_like(key)
-        d_value = torch.empty_like(value)
 
         q_tile_size, k_tile_size = ctx.backward_config
 
@@ -137,10 +128,7 @@ class CutlassHopperFmhaAutogradFn(Function):
                 f"Padded logsumexp with shape {old_shape} to {logsumexp.shape}."
             )
 
-        hopper_fmha_backward(
-            d_query,
-            d_key,
-            d_value,
+        d_query, d_key, d_value = hopper_fmha_backward(
             query,
             key,
             value,

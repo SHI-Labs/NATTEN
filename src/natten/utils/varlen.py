@@ -26,7 +26,8 @@ from typing import Optional, Tuple, Union
 import torch  # noqa: F401
 from torch import Tensor
 
-from ..types import NoneType
+from natten.types import NoneType
+from natten.utils.environment import is_torch_compiling
 
 
 def generate_varlen_parameters(
@@ -39,6 +40,20 @@ def generate_varlen_parameters(
     Tuple[NoneType, NoneType, int, int],
     Tuple[Tensor, Tensor, int, int],
 ]:
+    # NOTE: max_seqlen_{Q,KV} require a device-host sync, since they're expected to be ints (with
+    # which we launch the varlen kernel) and not device tensors.
+    # .item() introduces control flow and breaks the graph.
+    # It is also inefficient to repeat this per-op, and mostly there for convenience.
+    # generate_varlen_parameters should ideally always be called by the user ahead of model
+    # forward / backward.
+    if is_torch_compiling():
+        raise RuntimeError(
+            "Running 'generate_varlen_parameters' in a torch-compiled region is disallowed as it "
+            "results in graph breaks. Please consider calling ahead of time and pass "
+            "'cumulative_seqlen_{Q,KV}' and 'max_seqlen_{Q,KV}' instead of 'seqlens_{Q,KV}' to "
+            "'attention'. "
+        )
+
     if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
         raise ValueError(
             "Q, K, and V must match in batch size, got "

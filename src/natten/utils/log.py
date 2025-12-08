@@ -20,9 +20,12 @@
 # SOFTWARE.
 #
 #################################################################################################
+
 import enum
 import logging
 import os
+
+from natten.utils.environment import is_torch_compiling
 
 log_format = "| %(asctime)s | [[ %(name)s ]] [ %(levelname)s ]: %(message)s"
 
@@ -63,13 +66,32 @@ _map_log_level = {
 }
 
 
+class NattenLogger:
+    def __init__(self, name: str):
+        self.logger = logging.getLogger(name)
+        self.log_level = _map_log_level[_get_log_level()]
+        self.logger.setLevel(self.log_level)
+        self.formatter = logging.Formatter(log_format)
+        self.handler = logging.StreamHandler()
+        self.handler.setLevel(self.log_level)
+        self.handler.setFormatter(self.formatter)
+        self.logger.addHandler(self.handler)
+
+    def is_safe_to_log(self) -> bool:
+        return not is_torch_compiling()
+
+    def info(self, *args, **kwargs):
+        if self.is_safe_to_log():
+            self.logger.info(*args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        if self.is_safe_to_log():
+            self.logger.debug(*args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        if self.is_safe_to_log():
+            self.logger.warning(*args, **kwargs)
+
+
 def get_logger(name):
-    logger = logging.getLogger(name)
-    log_level = _map_log_level[_get_log_level()]
-    logger.setLevel(log_level)
-    formatter = logging.Formatter(log_format)
-    handler = logging.StreamHandler()
-    handler.setLevel(log_level)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+    return NattenLogger(name)

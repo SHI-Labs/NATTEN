@@ -69,19 +69,13 @@ class CutlassBlackwellFmhaAutogradFn(Function):
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()
-        output = torch.empty_like(query)
-
-        logsumexp = torch.empty(
-            query.shape[:-1], dtype=torch.float32, device=query.device
-        )
 
         q_tile_size, kv_tile_size = forward_config
-        blackwell_fmha_forward(
-            output,
+
+        output, logsumexp = blackwell_fmha_forward(
             query,
             key,
             value,
-            logsumexp,
             is_causal,
             scale,
             q_tile_size,
@@ -140,10 +134,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
 
         q_tile_size, k_tile_size = ctx.backward_config
 
-        d_query = torch.empty_like(query)
-        d_key = torch.empty_like(key)
-        d_value = torch.empty_like(value)
-
         if torch.are_deterministic_algorithms_enabled():
             raise RuntimeError(
                 "Blackwell FMHA backward pass does not have a deterministic mode, "
@@ -152,10 +142,7 @@ class CutlassBlackwellFmhaAutogradFn(Function):
                 "different backend."
             )
 
-        blackwell_fmha_backward(
-            d_query,
-            d_key,
-            d_value,
+        d_query, d_key, d_value = blackwell_fmha_backward(
             query,
             key,
             value,

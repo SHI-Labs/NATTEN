@@ -34,8 +34,17 @@ from torch.nn.attention.flex_attention import (
     flex_attention,
 )
 
-from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
-from ..types import (
+from natten.backends.configs.checks import (  # noqa: F401
+    _FLEX_COMPILE_SUPPORTED,
+    _FLEX_SUPPORTED,
+    can_run_flex_attention,
+)
+from natten.backends.configs.flex import (
+    check_flex_fmha_forward_config,
+    check_flex_fna_forward_config,
+)
+from natten.token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
+from natten.types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
     CausalArg3DTypeOrDed,
@@ -50,8 +59,8 @@ from ..types import (
     DimensionType,
     DimensionTypeOrDed,
 )
-from ..utils import log
-from ..utils.checks import (
+from natten.utils import log
+from natten.utils.checks import (
     check_all_args,
     check_args_against_input,
     check_input_size_arg,
@@ -59,12 +68,7 @@ from ..utils.checks import (
     na_tensor_checks,
     varlen_tensor_checks,
 )
-from .configs.checks import (  # noqa: F401
-    _FLEX_COMPILE_SUPPORTED,
-    _FLEX_SUPPORTED,
-    can_run_flex_attention,
-)
-from .configs.flex import check_flex_fmha_forward_config, check_flex_fna_forward_config
+from natten.utils.environment import is_torch_compiling
 
 logger = log.get_logger(__name__)
 
@@ -285,7 +289,8 @@ def get_na_flex_mask(
     kv_shape: Optional[DimensionType] = None,
     torch_compile: bool = False,
 ):
-    flex_mask_start_time = time.perf_counter()
+    if not is_torch_compiling():
+        flex_mask_start_time = time.perf_counter()
     do_token_permute = q_tile_shape is not None and kv_tile_shape is not None
     if do_token_permute:
         if q_tile_shape is None or kv_tile_shape is None:
@@ -535,11 +540,12 @@ def get_na_flex_mask(
         BLOCK_SIZE=(q_tile_size, kv_tile_size),
         device=device,
     )
-    flex_mask_end_time = time.perf_counter()
-    flex_mask_time = flex_mask_end_time - flex_mask_start_time
-    logger.debug(
-        f"Flex Attention block mask ({torch_compile=}) created in {flex_mask_time:.2f} seconds."
-    )
+    if not is_torch_compiling():
+        flex_mask_end_time = time.perf_counter()
+        flex_mask_time = flex_mask_end_time - flex_mask_start_time
+        logger.debug(
+            f"Flex Attention block mask ({torch_compile=}) created in {flex_mask_time:.2f} seconds."
+        )
     return block_mask
 
 
