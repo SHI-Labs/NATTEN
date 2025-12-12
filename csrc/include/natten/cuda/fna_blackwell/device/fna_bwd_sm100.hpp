@@ -269,10 +269,12 @@ class FnaBwdSm100 {
 
   /// Gets the workspace size
   static size_t get_workspace_size(Arguments const& args) {
-    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
-    auto [H, B] = product_each(HB);
-    D = cutlass::round_up(D, 8); // Alignment
-    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
+    auto [Q_, K, D_, D_VO, HB] = args.problem_shape;
+    auto [H_, B_] = product_each(HB);
+    size_t B = static_cast<size_t>(B_);
+    size_t H = static_cast<size_t>(H_);
+    size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
+    size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     size_t workspace_bytes = 0;
     // OdO vector
     workspace_bytes += B * H * Q * sizeof(ElementAccumulator);
@@ -295,10 +297,12 @@ class FnaBwdSm100 {
         << workspace_dQ << ", workspace_sum_OdO=" << workspace_sum_OdO
         << "stream: " << (stream ? "non-null" : "null"));
 
-    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
-    auto [H, B] = product_each(HB);
-    D = cutlass::round_up(D, 8); // Alignment
-    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
+    auto [Q_, K, D_, D_VO, HB] = args.problem_shape;
+    auto [H_, B_] = product_each(HB);
+    size_t B = static_cast<size_t>(B_);
+    size_t H = static_cast<size_t>(H_);
+    size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
+    size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_sum_OdO);
     ElementAccumulator* scaled_lse =
@@ -333,10 +337,12 @@ class FnaBwdSm100 {
         "FnaDeviceBwd::initialize() - workspace "
         << workspace << ", stream: " << (stream ? "non-null" : "null"));
 
-    auto [Q_, K, D, D_VO, HB] = args.problem_shape;
-    auto [H, B] = product_each(HB);
-    D = cutlass::round_up(D, 8); // Alignment
-    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
+    auto [Q_, K, D_, D_VO, HB] = args.problem_shape;
+    auto [H_, B_] = product_each(HB);
+    size_t B = static_cast<size_t>(B_);
+    size_t H = static_cast<size_t>(H_);
+    size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
+    size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     char* workspace_chr = reinterpret_cast<char*>(workspace);
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_chr);

@@ -65,6 +65,7 @@ class NattenBackendTester:
         reference_fmha_backend: str,
         dtype: torch.dtype,
         head_dim_v: Optional[int] = None,
+        heads_kv: Optional[int] = None,
     ):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)
@@ -72,6 +73,7 @@ class NattenBackendTester:
 
         self.batch = batch
         self.heads = heads
+        self.heads_kv = heads_kv or heads
         self.head_dim = head_dim
         self.head_dim_v = head_dim_v or head_dim
         self.input_shape = input_shape
@@ -96,12 +98,12 @@ class NattenBackendTester:
                     dtype=dtype,
                 ),
                 torch.randn(
-                    (self.batch, *self.input_shape, self.heads, self.head_dim),
+                    (self.batch, *self.input_shape, self.heads_kv, self.head_dim),
                     device="cuda",
                     dtype=dtype,
                 ),
                 torch.randn(
-                    (self.batch, *self.input_shape, self.heads, self.head_dim_v),
+                    (self.batch, *self.input_shape, self.heads_kv, self.head_dim_v),
                     device="cuda",
                     dtype=dtype,
                 ),
@@ -130,7 +132,12 @@ class NattenBackendTester:
             additional_k_ref, additional_v_ref = None, None
             if self.additional_kv_length > 0:
                 additional_k_ref = torch.randn(
-                    (self.batch, self.additional_kv_length, self.heads, self.head_dim),
+                    (
+                        self.batch,
+                        self.additional_kv_length,
+                        self.heads_kv,
+                        self.head_dim,
+                    ),
                     device="cuda",
                     dtype=dtype,
                 )
@@ -138,7 +145,7 @@ class NattenBackendTester:
                     (
                         self.batch,
                         self.additional_kv_length,
-                        self.heads,
+                        self.heads_kv,
                         self.head_dim_v,
                     ),
                     device="cuda",
@@ -247,6 +254,7 @@ class NattenBackendTester:
     ):
         batch = self.batch
         heads = self.heads
+        heads_kv = self.heads_kv
         head_dim = self.head_dim
         head_dim_v = self.head_dim_v
         input_shape = self.input_shape
@@ -262,7 +270,7 @@ class NattenBackendTester:
 
         logger.debug(
             f"Testing {target_backend} against {reference_backend}:\n"
-            f"{batch=}, {heads=}, {head_dim=}, {head_dim_v=}, {input_shape=}, {dtype=}\n"
+            f"{batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, {input_shape=}, {dtype=}\n"
             f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=}, {additional_kv_length=},\n"
             f"{q_tile_shape=}, {kv_tile_shape=}, {run_persistent_kernel=}, {kernel_schedule=}, "
             f"{torch_compile=}"

@@ -47,7 +47,6 @@ void blackwell_na1d_forward(
     const std::tuple<int32_t>& q_shape_,
     const std::tuple<int32_t>& kv_shape_,
     const std::tuple<int32_t>& qkv_shape_,
-    int num_extra_kv,
     const std::tuple<int32_t>& query_tile_shape,
     const std::tuple<int32_t>& key_tile_shape,
     bool run_persistent);
@@ -66,7 +65,6 @@ void blackwell_na2d_forward(
     const std::tuple<int32_t, int32_t>& q_shape_,
     const std::tuple<int32_t, int32_t>& kv_shape_,
     const std::tuple<int32_t, int32_t>& qkv_shape_,
-    int num_extra_kv,
     const std::tuple<int32_t, int32_t>& query_tile_shape,
     const std::tuple<int32_t, int32_t>& key_tile_shape,
     bool run_persistent);
@@ -85,7 +83,6 @@ void blackwell_na3d_forward(
     const std::tuple<int32_t, int32_t, int32_t>& q_shape_,
     const std::tuple<int32_t, int32_t, int32_t>& kv_shape_,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape_,
-    int num_extra_kv,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape,
     bool run_persistent);

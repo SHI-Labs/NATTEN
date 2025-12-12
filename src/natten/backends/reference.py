@@ -194,7 +194,9 @@ def reference_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value, must_match_head_dims=False)
+    na_tensor_checks(
+        query, key, value, must_match_head_dims=False, supports_gqa_mqa=False
+    )
     additional_kv_tensor_checks(
         query,
         key,
@@ -202,6 +204,7 @@ def reference_fna_generic(
         additional_keys,
         additional_values,
         must_match_head_dims=False,
+        supports_gqa_mqa=False,
     )
 
     na_dim = query.dim() - 3  # batch, heads, head_dim

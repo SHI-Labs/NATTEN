@@ -142,8 +142,9 @@ def attention(
             As long as `generate_varlen_parameters` is called ahead of torch.compiling the model, it
             is supported without any graph breaks.
 
-    Limited GQA/MQA support (`heads != heads_kv`) is available. For now, only the `blackwell-fmha`
-    backend supports GQA/MQA, in both forward and backward pass.
+    GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fmha` and
+    `flex-fmha` support GQA/MQA natively, and `cutlass-fmha` supports it with explicit repeats
+    (increases memory usage and runtime).
 
     Parameters:
         query (Tensor): 4-D query tensor, with the heads last layout
@@ -360,7 +361,7 @@ def merge_attentions(
     This operation also attempts to use `torch.compile` to fuse the elementwise operations. This
     can be disabled by passing `torch_compile=False`.
 
-    Args:
+    Parameters:
         outputs (List[Tensor]): List of 4-D attention output tensors, with the heads last layout
             (`[batch, seqlen, heads, head_dim]`)
 
@@ -638,15 +639,19 @@ def na1d(
 ) -> Tensor:
     """Computes 1-D neighborhood attention.
 
-    Args:
+    GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fna` and
+    `flex-fna` support GQA/MQA natively, and `cutlass-fna` supports it with explicit repeats
+    (increases memory usage and runtime).
+
+    Parameters:
         query (Tensor): 4-D query tensor, with the heads last layout
             (`[batch, seqlen, heads, head_dim]`)
 
         key (Tensor): 4-D key tensor, with the heads last layout
-            (`[batch, seqlen, heads, head_dim]`)
+            (`[batch, seqlen, heads_kv, head_dim]`)
 
         value (Tensor): 4-D value tensor, with the heads last layout
-            (`[batch, seqlen, heads, head_dim]`)
+            (`[batch, seqlen, heads_kv, head_dim_v]`)
 
         kernel_size (Tuple[int] | int): Neighborhood window (kernel) size.
 
@@ -674,12 +679,12 @@ def na1d(
         scale (float): Attention scale. Defaults to `head_dim ** -0.5`.
 
         additional_keys: `None` or 4-D key tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`), corresponding to key tokens from some
+            (`[batch, seqlen_kv, heads_kv, head_dim]`), corresponding to key tokens from some
             additional context. Used when performing neighborhood cross-attention, where `query`
             tokens attend to their neighborhood, as well as some fixed additional set of tokens.
 
         additional_values: `None` or 4-D value tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`), corresponding to value tokens from some
+            (`[batch, seqlen_kv, heads_kv, head_dim_v]`), corresponding to value tokens from some
             additional context. Used when performing neighborhood cross-attention, where `query`
             tokens attend to their neighborhood, as well as some fixed additional set of tokens.
 
@@ -763,7 +768,7 @@ def na1d(
 
     Returns:
         output (Tensor): 4-D output tensor, with the heads last layout
-            (`[batch, seqlen, heads, head_dim]`).
+            (`[batch, seqlen, heads, head_dim_v]`).
     """
     return neighborhood_attention_generic(
         query=query,
@@ -815,17 +820,21 @@ def na2d(
 ) -> Tensor:
     """Computes 2-D neighborhood attention.
 
-    Args:
+    GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fna` and
+    `flex-fna` support GQA/MQA natively, and `cutlass-fna` supports it with explicit repeats
+    (increases memory usage and runtime).
+
+    Parameters:
         query (Tensor): 2-D query tensor, with the heads last layout:
             `[batch, X, Y, heads, head_dim]`, where token layout shape (feature map shape) is
             `(X, Y)`.
 
         key (Tensor): 2-D key tensor, with the heads last layout:
-            `[batch, X, Y, heads, head_dim]`, where token layout shape (feature map shape) is
+            `[batch, X, Y, heads_kv, head_dim]`, where token layout shape (feature map shape) is
             `(X, Y)`.
 
         value (Tensor): 2-D value tensor, with the heads last layout:
-            `[batch, X, Y, heads, head_dim]`, where token layout shape (feature map shape) is
+            `[batch, X, Y, heads_kv, head_dim_v]`, where token layout shape (feature map shape) is
             `(X, Y)`.
 
         kernel_size (Tuple[int, int] | int): Neighborhood window (kernel) size/shape. If an
@@ -861,12 +870,12 @@ def na2d(
         scale (float): Attention scale. Defaults to `head_dim ** -0.5`.
 
         additional_keys: `None` or 4-D key tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`), corresponding to key tokens from some
+            (`[batch, seqlen_kv, heads_kv, head_dim]`), corresponding to key tokens from some
             additional context. Used when performing neighborhood cross-attention, where `query`
             tokens attend to their neighborhood, as well as some fixed additional set of tokens.
 
         additional_values: `None` or 4-D value tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`), corresponding to value tokens from some
+            (`[batch, seqlen_kv, heads_kv, head_dim_v]`), corresponding to value tokens from some
             additional context. Used when performing neighborhood cross-attention, where `query`
             tokens attend to their neighborhood, as well as some fixed additional set of tokens.
 
@@ -950,7 +959,7 @@ def na2d(
 
     Returns:
         output (Tensor): 5-D output tensor, with the heads last layout
-            (`[batch, X, Y, heads, head_dim]`).
+            (`[batch, X, Y, heads, head_dim_v]`).
     """
     return neighborhood_attention_generic(
         query=query,
@@ -1002,17 +1011,21 @@ def na3d(
 ) -> Tensor:
     """Computes 3-D neighborhood attention.
 
-    Args:
+    GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fna` and
+    `flex-fna` support GQA/MQA natively, and `cutlass-fna` supports it with explicit repeats
+    (increases memory usage and runtime).
+
+    Parameters:
         query (Tensor): 3-D query tensor, with the heads last layout:
             `[batch, X, Y, Z, heads, head_dim]`, where token layout shape (feature map shape) is
             `(X, Y, Z)`.
 
         key (Tensor): 3-D key tensor, with the heads last layout:
-            `[batch, X, Y, Z, heads, head_dim]`, where token layout shape (feature map shape) is
+            `[batch, X, Y, Z, heads_kv, head_dim]`, where token layout shape (feature map shape) is
             `(X, Y, Z)`.
 
         value (Tensor): 3-D value tensor, with the heads last layout:
-            `[batch, X, Y, Z, heads, head_dim]`, where token layout shape (feature map shape) is
+            `[batch, X, Y, Z, heads_kv, head_dim_V]`, where token layout shape (feature map shape) is
             `(X, Y, Z)`.
 
         kernel_size (Tuple[int, int, int] | int): Neighborhood window (kernel) size/shape. If an
@@ -1048,12 +1061,12 @@ def na3d(
         scale (float): Attention scale. Defaults to `head_dim ** -0.5`.
 
         additional_keys: `None` or 4-D key tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`), corresponding to key tokens from some
+            (`[batch, seqlen_kv, heads_kv, head_dim_v]`), corresponding to key tokens from some
             additional context. Used when performing neighborhood cross-attention, where `query`
             tokens attend to their neighborhood, as well as some fixed additional set of tokens.
 
         additional_values: `None` or 4-D value tensor, with the heads last layout
-            (`[batch, seqlen_kv, heads, head_dim]`), corresponding to value tokens from some
+            (`[batch, seqlen_kv, heads_kv, head_dim_v]`), corresponding to value tokens from some
             additional context. Used when performing neighborhood cross-attention, where `query`
             tokens attend to their neighborhood, as well as some fixed additional set of tokens.
 
@@ -1137,7 +1150,7 @@ def na3d(
 
     Returns:
         output (Tensor): 6-D output tensor, with the heads last layout
-            (`[batch, X, Y, Z, heads, head_dim]`).
+            (`[batch, X, Y, Z, heads, head_dim_v]`).
     """
     return neighborhood_attention_generic(
         query=query,

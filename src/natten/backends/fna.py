@@ -222,7 +222,9 @@ def cutlass_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value, must_match_head_dims=False)
+    na_tensor_checks(
+        query, key, value, must_match_head_dims=False, supports_gqa_mqa=True
+    )
 
     assert can_run_cutlass_fna(query, key, value, raise_error=True)
 
@@ -259,6 +261,18 @@ def cutlass_fna_generic(
     )
 
     scale = scale or query.shape[-1] ** -0.5
+
+    is_gqa = query.shape[-2] != key.shape[-2]
+    if is_gqa:
+        heads = query.shape[-2]
+        heads_kv = key.shape[-2]
+        assert key.shape[-2] == value.shape[-2]
+        assert heads >= heads_kv
+        assert heads % heads_kv == 0
+        h_k = heads // heads_kv
+
+        key = torch.repeat_interleave(key, repeats=h_k, dim=-2, output_size=heads)
+        value = torch.repeat_interleave(value, repeats=h_k, dim=-2, output_size=heads)
 
     output, lse = CutlassFNAAutogradFns[na_dim].apply(
         query,

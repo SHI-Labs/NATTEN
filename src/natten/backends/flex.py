@@ -122,6 +122,8 @@ def _run_flex_attn(
         torch_compile=torch_compile, torch_compile_args=torch_compile_args
     )
 
+    # tensors are BHSD here
+    is_gqa = q.shape[1] != k.shape[1]
     return flex_fn(
         q,
         k,
@@ -130,6 +132,7 @@ def _run_flex_attn(
         return_lse=True,
         scale=scale,
         kernel_options=kernel_options,
+        enable_gqa=is_gqa,
     )
 
 
@@ -195,7 +198,7 @@ def flex_fmha(
         key,
         value,
         must_match_head_dims=True,
-        supports_gqa_mqa=False,
+        supports_gqa_mqa=True,
         backend_name="Flex FMHA",
     )
 
@@ -234,12 +237,14 @@ def flex_fmha(
     scale = scale or query.shape[-1] ** -0.5
 
     batch_size, seqlen_q, num_heads, head_dim = query.shape
-    seqlen_kv = key.shape[1]
+    _, seqlen_kv, num_heads_kv, head_dim_v = value.shape
 
     # Flex and torch attention use heads first layout
     query_ = query.reshape(batch_size, seqlen_q, num_heads, head_dim).transpose(1, 2)
-    key_ = key.reshape(batch_size, seqlen_kv, num_heads, head_dim).transpose(1, 2)
-    value_ = value.reshape(batch_size, seqlen_kv, num_heads, head_dim).transpose(1, 2)
+    key_ = key.reshape(batch_size, seqlen_kv, num_heads_kv, head_dim_v).transpose(1, 2)
+    value_ = value.reshape(batch_size, seqlen_kv, num_heads_kv, head_dim_v).transpose(
+        1, 2
+    )
 
     out_, lse_ = run_flex_attn(
         query_,
@@ -252,7 +257,7 @@ def flex_fmha(
         kv_tile_size=kv_tile_size,
     )
 
-    out = out_.transpose(1, 2).reshape(batch_size, seqlen_q, num_heads, head_dim)
+    out = out_.transpose(1, 2).reshape(batch_size, seqlen_q, num_heads, head_dim_v)
     lse = lse_.transpose(1, 2).reshape(batch_size, seqlen_q, num_heads)
 
     if return_lse:
@@ -564,7 +569,9 @@ def flex_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value, must_match_head_dims=True)
+    na_tensor_checks(
+        query, key, value, must_match_head_dims=True, supports_gqa_mqa=True
+    )
 
     na_dim = query.dim() - 3  # batch, heads, head_dim
 
@@ -581,6 +588,7 @@ def flex_fna_generic(
     )
 
     batch_size, *qkv_shape_in, num_heads, head_dim = query.shape
+    num_heads_kv, head_dim_v = value.shape[-2:]
     qkv_shape = check_input_size_arg(na_dim, qkv_shape_in)
 
     scale = scale or query.shape[-1] ** -0.5
@@ -637,8 +645,10 @@ def flex_fna_generic(
         seqlen = math.prod(qkv_shape)
         # Flex uses heads first layout
         query_ = query.reshape(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
-        key_ = key.reshape(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
-        value_ = value.reshape(batch_size, seqlen, num_heads, head_dim).transpose(1, 2)
+        key_ = key.reshape(batch_size, seqlen, num_heads_kv, head_dim).transpose(1, 2)
+        value_ = value.reshape(batch_size, seqlen, num_heads_kv, head_dim_v).transpose(
+            1, 2
+        )
 
     na_block_mask = get_na_flex_mask(
         device=query.device.type,
@@ -683,7 +693,9 @@ def flex_fna_generic(
             padding,
         ).squeeze(-1)
     else:
-        out = out_.transpose(1, 2).reshape(batch_size, *qkv_shape, num_heads, head_dim)
+        out = out_.transpose(1, 2).reshape(
+            batch_size, *qkv_shape, num_heads, head_dim_v
+        )
         lse = lse_.transpose(1, 2).reshape(batch_size, *qkv_shape, num_heads)
 
     if return_lse:

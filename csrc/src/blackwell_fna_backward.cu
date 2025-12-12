@@ -85,16 +85,6 @@ void blackwell_fna_generic_backward(
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
-  CHECK_CONTIGUOUS(query);
-  CHECK_CONTIGUOUS(key);
-  CHECK_CONTIGUOUS(value);
-  CHECK_CONTIGUOUS(grad_query);
-  CHECK_CONTIGUOUS(grad_key);
-  CHECK_CONTIGUOUS(grad_value);
-  CHECK_CONTIGUOUS(out);
-  CHECK_CONTIGUOUS(grad_out);
-  CHECK_CONTIGUOUS(logsumexp);
-
   CHECK_CUDA(query);
   CHECK_CUDA(key);
   CHECK_CUDA(value);
@@ -107,7 +97,18 @@ void blackwell_fna_generic_backward(
 
   at::cuda::OptionalCUDAGuard device_guard(query.device());
 
+  CHECK_CONTIGUOUS(query);
+  CHECK_CONTIGUOUS(key);
+  CHECK_CONTIGUOUS(value);
+  CHECK_CONTIGUOUS(grad_query);
+  CHECK_CONTIGUOUS(grad_key);
+  CHECK_CONTIGUOUS(grad_value);
+  CHECK_CONTIGUOUS(out);
+  CHECK_CONTIGUOUS(grad_out);
+  CHECK_CONTIGUOUS(logsumexp);
+
   CheckArgs(kernel_size, stride_, dilation_);
+  CheckArgsAgainstDim(qkv_shape_, kernel_size, dilation_);
   CheckIfPropertiesMatch(query, key, value);
   CheckIfPropertiesMatch(grad_value, grad_out, out);
   CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
@@ -117,22 +118,56 @@ void blackwell_fna_generic_backward(
   // padding to multiples of the tile shape. We're also supporting extra KV
   // tokens, so we can't have 5D/6D tensors anymore. Seqlen mode must be
   // flattened.
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
-  CheckIfTensorShapesMatch<1>(query, grad_query);
-  CheckIfTensorShapesMatch<1>(key, grad_key);
-  CheckIfTensorShapesMatch<1>(value, grad_value);
-  CheckIfTensorShapesMatch<1>(out, grad_out);
+  CheckIfTensorShapesMatch<1>(query, out); // head_dim == head_dim_value
+  CheckIfTensorShapesMatch<1>(key, value); // head_dim == head_dim_value
+
+  CheckIfHeadDimsMatch(out, value);
+  CheckIfTensorShapesMatch<1>(grad_query, query);
+  CheckIfTensorShapesMatch<1>(grad_key, key);
+  CheckIfTensorShapesMatch<1>(grad_value, value);
+  CheckIfTensorShapesMatch<1>(grad_out, out);
+
+  CheckLogSumExp<1>(out, logsumexp);
+
+  TORCH_CHECK(
+      query.size(0) == key.size(0),
+      "Blackwell FMHA forward: Query and key must match in batch size, got ",
+      "query.shape[0]=",
+      query.size(0),
+      ", key.shape[0]=",
+      key.size(0));
+
+  TORCH_CHECK(
+      query.size(3) == key.size(3),
+      "Blackwell FMHA forward: Query and key must match in head dim, got ",
+      "query.shape[3]=",
+      query.size(3),
+      ", key.shape[3]=",
+      key.size(3));
+
+  // GQA/MQA is supported
+  TORCH_CHECK(
+      query.size(2) >= key.size(2),
+      "Blackwell FMHA forward: Query heads must be greater than or equal to key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
+  TORCH_CHECK(
+      query.size(2) % key.size(2) == 0,
+      "Blackwell FMHA forward: Query heads must evenly divide key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
 
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
-  int heads = query.size(2);
+  int heads_q = query.size(2);
+  int heads_kv = key.size(2);
   int dim = query.size(3);
-
-  CheckArgsAgainstDim(qkv_shape_, kernel_size, dilation_);
-
-  CheckLogSumExp<1>(out, logsumexp);
 
   auto qkv_shape = std_tuple_to_cute_tuple(qkv_shape_);
   auto q_shape = std_tuple_to_cute_tuple(q_shape_);
@@ -204,16 +239,19 @@ void blackwell_fna_generic_backward(
       batch_size,
       seqlen_q,
       seqlen_kv,
-      heads,
+      heads_q,
+      heads_kv,
       dim,
+      attn_scale,
+      // fna parameters
       q_shape,
       kv_shape,
       qkv_shape,
       window_size,
       stride,
       dilation,
+      // init/launch params
       device_id,
-      attn_scale,
       cuda_stream,
       query.options());
 

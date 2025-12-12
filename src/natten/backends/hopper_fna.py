@@ -357,7 +357,9 @@ def cutlass_hopper_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value, must_match_head_dims=True)
+    na_tensor_checks(
+        query, key, value, must_match_head_dims=True, supports_gqa_mqa=False
+    )
 
     assert can_run_cutlass_hopper_fna(query, key, value, raise_error=True)
 
