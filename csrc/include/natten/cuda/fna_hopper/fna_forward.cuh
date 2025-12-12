@@ -146,8 +146,6 @@ struct KernelForward {
         dim_aligned,
     };
 
-    int num_heads_actual = heads / size(dilation);
-
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, heads, seqlen, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
@@ -183,8 +181,7 @@ struct KernelForward {
          qkv_shape,
          window_size,
          stride,
-         dilation,
-         num_heads_actual},
+         dilation},
         {reinterpret_cast<Element*>(ptr_O),
          stride_O,
          reinterpret_cast<ElementAccumulatorPV*>(ptr_LSE),

@@ -107,7 +107,6 @@ class FnaBwdSm100 {
     NADim window_size;
     NADim stride;
     NADim dilation;
-    int num_heads_actual; // heads / size(dilation)
 
     ElementAccumulator softmax_scale;
 
@@ -225,8 +224,7 @@ class FnaBwdSm100 {
          args.qkv_shape,
          args.window_size,
          args.stride,
-         args.dilation,
-         args.num_heads_actual},
+         args.dilation},
         {args.ptr_Q,
          args.stride_Q,
          args.ptr_K,

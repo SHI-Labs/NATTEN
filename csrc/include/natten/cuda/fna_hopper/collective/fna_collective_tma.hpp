@@ -172,7 +172,6 @@ struct FnaMainloopTmaSm90 {
     NADim window_size;
     NADim stride;
     NADim dilation;
-    int num_heads_actual; // heads / size(dilation)
   };
 
   using TMA_Q = typename CollectiveMmaQK::Params::TMA_A;
@@ -199,7 +198,7 @@ struct FnaMainloopTmaSm90 {
     NADim dilation;
     bool requires_qkv_fixup;
     bool is_dilated;
-    int num_heads_actual;
+    int num_dilation_groups;
   };
 
   using LoadQ = cutlass::fna::collective::CollectiveLoadTma<
@@ -241,9 +240,9 @@ struct FnaMainloopTmaSm90 {
         evenly_divides(args.q_shape, QTileShape{}) &&
         evenly_divides(args.kv_shape, KVTileShape{}) &&
         evenly_divides(
-               size<1>(problem_size),
+               size<0>(problem_size),
                size(args.dilation)) && // dilation groups are
-                                       // folded into heads
+                                       // folded into batch
         tuple_leq(args.window_size, args.qkv_shape) &&
         // TODO: check window size * dilation <= qkv shape
         tuple_leq(args.stride, args.window_size);
@@ -312,7 +311,7 @@ struct FnaMainloopTmaSm90 {
         args.dilation,
         requires_qkv_fixup,
         is_dilated(args.dilation),
-        args.num_heads_actual};
+        size(args.dilation)};
   }
 
   CUTLASS_DEVICE
@@ -352,7 +351,7 @@ struct FnaMainloopTmaSm90 {
           params.qkv_shape,
           blk_coord,
           params.dilation,
-          params.num_heads_actual);
+          params.num_dilation_groups);
       is_fully_block_sparse = fully_block_sparse<typename Fusion::Causal>(
           qkv_shape,
           get<0>(params.na_params),

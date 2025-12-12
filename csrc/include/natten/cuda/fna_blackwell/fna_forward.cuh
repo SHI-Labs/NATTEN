@@ -165,8 +165,6 @@ struct KernelForward {
     int H_Q = size<3, 0, 0>(problem_size);
     int B = size<3, 1>(problem_size);
 
-    int num_heads_actual = heads / size(dilation);
-
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, seqlen, heads, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
@@ -199,7 +197,6 @@ struct KernelForward {
          window_size,
          stride,
          dilation,
-         num_heads_actual,
          num_extra_kv,
          attn_scale},
         {reinterpret_cast<Element*>(ptr_O),

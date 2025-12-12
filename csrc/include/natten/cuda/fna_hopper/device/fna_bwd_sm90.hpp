@@ -105,7 +105,6 @@ class FnaBwdSm90 {
     NADim window_size;
     NADim stride;
     NADim dilation;
-    int num_heads_actual; // heads / size(dilation)
 
     // if zero, defaults to 1/sqrt(D)
     float scale_softmax = 0.0f;
@@ -223,8 +222,7 @@ class FnaBwdSm90 {
              args.qkv_shape,
              args.window_size,
              args.stride,
-             args.dilation,
-             args.num_heads_actual},
+             args.dilation},
         },
         {args.ptr_dK, args.stride_dK, args.ptr_dV, args.stride_dV},
         args.hw_info};

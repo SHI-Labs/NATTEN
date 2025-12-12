@@ -282,7 +282,6 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
     NADim window_size;
     NADim stride;
     NADim dilation;
-    int num_heads_actual; // heads / size(dilation)
   };
 
   struct Arguments {
@@ -385,7 +384,7 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
     NADim dilation;
     bool requires_qkv_fixup;
     bool is_dilated;
-    int num_heads_actual;
+    int num_dilation_groups;
   };
 
   struct Params {
@@ -439,9 +438,9 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
         evenly_divides(args.fna.q_shape, QTileShape{}) &&
         evenly_divides(args.fna.kv_shape, KVTileShape{}) &&
         evenly_divides(
-               get<1>(problem_size),
+               get<0>(problem_size),
                size(args.fna.dilation)) && // dilation groups are
-                                           // folded into heads
+                                           // folded into batch
         tuple_leq(args.fna.window_size, args.fna.qkv_shape) &&
         tuple_leq(args.fna.stride, args.fna.window_size);
   }
@@ -563,7 +562,7 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
             args.fna.dilation,
             requires_qkv_fixup,
             is_dilated(args.fna.dilation),
-            args.fna.num_heads_actual},
+            size(args.fna.dilation)},
     };
   }
 
@@ -581,7 +580,7 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
           params.fna.qkv_shape,
           blk_coord,
           params.fna.dilation,
-          params.fna.num_heads_actual);
+          params.fna.num_dilation_groups);
       is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
           qkv_shape,
           get<0>(params.fna.na_params),

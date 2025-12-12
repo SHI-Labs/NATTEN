@@ -277,7 +277,6 @@ def idx2crd(index, shape) -> tuple:
 def get_na_flex_mask(
     device: str,
     na_dim: int,
-    num_heads: int,
     qkv_shape: DimensionType,
     kernel_size: DimensionType,
     stride: DimensionType,
@@ -289,6 +288,7 @@ def get_na_flex_mask(
     kv_shape: Optional[DimensionType] = None,
     torch_compile: bool = False,
 ):
+    num_dilation_groups = math.prod(dilation)
     if not is_torch_compiling():
         flex_mask_start_time = time.perf_counter()
     do_token_permute = q_tile_shape is not None and kv_tile_shape is not None
@@ -441,8 +441,8 @@ def get_na_flex_mask(
         )
 
         # Dilation group coordinates
-        # h_actual = h % num_heads
-        dilation_group_idx = h // num_heads
+        # b_actual = b // num_dilation_groups
+        dilation_group_idx = b % num_dilation_groups
         dilation_group_crd = idx2crd(dilation_group_idx, dilation)
 
         # Fixup input shape according to dilation group
@@ -643,7 +643,6 @@ def flex_fna_generic(
     na_block_mask = get_na_flex_mask(
         device=query.device.type,
         na_dim=na_dim,
-        num_heads=num_heads,
         qkv_shape=qkv_shape,
         kernel_size=kernel_size,
         stride=stride,

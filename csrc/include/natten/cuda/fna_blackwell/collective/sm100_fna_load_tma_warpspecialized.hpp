@@ -88,7 +88,6 @@ struct Sm100FnaLoadTmaWarpspecialized {
     NADim window_size;
     NADim stride;
     NADim dilation;
-    int num_heads_actual; // heads / size(dilation)
     int num_extra_kv;
   };
 
@@ -113,7 +112,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
     NADim dilation;
     bool requires_qkv_fixup;
     bool is_dilated;
-    int num_heads_actual;
+    int num_dilation_groups;
   };
 
   template <class ProblemShape>
@@ -179,7 +178,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
         args.dilation,
         requires_qkv_fixup,
         is_dilated(args.dilation),
-        args.num_heads_actual};
+        size(args.dilation)};
   }
 
   CUTLASS_DEVICE
@@ -210,7 +209,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
           params.qkv_shape,
           blk_coord_in,
           params.dilation,
-          params.num_heads_actual);
+          params.num_dilation_groups);
     } else if (params.is_dilated) {
       qkv_shape = ceil_div(params.qkv_shape, params.dilation);
     }

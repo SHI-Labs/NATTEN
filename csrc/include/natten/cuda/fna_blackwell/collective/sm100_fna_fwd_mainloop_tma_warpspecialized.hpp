@@ -266,9 +266,9 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     return evenly_divides(args.load.q_shape, QTileShape{}) &&
         evenly_divides(args.load.kv_shape, KVTileShape{}) &&
         evenly_divides(
-               size<3, 0, 1>(problem_shape),
+               size<3, 1>(problem_shape),
                size(args.load.dilation)) && // dilation groups are
-                                            // folded into heads
+                                            // folded into batch
         tuple_leq(args.load.window_size, args.load.qkv_shape) &&
         // TODO: check window size * dilation <= qkv shape
         tuple_leq(args.load.stride, args.load.window_size);
@@ -347,7 +347,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           params.load.qkv_shape,
           blk_coord,
           params.load.dilation,
-          params.load.num_heads_actual);
+          params.load.num_dilation_groups);
     } else if (params.load.is_dilated) {
       qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
     }
@@ -886,7 +886,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           params.load.qkv_shape,
           blk_coord,
           params.load.dilation,
-          params.load.num_heads_actual);
+          params.load.num_dilation_groups);
       is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
           qkv_shape,
           get<0>(params.load.na_params),
@@ -1235,7 +1235,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           params.load.qkv_shape,
           blk_coord,
           params.load.dilation,
-          params.load.num_heads_actual);
+          params.load.num_dilation_groups);
     } else if (params.load.is_dilated) {
       qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
     }
