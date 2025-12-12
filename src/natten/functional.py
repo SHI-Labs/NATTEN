@@ -143,8 +143,8 @@ def attention(
             is supported without any graph breaks.
 
     GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fmha` and
-    `flex-fmha` support GQA/MQA natively, and `cutlass-fmha` supports it with explicit repeats
-    (increases memory usage and runtime).
+    `flex-fmha` support GQA/MQA natively, and `cutlass-fmha` and `hopper-fmha` support it with
+    explicit repeats (increases memory usage and runtime).
 
     Parameters:
         query (Tensor): 4-D query tensor, with the heads last layout
@@ -640,8 +640,8 @@ def na1d(
     """Computes 1-D neighborhood attention.
 
     GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fna` and
-    `flex-fna` support GQA/MQA natively, and `cutlass-fna` supports it with explicit repeats
-    (increases memory usage and runtime).
+    `flex-fna` support GQA/MQA natively, and `cutlass-fna` and `hopper-fna` support it with
+    explicit repeats (increases memory usage and runtime).
 
     Parameters:
         query (Tensor): 4-D query tensor, with the heads last layout
@@ -821,8 +821,8 @@ def na2d(
     """Computes 2-D neighborhood attention.
 
     GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fna` and
-    `flex-fna` support GQA/MQA natively, and `cutlass-fna` supports it with explicit repeats
-    (increases memory usage and runtime).
+    `flex-fna` support GQA/MQA natively, and `cutlass-fna` and `hopper-fna` support it with
+    explicit repeats (increases memory usage and runtime).
 
     Parameters:
         query (Tensor): 2-D query tensor, with the heads last layout:
@@ -1012,8 +1012,8 @@ def na3d(
     """Computes 3-D neighborhood attention.
 
     GQA/MQA support (`heads != heads_kv`) is available. For now, `blackwell-fna` and
-    `flex-fna` support GQA/MQA natively, and `cutlass-fna` supports it with explicit repeats
-    (increases memory usage and runtime).
+    `flex-fna` support GQA/MQA natively, and `cutlass-fna` and `hopper-fna` support it with
+    explicit repeats (increases memory usage and runtime).
 
     Parameters:
         query (Tensor): 3-D query tensor, with the heads last layout:

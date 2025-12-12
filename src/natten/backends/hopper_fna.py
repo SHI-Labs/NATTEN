@@ -23,6 +23,7 @@
 import functools
 from typing import Optional, Tuple, Union
 
+import torch
 from torch import Tensor
 from torch.amp import custom_bwd, custom_fwd
 from torch.autograd import Function
@@ -358,7 +359,7 @@ def cutlass_hopper_fna_generic(
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
     na_tensor_checks(
-        query, key, value, must_match_head_dims=True, supports_gqa_mqa=False
+        query, key, value, must_match_head_dims=True, supports_gqa_mqa=True
     )
 
     assert can_run_cutlass_hopper_fna(query, key, value, raise_error=True)
@@ -390,6 +391,19 @@ def cutlass_hopper_fna_generic(
     )
 
     scale = scale or query.shape[-1] ** -0.5
+
+    # GQA/MQA is not supported by the kernel; only allowed via graph transform
+    is_gqa = query.shape[-2] != key.shape[-2]
+    if is_gqa:
+        heads = query.shape[-2]
+        heads_kv = key.shape[-2]
+        assert key.shape[-2] == value.shape[-2]
+        assert heads >= heads_kv
+        assert heads % heads_kv == 0
+        h_k = heads // heads_kv
+
+        key = torch.repeat_interleave(key, repeats=h_k, dim=-2, output_size=heads)
+        value = torch.repeat_interleave(value, repeats=h_k, dim=-2, output_size=heads)
 
     output, lse = CutlassHopperFNAAutogradFns[na_dim].apply(
         query,

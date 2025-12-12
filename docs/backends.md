@@ -68,7 +68,7 @@ following functions in your code.
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
-- [ ] GQA/MQA support (with tensor repeats)
+- [x] GQA/MQA support (with tensor repeats)
 - [ ] MLA support (head_dim != head_dim_v)
 - [x] torch.compile support without graph breaks
 

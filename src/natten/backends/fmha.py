@@ -249,6 +249,7 @@ def cutlass_fmha(
 
     scale = scale or query.shape[-1] ** -0.5
 
+    # GQA/MQA is not supported by the kernel; only allowed via graph transform
     is_gqa = query.shape[-2] != key.shape[-2]
     if is_gqa:
         heads = query.shape[-2]

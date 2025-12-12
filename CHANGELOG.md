@@ -7,7 +7,9 @@
     * All libnatten ops are now registered as torch ops, enabling full-graph compilation with NATTEN
         ops.
 * TokPerm kernels: Moved dilation to batch instead of heads, which finally unblocks GQA/MQA.
-* GQA/MQA available in CUTLASS FNA/FMHA, Blackwell FNA/FMHA, and Flex FNA/FMHA.
+* GQA/MQA support added for all FNA and FMHA operations.
+  * CUTLASS FNA/FMHA and Hopper FNA/FMHA don't support it in the kernels natively, therefore it's
+      implemented with graph transforms for now.
 
 ## [0.21.1] - 2025-10-26
 * FP8 inference support for Blackwell DC-class ([#266](https://github.com/SHI-Labs/NATTEN/pull/266))
