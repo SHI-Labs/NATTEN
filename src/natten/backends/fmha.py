@@ -208,7 +208,7 @@ def cutlass_fmha(
         key,
         value,
         must_match_head_dims=False,
-        supports_gqa_mqa=False,
+        supports_gqa_mqa=True,
         backend_name="CUTLASS FMHA",
     )
 
@@ -248,6 +248,19 @@ def cutlass_fmha(
     )
 
     scale = scale or query.shape[-1] ** -0.5
+
+    # GQA/MQA is not supported by the kernel; only allowed via graph transform
+    is_gqa = query.shape[-2] != key.shape[-2]
+    if is_gqa:
+        heads = query.shape[-2]
+        heads_kv = key.shape[-2]
+        assert key.shape[-2] == value.shape[-2]
+        assert heads >= heads_kv
+        assert heads % heads_kv == 0
+        h_k = heads // heads_kv
+
+        key = torch.repeat_interleave(key, repeats=h_k, dim=-2, output_size=heads)
+        value = torch.repeat_interleave(value, repeats=h_k, dim=-2, output_size=heads)
 
     output, lse = CutlassFmhaAutogradFn.apply(
         query,

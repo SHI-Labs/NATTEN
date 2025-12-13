@@ -32,8 +32,9 @@
 #include "natten/cuda/fna_blackwell/collective/sm100_fna_fwd_epilogue_tma_warpspecialized.hpp"
 #include "natten/cuda/fna_blackwell/collective/sm100_fna_fwd_mainloop_tma_warpspecialized.hpp"
 #include "natten/cuda/fna_blackwell/device/fna_sm100.hpp"
-#include "natten/cuda/fna_blackwell/kernel/fna_tile_scheduler.hpp"
 #include "natten/cuda/fna_blackwell/kernel/sm100_fna_fwd_kernel_tma_warpspecialized.hpp"
+
+#include "natten/cuda/fmha_blackwell/kernel/fmha_tile_scheduler.hpp"
 
 namespace natten {
 namespace cuda {
@@ -89,8 +90,8 @@ struct KernelForward {
 
   using TileScheduler = std::conditional_t<
       kIsPersistent,
-      cutlass::fna::kernel::PersistentTileScheduler,
-      cutlass::fna::kernel::IndividualTileScheduler>;
+      cutlass::fmha::kernel::PersistentTileScheduler,
+      cutlass::fmha::kernel::IndividualTileScheduler>;
 
   using Mainloop =
       cutlass::fna::collective::Sm100FnaFwdMainloopTmaWarpspecialized<
@@ -130,42 +131,44 @@ struct KernelForward {
       int batch,
       int seqlen_Q,
       int seqlen_KV,
-      int heads,
+      int heads_q,
+      int heads_kv,
       int dim,
-      int num_extra_kv,
+      float attn_scale,
+      // fna / fusion parameters
       NADim q_shape,
       NADim kv_shape,
       NADim qkv_shape,
       NADim window_size,
       NADim stride,
       NADim dilation,
-      int device_id,
-      float attn_scale) {
-    // No GQA/MQA for now
-    auto problem_shape_in = cute::make_tuple(
+      // init/launch params
+      int device_id) {
+    auto problem_shape_regular = cute::make_tuple(
         seqlen_Q,
         seqlen_KV,
+        // head dim is always either 32, 64, or 128 in natten, but it should
+        // always meet the 128-bit alignment constraint
         dim,
-        cute::make_tuple(cute::make_tuple(1, heads), batch));
+        cute::make_tuple(
+            cute::make_tuple(heads_q / heads_kv, heads_kv), batch));
 
-    ProblemShapeType problem_shape;
-    decltype(problem_shape_in) problem_size;
+    ProblemShapeType problem_shape_launch;
+    decltype(problem_shape_regular) problem_shape_memory;
 
-    problem_size = problem_shape_in;
-    problem_shape = problem_shape_in;
+    problem_shape_memory = problem_shape_regular;
+    problem_shape_launch = problem_shape_regular;
 
-    get<2>(problem_size) =
-        cutlass::round_up(get<2>(problem_size), 8); // alignment
+    // get<2>(problem_shape_memory) =
+    //     cutlass::round_up(get<2>(problem_shape_memory), 8); // alignment
 
-    int SQ = size<0>(problem_size);
-    int SK = size<1>(problem_size);
-    int D = size<2>(problem_size);
-    int H = size<3, 0>(problem_size);
-    int H_K = size<3, 0, 1>(problem_size);
-    int H_Q = size<3, 0, 0>(problem_size);
-    int B = size<3, 1>(problem_size);
-
-    int num_heads_actual = heads / size(dilation);
+    int SQ = size<0>(problem_shape_memory);
+    int SK = size<1>(problem_shape_memory);
+    int D = size<2>(problem_shape_memory);
+    int H = size<3, 0>(problem_shape_memory);
+    int H_K = size<3, 0, 1>(problem_shape_memory);
+    int H_Q = size<3, 0, 0>(problem_shape_memory);
+    int B = size<3, 1>(problem_shape_memory);
 
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, seqlen, heads, dim)
@@ -186,7 +189,7 @@ struct KernelForward {
             hw_info.device_id);
 
     Arguments arguments{
-        problem_shape,
+        problem_shape_launch,
         {reinterpret_cast<Element*>(ptr_Q),
          stride_Q,
          reinterpret_cast<Element*>(ptr_K),
@@ -199,8 +202,6 @@ struct KernelForward {
          window_size,
          stride,
          dilation,
-         num_heads_actual,
-         num_extra_kv,
          attn_scale},
         {reinterpret_cast<Element*>(ptr_O),
          stride_O,

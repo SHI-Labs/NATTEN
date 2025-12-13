@@ -5,10 +5,18 @@ attention (FNA).
 
 ## CUTLASS FNA / FMHA
 
-**Supported modes**
+**Supported features**
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
+- [x] GQA/MQA support (with tensor repeats)
+- [x] MLA support (head_dim != head_dim_v)
+- [x] torch.compile support without graph breaks
+
+**FMHA-specific features**
+
+- [x] Causal masking
+- [x] Variable length with sequence-packed format
 
 ![FNA visualization](assets/ampere-fna-viz.png){ width="80%" }
 /// caption
@@ -56,10 +64,18 @@ following functions in your code.
 
 ## Hopper FNA / FMHA
 
-**Supported modes**
+**Supported features**
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
+- [x] GQA/MQA support (with tensor repeats)
+- [ ] MLA support (head_dim != head_dim_v)
+- [x] torch.compile support without graph breaks
+
+**FMHA-specific features**
+
+- [ ] Causal masking
+- [ ] Variable length with sequence-packed format
 
 ![Hopper FNA performance sample](assets/hopper-fna-perf.png){ width="80%" }
 /// caption
@@ -100,10 +116,18 @@ following functions in your code.
 
 ## Blackwell FNA / FMHA
 
-**Supported modes**
+**Supported features**
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
+- [x] GQA/MQA support (with tensor repeats)
+- [ ] MLA support (head_dim != head_dim_v)
+- [x] torch.compile support without graph breaks
+
+**FMHA-specific features**
+
+- [x] Causal masking
+- [x] Variable length with sequence-packed format
 
 ![Blackwell FNA performance sample](assets/blackwell-fna-perf.png){ width="80%" }
 /// caption
@@ -143,15 +167,23 @@ following functions in your code.
 ## Flex FNA / FMHA
 
 !!! warning
-    This feature is experimental.
+    This backend is experimental.
 
-**Supported modes**
+!!! info inline end
+    This backend requires PyTorch >= 2.7.
+
+**Supported features**
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
+- [x] GQA/MQA support (with tensor repeats)
+- [ ] MLA support (head_dim != head_dim_v)
+- [ ] torch.compile support without graph breaks
 
-!!! info inline end
-    This feature requires PyTorch >= 2.7.
+**FMHA-specific features**
+
+- [ ] Causal masking
+- [ ] Variable length with sequence-packed format
 
 This backend is PyTorch-native, and supports some non-NVIDIA devices as well (CPU and ROCm).
 It is based on 

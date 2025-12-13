@@ -63,7 +63,10 @@ template <
     // (2, 1, 1) means that they are stacked (best for large Q since it loads
     // the least K/V) (1, 2, 1) means they sit side by side (best for small Q /
     // large K)
-    class ThreadShape = Shape<_2, _1, _1>>
+    class ThreadShape = Shape<_2, _1, _1>,
+    // Since shared memory is sufficient for FMHA, there is no need to reuse
+    // shared memory.
+    class OrderLoadEpilogue = cute::false_type>
 struct Sm100FnaFwdMainloopTmaWarpspecialized {
   using Element = Element_;
   using ElementQK = ElementQK_;
@@ -143,6 +146,9 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       typename CollectiveMmaPV::SmemLayoutB{},
       Int<StageCountKV>{}));
 
+  // Reuse shared memory for V and O.
+  static constexpr bool IsOrderLoadEpilogue =
+      std::is_same_v<OrderLoadEpilogue, cute::true_type>;
   struct TensorStorage {
     cute::array_aligned<Element, cute::cosize_v<SmemLayoutQ>> smem_q;
     union {
@@ -206,14 +212,13 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
   static const int TransactionBytesLoadQ = cutlass::bits_to_bytes(
       cosize(take<0, 3>(SmemLayoutQ{})) * cute::sizeof_bits_v<Element>);
 
-  static const int TransactionBytesLoadKV = cutlass::bits_to_bytes(
+  static const int TransactionBytesLoadK = cutlass::bits_to_bytes(
       cosize(take<0, 3>(SmemLayoutK{})) * cute::sizeof_bits_v<Element>);
+  static const int TransactionBytesLoadV = cutlass::bits_to_bytes(
+      cosize(take<0, 3>(SmemLayoutV{})) * cute::sizeof_bits_v<Element>);
 
   static_assert(
-      cutlass::bits_to_bytes(
-          cosize(take<0, 3>(SmemLayoutK{})) * cute::sizeof_bits_v<Element>) ==
-          cutlass::bits_to_bytes(
-              cosize(take<0, 3>(SmemLayoutV{})) * cute::sizeof_bits_v<Element>),
+      TransactionBytesLoadK == TransactionBytesLoadV,
       "K and V smem layouts must be of equal size");
 
   using Load = Sm100FnaLoadTmaWarpspecialized<
@@ -266,9 +271,9 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     return evenly_divides(args.load.q_shape, QTileShape{}) &&
         evenly_divides(args.load.kv_shape, KVTileShape{}) &&
         evenly_divides(
-               size<3, 0, 1>(problem_shape),
+               size<3, 1>(problem_shape),
                size(args.load.dilation)) && // dilation groups are
-                                            // folded into heads
+                                            // folded into batch
         tuple_leq(args.load.window_size, args.load.qkv_shape) &&
         // TODO: check window size * dilation <= qkv shape
         tuple_leq(args.load.stride, args.load.window_size);
@@ -347,7 +352,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           params.load.qkv_shape,
           blk_coord,
           params.load.dilation,
-          params.load.num_heads_actual);
+          params.load.num_dilation_groups);
     } else if (params.load.is_dilated) {
       qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
     }
@@ -358,13 +363,6 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
         params.load.q_shape,
         qkv_shape,
         params.load.na_params)));
-    auto [num_extra_trips_unmasked, has_masked_extra_trips] =
-        Mask{}.get_extra_trip_count(
-            MultiDimTileShape{}, params.load.num_extra_kv);
-    mask_tile_count += num_extra_trips_unmasked;
-    if (has_masked_extra_trips) {
-      mask_tile_count++;
-    }
 
     typename CollectiveMmaQK::TiledMma mma_qk;
     ThrMMA thr_mma_qk = mma_qk.get_slice(0);
@@ -612,10 +610,9 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
 
   template <
       bool need_apply_mask,
-      bool is_extra_kv,
       class Stage,
       class BlkCoord,
-      class CountingTensor,
+      class CoordTensor,
       class ProblemShape,
       class NADim>
   CUTLASS_DEVICE auto softmax_step(
@@ -629,7 +626,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       Stage stage,
       bool final_call,
       BlkCoord const& blk_coord,
-      CountingTensor const& cS,
+      CoordTensor const& cS,
       Params const& params,
       ProblemShape const& problem_shape,
       PipelineS& pipeline_s,
@@ -651,7 +648,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     Tensor tScS_v = tScS.compose(make_layout(make_shape(_128{}, _2{})));
 
     auto tilePlikeFP32 =
-        get<1>(TileShapeQK{}) / Int<sizeof(float)>{} * Int<sizeof(Element)>{};
+        size<1>(TileShapeQK{}) / Int<sizeof(float)>{} * Int<sizeof(Element)>{};
     Tensor tStS_P =
         tStS.compose(make_layout(make_shape(_128{}, tilePlikeFP32)));
     tStS_P.data() = warp_uniform(
@@ -695,12 +692,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     Tensor tTMEM_LOADrS = make_tensor<ElementQK>(shape(tTMEM_LOADcS));
     copy(tiled_tmem_load, tTMEM_LOADtS, tTMEM_LOADrS);
 
-    if constexpr (need_apply_mask && is_extra_kv) {
-      if (not params.load.extra_kv_divides_tile) {
-        Mask{}.apply_extra_kv_mask(
-            tTMEM_LOADrS, tTMEM_LOADcS, params.load.num_extra_kv);
-      }
-    } else if constexpr (need_apply_mask) {
+    if constexpr (need_apply_mask) {
       if (not is_fully_block_sparse) {
         Mask{}.apply_mask(
             tTMEM_LOADrS,
@@ -824,7 +816,9 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
 
     pipeline_c.producer_acquire(pipeline_c_producer_state);
 
-    ElementQK acc_scale = 0.5f * ::exp2f(scale * (old_row_max - row_max_safe));
+    ElementQK acc_scale = (old_row_max == row_max_safe)
+        ? 0.5f
+        : 0.5f * ::exp2f(scale * (old_row_max - row_max_safe));
     row_sum *= acc_scale;
     // row_sum = sum(reg_S)
     float2 local_row_sum_f32x2 = make_float2(row_sum, row_sum);
@@ -886,7 +880,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           params.load.qkv_shape,
           blk_coord,
           params.load.dilation,
-          params.load.num_heads_actual);
+          params.load.num_dilation_groups);
       is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
           qkv_shape,
           get<0>(params.load.na_params),
@@ -905,9 +899,6 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       has_kv_padding = not evenly_divides(qkv_shape, KVTileShape{});
     }
 
-    auto [num_extra_trips_unmasked, has_masked_extra_trips] =
-        Mask{}.get_extra_trip_count(
-            MultiDimTileShape{}, params.load.num_extra_kv);
     auto [kv_offset, num_tiles] = Mask{}.get_trip_count(
         blk_coord,
         MultiDimTileShape{},
@@ -931,7 +922,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     // (Self/neighborhood) attention iterations
     CUTLASS_PRAGMA_NO_UNROLL
     for (; mask_tile_count > 0; mask_tile_count -= 1) {
-      softmax_step<true /* need_apply_mask */, false /* is_extra_kv */>(
+      softmax_step<true /* need_apply_mask */>(
           qkv_shape,
           is_fully_block_sparse,
           has_kv_padding,
@@ -940,8 +931,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           row_max,
           row_sum,
           stage,
-          mask_tile_count == 1 && num_extra_trips_unmasked == 0 &&
-              not has_masked_extra_trips,
+          mask_tile_count == 1,
           blk_coord,
           cS,
           params,
@@ -954,66 +944,6 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
 
       cS.data() =
           cS.data() + E<1>{} * get<1>(ThreadShape{}) * get<1>(TileShapeQK{});
-    }
-
-    // Extra KV iterations
-    if (num_extra_trips_unmasked > 0 || has_masked_extra_trips) {
-      int extra_kv_tile_offset =
-          ceil_div(params.load.extra_kv_offset, get<1>(TileShape{}));
-      auto logical_offset_self_attn = make_coord(
-          get<0>(blk_coord) * get<0>(TileShape{}) +
-              (stage % get<0>(ThreadShape{})) * get<0>(TileShapeQK{}),
-          extra_kv_tile_offset * get<1>(TileShapeQK{}) +
-              (stage % get<1>(ThreadShape{})) * get<1>(TileShapeQK{}));
-      Tensor cS = domain_offset(logical_offset, cS_base);
-
-      CUTLASS_PRAGMA_NO_UNROLL
-      for (; num_extra_trips_unmasked > 0; num_extra_trips_unmasked -= 1) {
-        softmax_step<false /* need_apply_mask */, true /* is_extra_kv */>(
-            qkv_shape,
-            is_fully_block_sparse,
-            has_kv_padding,
-            kv_offset,
-            num_tiles,
-            row_max,
-            row_sum,
-            stage,
-            num_extra_trips_unmasked == 1 && not has_masked_extra_trips,
-            blk_coord,
-            cS,
-            params,
-            problem_shape,
-            pipeline_s,
-            pipeline_s_consumer_state,
-            pipeline_c,
-            pipeline_c_producer_state,
-            order_s);
-
-        cS.data() =
-            cS.data() + E<1>{} * get<1>(ThreadShape{}) * get<1>(TileShapeQK{});
-      }
-
-      if (has_masked_extra_trips) {
-        softmax_step<true /* need_apply_mask */, true /* is_extra_kv */>(
-            qkv_shape,
-            is_fully_block_sparse,
-            has_kv_padding,
-            kv_offset,
-            num_tiles,
-            row_max,
-            row_sum,
-            stage,
-            true,
-            blk_coord,
-            cS,
-            params,
-            problem_shape,
-            pipeline_s,
-            pipeline_s_consumer_state,
-            pipeline_c,
-            pipeline_c_producer_state,
-            order_s);
-      }
     }
 
     pipeline_c.producer_commit(pipeline_c_producer_state);
@@ -1196,13 +1126,16 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       }
 
       Tensor tTMrO_i = tTMrO(_, i).compose(make_layout(shape<0>(tTMrO)));
-      CUTLASS_PRAGMA_UNROLL
-      for (int j = 0; j < size(tTMrO_i); j += 2) {
-        float2 in = make_float2(tTMrO_i(j), tTMrO_i(j + 1));
-        float2 out;
-        cute::mul(out, scale_f32x2, in);
-        tTMrO_i(j) = out.x;
-        tTMrO_i(j + 1) = out.y;
+
+      if (scale != 1.0f) {
+        CUTLASS_PRAGMA_UNROLL
+        for (int j = 0; j < size(tTMrO_i); j += 2) {
+          float2 in = make_float2(tTMrO_i(j), tTMrO_i(j + 1));
+          float2 out;
+          cute::mul(out, scale_f32x2, in);
+          tTMrO_i(j) = out.x;
+          tTMrO_i(j + 1) = out.y;
+        }
       }
 
       copy_out(i);
@@ -1235,7 +1168,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
           params.load.qkv_shape,
           blk_coord,
           params.load.dilation,
-          params.load.num_heads_actual);
+          params.load.num_dilation_groups);
     } else if (params.load.is_dilated) {
       qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
     }
@@ -1246,13 +1179,6 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
         params.load.q_shape,
         qkv_shape,
         params.load.na_params)));
-    auto [num_extra_trips_unmasked, has_masked_extra_trips] =
-        Mask{}.get_extra_trip_count(
-            MultiDimTileShape{}, params.load.num_extra_kv);
-    mask_tile_count += num_extra_trips_unmasked;
-    if (has_masked_extra_trips) {
-      mask_tile_count++;
-    }
 
     int thread_idx = threadIdx.x % (4 * cutlass::NumThreadsPerWarp);
 
@@ -1302,13 +1228,19 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       copy(tiled_tmem_loadv, tTMEM_LOADVtS0, tTMEM_LOADVrS);
 
       // e^(scale * (old_max - new_max)
-      float scale = ::exp2f(
-          params.scale_softmax_log2 *
-          (tTMEM_LOADVrS(kIdxOldRowMax) - tTMEM_LOADVrS(kIdxNewRowMax)));
+      float scale =
+          (tTMEM_LOADVrS(kIdxOldRowMax) == tTMEM_LOADVrS(kIdxNewRowMax))
+          ? 1.0f
+          : ::exp2f(
+                params.scale_softmax_log2 *
+                (tTMEM_LOADVrS(kIdxOldRowMax) - tTMEM_LOADVrS(kIdxNewRowMax)));
 
       pipeline_o.consumer_wait(pipeline_o_consumer_state);
 
-      correction_rescale(scale, uint32_t(TmemAllocation::O0));
+      bool warp_do_correction = __any_sync(0xFFFFFFFF, scale != 1.0f);
+      if (warp_do_correction) {
+        correction_rescale(scale, uint32_t(TmemAllocation::O0));
+      }
 
       pipeline_s1_c.consumer_release(pipeline_s1_c_consumer_state);
       ++pipeline_s1_c_consumer_state;
@@ -1322,13 +1254,18 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
 
       copy(tiled_tmem_loadv, tTMEM_LOADVtS1, tTMEM_LOADVrS);
 
-      scale = ::exp2f(
-          params.scale_softmax_log2 *
-          (tTMEM_LOADVrS(kIdxOldRowMax) - tTMEM_LOADVrS(kIdxNewRowMax)));
+      scale = (tTMEM_LOADVrS(kIdxOldRowMax) == tTMEM_LOADVrS(kIdxNewRowMax))
+          ? 1.0f
+          : ::exp2f(
+                params.scale_softmax_log2 *
+                (tTMEM_LOADVrS(kIdxOldRowMax) - tTMEM_LOADVrS(kIdxNewRowMax)));
 
       pipeline_o.consumer_wait(pipeline_o_consumer_state);
 
-      correction_rescale(scale, uint32_t(TmemAllocation::O1));
+      warp_do_correction = __any_sync(0xFFFFFFFF, scale != 1.0f);
+      if (warp_do_correction) {
+        correction_rescale(scale, uint32_t(TmemAllocation::O1));
+      }
 
       pipeline_s0_c.consumer_release(pipeline_s0_c_consumer_state);
       ++pipeline_s0_c_consumer_state;
@@ -1371,7 +1308,7 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
         typename TensorStorageEpi::SmemLayoutO{});
     Tensor gLSE = make_tensor(
         make_gmem_ptr(epilogue.params.ptr_LSE),
-        repeat_like(typename CollectiveEpilogue::StrideLSE{}, _1{}),
+        select<0, 3>(problem_shape),
         epilogue.params.dLSE);
 
     correction_epilogue(
@@ -1428,6 +1365,87 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     pipeline_o.consumer_release(pipeline_o_consumer_state);
     ++pipeline_o_consumer_state;
 
+    pipeline_epi.producer_commit(pipeline_epi_producer_state);
+    ++pipeline_epi_producer_state;
+  }
+
+  template <
+      class BlkCoord,
+      class ProblemShape,
+      class ParamsProblemShape,
+      class TensorStorageEpi,
+      class CollectiveEpilogue>
+  CUTLASS_DEVICE auto correction_empty(
+      BlkCoord const& blk_coord,
+      Params const& params,
+      ProblemShape const& problem_shape,
+      ParamsProblemShape const& params_problem_shape,
+      TensorStorageEpi& shared_storage_epi,
+      PipelineE& pipeline_epi,
+      typename PipelineE::PipelineState& pipeline_epi_producer_state,
+      CollectiveEpilogue& epilogue) {
+    pipeline_epi.producer_acquire(pipeline_epi_producer_state);
+
+    Tensor sO = make_tensor(
+        make_smem_ptr(shared_storage_epi.smem_o.data()),
+        typename TensorStorageEpi::SmemLayoutO{});
+    Tensor gLSE = make_tensor(
+        make_gmem_ptr(epilogue.params.ptr_LSE),
+        select<0, 3>(problem_shape),
+        epilogue.params.dLSE);
+    float lse = -INFINITY;
+    int thread_idx = threadIdx.x % (4 * NumThreadsPerWarp);
+
+#define DSHOW(x)  \
+  print(#x ": "); \
+  print(x);       \
+  print("\n")
+    if (threadIdx.x % 128 == 0 && block0()) {
+      DSHOW(sO);
+    }
+#if 1
+
+    using ElementOut = typename CollectiveEpilogue::ElementOut;
+    auto tiled_copy = make_cotiled_copy(
+        Copy_Atom<UniversalCopy<uint32_t>, ElementOut>{},
+        make_ordered_layout(
+            make_shape(_128{}, Int<sizeof(uint32_t) / sizeof(ElementOut)>{}),
+            Step<_1, _0>{}),
+        sO.layout());
+
+    auto thr_copy = tiled_copy.get_slice(thread_idx);
+    auto tOgO = thr_copy.partition_D(sO);
+    auto tOrO = make_tensor<ElementOut>(shape(tOgO(_, _, _, _0{})));
+    clear(tOrO);
+
+    copy(tiled_copy, tOrO, tOgO(_, _, _, _0{}));
+#endif
+
+    if (epilogue.params.ptr_LSE != nullptr) {
+      int row_idx = thread_idx + get<0>(TileShape{}) * get<0>(blk_coord);
+
+      if (row_idx < get<0>(problem_shape)) {
+        gLSE(row_idx, get<2>(blk_coord)) = lse;
+      }
+    }
+
+    pipeline_epi.producer_commit(pipeline_epi_producer_state);
+    ++pipeline_epi_producer_state;
+
+    copy(tiled_copy, tOrO, tOgO(_, _, _, _1{}));
+    cutlass::arch::fence_view_async_shared();
+    pipeline_epi.producer_acquire(pipeline_epi_producer_state);
+
+    if (epilogue.params.ptr_LSE != nullptr) {
+      int row_idx = thread_idx + get<0>(TileShape{}) * get<0>(blk_coord) +
+          get<0>(TileShapeQK{});
+
+      if (row_idx < get<0>(problem_shape)) {
+        gLSE(row_idx, get<2>(blk_coord)) = lse;
+      }
+    }
+
+    cutlass::arch::fence_view_async_shared();
     pipeline_epi.producer_commit(pipeline_epi_producer_state);
     ++pipeline_epi_producer_state;
   }

@@ -297,10 +297,10 @@ struct NeighborhoodAttentionMask {
                                  // the self attention
       BlkCoord const& blk_coord,
       Dilation const& dilation,
-      int num_heads_actual) {
-    auto head_idx = get<2, 0>(blk_coord);
+      int num_dilation_groups) {
+    auto batch_idx = get<2, 1>(blk_coord);
 
-    auto dilation_group_idx = head_idx / num_heads_actual;
+    auto dilation_group_idx = batch_idx % num_dilation_groups;
     auto dilation_group_crd = idx2crd(dilation_group_idx, dilation);
 
     return correct_qkv_shape_wrt_dilation(

@@ -150,9 +150,9 @@ def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = Tru
 
     permutation_idxes = (
         [0]
+        + permutation_idxes_d
         + permutation_idxes_r
         + permutation_idxes_t
-        + permutation_idxes_d
         + [na_dim * 3 + 1, na_dim * 3 + 2]
     )
 
@@ -168,7 +168,7 @@ def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = Tru
 
     # Reshape back and copy
     tensor_flatten = tensor_permuted.reshape(
-        batch, math.prod(attn_dims_post_dilation), num_dilation_groups * heads, dim
+        num_dilation_groups * batch, math.prod(attn_dims_post_dilation), heads, dim
     ).contiguous()
     # NOTE: token permute without dilation is a no-op for 1-D
     # assert na_dim == 1 or tensor_flatten.data_ptr() != tensor_permuted.data_ptr()
@@ -212,13 +212,13 @@ def token_unpermute(
 
     batch, seqlen, heads, dim = tensor.shape
 
-    if heads % num_dilation_groups != 0:
+    if batch % num_dilation_groups != 0:
         raise ValueError(
-            "Expected number of heads in token-permuted tensor to be divisible by "
-            f"number of dilation groups {num_dilation_groups} ({dilation=}), got {heads=}."
+            "Expected batch size in token-permuted tensor to be divisible by "
+            f"number of dilation groups {num_dilation_groups} ({dilation=}), got {batch=}."
         )
 
-    heads_actual = heads // num_dilation_groups
+    batch_actual = batch // num_dilation_groups
 
     orig_shape_pre_dilation = tuple(x * d for x, d in zip(orig_shape, dilation))
 
@@ -227,19 +227,23 @@ def token_unpermute(
     tile_shape_ = reversed(tile_shape) if flip_tiled_dims else tile_shape
     dilation_ = reversed(dilation) if flip_tiled_dims else dilation
     tensor_tiled = tensor.view(
-        batch, *rest_shape_, *tile_shape_, *dilation_, heads_actual, dim
+        batch_actual, *dilation_, *rest_shape_, *tile_shape_, heads, dim
     )
     if not is_torch_compiling():
         assert tensor_tiled.data_ptr() == tensor.data_ptr()
 
     # Undo permutation
+    # batch
     permutation_idxes = [0]
+
+    # dilation, rest, tile -> rest, tile, dilation
     for i in range(na_dim):
         if flip_tiled_dims:
-            permutation_idxes += [na_dim - i, 2 * na_dim - i, 3 * na_dim - i]
+            permutation_idxes += [2 * na_dim - i, 3 * na_dim - i, na_dim - i]
         else:
-            permutation_idxes += [i + 1, na_dim + i + 1, 2 * na_dim + i + 1]
+            permutation_idxes += [na_dim + i + 1, 2 * na_dim + i + 1, i + 1]
 
+    # heads, head_dim
     permutation_idxes += [na_dim * 3 + 1, na_dim * 3 + 2]
 
     # View, not copy
@@ -249,7 +253,7 @@ def token_unpermute(
 
     # Reshape back and copy
     out = tensor_permuted.reshape(
-        batch, *orig_shape_pre_dilation, heads_actual, dim
+        batch_actual, *orig_shape_pre_dilation, heads, dim
     ).contiguous()
     # NOTE: token permute without dilation is a no-op for 1-D
     # assert na_dim == 1 or out.data_ptr() != tensor_permuted.data_ptr()

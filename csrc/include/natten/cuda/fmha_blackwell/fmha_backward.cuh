@@ -45,7 +45,7 @@ struct KernelBackward {
   using ElementAccumulator = float;
   using VariableLength = cutlass::fmha::collective::VariableLength;
 
-  // Q K D ((H_R, H_K) B)
+  // Q K D D_VO ((H_R, H_K) B)
   using ProblemShapeRegular =
       cute::tuple<int, int, int, int, cute::tuple<cute::tuple<int, int>, int>>;
   using ProblemShapeVarlen = cute::tuple<
