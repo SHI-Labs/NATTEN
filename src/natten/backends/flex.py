@@ -624,13 +624,13 @@ def flex_fna_generic(
             query,
             tile_shape=q_tile_shape,
             dilation=dilation,
-            flip_tiled_dims=True,
+            flip_tiled_dims=False,
         )
         key_perm, _, k_shape = token_permute_operation(
-            key, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            key, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=False
         )
         value_perm, _, v_shape = token_permute_operation(
-            value, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            value, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=False
         )
 
         assert k_shape == v_shape
@@ -688,14 +688,14 @@ def flex_fna_generic(
             token_layout_shape=qkv_shape,
             tile_shape=q_tile_shape,
             dilation=dilation,
-            flip_tiled_dims=True,
+            flip_tiled_dims=False,
         )
         lse = token_unpermute_operation(
             lse,
             token_layout_shape=qkv_shape,
             tile_shape=q_tile_shape,
             dilation=dilation,
-            flip_tiled_dims=True,
+            flip_tiled_dims=False,
         ).squeeze(-1)
     else:
         out = out_.transpose(1, 2).reshape(
