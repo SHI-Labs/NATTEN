@@ -161,7 +161,7 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
                 tile_shape=q_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,
-            )
+            ).squeeze(-1)
             # Token un-permute end
 
             ctx.save_for_backward(query, key, value, logsumexp, output)
@@ -214,7 +214,7 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
                 flip_tiled_dims=True,
             )
             logsumexp_perm, _, _ = token_permute_operation(
-                logsumexp,
+                logsumexp.unsqueeze(-1),
                 tile_shape=q_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,

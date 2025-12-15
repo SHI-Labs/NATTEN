@@ -696,7 +696,7 @@ def flex_fna_generic(
             tile_shape=q_tile_shape,
             dilation=dilation,
             flip_tiled_dims=True,
-        )
+        ).squeeze(-1)
     else:
         out = out_.transpose(1, 2).reshape(
             batch_size, *qkv_shape, num_heads, head_dim_v
