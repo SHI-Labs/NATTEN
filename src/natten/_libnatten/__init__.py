@@ -60,6 +60,12 @@ try:
         reference_na2d_forward,
         reference_na3d_backward,
         reference_na3d_forward,
+        token_permute_1d,
+        token_permute_2d,
+        token_permute_3d,
+        token_unpermute_1d,
+        token_unpermute_2d,
+        token_unpermute_3d,
     )
 
 except ImportError:
@@ -97,6 +103,12 @@ except ImportError:
         reference_na2d_forward,
         reference_na3d_backward,
         reference_na3d_forward,
+        token_permute_1d,
+        token_permute_2d,
+        token_permute_3d,
+        token_unpermute_1d,
+        token_unpermute_2d,
+        token_unpermute_3d,
     )
 
 
@@ -132,4 +144,10 @@ __all__ = [
     "reference_na2d_forward",
     "reference_na3d_backward",
     "reference_na3d_forward",
+    "token_permute_1d",
+    "token_permute_2d",
+    "token_permute_3d",
+    "token_unpermute_1d",
+    "token_unpermute_2d",
+    "token_unpermute_3d",
 ]

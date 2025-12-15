@@ -50,6 +50,10 @@ def parse_env_int(env_var: str, default: int) -> int:
         return default
 
 
+def parse_env_str(env_var: str, default: str) -> str:
+    return os.getenv(env_var, str(default))
+
+
 _IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
 _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
