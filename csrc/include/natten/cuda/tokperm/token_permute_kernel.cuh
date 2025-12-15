@@ -321,10 +321,10 @@ struct TokenPermuteKernel {
 
         using VecSrc = uint_bit_t<sizeof_bits_v<ElementIn> * kElementsPerLoad>;
         using VecDst = uint_bit_t<sizeof_bits_v<ElementOut> * kElementsPerLoad>;
-        *reinterpret_cast<VecSrc*>(value_src) =
-            *reinterpret_cast<VecSrc*>(&ptr_src_bhs[idx_d]);
-
         if (pred) {
+          *reinterpret_cast<VecSrc*>(value_src) =
+              *reinterpret_cast<VecSrc*>(&ptr_src_bhs[idx_d]);
+
           for (int v = 0; v < kElementsPerLoad; v++) {
             value_dst[v] = static_cast<ElementOut>(value_src[v]);
           }
