@@ -23,56 +23,20 @@
 
 from typing import Optional
 
-import torch
 from torch import Tensor
 
 from natten._environment import USE_TORCH_IMPL_DEFAULT
-from natten._libnatten import (
-    HAS_LIBNATTEN,
-    token_permute_1d,
-    token_permute_2d,
-    token_permute_3d,
-    token_unpermute_1d,
-    token_unpermute_2d,
-    token_unpermute_3d,
+from natten.token_permute.cutlass_impl import (
+    can_run_cutlass_tokperm,
+    token_permute_cutlass,
+    token_unpermute_cutlass,
 )
 from natten.token_permute.torch_impl import token_permute_torch, token_unpermute_torch
 from natten.types import DimensionType
 from natten.utils import log
-from natten.utils.device import get_device_cc, is_cuda
 from natten.utils.tuples import ceil_div_tuple, mul_tuple
 
 logger = log.get_logger(__name__)
-
-
-def can_implement_with_libnatten(tensor: Tensor) -> bool:
-    if not HAS_LIBNATTEN:
-        logger.debug(
-            "Can't use libnatten TokPerm kernels, because libnatten is not available."
-        )
-        return False
-
-    if not is_cuda(tensor.device):
-        logger.debug(
-            "Can't use libnatten TokPerm kernels, because input is not a CUDA tensor."
-        )
-        return False
-
-    is_fp8_allowed = get_device_cc(tensor.device) in [100, 103]
-    if tensor.dtype not in [
-        torch.float32,
-        torch.float16,
-        torch.bfloat16,
-        torch.float16,
-    ] and (
-        is_fp8_allowed and tensor.dtype not in [torch.float8_e5m2, torch.float8_e4m3fn]
-    ):
-        logger.debug(
-            f"Can't use libnatten TokPerm kernels; unexpected dtype {tensor.dtype}."
-        )
-        return False
-
-    return True
 
 
 def token_permute_operation(
@@ -103,24 +67,20 @@ def token_permute_operation(
 
     dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
 
-    fn_map = {1: token_permute_1d, 2: token_permute_2d, 3: token_permute_3d}
-
     tensor = tensor.contiguous()
     batch, *token_layout_, heads, dim = tensor.shape
     token_layout: DimensionType = tuple(x for x in token_layout_)  # type: ignore[assignment]
 
     token_layout_post_dilation: DimensionType = mul_tuple(ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation_), tile_shape)  # type: ignore[assignment]
 
-    if not use_torch and can_implement_with_libnatten(tensor):
-        # Use TokPerm kernels
-        output = fn_map[na_dim](
+    if not use_torch and can_run_cutlass_tokperm(tensor):
+        output = token_permute_cutlass(
             tensor,
             tile_shape=tile_shape,
             dilation=dilation_,
             flip_tiled_dims=flip_tiled_dims,
         )
     else:
-        # Fall back to torch impl
         output = token_permute_torch(
             tensor,
             tile_shape=tile_shape,
@@ -157,10 +117,8 @@ def token_unpermute_operation(
     dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
 
     tensor = tensor.contiguous()
-    if not use_torch and can_implement_with_libnatten(tensor):
-        # Use TokPerm kernels
-        fn_map = {1: token_unpermute_1d, 2: token_unpermute_2d, 3: token_unpermute_3d}
-        output = fn_map[na_dim](
+    if not use_torch and can_run_cutlass_tokperm(tensor):
+        output = token_unpermute_cutlass(
             tensor,
             token_layout_shape,
             tile_shape=tile_shape,
@@ -168,7 +126,6 @@ def token_unpermute_operation(
             flip_tiled_dims=flip_tiled_dims,
         )
     else:
-        # Fall back to torch impl
         output = token_unpermute_torch(
             tensor,
             token_layout_shape,
