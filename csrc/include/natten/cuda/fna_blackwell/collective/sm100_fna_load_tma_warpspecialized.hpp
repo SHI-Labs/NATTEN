@@ -88,8 +88,6 @@ struct Sm100FnaLoadTmaWarpspecialized {
     NADim window_size;
     NADim stride;
     NADim dilation;
-    int num_heads_actual; // heads / size(dilation)
-    int num_extra_kv;
   };
 
   using TMA_Q = typename CollectiveMmaQK::Params::TMA_A;
@@ -105,15 +103,12 @@ struct Sm100FnaLoadTmaWarpspecialized {
     NADim kv_shape;
     cute::tuple<NADim, NADim, NADim, NADim>
         na_params; // win, win_left, win_right, stride
-    int num_extra_kv;
-    int extra_kv_offset;
     bool is_fully_block_sparse;
     bool has_kv_padding;
-    bool extra_kv_divides_tile;
     NADim dilation;
     bool requires_qkv_fixup;
     bool is_dilated;
-    int num_heads_actual;
+    int num_dilation_groups;
   };
 
   template <class ProblemShape>
@@ -163,10 +158,6 @@ struct Sm100FnaLoadTmaWarpspecialized {
         args.q_shape,
         args.kv_shape,
         make_tuple(args.window_size, window_left, window_right, args.stride),
-        args.num_extra_kv,
-        /* extra_kv_offset */ size(args.kv_shape), // NOTE: dilation > 1 would
-                                                   // have to repeat extra kv
-                                                   // along heads
         fully_block_sparse<typename Mask::Causal>(
             args.qkv_shape,
             args.window_size,
@@ -174,12 +165,10 @@ struct Sm100FnaLoadTmaWarpspecialized {
             QTileShape{},
             KVTileShape{}),
         /* has_kv_padding */ not evenly_divides(args.qkv_shape, KVTileShape{}),
-        /* extra_kv_divides_tile */ args.num_extra_kv % get<1>(TileShape{}) ==
-            0,
         args.dilation,
         requires_qkv_fixup,
         is_dilated(args.dilation),
-        args.num_heads_actual};
+        size(args.dilation)};
   }
 
   CUTLASS_DEVICE
@@ -210,7 +199,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
           params.qkv_shape,
           blk_coord_in,
           params.dilation,
-          params.num_heads_actual);
+          params.num_dilation_groups);
     } else if (params.is_dilated) {
       qkv_shape = ceil_div(params.qkv_shape, params.dilation);
     }
@@ -224,12 +213,6 @@ struct Sm100FnaLoadTmaWarpspecialized {
 
     int mask_tile_count = size(num_tiles);
 
-    auto mask_tile_count_extra =
-        Mask{}.get_extra_trip_info(MultiDimTileShape{}, params.num_extra_kv);
-
-    int extra_kv_tile_offset =
-        ceil_div(params.extra_kv_offset, get<1>(TileShape{}));
-
     auto kv_start_tile = ceil_div(kv_start, KVTileShape{});
 
     auto kv_tiled = ceil_div(params.kv_shape, KVTileShape{});
@@ -237,6 +220,10 @@ struct Sm100FnaLoadTmaWarpspecialized {
     auto ctr_offset = domain_offset(kv_start_tile, ctr);
 
     auto kv_tiled_layout = make_layout(kv_tiled);
+
+    auto iter_to_tile_map = [&ctr_offset, &kv_tiled_layout](int iter) {
+      return crd2idx(ctr_offset(iter), kv_tiled_layout);
+    };
 
     using X = Underscore;
 
@@ -253,10 +240,9 @@ struct Sm100FnaLoadTmaWarpspecialized {
         params.tma_load_q.get_tma_tensor(select<0, 2, 3>(problem_shape));
 
     int q_offs_0 = 0;
-    int q_offs_2_1 = 0;
 
     Tensor mQ_qdl = domain_offset(
-        make_coord(q_offs_0, _0{}, make_coord(_0{}, q_offs_2_1)), mQ_qdl_p);
+        make_coord(q_offs_0, _0{}, make_coord(_0{}, _0{})), mQ_qdl_p);
 
     Tensor gQ_qdl = local_tile(
         mQ_qdl, TileShapeQK{}, make_coord(_, _, _), Step<_1, X, _1>{});
@@ -276,10 +262,9 @@ struct Sm100FnaLoadTmaWarpspecialized {
         params.tma_load_k.get_tma_tensor(select<1, 2, 3>(problem_shape));
 
     int kv_offs_0 = 0;
-    int kv_offs_2_1 = 0;
 
     Tensor mK_kdl = domain_offset(
-        make_coord(kv_offs_0, _0{}, make_coord(_0{}, kv_offs_2_1)), mK_kdl_p);
+        make_coord(kv_offs_0, _0{}, make_coord(_0{}, _0{})), mK_kdl_p);
 
     Tensor gK_kdl = local_tile(
         mK_kdl, TileShapeQK{}, make_coord(_, _, _), Step<X, _1, _1>{});
@@ -300,7 +285,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
         params.tma_load_v.get_tma_tensor(select<2, 1, 3>(problem_shape));
 
     Tensor mV_dkl = domain_offset(
-        make_coord(_0{}, kv_offs_0, make_coord(_0{}, kv_offs_2_1)), mV_dkl_p);
+        make_coord(_0{}, kv_offs_0, make_coord(_0{}, _0{})), mV_dkl_p);
 
     Tensor gV_dkl = local_tile(
         mV_dkl, TileShapePV{}, make_coord(_, _, _), Step<X, _1, _1>{});
@@ -344,7 +329,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
           pipeline_kv.producer_get_barrier(pipeline_kv_producer_state);
       copy(
           params.tma_load_k.with(*tma_barrier, 0),
-          tKgK(_, crd2idx(ctr_offset(k_index), kv_tiled_layout)),
+          tKgK(_, iter_to_tile_map(k_index)),
           tKsK(_, pipeline_kv_producer_state.index()));
     }
     ++pipeline_kv_producer_state;
@@ -368,7 +353,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
           pipeline_kv.producer_get_barrier(pipeline_kv_producer_state);
       copy(
           params.tma_load_v.with(*tma_barrier, 0),
-          tVgV(_, crd2idx(ctr_offset(k_index), kv_tiled_layout)),
+          tVgV(_, iter_to_tile_map(k_index)),
           tVsV(_, pipeline_kv_producer_state.index()));
     }
     ++pipeline_kv_producer_state;
@@ -384,7 +369,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
             pipeline_kv.producer_get_barrier(pipeline_kv_producer_state);
         copy(
             params.tma_load_k.with(*tma_barrier, 0),
-            tKgK(_, crd2idx(ctr_offset(k_index), kv_tiled_layout)),
+            tKgK(_, iter_to_tile_map(k_index)),
             tKsK(_, pipeline_kv_producer_state.index()));
       }
       ++pipeline_kv_producer_state;
@@ -396,35 +381,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
             pipeline_kv.producer_get_barrier(pipeline_kv_producer_state);
         copy(
             params.tma_load_v.with(*tma_barrier, 0),
-            tVgV(_, crd2idx(ctr_offset(k_index), kv_tiled_layout)),
-            tVsV(_, pipeline_kv_producer_state.index()));
-      }
-      ++pipeline_kv_producer_state;
-      k_index += 1;
-    }
-
-    k_index = extra_kv_tile_offset;
-    for (; mask_tile_count_extra > 0; mask_tile_count_extra -= 1) {
-      // Ki
-      pipeline_kv.producer_acquire(pipeline_kv_producer_state);
-      if (lane_predicate) {
-        auto tma_barrier =
-            pipeline_kv.producer_get_barrier(pipeline_kv_producer_state);
-        copy(
-            params.tma_load_k.with(*tma_barrier, 0),
-            tKgK(_, k_index),
-            tKsK(_, pipeline_kv_producer_state.index()));
-      }
-      ++pipeline_kv_producer_state;
-
-      // Vi
-      pipeline_kv.producer_acquire(pipeline_kv_producer_state);
-      if (lane_predicate) {
-        auto tma_barrier =
-            pipeline_kv.producer_get_barrier(pipeline_kv_producer_state);
-        copy(
-            params.tma_load_v.with(*tma_barrier, 0),
-            tVgV(_, k_index),
+            tVgV(_, iter_to_tile_map(k_index)),
             tVsV(_, pipeline_kv_producer_state.index()));
       }
       ++pipeline_kv_producer_state;

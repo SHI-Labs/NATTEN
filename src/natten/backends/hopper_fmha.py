@@ -205,6 +205,19 @@ def cutlass_hopper_fmha(
 
     scale = scale or query.shape[-1] ** -0.5
 
+    # GQA/MQA is not supported by the kernel; only allowed via graph transform
+    is_gqa = query.shape[-2] != key.shape[-2]
+    if is_gqa:
+        heads = query.shape[-2]
+        heads_kv = key.shape[-2]
+        assert key.shape[-2] == value.shape[-2]
+        assert heads >= heads_kv
+        assert heads % heads_kv == 0
+        h_k = heads // heads_kv
+
+        key = torch.repeat_interleave(key, repeats=h_k, dim=-2, output_size=heads)
+        value = torch.repeat_interleave(value, repeats=h_k, dim=-2, output_size=heads)
+
     # NOTE: is_causal is not supported
     # NOTE: varlen is not supported
     output, lse = CutlassHopperFmhaAutogradFn.apply(

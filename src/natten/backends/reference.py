@@ -104,7 +104,6 @@ def make_reference_fna_autograd_fn(na_dim):
 
             assert query.dim() == value.dim() == 4
             assert query.shape[0] == value.shape[0]
-            assert query.shape[-2] == value.shape[-2]
 
             output, logsumexp = FORWARD_OPS[na_dim](
                 query,
@@ -194,7 +193,9 @@ def reference_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value, must_match_head_dims=False)
+    na_tensor_checks(
+        query, key, value, must_match_head_dims=False, supports_gqa_mqa=True
+    )
     additional_kv_tensor_checks(
         query,
         key,
@@ -202,6 +203,7 @@ def reference_fna_generic(
         additional_keys,
         additional_values,
         must_match_head_dims=False,
+        supports_gqa_mqa=True,
     )
 
     na_dim = query.dim() - 3  # batch, heads, head_dim

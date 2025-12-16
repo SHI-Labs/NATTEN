@@ -609,7 +609,8 @@ void fna_reference_backward(
     ElementLSE* ptr_LSE,
     int batch,
     int seqlen,
-    int heads,
+    int heads_q,
+    int heads_kv,
     int dim,
     int dim_value,
     int num_additional_kv,
@@ -622,12 +623,11 @@ void fna_reference_backward(
     cudaStream_t stream) {
   using namespace cute;
 
-  // No GQA/MQA for now
   auto problem_shape = cute::make_tuple(
       seqlen,
       seqlen + num_additional_kv,
       dim,
-      cute::make_tuple(cute::make_tuple(1, heads), batch),
+      cute::make_tuple(cute::make_tuple(heads_q / heads_kv, heads_kv), batch),
       dim_value);
 
   int SQ = size<0>(problem_shape);

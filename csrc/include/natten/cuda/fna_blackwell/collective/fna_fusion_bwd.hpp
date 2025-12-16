@@ -243,14 +243,9 @@ struct NeighborhoodAttentionBackwardMask {
                                  // the self attention
       BlkCoord const& blk_coord,
       Dilation const& dilation,
-      int num_heads_actual) {
-    // TODO: move dilation to batch instead of head!
-    // This is the only way that we can support GQA/MQA
-    // auto batch_idx = get<4, 1>(blk_coord);
-    // auto dilation_group_idx = batch_idx / batch_size_actual;
-
-    auto head_idx = get<4, 0, 1>(blk_coord);
-    auto dilation_group_idx = head_idx / num_heads_actual;
+      int num_dilation_groups) {
+    auto batch_idx = get<4, 1>(blk_coord);
+    auto dilation_group_idx = batch_idx % num_dilation_groups;
 
     auto dilation_group_crd = idx2crd(dilation_group_idx, dilation);
     return correct_qkv_shape_wrt_dilation(

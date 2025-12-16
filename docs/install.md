@@ -364,9 +364,10 @@ If `True`, you're good to go. If `False`, it could mean either you didn't instal
 
 ## Older NATTEN builds
 We highly recommend using the latest NATTEN builds, but if you need to install older NATTEN
-versions, you can install them via [PyPI](https://pypi.org/project/natten/).
-We only offer wheels for >=`0.20.0` and `0.17.5` releases. Earlier releases will have to be
-[compiled locally](#natten-via-pypi).
+versions, you can find their wheels in their corresponding
+[GitHub release](https://github.com/SHI-Labs/NATTEN/releases), or build them from
+[PyPI](https://pypi.org/project/natten/) distributions.
+You can of course always build from source as well.
 
 #### `0.21.0`
 Released on 2025-07-14.
@@ -500,4 +501,5 @@ Released on 2025-03-20.
     Refer to [NATTEN via PyPI](#natten-via-pypi) for more details.
 
 #### < `0.17.5`
-Refer to our release index on [PyPI](https://pypi.org/project/natten/#history).
+Refer to our release index on [GitHub](https://github.com/SHI-Labs/NATTEN/releases),
+or build from distribution using [PyPI](https://pypi.org/project/natten/#history).

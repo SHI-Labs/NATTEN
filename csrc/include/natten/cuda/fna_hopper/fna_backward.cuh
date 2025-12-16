@@ -111,8 +111,6 @@ struct KernelBackward {
         dim_aligned,
     };
 
-    int num_heads_actual = heads / size(dilation);
-
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, heads, seqlen, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
@@ -146,8 +144,8 @@ struct KernelBackward {
         stride_V,      q_shape,
         kv_shape,      qkv_shape,
         window_size,   stride,
-        dilation,      num_heads_actual,
-        attn_scale,    hw_info};
+        dilation,      attn_scale,
+        hw_info};
 
     return arguments;
   }

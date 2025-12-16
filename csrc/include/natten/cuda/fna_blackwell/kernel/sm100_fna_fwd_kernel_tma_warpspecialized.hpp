@@ -30,6 +30,8 @@
  *
  **************************************************************************************************/
 
+#pragma once
+
 #include "cute/arch/tmem_allocator_sm100.hpp"
 #include "cute/layout.hpp"
 #include "cutlass/arch/arch.h"
@@ -39,7 +41,8 @@
 
 #include "natten/cuda/fna_blackwell/collective/fna_common.hpp"
 #include "natten/cuda/fna_blackwell/collective/fna_fusion.hpp"
-#include "natten/cuda/fna_blackwell/kernel/fna_tile_scheduler.hpp"
+
+#include "natten/cuda/fmha_blackwell/kernel/fmha_tile_scheduler.hpp"
 
 namespace cutlass::fna::kernel {
 
@@ -109,6 +112,9 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
   static const int NumWarpsEpilogue = KernelSchedule::NumWarpsEpilogue;
   static const int NumWarpsLoad = KernelSchedule::NumWarpsLoad;
 
+  static_assert(NumWarpsEpilogue == CollectiveEpilogue::NumWarpsEpilogue);
+  static_assert(NumWarpsLoad == CollectiveEpilogue::NumWarpsLoad);
+
   static const int NumRegsSoftmax = KernelSchedule::NumRegsSoftmax;
   static const int NumRegsCorrection = KernelSchedule::NumRegsCorrection;
   static const int NumRegsOther = KernelSchedule::NumRegsOther;
@@ -116,13 +122,38 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
 
   static const int NumWarps = KernelSchedule::NumWarps;
 
+  static constexpr bool IsMla = false;
+
   using ClusterShape = typename CollectiveMainloop::ClusterShape;
 
   using TmemAllocator = cute::TMEM::Allocator1Sm;
 
   struct SharedStorage {
-    typename CollectiveMainloop::TensorStorage mainloop;
-    typename CollectiveEpilogue::TensorStorage epilogue;
+    using UnionType = union {
+      typename CollectiveMainloop::TensorStorage mainloop;
+      typename CollectiveEpilogue::TensorStorage epilogue;
+    };
+
+    using StructType = struct {
+      typename CollectiveMainloop::TensorStorage mainloop;
+      typename CollectiveEpilogue::TensorStorage epilogue;
+    };
+
+    static constexpr bool IsPersistent = std::is_same_v<
+        TileScheduler,
+        cutlass::fmha::kernel::PersistentTileScheduler>;
+    using MainloopEpilogueStorage = std::conditional_t<
+        IsPersistent,
+        std::conditional_t<
+            IsMla,
+            std::conditional_t<
+                CollectiveMainloop::IsOrderLoadEpilogue,
+                UnionType,
+                StructType>,
+            StructType>,
+        UnionType>;
+
+    MainloopEpilogueStorage mainloop_epilogue;
 
     struct PipelineStorage {
       alignas(16) typename CollectiveMainloop::PipelineQ::SharedStorage load_q;
@@ -208,6 +239,15 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
+#if (                                            \
+    !defined(CUTLASS_ARCH_MMA_SM100A_ENABLED) && \
+    !defined(CUTLASS_ARCH_MMA_SM100F_ENABLED) && \
+    !defined(CUTLASS_ARCH_MMA_SM103A_ENABLED) && \
+    !defined(CUTLASS_ARCH_MMA_SM103F_ENABLED))
+    printf(
+        "ERROR : Arch conditional MMA instruction used without targeting appropriate compute capability. Aborting.\n");
+#else
+
     TileScheduler tile_scheduler{params.tile_scheduler};
 
     int warp_idx = cutlass::canonical_warp_idx_sync();
@@ -223,6 +263,17 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
     }
 
     SharedStorage& shared_storage = *reinterpret_cast<SharedStorage*>(smem);
+
+    auto get_epilogue_storage = [&]() {
+      if constexpr (IsMla && CollectiveMainloop::IsOrderLoadEpilogue) {
+        return reinterpret_cast<typename CollectiveEpilogue::TensorStorage*>(
+            shared_storage.mainloop_epilogue.mainloop.smem_o.data());
+      } else {
+        return &shared_storage.mainloop_epilogue.epilogue;
+      }
+    };
+    typename CollectiveEpilogue::TensorStorage& epilogue_storage =
+        *get_epilogue_storage();
 
     typename CollectiveMainloop::PipelineQ::Params pipeline_load_q_params;
     if (role == WarpRole::Load) {
@@ -256,7 +307,7 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
     pipeline_load_kv_params.is_leader =
         lane_predicate && (role == WarpRole::Load);
     pipeline_load_kv_params.transaction_bytes =
-        CollectiveMainloop::TransactionBytesLoadKV;
+        CollectiveMainloop::TransactionBytesLoadK;
     typename CollectiveMainloop::PipelineKV pipeline_load_kv(
         shared_storage.pipelines.load_kv,
         pipeline_load_kv_params,
@@ -454,6 +505,10 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
           continue;
         }
 
+        if (get<1>(logical_problem_shape) == 0) {
+          continue;
+        }
+
         bool is_softmax_0 = role == WarpRole::Softmax0;
 
         mainloop.softmax(
@@ -472,6 +527,8 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
     } else if (role == WarpRole::Correction) {
       cutlass::arch::warpgroup_reg_dealloc<NumRegsCorrection>();
 
+      bool has_valid = false;
+
       CUTLASS_PRAGMA_NO_UNROLL
       for (; tile_scheduler.is_valid(); ++tile_scheduler) {
         auto blk_coord = tile_scheduler.get_block_coord();
@@ -484,11 +541,26 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
           continue;
         }
 
+        has_valid = true;
+
+        if (get<1>(logical_problem_shape) == 0) {
+          mainloop.correction_empty(
+              blk_coord,
+              params.mainloop,
+              logical_problem_shape,
+              params.problem_shape,
+              epilogue_storage,
+              pipeline_corr_epi,
+              pipeline_corr_epi_producer_state,
+              epilogue);
+          continue;
+        }
+
         mainloop.correction(
             blk_coord,
             params.mainloop,
             logical_problem_shape,
-            shared_storage.epilogue,
+            epilogue_storage,
             pipeline_s0_corr,
             pipeline_s0_corr_consumer_state,
             pipeline_s1_corr,
@@ -503,18 +575,17 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
       if constexpr (NumWarpsEpilogue == 0) {
         static_assert(NumWarpsCorrection == 1);
 
-        uint32_t free_stage_ptr = shared_storage.tmem_base_ptr;
-        tmem_allocator.free(
-            free_stage_ptr, TmemAllocator::Sm100TmemCapacityColumns);
+        if (has_valid) {
+          uint32_t free_stage_ptr = shared_storage.tmem_base_ptr;
+          tmem_allocator.free(
+              free_stage_ptr, TmemAllocator::Sm100TmemCapacityColumns);
+        }
       }
 
     } else if (role == WarpRole::MMA) {
       warpgroup_reg_set<NumRegsOther>();
 
-      tmem_allocator.allocate(
-          TmemAllocator::Sm100TmemCapacityColumns,
-          &shared_storage.tmem_base_ptr);
-      __syncwarp();
+      bool allocated = false;
 
       CUTLASS_PRAGMA_NO_UNROLL
       for (; tile_scheduler.is_valid(); ++tile_scheduler) {
@@ -528,11 +599,23 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
           continue;
         }
 
+        if (!allocated) {
+          tmem_allocator.allocate(
+              TmemAllocator::Sm100TmemCapacityColumns,
+              &shared_storage.tmem_base_ptr);
+          __syncwarp();
+          allocated = true;
+        }
+
+        if (get<1>(logical_problem_shape) == 0) {
+          continue;
+        }
+
         mainloop.mma(
             blk_coord,
             params.mainloop,
             logical_problem_shape,
-            shared_storage.mainloop,
+            shared_storage.mainloop_epilogue.mainloop,
             pipeline_load_q,
             pipeline_load_q_consumer_state,
             pipeline_load_kv,
@@ -547,6 +630,12 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
     } else if (role == WarpRole::Load) {
       warpgroup_reg_set<NumRegsOther>();
 
+      if constexpr (IsMla && CollectiveMainloop::IsOrderLoadEpilogue) {
+        cutlass::arch::NamedBarrier::arrive(
+            (NumWarpsLoad + NumWarpsEpilogue) * NumThreadsPerWarp,
+            cutlass::arch::ReservedNamedBarriers::EpilogueBarrier);
+      }
+
       CUTLASS_PRAGMA_NO_UNROLL
       for (; tile_scheduler.is_valid(); ++tile_scheduler) {
         auto blk_coord = tile_scheduler.get_block_coord();
@@ -556,6 +645,10 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
 
         if (get<0>(blk_coord) * get<0>(TileShape{}) >=
             get<0>(logical_problem_shape)) {
+          continue;
+        }
+
+        if (get<1>(logical_problem_shape) == 0) {
           continue;
         }
 
@@ -564,7 +657,7 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
             logical_problem_shape,
             params.mainloop,
             params.problem_shape,
-            shared_storage.mainloop,
+            shared_storage.mainloop_epilogue.mainloop,
             pipeline_load_q,
             pipeline_load_q_producer_state,
             pipeline_load_kv,
@@ -572,6 +665,8 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
       }
     } else if (role == WarpRole::Epilogue) {
       warpgroup_reg_set<NumRegsOther>();
+
+      bool has_valid = false;
 
       CUTLASS_PRAGMA_NO_UNROLL
       for (; tile_scheduler.is_valid(); ++tile_scheduler) {
@@ -585,21 +680,25 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
           continue;
         }
 
+        has_valid = true;
+
         epilogue.store(
             blk_coord,
             logical_problem_shape,
             params.epilogue,
             params.problem_shape,
-            shared_storage.epilogue,
+            epilogue_storage,
             pipeline_corr_epi,
             pipeline_corr_epi_consumer_state);
       }
 
       static_assert(NumWarpsEpilogue <= 1);
       if constexpr (NumWarpsEpilogue == 1) {
-        uint32_t free_stage_ptr = shared_storage.tmem_base_ptr;
-        tmem_allocator.free(
-            free_stage_ptr, TmemAllocator::Sm100TmemCapacityColumns);
+        if (has_valid) {
+          uint32_t free_stage_ptr = shared_storage.tmem_base_ptr;
+          tmem_allocator.free(
+              free_stage_ptr, TmemAllocator::Sm100TmemCapacityColumns);
+        }
       }
 
     } else if (role == WarpRole::Empty) {
@@ -607,6 +706,7 @@ struct Sm100FnaFwdKernelTmaWarpspecialized {
 
       /* no-op, donate regs and exit */
     }
+#endif
   }
 };
 

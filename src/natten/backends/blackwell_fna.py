@@ -141,7 +141,6 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
                 q_shape,
                 kv_shape,
                 qkv_shape,
-                0,  # num_extra_kv: disallowed for simplicity
                 q_tile_shape,
                 kv_tile_shape,
                 run_persistent_kernel,
@@ -357,7 +356,9 @@ def cutlass_blackwell_fna_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    na_tensor_checks(query, key, value, must_match_head_dims=True)
+    na_tensor_checks(
+        query, key, value, must_match_head_dims=True, supports_gqa_mqa=True
+    )
 
     assert can_run_cutlass_blackwell_fna(query, key, value, raise_error=True)
 

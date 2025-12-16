@@ -145,6 +145,7 @@ def can_run_cutlass_blackwell_fna(
         key,
         value,
         must_match_head_dims=True,
+        supports_gqa_mqa=True,
         raise_error=raise_error,
         backend_name="Blackwell FNA",
     ):
@@ -242,7 +243,7 @@ def can_run_cutlass_hopper_fmha(
         key,
         value,
         must_match_head_dims=True,
-        supports_gqa_mqa=False,
+        supports_gqa_mqa=True,  # NOTE: supports GQA in only by virtue of repeating heads manually
         raise_error=raise_error,
         backend_name="Hopper FMHA",
     ):
@@ -334,6 +335,7 @@ def can_run_cutlass_hopper_fna(
         key,
         value,
         must_match_head_dims=True,
+        supports_gqa_mqa=True,  # NOTE: supports GQA in only by virtue of repeating heads manually
         raise_error=raise_error,
         backend_name="Hopper FNA",
     ):
@@ -426,7 +428,7 @@ def can_run_cutlass_fmha(
         key,
         value,
         must_match_head_dims=False,
-        supports_gqa_mqa=False,
+        supports_gqa_mqa=True,  # NOTE: supports GQA in only by virtue of repeating heads manually
         raise_error=raise_error,
         backend_name="CUTLASS FMHA",
     ):
@@ -502,6 +504,7 @@ def can_run_cutlass_fna(
         key,
         value,
         must_match_head_dims=False,
+        supports_gqa_mqa=True,  # NOTE: supports GQA in only by virtue of repeating heads manually
         raise_error=raise_error,
         backend_name="CUTLASS FNA",
     ):
@@ -636,7 +639,7 @@ def can_run_flex_attention(
             key,
             value,
             must_match_head_dims=True,
-            supports_gqa_mqa=False,
+            supports_gqa_mqa=True,
             raise_error=raise_error,
             backend_name="Flex FMHA",
         )
@@ -646,6 +649,7 @@ def can_run_flex_attention(
             key,
             value,
             must_match_head_dims=True,
+            supports_gqa_mqa=True,
             raise_error=raise_error,
             backend_name="Flex FMHA/FNA",
         )

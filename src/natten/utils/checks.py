@@ -86,6 +86,7 @@ def na_tensor_checks(
     key: Tensor,
     value: Tensor,
     must_match_head_dims: bool = False,
+    supports_gqa_mqa: bool = True,
     raise_error: bool = True,
     backend_name: Optional[str] = None,
 ) -> bool:
@@ -111,10 +112,19 @@ def na_tensor_checks(
         )
         return False
 
-    if query.shape != key.shape or query.shape[:-1] != value.shape[:-1]:
+    na_dim = query.dim() - 3  # minus batch, heads, head_dim
+
+    if query.shape[-1] != key.shape[-1]:
         target_fn(
-            "Neighborhood attention ops expect Q, K, and V to have the same shape (except value "
-            f"head dim), got {query.shape=}, {key.shape=}, {value.shape=}.",
+            f"Q and K head dims must match, got {query.shape[-1]=}, {key.shape[-1]=}.",
+            exception=ValueError,
+        )
+        return False
+
+    if query.shape[0] != key.shape[0] or query.shape[0] != value.shape[0]:
+        target_fn(
+            "Q, K, and V must match in batch size, got "
+            f"{query.shape[0]=}, {key.shape[0]=}, {value.shape[0]=}.",
             exception=ValueError,
         )
         return False
@@ -126,6 +136,47 @@ def na_tensor_checks(
             exception=ValueError,
         )
         return False
+
+    if (
+        query.shape[1 : na_dim + 1] != key.shape[1 : na_dim + 1]
+        or query.shape[1 : na_dim + 1] != value.shape[1 : na_dim + 1]
+    ):
+        target_fn(
+            "Neighborhood Attention operations require Q, K, and V to match in their token layouts, got "
+            f"{query.shape[1:na_dim+1]=}, {key.shape[1:na_dim+1]=}, {value.shape[1:na_dim+1]=}.",
+            exception=ValueError,
+        )
+        return False
+
+    if not supports_gqa_mqa and (
+        query.shape[-2] != key.shape[-2] or query.shape[-2] != value.shape[-2]
+    ):
+        target_fn(
+            f"{backend_name} does not support GQA/MQA, therefore number of heads in Q, K, and V "
+            f"must match, got {query.shape[-2]=}, {key.shape[-2]=}, {value.shape[-2]=}.",
+            exception=ValueError,
+        )
+        return False
+
+    if supports_gqa_mqa:
+        if key.shape[-2] != value.shape[-2]:
+            target_fn(
+                "Key and value must always have the same number of heads, got "
+                f"{key.shape[-2]=}, {value.shape[-2]=}.",
+                exception=ValueError,
+            )
+            return False
+
+        heads_q = query.shape[-2]
+        heads_kv = key.shape[-2]
+
+        if heads_q < heads_kv or heads_q % heads_kv != 0:
+            target_fn(
+                "Key/value heads must evenly divide query heads, got "
+                f"{heads_q=}, {heads_kv=}.",
+                exception=ValueError,
+            )
+            return False
 
     return True
 
@@ -191,26 +242,26 @@ def fmha_tensor_checks(
         return False
 
     if not supports_gqa_mqa and (
-        query.shape[2] != key.shape[2] or query.shape[2] != value.shape[2]
+        query.shape[-2] != key.shape[-2] or query.shape[-2] != value.shape[-2]
     ):
         target_fn(
             f"{backend_name} does not support GQA/MQA, therefore number of heads in Q, K, and V "
-            f"must match, got {query.shape[2]=}, {key.shape[2]=}, {value.shape[2]=}.",
+            f"must match, got {query.shape[-2]=}, {key.shape[-2]=}, {value.shape[-2]=}.",
             exception=ValueError,
         )
         return False
 
     if supports_gqa_mqa:
-        if key.shape[2] != value.shape[2]:
+        if key.shape[-2] != value.shape[-2]:
             target_fn(
                 "Key and value must always have the same number of heads, got "
-                f"{key.shape[2]=}, {value.shape[2]=}.",
+                f"{key.shape[-2]=}, {value.shape[-2]=}.",
                 exception=ValueError,
             )
             return False
 
-        heads_q = query.shape[2]
-        heads_kv = key.shape[2]
+        heads_q = query.shape[-2]
+        heads_kv = key.shape[-2]
 
         if heads_q < heads_kv or heads_q % heads_kv != 0:
             target_fn(
@@ -230,6 +281,7 @@ def additional_kv_tensor_checks(
     add_key: Optional[Tensor] = None,
     add_value: Optional[Tensor] = None,
     must_match_head_dims: bool = False,
+    supports_gqa_mqa: bool = True,
 ):
 
     if (add_key is not None) ^ (add_value is not None):
@@ -267,12 +319,6 @@ def additional_kv_tensor_checks(
             f"{add_value.shape[1]=}."
         )
 
-    if query.shape[-2] != add_key.shape[-2] or query.shape[-2] != add_value.shape[-2]:
-        raise ValueError(
-            "NATTEN operations do not support GQA/MQA, therefore number of heads in Q, K, and V "
-            f"must match, got {query.shape[-2]=}, {add_key.shape[-2]=}, {add_value.shape[-2]=}."
-        )
-
     if key.shape[0] != add_key.shape[0] or value.shape[0] != add_value.shape[0]:
         raise ValueError(
             "Additional key/value tokens must match the self attention key/value tokens in batch "
@@ -293,6 +339,34 @@ def additional_kv_tensor_checks(
             f"dim, got {key.shape[-1]=} != {add_key.shape[-1]=}, and "
             f"{value.shape[-1]=} != {add_value.shape[-1]=}."
         )
+
+    if not supports_gqa_mqa and (
+        query.shape[-2] != add_key.shape[-2] or query.shape[-2] != add_value.shape[-2]
+    ):
+        raise ValueError(
+            f"This operation does not support GQA/MQA, therefore number of heads in Q, K, and V "
+            f"must match, got {query.shape[-2]=}, {key.shape[-2]=}, {value.shape[-2]=}."
+        )
+
+    if supports_gqa_mqa:
+        if (
+            key.shape[-2] != value.shape[-2]
+            or key.shape[-2] != add_key.shape[-2]
+            or key.shape[-2] != add_value.shape[-2]
+        ):
+            raise ValueError(
+                "Key and value, original and additional, must always have the same number of heads, got "
+                f"{key.shape[-2]=}, {value.shape[-2]=}, {add_key.shape[-2]=}, {add_value.shape[-2]=}."
+            )
+
+        heads_q = query.shape[-2]
+        heads_kv = key.shape[-2]
+
+        if heads_q < heads_kv or heads_q % heads_kv != 0:
+            raise ValueError(
+                "Key/value heads must evenly divide query heads, got "
+                f"{heads_q=}, {heads_kv=}."
+            )
 
 
 def check_input_size_arg(na_dim: int, input_size: Any) -> DimensionType:

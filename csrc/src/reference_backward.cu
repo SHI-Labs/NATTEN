@@ -112,15 +112,49 @@ void reference_na_generic_backward(
   // Everything's flattened to 1D, because we concat additional kvs
   CheckIfTensorShapesMatchExceptHeadDim<1>(query, out);
   CheckIfTensorShapesMatchExceptHeadDim<1>(key, value);
-  CheckIfBatchHeadsHeadDimMatch(query, key);
+  // CheckIfBatchHeadsHeadDimMatch(query, key);
   CheckIfTensorShapesMatch<1>(grad_query, query);
   CheckIfTensorShapesMatch<1>(grad_key, key);
   CheckIfTensorShapesMatch<1>(grad_value, value);
   CheckIfTensorShapesMatch<1>(grad_out, out);
   CheckLogSumExp<1>(out, logsumexp);
 
+  TORCH_CHECK(
+      query.size(0) == key.size(0),
+      "Blackwell FMHA forward: Query and key must match in batch size, got ",
+      "query.shape[0]=",
+      query.size(0),
+      ", key.shape[0]=",
+      key.size(0));
+
+  TORCH_CHECK(
+      query.size(3) == key.size(3),
+      "Blackwell FMHA forward: Query and key must match in head dim, got ",
+      "query.shape[3]=",
+      query.size(3),
+      ", key.shape[3]=",
+      key.size(3));
+
+  // GQA/MQA is supported
+  TORCH_CHECK(
+      query.size(2) >= key.size(2),
+      "Blackwell FMHA forward: Query heads must be greater than or equal to key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
+  TORCH_CHECK(
+      query.size(2) % key.size(2) == 0,
+      "Blackwell FMHA forward: Query heads must evenly divide key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
   int batch_size = query.size(0);
   int heads = query.size(2);
+  int heads_kv = key.size(2);
   int dim = query.size(3);
 
   int seqlen_q = query.size(1);
@@ -169,6 +203,7 @@ void reference_na_generic_backward(
       batch_size,
       seqlen,
       heads,
+      heads_kv,
       dim,
       dim_value,
       num_extra_kv,

@@ -93,36 +93,40 @@ struct KernelBackward {
       int batch,
       int seqlen_Q,
       int seqlen_KV,
-      int heads,
+      int heads_q,
+      int heads_kv,
       int dim,
+      float attn_scale,
+      // fna parameters
       NADim q_shape,
       NADim kv_shape,
       NADim qkv_shape,
       NADim window_size,
       NADim stride,
       NADim dilation,
-      int device_id,
-      float attn_scale) {
-    auto dim_aligned = cutlass::round_up(dim, 8); // alignment
-
-    ProblemShapeType problem_shape = cute::make_tuple(
+      // init/launch params
+      int device_id) {
+    auto problem_shape_regular = cute::make_tuple(
         seqlen_Q,
         seqlen_KV,
-        dim_aligned,
-        dim_aligned, // dim_value -- if different from dim, needs the MLA kernel
-        cute::make_tuple(
-            make_tuple(1, heads), // gqa/mqa is supported, just disabled for now
-            batch));
+        // head dim is always either 32, 64, or 128 in natten, but it should
+        // always meet the 128-bit alignment constraint
+        dim,
+        dim, // dim_value -- if different from dim, needs the MLA kernel
+        cute::make_tuple(make_tuple(heads_q / heads_kv, heads_kv), batch));
 
-    int SQ = size<0>(problem_shape);
-    int SK = size<1>(problem_shape);
-    int D = size<2>(problem_shape);
-    int D_VO = size<3>(problem_shape);
-    auto HB = get<4, 0>(problem_shape);
+    ProblemShapeType problem_shape_launch;
+    decltype(problem_shape_regular) problem_shape_memory;
+
+    problem_shape_memory = problem_shape_regular;
+    problem_shape_launch = problem_shape_regular;
+    int SQ = size<0>(problem_shape_memory);
+    int SK = size<1>(problem_shape_memory);
+    int D = size<2>(problem_shape_memory);
+    int D_VO = size<3>(problem_shape_memory);
+    auto HB = get<4, 0>(problem_shape_memory);
     auto [H_R, H_K] = HB;
-    int B = size<4, 1>(problem_shape);
-
-    int num_heads_actual = heads / size(dilation);
+    int B = size<4, 1>(problem_shape_memory);
 
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, seqlen, heads, dim)
@@ -155,20 +159,33 @@ struct KernelBackward {
             hw_info.device_id);
 
     Arguments arguments{
-        problem_shape, reinterpret_cast<Element*>(ptr_Q),
-        stride_Q,      reinterpret_cast<Element*>(ptr_K),
-        stride_K,      reinterpret_cast<Element*>(ptr_V),
-        stride_V,      reinterpret_cast<Element*>(ptr_O),
-        stride_O,      reinterpret_cast<ElementAccumulator*>(ptr_LSE),
-        stride_LSE,    reinterpret_cast<Element*>(ptr_dO),
-        stride_O,      reinterpret_cast<Element*>(ptr_dQ),
-        stride_Q,      reinterpret_cast<Element*>(ptr_dK),
-        stride_K,      reinterpret_cast<Element*>(ptr_dV),
-        stride_V,      q_shape,
-        kv_shape,      qkv_shape,
-        window_size,   stride,
-        dilation,      num_heads_actual,
-        attn_scale,    hw_info};
+        problem_shape_launch,
+        reinterpret_cast<Element*>(ptr_Q),
+        stride_Q,
+        reinterpret_cast<Element*>(ptr_K),
+        stride_K,
+        reinterpret_cast<Element*>(ptr_V),
+        stride_V,
+        reinterpret_cast<Element*>(ptr_O),
+        stride_O,
+        reinterpret_cast<ElementAccumulator*>(ptr_LSE),
+        stride_LSE,
+        reinterpret_cast<Element*>(ptr_dO),
+        stride_O,
+        reinterpret_cast<Element*>(ptr_dQ),
+        stride_Q,
+        reinterpret_cast<Element*>(ptr_dK),
+        stride_K,
+        reinterpret_cast<Element*>(ptr_dV),
+        stride_V,
+        q_shape,
+        kv_shape,
+        qkv_shape,
+        window_size,
+        stride,
+        dilation,
+        attn_scale,
+        hw_info};
 
     return arguments;
   }

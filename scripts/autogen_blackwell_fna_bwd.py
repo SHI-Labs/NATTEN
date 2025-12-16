@@ -38,16 +38,19 @@ void {kernel_name}(
       int batch_size,
       int seqlen_q,
       int seqlen_k,
-      int heads,
+      int heads_q,
+      int heads_kv,
       int dim,
+      float attn_scale,
+      // fna parameters
       {DimType} q_shape,
       {DimType} kv_shape,
       {DimType} qkv_shape,
       {DimType} window_size,
       {DimType} stride,
       {DimType} dilation,
+      // init/launch params
       int device_id,
-      float attn_scale,
       cudaStream_t stream,
       at::TensorOptions tensor_options);
 """
@@ -67,16 +70,19 @@ void {kernel_name}(
       int batch_size,
       int seqlen_q,
       int seqlen_k,
-      int heads,
+      int heads_q,
+      int heads_kv,
       int dim,
+      float attn_scale,
+      // fna parameters
       {DimType} q_shape,
       {DimType} kv_shape,
       {DimType} qkv_shape,
       {DimType} window_size,
       {DimType} stride,
       {DimType} dilation,
+      // init/launch params
       int device_id,
-      float attn_scale,
       cudaStream_t stream,
       at::TensorOptions tensor_options) {{
 
@@ -101,16 +107,17 @@ void {kernel_name}(
       batch_size,
       seqlen_q,
       seqlen_k,
-      heads,
+      heads_q,
+      heads_kv,
       dim,
+      attn_scale,
       q_shape,
       kv_shape,
       qkv_shape,
       window_size,
       stride,
       dilation,
-      device_id,
-      attn_scale);
+      device_id);
 
   auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
   auto workspace = at::empty({{bytes}}, tensor_options.dtype(at::ScalarType::Byte));

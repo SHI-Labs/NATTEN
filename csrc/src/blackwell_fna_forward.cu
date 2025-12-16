@@ -67,11 +67,8 @@ void blackwell_fna_generic_forward(
     const StdCausal& is_causal_,
     float attn_scale,
     const StdNADim& q_shape_, // after token permute and padding
-    const StdNADim&
-        kv_shape_, // after token permute and padding, including extra KV
-    const StdNADim&
-        qkv_shape_, // before token permute and padding, not including extra KV
-    int num_extra_kv,
+    const StdNADim& kv_shape_, // after token permute and padding
+    const StdNADim& qkv_shape_, // before token permute and padding
     const StdNADim& query_tile_shape_,
     const StdNADim& key_tile_shape_,
     bool run_persistent) {
@@ -99,16 +96,52 @@ void blackwell_fna_generic_forward(
   CheckIfPropertiesMatch(query, key, value);
 
   // NOTE (alih): q and kv might have slightly different shapes because we're
-  // padding to multiples of the tile shape. We're also supporting extra KV
-  // tokens, so we can't have 5D/6D tensors anymore. Seqlen mode must be
-  // flattened.
-  CheckIfTensorShapesMatch<1>(query, out);
-  CheckIfTensorShapesMatch<1>(key, value);
+  // padding to multiples of the tile shape. Seqlen mode must be flattened.
+  CheckIfTensorShapesMatch<1>(key, value); // head_dim == head_dim_value
+  CheckIfTensorShapesMatch<1>(query, out); // head_dim == head_dim_value
+
+  TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
+  TORCH_CHECK(key.dim() == 4, "Tensors must be 4-D.");
+  TORCH_CHECK(value.dim() == 4, "Tensors must be 4-D.");
+
+  TORCH_CHECK(
+      query.size(0) == key.size(0),
+      "Blackwell FMHA forward: Query and key must match in batch size, got ",
+      "query.shape[0]=",
+      query.size(0),
+      ", key.shape[0]=",
+      key.size(0));
+
+  TORCH_CHECK(
+      query.size(3) == key.size(3),
+      "Blackwell FMHA forward: Query and key must match in head dim, got ",
+      "query.shape[3]=",
+      query.size(3),
+      ", key.shape[3]=",
+      key.size(3));
+
+  // GQA/MQA is supported
+  TORCH_CHECK(
+      query.size(2) >= key.size(2),
+      "Blackwell FMHA forward: Query heads must be greater than or equal to key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
+
+  TORCH_CHECK(
+      query.size(2) % key.size(2) == 0,
+      "Blackwell FMHA forward: Query heads must evenly divide key/value heads, got ",
+      "query.shape[2]=",
+      query.size(2),
+      ", key.shape[2]=",
+      key.size(2));
 
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
-  int heads = query.size(2);
+  int heads_q = query.size(2);
+  int heads_kv = key.size(2);
   int dim = query.size(3);
 
   if (logsumexp.has_value()) {
@@ -134,8 +167,8 @@ void blackwell_fna_generic_forward(
       size(q_shape) == seqlen_q,
       "Blackwell FNA forward: Q sequence length (q.shape[1]) must match the size of QKV shape.");
   TORCH_CHECK(
-      size(kv_shape) + num_extra_kv == seqlen_kv,
-      "Blackwell FNA forward: KV sequence length ({k,v}.shape[1]) must match the size of QKV shape + num_extra_kv.");
+      size(kv_shape) == seqlen_kv,
+      "Blackwell FNA forward: KV sequence length ({k,v}.shape[1]) must match the size of QKV shape.");
 
   TORCH_CHECK(
       dim == 32 || dim == 64 || dim == 128,
@@ -189,17 +222,19 @@ void blackwell_fna_generic_forward(
       batch_size,
       seqlen_q,
       seqlen_kv,
-      heads,
+      heads_q,
+      heads_kv,
       dim,
-      num_extra_kv,
+      attn_scale,
+      // fna / fusion parameters
       q_shape,
       kv_shape,
       qkv_shape,
       window_size,
       stride,
       dilation,
+      // init/launch params
       device_id,
-      attn_scale,
       cuda_stream,
       query.options());
 
@@ -229,7 +264,6 @@ void blackwell_na1d_forward(
     const std::tuple<int32_t>& q_shape,
     const std::tuple<int32_t>& kv_shape,
     const std::tuple<int32_t>& qkv_shape,
-    int num_extra_kv,
     const std::tuple<int32_t>& query_tile_shape,
     const std::tuple<int32_t>& key_tile_shape,
     bool run_persistent) {
@@ -249,7 +283,6 @@ void blackwell_na1d_forward(
       q_shape,
       kv_shape,
       qkv_shape,
-      num_extra_kv,
       query_tile_shape,
       key_tile_shape,
       run_persistent);
@@ -269,7 +302,6 @@ void blackwell_na2d_forward(
     const std::tuple<int32_t, int32_t>& q_shape,
     const std::tuple<int32_t, int32_t>& kv_shape,
     const std::tuple<int32_t, int32_t>& qkv_shape,
-    int num_extra_kv,
     const std::tuple<int32_t, int32_t>& query_tile_shape,
     const std::tuple<int32_t, int32_t>& key_tile_shape,
     bool run_persistent) {
@@ -289,7 +321,6 @@ void blackwell_na2d_forward(
       q_shape,
       kv_shape,
       qkv_shape,
-      num_extra_kv,
       query_tile_shape,
       key_tile_shape,
       run_persistent);
@@ -309,7 +340,6 @@ void blackwell_na3d_forward(
     const std::tuple<int32_t, int32_t, int32_t>& q_shape,
     const std::tuple<int32_t, int32_t, int32_t>& kv_shape,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape,
-    int num_extra_kv,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape,
     bool run_persistent) {
@@ -329,7 +359,6 @@ void blackwell_na3d_forward(
       q_shape,
       kv_shape,
       qkv_shape,
-      num_extra_kv,
       query_tile_shape,
       key_tile_shape,
       run_persistent);
