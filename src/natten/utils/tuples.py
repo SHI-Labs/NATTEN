@@ -21,7 +21,7 @@
 #
 #################################################################################################
 
-from ..types import CausalArgType, DimensionType
+from natten.types import CausalArgType, DimensionType
 
 
 def ceil_div_int(x: int, y: int) -> int:
@@ -31,6 +31,16 @@ def ceil_div_int(x: int, y: int) -> int:
 def ceil_div_tuple(X: tuple, Y: tuple) -> tuple:
     assert len(X) == len(Y)
     return tuple(ceil_div_int(x, y) for x, y in zip(X, Y))
+
+
+def mul_tuple(X: tuple, Y: tuple) -> tuple:
+    assert len(X) == len(Y)
+    return tuple(x * y for x, y in zip(X, Y))
+
+
+def sub_tuple(X: tuple, Y: tuple) -> tuple:
+    assert len(X) == len(Y)
+    return tuple(x - y for x, y in zip(X, Y))
 
 
 def create_dim_from_int(na_dim: int, value: int) -> DimensionType:

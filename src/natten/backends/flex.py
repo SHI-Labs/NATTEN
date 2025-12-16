@@ -43,7 +43,7 @@ from natten.backends.configs.flex import (
     check_flex_fmha_forward_config,
     check_flex_fna_forward_config,
 )
-from natten.token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
+from natten.token_permute import token_permute_operation, token_unpermute_operation
 from natten.types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
@@ -618,18 +618,19 @@ def flex_fna_generic(
         q_tile_size = math.prod(q_tile_shape)
         kv_tile_size = math.prod(kv_tile_shape)
 
-        query_pad, padding = maybe_pad(query, q_tile_shape, dilation=dilation)
-        key, _ = maybe_pad(key, kv_tile_shape, dilation=dilation)
-        value, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
-
-        query_perm, q_shape, qR = token_permute(
-            query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=False
+        assert q_tile_shape is not None
+        assert kv_tile_shape is not None
+        query_perm, _, q_shape = token_permute_operation(
+            query,
+            tile_shape=q_tile_shape,
+            dilation=dilation,
+            flip_tiled_dims=False,
         )
-        key_perm, k_shape, kR = token_permute(
-            key, kv_tile_shape, dilation=dilation, flip_tiled_dims=False
+        key_perm, _, k_shape = token_permute_operation(
+            key, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=False
         )
-        value_perm, v_shape, vR = token_permute(
-            value, kv_tile_shape, dilation=dilation, flip_tiled_dims=False
+        value_perm, _, v_shape = token_permute_operation(
+            value, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=False
         )
 
         assert k_shape == v_shape
@@ -680,17 +681,21 @@ def flex_fna_generic(
         out = out_.transpose(1, 2)
         lse = lse_.transpose(1, 2).unsqueeze(-1)
 
-        out = maybe_unpad(
-            token_unpermute(
-                out, q_tile_shape, q_shape, qR, dilation=dilation, flip_tiled_dims=False
-            ),
-            padding,
+        assert q_tile_shape is not None
+        assert kv_tile_shape is not None
+        out = token_unpermute_operation(
+            out,
+            token_layout_shape=qkv_shape,
+            tile_shape=q_tile_shape,
+            dilation=dilation,
+            flip_tiled_dims=False,
         )
-        lse = maybe_unpad(
-            token_unpermute(
-                lse, q_tile_shape, q_shape, qR, dilation=dilation, flip_tiled_dims=False
-            ),
-            padding,
+        lse = token_unpermute_operation(
+            lse,
+            token_layout_shape=qkv_shape,
+            tile_shape=q_tile_shape,
+            dilation=dilation,
+            flip_tiled_dims=False,
         ).squeeze(-1)
     else:
         out = out_.transpose(1, 2).reshape(

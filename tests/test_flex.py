@@ -681,6 +681,15 @@ class FlexBackendTest(unittest.TestCase):
             )
             is_causal = tuple(random.choice([False, True]) for _ in range(na_dim))
 
+            # Prevent accidentally targeting flex-fmha with causal mask, which is not supported
+            if na_dim == 1 and is_causal[0] and kernel_size[0] == input_shape[0]:
+                kernel_size = (kernel_size[0] - 1,)
+                stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
+                dilation = tuple(
+                    random.choice(range(1, x // k + 1))
+                    for x, k in zip(input_shape, kernel_size)
+                )
+
             self._test_all_dtypes_against_cutlass_2x_fna(
                 batch=batch,
                 heads=heads,

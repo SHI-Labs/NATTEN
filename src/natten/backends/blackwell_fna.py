@@ -30,7 +30,7 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import (
+from natten._libnatten import (
     blackwell_na1d_backward,
     blackwell_na1d_forward,
     blackwell_na2d_backward,
@@ -38,8 +38,13 @@ from .._libnatten import (
     blackwell_na3d_backward,
     blackwell_na3d_forward,
 )
-from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
-from ..types import (
+from natten.backends.configs.checks import can_run_cutlass_blackwell_fna
+from natten.backends.configs.cutlass_blackwell import (
+    check_cutlass_blackwell_fna_backward_config,
+    check_cutlass_blackwell_fna_forward_config,
+)
+from natten.token_permute import token_permute_operation, token_unpermute_operation
+from natten.types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
     CausalArg3DTypeOrDed,
@@ -57,11 +62,10 @@ from ..types import (
     DimensionTypeOrDed,
     NoneType,
 )
-from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
-from .configs.checks import can_run_cutlass_blackwell_fna
-from .configs.cutlass_blackwell import (
-    check_cutlass_blackwell_fna_backward_config,
-    check_cutlass_blackwell_fna_forward_config,
+from natten.utils.checks import (
+    check_all_args,
+    check_args_against_input,
+    na_tensor_checks,
 )
 
 
@@ -104,21 +108,17 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
             q_tile_shape, kv_tile_shape = forward_config
 
             # Token permute begin
-            # Shape before padding and token permute
-            qkv_shape = query.shape[1 : 1 + na_dim]
-
-            query_pad, padding = maybe_pad(query, q_tile_shape, dilation=dilation)
-            key_pad, _ = maybe_pad(key, kv_tile_shape, dilation=dilation)
-            value_pad, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
-
-            query_perm, q_shape, qR = token_permute(
-                query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            query_perm, qkv_shape, q_shape = token_permute_operation(
+                query,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            key_perm, k_shape, kR = token_permute(
-                key_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            key_perm, _, k_shape = token_permute_operation(
+                key, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            value_perm, v_shape, vR = token_permute(
-                value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            value_perm, _, v_shape = token_permute_operation(
+                value, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
 
             assert k_shape == v_shape
@@ -147,27 +147,19 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
             )
 
             # Token un-permute begin
-            output = maybe_unpad(
-                token_unpermute(
-                    output_perm,
-                    q_tile_shape,
-                    q_shape,
-                    qR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding,
+            output = token_unpermute_operation(
+                output_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            logsumexp = maybe_unpad(
-                token_unpermute(
-                    logsumexp_perm.unsqueeze(-1),
-                    q_tile_shape,
-                    q_shape,
-                    qR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding,
+            logsumexp = token_unpermute_operation(
+                logsumexp_perm.unsqueeze(-1),
+                token_layout_shape=qkv_shape,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             ).squeeze(-1)
             # Token un-permute end
 
@@ -208,35 +200,30 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
             q_tile_shape, kv_tile_shape = ctx.backward_config
 
             # Token permute begin
-            # Shape before padding and token permute
-            qkv_shape = query.shape[1 : 1 + na_dim]
 
-            query_pad, padding_q = maybe_pad(query, q_tile_shape, dilation=dilation)
-            key_pad, padding_kv = maybe_pad(key, kv_tile_shape, dilation=dilation)
-            value_pad, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
-            logsumexp_pad, _ = maybe_pad(
-                logsumexp.unsqueeze(-1), q_tile_shape, dilation=dilation
+            query_perm, qkv_shape, q_shape = token_permute_operation(
+                query, tile_shape=q_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            output_pad, _ = maybe_pad(output, q_tile_shape, dilation=dilation)
-            d_output_pad, _ = maybe_pad(d_output, q_tile_shape, dilation=dilation)
-
-            query_perm, q_shape, qR = token_permute(
-                query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            output_perm, _, o_shape = token_permute_operation(
+                output, tile_shape=q_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            output_perm, o_shape, oR = token_permute(
-                output_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            d_output_perm, _, d_o_shape = token_permute_operation(
+                d_output,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            d_output_perm, d_o_shape, doR = token_permute(
-                d_output_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            logsumexp_perm, _, _ = token_permute_operation(
+                logsumexp.unsqueeze(-1),
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            logsumexp_perm, _, _ = token_permute(
-                logsumexp_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            key_perm, _, k_shape = token_permute_operation(
+                key, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            key_perm, k_shape, kR = token_permute(
-                key_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
-            )
-            value_perm, v_shape, vR = token_permute(
-                value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            value_perm, _, v_shape = token_permute_operation(
+                value, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
 
             assert q_shape == o_shape == d_o_shape
@@ -271,38 +258,26 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
             )
 
             # Token un-permute begin
-            d_query = maybe_unpad(
-                token_unpermute(
-                    d_query_perm,
-                    q_tile_shape,
-                    q_shape,
-                    qR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding_q,
+            d_query = token_unpermute_operation(
+                d_query_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            d_key = maybe_unpad(
-                token_unpermute(
-                    d_key_perm,
-                    kv_tile_shape,
-                    kv_shape,
-                    kR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding_kv,
+            d_key = token_unpermute_operation(
+                d_key_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=kv_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            d_value = maybe_unpad(
-                token_unpermute(
-                    d_value_perm,
-                    kv_tile_shape,
-                    kv_shape,
-                    vR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding_kv,
+            d_value = token_unpermute_operation(
+                d_value_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=kv_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
             # Token un-permute end
 

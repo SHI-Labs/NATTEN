@@ -167,7 +167,7 @@ def cutlass_hopper_fmha(
         key,
         value,
         must_match_head_dims=True,
-        supports_gqa_mqa=False,
+        supports_gqa_mqa=True,
         backend_name="Hopper FMHA",
     )
 

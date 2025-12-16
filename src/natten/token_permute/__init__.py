@@ -21,42 +21,12 @@
 #
 #################################################################################################
 
-from natten._libnatten import HAS_LIBNATTEN  # noqa: F401
-from natten.utils.environment import (
-    _IS_CUDA_AVAILABLE,
-    _IS_TORCH_COMPILE_SUPPORTED,
-    _TORCH_VERSION,
-    parse_env_flag,
-    parse_env_int,
-    parse_env_str,
+from natten.token_permute.frontend import (
+    token_permute_operation,
+    token_unpermute_operation,
 )
-
-
-# Default tokperm implementation; choices:
-# NATTEN_TOKPERM_DEFAULT_IMPL="cutlass"
-# NATTEN_TOKPERM_DEFAULT_IMPL="torch"
-USE_TORCH_IMPL_DEFAULT = (
-    parse_env_str("NATTEN_TOKPERM_DEFAULT_IMPL", "cutlass") == "torch"
-)
-
-# Unit tests
-_RUN_EXTENDED_TESTS = parse_env_flag("NATTEN_RUN_EXTENDED_TESTS", False)
-_RUN_ADDITIONAL_KV_TESTS = parse_env_flag("NATTEN_RUN_ADDITIONAL_KV_TESTS", True)
-_RUN_FLEX_TESTS = parse_env_flag("NATTEN_RUN_FLEX_TESTS", True)
-_NUM_RAND_SWEEP_TESTS = parse_env_int("NATTEN_RAND_SWEEP_TESTS", 1000)
-
-# Profiler
-DISABLE_TQDM = parse_env_flag("NATTEN_DISABLE_TQDM", False)
-
 
 __all__ = [
-    "HAS_LIBNATTEN",
-    "_IS_CUDA_AVAILABLE",
-    "_IS_TORCH_COMPILE_SUPPORTED",
-    "DISABLE_TQDM",
-    "_RUN_FLEX_TESTS",
-    "_RUN_ADDITIONAL_KV_TESTS",
-    "_RUN_FLEX_TESTS",
-    "_NUM_RAND_SWEEP_TESTS",
-    "_TORCH_VERSION",
+    "token_permute_operation",
+    "token_unpermute_operation",
 ]

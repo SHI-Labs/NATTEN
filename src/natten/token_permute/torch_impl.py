@@ -23,9 +23,12 @@
 import math
 
 import torch
+from torch import Tensor
 
+from natten.types import DimensionType
 from natten.utils import log
 from natten.utils.environment import is_torch_compiling
+from natten.utils.tuples import ceil_div_tuple, mul_tuple, sub_tuple
 
 logger = log.get_logger(__name__)
 
@@ -34,7 +37,9 @@ DISABLE_PADDING_WARNING = True
 TOKEN_PERMUTE_PADDING_RATIO_LIMIT_UNTIL_WARNING = 0.5
 
 
-def maybe_pad(tensor, tile_shape, dilation=None):
+def _maybe_pad(
+    tensor: Tensor, tile_shape: DimensionType, dilation: DimensionType
+) -> Tensor:
     if tensor.dim() not in [4, 5, 6]:
         raise ValueError(
             "Expected 4D, 5D, or 6D tensor (corresponding to NA1D, 2D, 3D), "
@@ -46,34 +51,34 @@ def maybe_pad(tensor, tile_shape, dilation=None):
 
     if len(tile_shape) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D tiler for NA{na_dim}, " f"got {tile_shape=}."
+            f"Expected {na_dim}D tiler for NA{na_dim}D, " f"got {tile_shape=}."
         )
 
     if dilation is not None and len(dilation) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D dilation for NA{na_dim}, " f"got {dilation=}."
+            f"Expected {na_dim}D dilation for NA{na_dim}D, " f"got {dilation=}."
         )
 
-    attn_dims = tensor.shape[1 : na_dim + 1]
+    token_layout = tensor.shape[1 : na_dim + 1]
     tile_shape_ = tuple(x for x in tile_shape)
     if dilation is not None:
         # NOTE: LCM?
         # tile_shape_ = tuple(math.lcm(t, d) for t, d in zip(tile_shape, dilation))
         tile_shape_ = tuple(t * d for t, d in zip(tile_shape, dilation))
 
-    rest = tuple((x + t - 1) // t for x, t in zip(attn_dims, tile_shape_))
-    residual = tuple(r * t - x for x, t, r in zip(attn_dims, tile_shape_, rest))
+    rest = tuple((x + t - 1) // t for x, t in zip(token_layout, tile_shape_))
+    residual = tuple(r * t - x for x, t, r in zip(token_layout, tile_shape_, rest))
 
     assert all(res >= 0 for res in residual)
 
     if not DISABLE_PADDING_WARNING and any(
         res / sz > TOKEN_PERMUTE_PADDING_RATIO_LIMIT_UNTIL_WARNING
-        for res, sz in zip(residual, attn_dims)
+        for res, sz in zip(residual, token_layout)
     ):
-        padded_attn_dims = tuple(x + p for x, p in zip(attn_dims, residual))
+        padded_token_layout = tuple(x + p for x, p in zip(token_layout, residual))
         logger.warning(
             "Potentially excessive padding detected in token permute: "
-            f"input shape {attn_dims} will be padded to {padded_attn_dims} to handle "
+            f"input shape {token_layout} will be padded to {padded_token_layout} to handle "
             "token permutation, which can result in excessive memory usage, and "
             "performance implications. Consider choosing your tile shapes, input shapes "
             "(and dilation if you use it) accordingly. Refer to NATTEN docs for more info."
@@ -88,10 +93,15 @@ def maybe_pad(tensor, tile_shape, dilation=None):
     else:
         tensor_padded = tensor
 
-    return tensor_padded, residual
+    return tensor_padded
 
 
-def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = True):
+def _token_permute(
+    tensor: Tensor,
+    tile_shape: DimensionType,
+    dilation: DimensionType,
+    flip_tiled_dims: bool,
+) -> Tensor:
     if tensor.dim() not in [4, 5, 6]:
         raise ValueError(
             "Expected 4D, 5D, or 6D tensor (corresponding to NA1D, 2D, 3D), "
@@ -103,21 +113,21 @@ def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = Tru
 
     if len(tile_shape) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D tiler for NA{na_dim}, " f"got {tile_shape=}."
+            f"Expected {na_dim}D tiler for NA{na_dim}D, " f"got {tile_shape=}."
         )
 
     dilation = dilation or tuple(1 for _ in range(na_dim))
 
     if len(dilation) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D dilation for NA{na_dim}, " f"got {dilation=}."
+            f"Expected {na_dim}D dilation for NA{na_dim}D, " f"got {dilation=}."
         )
 
-    batch, *attn_dims, heads, dim = tensor.shape
+    batch, *token_layout, heads, dim = tensor.shape
 
     if any(
         x % d != 0 or (x // d) % t != 0
-        for x, t, d in zip(attn_dims, tile_shape, dilation)
+        for x, t, d in zip(token_layout, tile_shape, dilation)
     ):
         raise ValueError(
             "Tensor must be divisible by static tile shape and dilation, but got "
@@ -125,8 +135,8 @@ def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = Tru
         )
 
     num_dilation_groups = math.prod(dilation)
-    attn_dims_post_dilation = tuple(x // d for x, d in zip(attn_dims, dilation))
-    rest = tuple(x // d // t for x, t, d in zip(attn_dims, tile_shape, dilation))
+    token_layout_post_dilation = tuple(x // d for x, d in zip(token_layout, dilation))
+    rest = tuple(x // d // t for x, t, d in zip(token_layout, tile_shape, dilation))
     logical_divide_dims = []
     for d, r, t in zip(dilation, rest, tile_shape):
         logical_divide_dims += [r, t, d]
@@ -168,44 +178,38 @@ def token_permute(tensor, tile_shape, dilation=None, flip_tiled_dims: bool = Tru
 
     # Reshape back and copy
     tensor_flatten = tensor_permuted.reshape(
-        num_dilation_groups * batch, math.prod(attn_dims_post_dilation), heads, dim
+        num_dilation_groups * batch, math.prod(token_layout_post_dilation), heads, dim
     ).contiguous()
     # NOTE: token permute without dilation is a no-op for 1-D
     # assert na_dim == 1 or tensor_flatten.data_ptr() != tensor_permuted.data_ptr()
     assert tensor_flatten.is_contiguous()
 
-    return tensor_flatten, attn_dims_post_dilation, rest
+    return tensor_flatten
 
 
-def token_unpermute(
-    tensor,
-    tile_shape,
-    orig_shape,
-    rest_shape,
-    dilation=None,
-    flip_tiled_dims: bool = True,
+def _token_unpermute(
+    tensor: Tensor,
+    token_layout: DimensionType,
+    tile_shape: DimensionType,
+    dilation: DimensionType,
+    flip_tiled_dims: bool,
 ):
     if tensor.dim() != 4:
         raise ValueError(f"Expected flattened 4D tensor, got {tensor.dim()}D input.")
 
-    na_dim = len(orig_shape)
+    na_dim = len(token_layout)
     assert na_dim in [1, 2, 3]
 
     if len(tile_shape) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D tiler for NA{na_dim}, " f"got {tile_shape=}."
-        )
-
-    if len(rest_shape) != na_dim:
-        raise ValueError(
-            f"Expected {na_dim}D rest shape for NA{na_dim}, " f"got {rest_shape=}."
+            f"Expected {na_dim}D tiler for NA{na_dim}D, " f"got {tile_shape=}."
         )
 
     dilation = dilation or tuple(1 for _ in range(na_dim))
 
     if len(dilation) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D dilation for NA{na_dim}, " f"got {dilation=}."
+            f"Expected {na_dim}D dilation for NA{na_dim}D, " f"got {dilation=}."
         )
 
     num_dilation_groups = math.prod(dilation)
@@ -220,7 +224,8 @@ def token_unpermute(
 
     batch_actual = batch // num_dilation_groups
 
-    orig_shape_pre_dilation = tuple(x * d for x, d in zip(orig_shape, dilation))
+    rest_shape = ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation)
+    token_layout_padded = mul_tuple(mul_tuple(rest_shape, tile_shape), dilation)
 
     # View, not copy
     rest_shape_ = reversed(rest_shape) if flip_tiled_dims else rest_shape
@@ -253,7 +258,7 @@ def token_unpermute(
 
     # Reshape back and copy
     out = tensor_permuted.reshape(
-        batch_actual, *orig_shape_pre_dilation, heads, dim
+        batch_actual, *token_layout_padded, heads, dim
     ).contiguous()
     # NOTE: token permute without dilation is a no-op for 1-D
     # assert na_dim == 1 or out.data_ptr() != tensor_permuted.data_ptr()
@@ -262,7 +267,7 @@ def token_unpermute(
     return out
 
 
-def maybe_unpad(tensor, padding):
+def _maybe_unpad(tensor: Tensor, padding: DimensionType):
     if tensor.dim() not in [4, 5, 6]:
         raise ValueError(
             "Expected 4D, 5D, or 6D tensor (corresponding to NA1D, 2D, 3D), "
@@ -274,18 +279,18 @@ def maybe_unpad(tensor, padding):
 
     if len(padding) != na_dim:
         raise ValueError(
-            f"Expected {na_dim}D padding shape for NA{na_dim}, " f"got {padding=}."
+            f"Expected {na_dim}D padding shape for NA{na_dim}D, " f"got {padding=}."
         )
 
-    attn_dims = tensor.shape[1 : na_dim + 1]
+    token_layout = tensor.shape[1 : na_dim + 1]
 
     # Slice
     if any(p for p in padding):
         assert all(p >= 0 for p in padding)
 
-        orig_lens = tuple(x - p for x, p in zip(attn_dims, padding))
+        orig_lens = tuple(x - p for x, p in zip(token_layout, padding))
 
-        # TODO: there must be a beter way
+        # TODO: there must be a better way
         if len(orig_lens) == 1:
             x = orig_lens[0]
             return tensor[:, :x].contiguous()
@@ -299,3 +304,65 @@ def maybe_unpad(tensor, padding):
             raise NotImplementedError()
 
     return tensor
+
+
+def token_permute_torch(
+    tensor: Tensor,
+    tile_shape: DimensionType,
+    dilation: DimensionType,
+    flip_tiled_dims: bool,
+) -> Tensor:
+    if tensor.dim() not in [4, 5, 6]:
+        raise ValueError(
+            "Expected 4D, 5D, or 6D tensor (corresponding to NA1D, 2D, 3D), "
+            f"got {tensor.dim()}D input."
+        )
+
+    tensor_pad = _maybe_pad(tensor, tile_shape=tile_shape, dilation=dilation)
+    output = _token_permute(
+        tensor_pad,
+        tile_shape=tile_shape,
+        dilation=dilation,
+        flip_tiled_dims=flip_tiled_dims,
+    )
+
+    return output
+
+
+def token_unpermute_torch(
+    tensor: Tensor,
+    token_layout: DimensionType,
+    tile_shape: DimensionType,
+    dilation: DimensionType,
+    flip_tiled_dims: bool,
+) -> Tensor:
+    if tensor.dim() != 4:
+        raise ValueError(f"Expected flattened 4D tensor, got {tensor.dim()}D input.")
+
+    token_layout_padded = mul_tuple(
+        mul_tuple(
+            ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation),
+            dilation,
+        ),
+        tile_shape,
+    )
+    padding = sub_tuple(token_layout_padded, token_layout)
+
+    output = _maybe_unpad(
+        _token_unpermute(
+            tensor,
+            token_layout=token_layout,
+            tile_shape=tile_shape,
+            dilation=dilation,
+            flip_tiled_dims=flip_tiled_dims,
+        ),
+        padding=padding,
+    )
+
+    return output
+
+
+__all__ = [
+    "token_permute_torch",
+    "token_unpermute_torch",
+]

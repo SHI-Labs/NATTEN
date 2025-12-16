@@ -10,6 +10,9 @@
 * GQA/MQA support added for all FNA and FMHA operations.
   * CUTLASS FNA/FMHA and Hopper FNA/FMHA don't support it in the kernels natively, therefore it's
       implemented with graph transforms for now.
+* Dedicated Token Permute kernels
+  * Token Permute/Unpermute and padding operations are now implemented as their own kernels, and can
+      be used instead of the PyTorch implementation.
 
 ## [0.21.1] - 2025-10-26
 * FP8 inference support for Blackwell DC-class ([#266](https://github.com/SHI-Labs/NATTEN/pull/266))

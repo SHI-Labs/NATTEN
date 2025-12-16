@@ -76,5 +76,13 @@ blackwell_na1d_backward = libnatten_import_error
 blackwell_na2d_backward = libnatten_import_error
 blackwell_na3d_backward = libnatten_import_error
 
+# Token permute kernels
+token_permute_1d = libnatten_import_error
+token_permute_2d = libnatten_import_error
+token_permute_3d = libnatten_import_error
+token_unpermute_1d = libnatten_import_error
+token_unpermute_2d = libnatten_import_error
+token_unpermute_3d = libnatten_import_error
+
 # Misc kernels
 compute_delta = libnatten_import_error
