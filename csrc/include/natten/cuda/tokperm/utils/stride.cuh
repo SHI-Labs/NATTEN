@@ -42,20 +42,20 @@ struct StrideHelper {
 
   CUTE_HOST_DEVICE static constexpr StrideType make_stride(Shape const& shape) {
     if constexpr (Rank == 1) {
-      return make_stride(_1{});
+      return cute::make_stride(_1{});
+    } else {
+      StrideType stride;
+
+      get<Rank - 1>(stride) = _1{};
+      get<Rank - 2>(stride) = get<Rank - 1>(shape);
+      cute::for_each(cute::make_range<0, Rank - 1>{}, [&](auto i) {
+        static_assert(i < Rank - 1);
+        get<Rank - i - 2>(stride) =
+            get<Rank - i - 1>(shape) * get<Rank - i - 1>(stride);
+      });
+
+      return stride;
     }
-
-    StrideType stride;
-
-    get<Rank - 1>(stride) = _1{};
-    get<Rank - 2>(stride) = get<Rank - 1>(shape);
-    cute::for_each(cute::make_range<0, Rank - 1>{}, [&](auto i) {
-      static_assert(i < Rank - 1);
-      get<Rank - i - 2>(stride) =
-          get<Rank - i - 1>(shape) * get<Rank - i - 1>(stride);
-    });
-
-    return stride;
   }
 };
 

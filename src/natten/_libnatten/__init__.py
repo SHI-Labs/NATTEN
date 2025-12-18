@@ -63,9 +63,15 @@ try:
         token_permute_1d,
         token_permute_2d,
         token_permute_3d,
+        token_permute_varlen_1d,
+        token_permute_varlen_2d,
+        token_permute_varlen_3d,
         token_unpermute_1d,
         token_unpermute_2d,
         token_unpermute_3d,
+        token_unpermute_varlen_1d,
+        token_unpermute_varlen_2d,
+        token_unpermute_varlen_3d,
     )
 
 except ImportError:
@@ -106,9 +112,15 @@ except ImportError:
         token_permute_1d,
         token_permute_2d,
         token_permute_3d,
+        token_permute_varlen_1d,
+        token_permute_varlen_2d,
+        token_permute_varlen_3d,
         token_unpermute_1d,
         token_unpermute_2d,
         token_unpermute_3d,
+        token_unpermute_varlen_1d,
+        token_unpermute_varlen_2d,
+        token_unpermute_varlen_3d,
     )
 
 
@@ -150,4 +162,10 @@ __all__ = [
     "token_unpermute_1d",
     "token_unpermute_2d",
     "token_unpermute_3d",
+    "token_permute_varlen_1d",
+    "token_permute_varlen_2d",
+    "token_permute_varlen_3d",
+    "token_unpermute_varlen_1d",
+    "token_unpermute_varlen_2d",
+    "token_unpermute_varlen_3d",
 ]

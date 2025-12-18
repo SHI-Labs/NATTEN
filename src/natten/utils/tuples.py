@@ -24,6 +24,18 @@
 from natten.types import CausalArgType, DimensionType
 
 
+def idx2crd(index: int, shape: tuple) -> tuple:
+    rank = len(shape)
+    coord = []
+    residual = index
+    for i in range(rank - 1, -1, -1):
+        coord.append(residual % shape[i])
+        residual = residual // shape[i]
+
+    # assert residual == 0
+    return tuple(coord[::-1])
+
+
 def ceil_div_int(x: int, y: int) -> int:
     return (x + y - 1) // y
 

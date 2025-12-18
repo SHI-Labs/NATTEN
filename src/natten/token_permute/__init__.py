@@ -23,10 +23,16 @@
 
 from natten.token_permute.frontend import (
     token_permute_operation,
+    token_permute_varlen_operation,
     token_unpermute_operation,
+    token_unpermute_varlen_operation,
 )
+from natten.token_permute.varlen import generate_fna_varlen_metadata
 
 __all__ = [
     "token_permute_operation",
     "token_unpermute_operation",
+    "token_permute_varlen_operation",
+    "token_unpermute_varlen_operation",
+    "generate_fna_varlen_metadata",
 ]

@@ -73,4 +73,70 @@ void token_unpermute_3d(
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     bool flip_tiled_dims);
 
+void token_permute_varlen_1d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t>& tile_shape,
+    const std::tuple<int32_t>& dilation,
+    bool flip_tiled_dims);
+
+void token_permute_varlen_2d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t, int32_t>& tile_shape,
+    const std::tuple<int32_t, int32_t>& dilation,
+    bool flip_tiled_dims);
+
+void token_permute_varlen_3d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t, int32_t, int32_t>& tile_shape,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    bool flip_tiled_dims);
+
+void token_unpermute_varlen_1d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t>& tile_shape,
+    const std::tuple<int32_t>& dilation,
+    bool flip_tiled_dims);
+
+void token_unpermute_varlen_2d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t, int32_t>& tile_shape,
+    const std::tuple<int32_t, int32_t>& dilation,
+    bool flip_tiled_dims);
+
+void token_unpermute_varlen_3d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t, int32_t, int32_t>& tile_shape,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation,
+    bool flip_tiled_dims);
+
 } // namespace natten

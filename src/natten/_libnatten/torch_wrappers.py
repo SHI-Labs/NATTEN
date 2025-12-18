@@ -62,9 +62,15 @@ from natten.libnatten import (  # type: ignore[import-untyped]
     token_permute_1d as token_permute_1d_cxx,
     token_permute_2d as token_permute_2d_cxx,
     token_permute_3d as token_permute_3d_cxx,
+    token_permute_varlen_1d as token_permute_varlen_1d_cxx,
+    token_permute_varlen_2d as token_permute_varlen_2d_cxx,
+    token_permute_varlen_3d as token_permute_varlen_3d_cxx,
     token_unpermute_1d as token_unpermute_1d_cxx,
     token_unpermute_2d as token_unpermute_2d_cxx,
     token_unpermute_3d as token_unpermute_3d_cxx,
+    token_unpermute_varlen_1d as token_unpermute_varlen_1d_cxx,
+    token_unpermute_varlen_2d as token_unpermute_varlen_2d_cxx,
+    token_unpermute_varlen_3d as token_unpermute_varlen_3d_cxx,
 )
 from natten.utils.environment import DISABLE_TORCH_OPS
 from natten.utils.tuples import ceil_div_tuple, mul_tuple
@@ -1431,6 +1437,171 @@ def make_token_permute_ops(na_dim):
     )
 
 
+def make_token_permute_varlen_ops(na_dim):
+    permute_handle, unpermute_handle = {
+        1: (token_permute_varlen_1d_cxx, token_unpermute_varlen_1d_cxx),
+        2: (token_permute_varlen_2d_cxx, token_unpermute_varlen_2d_cxx),
+        3: (token_permute_varlen_3d_cxx, token_unpermute_varlen_3d_cxx),
+    }[na_dim]
+
+    @register_op(
+        f"natten::token_permute_varlen_{na_dim}d",
+        mutates_args=(),
+        device_types="cuda",
+    )
+    def token_permute_varlen_torch_op(
+        input_tensor: Tensor,
+        offsets_pre_permute: Tensor,
+        offsets_post_permute: Tensor,
+        token_layouts_pre_permute: Tensor,
+        max_seqlen: int,
+        total_seqlen_post_permute: int,
+        tile_shape: list[int],
+        dilation: list[int],
+        flip_tiled_dims: bool,
+    ) -> Tensor:
+        input_tensor = maybe_contiguous(input_tensor)
+        offsets_pre_permute = maybe_contiguous(offsets_pre_permute)
+        offsets_post_permute = maybe_contiguous(offsets_post_permute)
+        token_layouts_pre_permute = maybe_contiguous(token_layouts_pre_permute)
+
+        assert input_tensor.shape[0] == 1
+        output_shape = [
+            1,
+            total_seqlen_post_permute,
+            input_tensor.shape[-2],
+            input_tensor.shape[-1],
+        ]
+        output = torch.empty(
+            output_shape, device=input_tensor.device, dtype=input_tensor.dtype
+        )
+        permute_handle(
+            output,
+            input_tensor,
+            offsets_pre_permute,
+            offsets_post_permute,
+            token_layouts_pre_permute,
+            max_seqlen,
+            tile_shape,
+            dilation,
+            flip_tiled_dims,
+        )
+
+        return output
+
+    @register_fake(f"natten::token_permute_varlen_{na_dim}d")
+    def token_permute_varlen_torch_fake_op(
+        input_tensor: Tensor,
+        offsets_pre_permute: Tensor,
+        offsets_post_permute: Tensor,
+        token_layouts_pre_permute: Tensor,
+        max_seqlen: int,
+        total_seqlen_post_permute: int,
+        tile_shape: list[int],
+        dilation: list[int],
+        flip_tiled_dims: bool,
+    ) -> Tensor:
+        input_tensor = maybe_contiguous(input_tensor)
+        offsets_pre_permute = maybe_contiguous(offsets_pre_permute)
+        offsets_post_permute = maybe_contiguous(offsets_post_permute)
+        token_layouts_pre_permute = maybe_contiguous(token_layouts_pre_permute)
+
+        assert input_tensor.shape[0] == 1
+        output_shape = [
+            1,
+            total_seqlen_post_permute,
+            input_tensor.shape[-2],
+            input_tensor.shape[-1],
+        ]
+        output = torch.empty(
+            output_shape, device=input_tensor.device, dtype=input_tensor.dtype
+        )
+
+        return output
+
+    @register_op(
+        f"natten::token_unpermute_varlen_{na_dim}d",
+        mutates_args=(),
+        device_types="cuda",
+    )
+    def token_unpermute_varlen_torch_op(
+        input_tensor: Tensor,
+        offsets_pre_permute: Tensor,
+        offsets_post_permute: Tensor,
+        token_layouts_pre_permute: Tensor,
+        max_seqlen: int,
+        total_seqlen_pre_permute: int,
+        tile_shape: list[int],
+        dilation: list[int],
+        flip_tiled_dims: bool,
+    ) -> Tensor:
+        input_tensor = maybe_contiguous(input_tensor)
+        offsets_pre_permute = maybe_contiguous(offsets_pre_permute)
+        offsets_post_permute = maybe_contiguous(offsets_post_permute)
+        token_layouts_pre_permute = maybe_contiguous(token_layouts_pre_permute)
+
+        assert input_tensor.shape[0] == 1
+        output_shape = [
+            1,
+            total_seqlen_pre_permute,
+            input_tensor.shape[-2],
+            input_tensor.shape[-1],
+        ]
+        output = torch.empty(
+            output_shape, device=input_tensor.device, dtype=input_tensor.dtype
+        )
+        unpermute_handle(
+            output,
+            input_tensor,
+            offsets_pre_permute,
+            offsets_post_permute,
+            token_layouts_pre_permute,
+            max_seqlen,
+            tile_shape,
+            dilation,
+            flip_tiled_dims,
+        )
+
+        return output
+
+    @register_fake(f"natten::token_unpermute_varlen_{na_dim}d")
+    def token_unpermute_varlen_torch_fake_op(
+        input_tensor: Tensor,
+        offsets_pre_permute: Tensor,
+        offsets_post_permute: Tensor,
+        token_layouts_pre_permute: Tensor,
+        max_seqlen: int,
+        total_seqlen_pre_permute: int,
+        tile_shape: list[int],
+        dilation: list[int],
+        flip_tiled_dims: bool,
+    ) -> Tensor:
+        input_tensor = maybe_contiguous(input_tensor)
+        offsets_pre_permute = maybe_contiguous(offsets_pre_permute)
+        offsets_post_permute = maybe_contiguous(offsets_post_permute)
+        token_layouts_pre_permute = maybe_contiguous(token_layouts_pre_permute)
+
+        assert input_tensor.shape[0] == 1
+        output_shape = [
+            1,
+            total_seqlen_pre_permute,
+            input_tensor.shape[-2],
+            input_tensor.shape[-1],
+        ]
+        output = torch.empty(
+            output_shape, device=input_tensor.device, dtype=input_tensor.dtype
+        )
+
+        return output
+
+    return (
+        token_permute_varlen_torch_op,
+        token_permute_varlen_torch_fake_op,
+        token_unpermute_varlen_torch_op,
+        token_unpermute_varlen_torch_fake_op,
+    )
+
+
 (
     blackwell_na1d_forward_torch_op,
     blackwell_na1d_forward_torch_fake_op,
@@ -1526,6 +1697,25 @@ def make_token_permute_ops(na_dim):
     token_unpermute_3d_torch_fake_op,
 ) = make_token_permute_ops(3)
 
+(
+    token_permute_varlen_1d_torch_op,
+    token_permute_varlen_1d_torch_fake_op,
+    token_unpermute_varlen_1d_torch_op,
+    token_unpermute_varlen_1d_torch_fake_op,
+) = make_token_permute_varlen_ops(1)
+(
+    token_permute_varlen_2d_torch_op,
+    token_permute_varlen_2d_torch_fake_op,
+    token_unpermute_varlen_2d_torch_op,
+    token_unpermute_varlen_2d_torch_fake_op,
+) = make_token_permute_varlen_ops(2)
+(
+    token_permute_varlen_3d_torch_op,
+    token_permute_varlen_3d_torch_fake_op,
+    token_unpermute_varlen_3d_torch_op,
+    token_unpermute_varlen_3d_torch_fake_op,
+) = make_token_permute_varlen_ops(3)
+
 
 if DISABLE_TORCH_OPS:
     # Torch wrapped handles
@@ -1582,6 +1772,14 @@ if DISABLE_TORCH_OPS:
     token_unpermute_2d = token_unpermute_2d_torch_op
     token_unpermute_3d = token_unpermute_3d_torch_op
 
+    token_permute_varlen_1d = token_permute_varlen_1d_torch_op
+    token_permute_varlen_2d = token_permute_varlen_2d_torch_op
+    token_permute_varlen_3d = token_permute_varlen_3d_torch_op
+
+    token_unpermute_varlen_1d = token_unpermute_varlen_1d_torch_op
+    token_unpermute_varlen_2d = token_unpermute_varlen_2d_torch_op
+    token_unpermute_varlen_3d = token_unpermute_varlen_3d_torch_op
+
 else:
     # Torch wrapped handles
     blackwell_fmha_forward = torch.ops.natten.blackwell_fmha_forward
@@ -1637,6 +1835,14 @@ else:
     token_unpermute_2d = torch.ops.natten.token_unpermute_2d
     token_unpermute_3d = torch.ops.natten.token_unpermute_3d
 
+    token_permute_varlen_1d = torch.ops.natten.token_permute_varlen_1d
+    token_permute_varlen_2d = torch.ops.natten.token_permute_varlen_2d
+    token_permute_varlen_3d = torch.ops.natten.token_permute_varlen_3d
+
+    token_unpermute_varlen_1d = torch.ops.natten.token_unpermute_varlen_1d
+    token_unpermute_varlen_2d = torch.ops.natten.token_unpermute_varlen_2d
+    token_unpermute_varlen_3d = torch.ops.natten.token_unpermute_varlen_3d
+
 # This is only used in unit tests, and not even auto-diffable
 compute_delta = compute_delta_cxx
 
@@ -1679,4 +1885,10 @@ __all__ = [
     "token_unpermute_1d",
     "token_unpermute_2d",
     "token_unpermute_3d",
+    "token_permute_varlen_1d",
+    "token_permute_varlen_2d",
+    "token_permute_varlen_3d",
+    "token_unpermute_varlen_1d",
+    "token_unpermute_varlen_2d",
+    "token_unpermute_varlen_3d",
 ]

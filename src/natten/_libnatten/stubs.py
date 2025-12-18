@@ -84,5 +84,12 @@ token_unpermute_1d = libnatten_import_error
 token_unpermute_2d = libnatten_import_error
 token_unpermute_3d = libnatten_import_error
 
+token_permute_varlen_1d = libnatten_import_error
+token_permute_varlen_2d = libnatten_import_error
+token_permute_varlen_3d = libnatten_import_error
+token_unpermute_varlen_1d = libnatten_import_error
+token_unpermute_varlen_2d = libnatten_import_error
+token_unpermute_varlen_3d = libnatten_import_error
+
 # Misc kernels
 compute_delta = libnatten_import_error

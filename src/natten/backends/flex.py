@@ -69,6 +69,7 @@ from natten.utils.checks import (
     varlen_tensor_checks,
 )
 from natten.utils.environment import is_torch_compiling
+from natten.utils.tuples import idx2crd
 
 logger = log.get_logger(__name__)
 
@@ -266,19 +267,6 @@ def flex_fmha(
     return out
 
 
-# TODO: move me elsewhere?
-def idx2crd(index, shape) -> tuple:
-    rank = len(shape)
-    coord = []
-    residual = index
-    for i in range(rank - 1, -1, -1):
-        coord.append(residual % shape[i])
-        residual = residual // shape[i]
-
-    # assert residual == 0
-    return tuple(coord[::-1])
-
-
 def get_na_flex_mask(
     device: str,
     na_dim: int,
@@ -343,8 +331,8 @@ def get_na_flex_mask(
     ) -> BoolTensor:
 
         # Reconstruct global Q and KV coordinates
-        q_crd = idx2crd(q_idx, qkv_shape)
-        kv_crd = idx2crd(kv_idx, qkv_shape)
+        q_crd = idx2crd(q_idx, qkv_shape)  # type: ignore[arg-type]
+        kv_crd = idx2crd(kv_idx, qkv_shape)  # type: ignore[arg-type]
 
         # Coordinates within dilation group
         q_crd_di = tuple(x // d for x, d in zip(q_crd, dilation))
@@ -427,10 +415,10 @@ def get_na_flex_mask(
         kv_tile_idx = kv_idx // kv_tile_size
         q_tile_offset = q_idx % q_tile_size
         kv_tile_offset = kv_idx % q_tile_size
-        q_tile_coord = idx2crd(q_tile_idx, q_rest_shape)
-        kv_tile_coord = idx2crd(kv_tile_idx, kv_rest_shape)
-        q_tile_offset_coord = idx2crd(q_tile_offset, q_tile_shape)
-        kv_tile_offset_coord = idx2crd(kv_tile_offset, kv_tile_shape)
+        q_tile_coord = idx2crd(q_tile_idx, q_rest_shape)  # type: ignore[arg-type]
+        kv_tile_coord = idx2crd(kv_tile_idx, kv_rest_shape)  # type: ignore[arg-type]
+        q_tile_offset_coord = idx2crd(q_tile_offset, q_tile_shape)  # type: ignore[arg-type]
+        kv_tile_offset_coord = idx2crd(kv_tile_offset, kv_tile_shape)  # type: ignore[arg-type]
 
         q_crd = tuple(
             tile_crd * tile_sz + tile_off
@@ -448,7 +436,7 @@ def get_na_flex_mask(
         # Dilation group coordinates
         # b_actual = b // num_dilation_groups
         dilation_group_idx = b % num_dilation_groups
-        dilation_group_crd = idx2crd(dilation_group_idx, dilation)
+        dilation_group_crd = idx2crd(dilation_group_idx, dilation)  # type: ignore[arg-type]
 
         # Fixup input shape according to dilation group
         dilation_group_padding = tuple(

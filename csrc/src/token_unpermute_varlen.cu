@@ -21,7 +21,7 @@
  *
  **************************************************************************************************/
 /*! \file
-    \brief Token Unpermute
+    \brief Varlen Token Unpermute
 */
 
 #include <ATen/ATen.h>
@@ -34,7 +34,7 @@
 #include <natten/natten.h>
 
 #ifdef NATTEN_WITH_CUTLASS
-#include <natten/cuda/tokperm/tokperm.hpp>
+#include <natten/cuda/tokperm/tokperm_varlen.hpp>
 
 template <typename StdTuple>
 auto std_tuple_to_cute_tuple(StdTuple a) {
@@ -59,10 +59,13 @@ auto std_tuple_to_cute_tuple(StdTuple a) {
 namespace natten {
 
 template <class StdNADim>
-void token_unpermute_generic(
+void token_unpermute_varlen_generic(
     at::Tensor& out,
     const at::Tensor& in,
-    const StdNADim& token_layout,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
     const StdNADim& tile_shape,
     const StdNADim& dilation,
     bool flip_tiled_dims) {
@@ -81,51 +84,77 @@ void token_unpermute_generic(
   at::cuda::OptionalCUDAGuard device_guard(in.device());
 
   TORCH_CHECK(
-      out.dim() == 3 + kNADim,
-      "Token unpermute ",
-      kNADim,
-      "-D expected rank-",
-      3 + kNADim,
-      " tensor output, got ",
+      in.dim() == 4,
+      "Varlen Token Unpermute expects rank-4 inputs and outputs, got ",
+      "input.dim()=",
+      in.dim());
+
+  TORCH_CHECK(
+      out.dim() == 4,
+      "Varlen Token Unpermute expects rank-4 inputs and outputs, got ",
       "output.dim()=",
       out.dim());
 
   TORCH_CHECK(
-      in.size(0) == out.size(0),
-      "Token unpermute input and output batches must match, got ",
+      in.size(0) == out.size(0) && in.size(0) == 1,
+      "Varlen Token Unpermute input and output must have batch=1, got ",
       "input.shape[0]=",
       in.size(0),
       ", output.shape[0]=",
       out.size(0));
 
   TORCH_CHECK(
-      out.size(1 + kNADim) == in.size(2),
-      "Token unpermute input and output heads must match, got ",
+      out.size(2) == in.size(2),
+      "Varlen Token Unpermute input and output heads must match, got ",
       "output.shape[-2]=",
-      out.size(1 + kNADim),
+      out.size(2),
       ", input.shape[-2]=",
       in.size(2));
 
   TORCH_CHECK(
-      out.size(2 + kNADim) == in.size(3),
-      "Token unpermute input and output dims must match, got ",
+      out.size(3) == in.size(3),
+      "Varlen Token Unpermute input and output dims must match, got ",
       "output.shape[-1]=",
-      out.size(2 + kNADim),
+      out.size(3),
       ", input.shape[-1]=",
       in.size(3));
 
-  int batch = in.size(0);
-  int seqlen = in.size(1);
-  int heads = in.size(2);
-  int dim = in.size(3);
-
-  auto token_layout_ = std_tuple_to_cute_tuple(token_layout);
-  auto tile_shape_ = std_tuple_to_cute_tuple(tile_shape);
-  auto dilation_ = std_tuple_to_cute_tuple(dilation);
+  TORCH_CHECK(
+      offsets_pre_permute.dim() == 1 && offsets_post_permute.dim() == 1,
+      "Varlen Token Permute offsets must be rank-1 tensors, got "
+      "offsets_pre_permute.dim()=",
+      offsets_pre_permute.dim(),
+      ", offsets_post_permute.dim()=",
+      offsets_post_permute.dim());
 
   TORCH_CHECK(
-      size(token_layout_) <= seqlen,
-      "Token unpermute output's flattened token layout must be <= input sequence size.");
+      offsets_pre_permute.size(0) > 1,
+      "Varlen Token Permute pre-permute offsets must contain at least 2 elements, got "
+      "offsets_pre_permute.shape[0]=",
+      offsets_pre_permute.size(0));
+
+  int batch = offsets_pre_permute.size(0) - 1;
+  int seqlen = out.size(1);
+  int heads = out.size(2);
+  int dim = out.size(3);
+
+  auto tile_shape_ = std_tuple_to_cute_tuple(tile_shape);
+  auto dilation_ = std_tuple_to_cute_tuple(dilation);
+  auto num_dilation_groups = cute::size(dilation_);
+
+  TORCH_CHECK(
+      offsets_post_permute.size(0) == num_dilation_groups * batch + 1,
+      "Varlen Token Permute post-permute offsets must contain exactly ",
+      "batch (=",
+      batch,
+      ") * math.prod(dilation) (=",
+      num_dilation_groups,
+      ") + 1"
+      "elements, which is = ",
+      num_dilation_groups * batch + 1,
+      ", got ",
+      "offsets_post_permute.shape[0]=",
+      offsets_post_permute.size(0));
 
   int device_id = in.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
@@ -142,41 +171,81 @@ void token_unpermute_generic(
           (is_fp8_allowed &&
            (in.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
             in.scalar_type() == c10::ScalarType::Float8_e5m2)),
-      "Token Unpermute only supports FP32, FP16, BF16, and FP8 operands (Blackwell DC-class only) for now.");
+      "Varlen Token Unpermute only supports FP32, FP16, BF16, and FP8 operands (Blackwell DC-class only) for now.");
+
+  TORCH_CHECK(
+      offsets_pre_permute.scalar_type() == torch::kInt &&
+          offsets_post_permute.scalar_type() == torch::kInt,
+      "Varlen Token Permute only supports Int32 offsets.");
+
+  TORCH_CHECK(
+      token_layouts.scalar_type() == torch::kInt,
+      "Varlen Token Permute expects token_layouts to be an int32 tensor.");
+
+  TORCH_CHECK(
+      token_layouts.dim() == 2,
+      "Varlen Token Permute expects token_layouts to be a rank-2 tensor.");
+
+  TORCH_CHECK(
+      token_layouts.size(0) == batch,
+      "Varlen Token Permute expects token_layouts.shape[0] == batch (=",
+      batch,
+      "), got ",
+      token_layouts.size(0));
+
+  TORCH_CHECK(
+      token_layouts.size(1) == kNADim,
+      "Varlen Token Permute ",
+      kNADim,
+      "-D expects token_layouts.shape[1] == ",
+      kNADim,
+      ", got ",
+      token_layouts.size(1));
+
+  using CuteTuple = decltype(tile_shape_);
 
   bool success = false;
   if (in.scalar_type() == torch::kFloat32) {
-    success = natten::tokperm::token_unpermute_op(
+    success = natten::tokperm::token_unpermute_varlen_op(
         reinterpret_cast<float*>(in.data_ptr()),
         reinterpret_cast<float*>(out.data_ptr()),
         batch,
+        seqlen_max,
         heads,
         dim,
-        token_layout_,
+        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
         tile_shape_,
         dilation_,
         flip_tiled_dims,
         cuda_stream);
   } else if (in.scalar_type() == torch::kFloat16) {
-    success = natten::tokperm::token_unpermute_op(
+    success = natten::tokperm::token_unpermute_varlen_op(
         reinterpret_cast<cutlass::half_t*>(in.data_ptr()),
         reinterpret_cast<cutlass::half_t*>(out.data_ptr()),
         batch,
+        seqlen_max,
         heads,
         dim,
-        token_layout_,
+        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
         tile_shape_,
         dilation_,
         flip_tiled_dims,
         cuda_stream);
   } else if (in.scalar_type() == torch::kBFloat16) {
-    success = natten::tokperm::token_unpermute_op(
+    success = natten::tokperm::token_unpermute_varlen_op(
         reinterpret_cast<cutlass::bfloat16_t*>(in.data_ptr()),
         reinterpret_cast<cutlass::bfloat16_t*>(out.data_ptr()),
         batch,
+        seqlen_max,
         heads,
         dim,
-        token_layout_,
+        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -185,26 +254,32 @@ void token_unpermute_generic(
 #if defined(NATTEN_WITH_BLACKWELL_FNA)
   else if (
       is_fp8_allowed && in.scalar_type() == c10::ScalarType::Float8_e4m3fn) {
-    success = natten::tokperm::token_unpermute_op(
+    success = natten::tokperm::token_unpermute_varlen_op(
         reinterpret_cast<cutlass::float_e4m3_t*>(in.data_ptr()),
         reinterpret_cast<cutlass::float_e4m3_t*>(out.data_ptr()),
         batch,
+        seqlen_max,
         heads,
         dim,
-        token_layout_,
+        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
         tile_shape_,
         dilation_,
         flip_tiled_dims,
         cuda_stream);
   } else if (
       is_fp8_allowed && in.scalar_type() == c10::ScalarType::Float8_e5m2) {
-    success = natten::tokperm::token_unpermute_op(
+    success = natten::tokperm::token_unpermute_varlen_op(
         reinterpret_cast<cutlass::float_e5m2_t*>(in.data_ptr()),
         reinterpret_cast<cutlass::float_e5m2_t*>(out.data_ptr()),
         batch,
+        seqlen_max,
         heads,
         dim,
-        token_layout_,
+        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -219,47 +294,67 @@ void token_unpermute_generic(
 #endif
 }
 
-void token_unpermute_1d(
+void token_unpermute_varlen_1d(
     at::Tensor& out,
     const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
     const std::tuple<int32_t>& tile_shape,
     const std::tuple<int32_t>& dilation,
     bool flip_tiled_dims) {
-  TORCH_CHECK(out.dim() == 4, "Output tensor must be 4-D.");
-
-  token_unpermute_generic(
-      out, in, {out.size(1)}, tile_shape, dilation, flip_tiled_dims);
-}
-
-void token_unpermute_2d(
-    at::Tensor& out,
-    const at::Tensor& in,
-    const std::tuple<int32_t, int32_t>& tile_shape,
-    const std::tuple<int32_t, int32_t>& dilation,
-    bool flip_tiled_dims) {
-  TORCH_CHECK(out.dim() == 5, "Output tensor must be 5-D.");
-
-  token_unpermute_generic(
+  token_unpermute_varlen_generic(
       out,
       in,
-      {out.size(1), out.size(2)},
+      offsets_pre_permute,
+      offsets_post_permute,
+      token_layouts,
+      seqlen_max,
       tile_shape,
       dilation,
       flip_tiled_dims);
 }
 
-void token_unpermute_3d(
+void token_unpermute_varlen_2d(
     at::Tensor& out,
     const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
+    const std::tuple<int32_t, int32_t>& tile_shape,
+    const std::tuple<int32_t, int32_t>& dilation,
+    bool flip_tiled_dims) {
+  token_unpermute_varlen_generic(
+      out,
+      in,
+      offsets_pre_permute,
+      offsets_post_permute,
+      token_layouts,
+      seqlen_max,
+      tile_shape,
+      dilation,
+      flip_tiled_dims);
+}
+
+void token_unpermute_varlen_3d(
+    at::Tensor& out,
+    const at::Tensor& in,
+    const at::Tensor& offsets_pre_permute,
+    const at::Tensor& offsets_post_permute,
+    const at::Tensor& token_layouts,
+    int32_t seqlen_max,
     const std::tuple<int32_t, int32_t, int32_t>& tile_shape,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
     bool flip_tiled_dims) {
-  TORCH_CHECK(out.dim() == 6, "Output tensor must be 6-D.");
-
-  token_unpermute_generic(
+  token_unpermute_varlen_generic(
       out,
       in,
-      {out.size(1), out.size(2), out.size(3)},
+      offsets_pre_permute,
+      offsets_post_permute,
+      token_layouts,
+      seqlen_max,
       tile_shape,
       dilation,
       flip_tiled_dims);

@@ -29,9 +29,12 @@ from natten._environment import USE_TORCH_IMPL_DEFAULT
 from natten.token_permute.cutlass_impl import (
     can_run_cutlass_tokperm,
     token_permute_cutlass,
+    token_permute_varlen_cutlass,
     token_unpermute_cutlass,
+    token_unpermute_varlen_cutlass,
 )
 from natten.token_permute.torch_impl import token_permute_torch, token_unpermute_torch
+from natten.token_permute.varlen import verify_fna_varlen_metadata
 from natten.types import DimensionType
 from natten.utils import log
 from natten.utils.tuples import ceil_div_tuple, mul_tuple
@@ -132,6 +135,82 @@ def token_unpermute_operation(
             tile_shape=tile_shape,
             dilation=dilation_,
             flip_tiled_dims=flip_tiled_dims,
+        )
+
+    return output
+
+
+def token_permute_varlen_operation(
+    tensor: Tensor,
+    metadata: dict,
+    tile_shape: DimensionType,
+    dilation: Optional[DimensionType] = None,
+    flip_tiled_dims: bool = True,
+    use_torch: bool = USE_TORCH_IMPL_DEFAULT,
+) -> Tensor:
+    na_dim = len(tile_shape)
+    assert na_dim in [1, 2, 3]
+
+    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+
+    verify_fna_varlen_metadata(
+        tensor=tensor,
+        metadata=metadata,
+        tile_shape=tile_shape,
+        dilation=dilation_,
+    )
+
+    tensor = tensor.contiguous()
+
+    if not use_torch and can_run_cutlass_tokperm(tensor):
+        output = token_permute_varlen_cutlass(
+            tensor,
+            metadata=metadata,
+            tile_shape=tile_shape,
+            dilation=dilation_,
+            flip_tiled_dims=flip_tiled_dims,
+        )
+    else:
+        raise NotImplementedError(
+            "Varlen Token Permute is only implemented with CUTLASS for now."
+        )
+
+    return output
+
+
+def token_unpermute_varlen_operation(
+    tensor: Tensor,
+    metadata: dict,
+    tile_shape: DimensionType,
+    dilation: Optional[DimensionType] = None,
+    flip_tiled_dims: bool = True,
+    use_torch: bool = USE_TORCH_IMPL_DEFAULT,
+) -> Tensor:
+    na_dim = len(tile_shape)
+    assert na_dim in [1, 2, 3]
+
+    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+
+    verify_fna_varlen_metadata(
+        tensor=tensor,
+        metadata=metadata,
+        tile_shape=tile_shape,
+        dilation=dilation_,
+    )
+
+    tensor = tensor.contiguous()
+
+    if not use_torch and can_run_cutlass_tokperm(tensor):
+        output = token_unpermute_varlen_cutlass(
+            tensor,
+            metadata=metadata,
+            tile_shape=tile_shape,
+            dilation=dilation_,
+            flip_tiled_dims=flip_tiled_dims,
+        )
+    else:
+        raise NotImplementedError(
+            "Varlen Token Permute is only implemented with CUTLASS for now."
         )
 
     return output

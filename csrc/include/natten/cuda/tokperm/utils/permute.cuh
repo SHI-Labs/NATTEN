@@ -54,4 +54,18 @@ CUTE_HOST_DEVICE constexpr ProblemShape permute_tokens(
       get<3>(problem_shape));
 }
 
+// `permute_tokens_varlen`
+// Expects rank-2 inputs ((*tokens), heads * head_dim)
+//
+// NOTE: does not check Permutation to ensure it's a valid permutation
+// I.e. permute_tokens<1,1> repeats token dimension 1 without raising an error.
+template <int... Permutation, class ProblemShape>
+CUTE_HOST_DEVICE constexpr ProblemShape permute_tokens_varlen(
+    ProblemShape problem_shape) {
+  static_assert(rank(ProblemShape{}) == 2);
+
+  return cute::make_tuple(
+      select<Permutation...>(get<0>(problem_shape)), get<1>(problem_shape));
+}
+
 } // namespace natten::tokperm::utils

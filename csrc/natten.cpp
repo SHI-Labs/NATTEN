@@ -56,6 +56,24 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   m.def(
       "token_unpermute_3d", &natten::token_unpermute_3d, "Token UnPermute 3D");
 
+  m.def(
+      "token_permute_varlen_1d", &natten::token_permute_varlen_1d, "Varlen Token Permute 1D");
+
+  m.def(
+      "token_permute_varlen_2d", &natten::token_permute_varlen_2d, "Varlen Token Permute 2D");
+
+  m.def(
+      "token_permute_varlen_3d", &natten::token_permute_varlen_3d, "Varlen Token Permute 3D");
+
+  m.def(
+      "token_unpermute_varlen_1d", &natten::token_unpermute_varlen_1d, "Varlen Token UnPermute 1D");
+
+  m.def(
+      "token_unpermute_varlen_2d", &natten::token_unpermute_varlen_2d, "Varlen Token UnPermute 2D");
+
+  m.def(
+      "token_unpermute_varlen_3d", &natten::token_unpermute_varlen_3d, "Varlen Token UnPermute 3D");
+
   // CUTLASS 3.X kernels
   //// SM100 - Blackwell FNA
   m.def(

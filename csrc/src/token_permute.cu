@@ -111,7 +111,7 @@ void token_permute_generic(
       "Token permute input and output dims must match, got ",
       "input.shape[-1]=",
       in.size(2 + kNADim),
-      ", output.shape[-2]=",
+      ", output.shape[-1]=",
       out.size(3));
 
   int batch = out.size(0);
@@ -142,7 +142,7 @@ void token_permute_generic(
           (is_fp8_allowed &&
            (in.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
             in.scalar_type() == c10::ScalarType::Float8_e5m2)),
-      "Only FP32, FP16, BF16, and FP8 operands are supported for now.");
+      "Token Permute only supports FP32, FP16, BF16, and FP8 operands (Blackwell DC-class only) for now.");
 
   bool success = false;
   if (in.scalar_type() == torch::kFloat32) {
