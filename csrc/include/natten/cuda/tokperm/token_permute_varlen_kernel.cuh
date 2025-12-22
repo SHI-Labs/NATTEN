@@ -127,14 +127,15 @@ struct TokenPermuteVarlenKernel {
 
   static dim3 get_grid_shape(Params const& params) {
     dim3 grid(
-        params.batch,
+        // never put seq in z, long seqs can easily exceed the 64K limit
+        cute::ceil_div(params.seqlen_max, kBlockSeq),
         params.heads,
-        cute::ceil_div(params.seqlen_max, kBlockSeq));
+        params.batch);
     return grid;
   }
 
   static dim3 get_block_shape() {
-    dim3 block(kNumThreadsD, kNumThreadsSeq, 1);
+    dim3 block(kNumThreadsSeq, kNumThreadsD, 1);
     return block;
   }
 
@@ -170,14 +171,14 @@ struct TokenPermuteVarlenKernel {
     StrideSrc stride_src;
     StrideDst stride_dst;
 
-    TokenLayout token_layout = params.token_layout_array[blockIdx.x];
+    TokenLayout token_layout = params.token_layout_array[blockIdx.z];
     TokenLayout rest =
         ceil_div(ceil_div(token_layout, params.tile_shape), params.dilation);
 
     if constexpr (IsUnpermute) {
       batch_offset_src = params.ptr_offsets_post_permute
-                             [blockIdx.x * params.num_dilation_groups];
-      batch_offset_dst = params.ptr_offsets_pre_permute[blockIdx.x];
+                             [blockIdx.z * params.num_dilation_groups];
+      batch_offset_dst = params.ptr_offsets_pre_permute[blockIdx.z];
 
       problem_shape_dst =
           cute::make_tuple(token_layout, params.heads * params.head_dim);
@@ -194,9 +195,9 @@ struct TokenPermuteVarlenKernel {
       stride_src = layout_src.stride();
 
     } else {
-      batch_offset_src = params.ptr_offsets_pre_permute[blockIdx.x];
+      batch_offset_src = params.ptr_offsets_pre_permute[blockIdx.z];
       batch_offset_dst = params.ptr_offsets_post_permute
-                             [blockIdx.x * params.num_dilation_groups];
+                             [blockIdx.z * params.num_dilation_groups];
 
       problem_shape_src =
           cute::make_tuple(token_layout, params.heads * params.head_dim);
@@ -226,9 +227,9 @@ struct TokenPermuteVarlenKernel {
     auto src_shape = token_layout_src.shape();
     auto seqlen = size<0>(problem_shape_dst);
 
-    for (int idx_s_t = threadIdx.y; idx_s_t < kBlockSeq;
+    for (int idx_s_t = threadIdx.x; idx_s_t < kBlockSeq;
          idx_s_t += kNumThreadsSeq) {
-      int idx_s = idx_s_t + kBlockSeq * blockIdx.z;
+      int idx_s = idx_s_t + kBlockSeq * blockIdx.x;
       if (idx_s >= seqlen)
         continue;
 
@@ -249,7 +250,7 @@ struct TokenPermuteVarlenKernel {
       auto ptr_src_bhs = ptr_src_bh + token_layout_src(crd_src);
       auto ptr_dst_bhs = ptr_dst_bh + token_layout_dst(crd_dst);
 
-      for (int idx_d = threadIdx.x * kElementsPerLoad; idx_d < params.head_dim;
+      for (int idx_d = threadIdx.y * kElementsPerLoad; idx_d < params.head_dim;
            idx_d += kElementsPerLoad * kNumThreadsD) {
         ElementSrc value_src[kElementsPerLoad];
         ElementDst value_dst[kElementsPerLoad];

@@ -49,6 +49,13 @@ void {kernel_name}(
       {DimType} window_size,
       {DimType} stride,
       {DimType} dilation,
+      // varlen parameters
+      bool is_varlen,
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      void* ptr_token_layouts,
       // init/launch params
       int device_id,
       cudaStream_t stream,
@@ -81,6 +88,13 @@ void {kernel_name}(
       {DimType} window_size,
       {DimType} stride,
       {DimType} dilation,
+      // varlen parameters
+      bool is_varlen,
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      void* ptr_token_layouts,
       // init/launch params
       int device_id,
       cudaStream_t stream,
@@ -91,38 +105,56 @@ void {kernel_name}(
   using KVTileShape = {KVTileShape};
   using Config = {GEMMShape};
   using Kernel = natten::cuda::fna_blackwell::KernelBackward<
-    {dtype}, Causal, QTileShape, KVTileShape, Config>;
+    {dtype}, Causal, QTileShape, KVTileShape, Config, false>;
+  using VarlenKernel = natten::cuda::fna_blackwell::KernelBackward<
+    {dtype}, Causal, QTileShape, KVTileShape, Config, true>;
 
-  Kernel kernel;
-  auto args = kernel.initialize(
-      ptr_Q,
-      ptr_K,
-      ptr_V,
-      ptr_O,
-      ptr_LSE,
-      ptr_dQ,
-      ptr_dK,
-      ptr_dV,
-      ptr_dO,
-      batch_size,
-      seqlen_q,
-      seqlen_k,
-      heads_q,
-      heads_kv,
-      dim,
-      attn_scale,
-      q_shape,
-      kv_shape,
-      qkv_shape,
-      window_size,
-      stride,
-      dilation,
-      device_id);
+  auto launch_kernel = [&](auto& kernel) {{
+    auto args = kernel.initialize(
+        ptr_Q,
+        ptr_K,
+        ptr_V,
+        ptr_O,
+        ptr_LSE,
+        ptr_dQ,
+        ptr_dK,
+        ptr_dV,
+        ptr_dO,
+        batch_size,
+        seqlen_q,
+        seqlen_k,
+        heads_q,
+        heads_kv,
+        dim,
+        attn_scale,
+        q_shape,
+        kv_shape,
+        qkv_shape,
+        window_size,
+        stride,
+        dilation,
+        // varlen
+        max_seqlen_Q,
+        max_seqlen_KV,
+        ptr_cumulative_seqlen_Q,
+        ptr_cumulative_seqlen_KV,
+        ptr_token_layouts,
+        device_id);
 
-  auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
-  auto workspace = at::empty({{bytes}}, tensor_options.dtype(at::ScalarType::Byte));
-  auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
-  kernel.run(args, workspace_ptr, stream);
+    auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));
+    auto workspace = at::empty({{bytes}}, tensor_options.dtype(at::ScalarType::Byte));
+    auto workspace_ptr = static_cast<void*>(workspace.data_ptr());
+    kernel.run(args, workspace_ptr, stream);
+  }};
+
+  if (is_varlen) {{
+    VarlenKernel kernel;
+    launch_kernel(kernel);
+  }}
+  else {{
+    Kernel kernel;
+    launch_kernel(kernel);
+  }}
 }}
 """
 

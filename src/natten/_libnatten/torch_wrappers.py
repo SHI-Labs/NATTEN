@@ -596,11 +596,16 @@ def make_blackwell_fna_ops(na_dim):
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
         run_persistent_kernel: bool,
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        token_layouts: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
         output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
-        output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
+        output = torch.zeros(output_shape, device=query.device, dtype=query.dtype)
 
         logsumexp = torch.empty(
             query.shape[:-1], dtype=torch.float32, device=query.device
@@ -623,6 +628,11 @@ def make_blackwell_fna_ops(na_dim):
             q_tile_shape,
             kv_tile_shape,
             run_persistent_kernel,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            token_layouts,
+            max_seqlen_Q,
+            max_seqlen_KV,
         )
 
         return output, logsumexp
@@ -643,6 +653,11 @@ def make_blackwell_fna_ops(na_dim):
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
         run_persistent_kernel: bool,
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        token_layouts: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
@@ -678,6 +693,11 @@ def make_blackwell_fna_ops(na_dim):
         qkv_shape: list[int],
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        token_layouts: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
         output, d_output, logsumexp = [
@@ -708,6 +728,11 @@ def make_blackwell_fna_ops(na_dim):
             qkv_shape,
             q_tile_shape,
             kv_tile_shape,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            token_layouts,
+            max_seqlen_Q,
+            max_seqlen_KV,
         )
 
         return d_query, d_key, d_value
@@ -730,6 +755,11 @@ def make_blackwell_fna_ops(na_dim):
         qkv_shape: list[int],
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        token_layouts: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
         output, d_output, logsumexp = [

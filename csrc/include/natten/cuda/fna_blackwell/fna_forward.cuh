@@ -53,7 +53,8 @@ template <
     class QTileShape,
     class KVTileShape,
     class TileShape,
-    bool kIsPersistent>
+    bool kIsPersistent,
+    bool kIsVarlen>
 struct KernelForward {
   static_assert(
       rank(QTileShape{}) == 1 || rank(QTileShape{}) == 2 ||
@@ -71,10 +72,18 @@ struct KernelForward {
   using ElementAccumulatorQK = float;
   using ElementAccumulatorPV = float;
   using ElementOut = Element;
+  using VariableLength = cutlass::fmha::collective::VariableLength;
 
-  // Q K D (B H)
-  using ProblemShapeType =
+  // Q K D ((H_R, H_K) B)
+  using ProblemShapeRegular =
       cute::tuple<int, int, int, cute::tuple<cute::tuple<int, int>, int>>;
+  using ProblemShapeVarlen = cute::tuple<
+      VariableLength,
+      VariableLength,
+      int,
+      cute::tuple<cute::tuple<int, int>, int>>;
+  using ProblemShapeType =
+      std::conditional_t<kIsVarlen, ProblemShapeVarlen, ProblemShapeRegular>;
 
   using StrideQ =
       cute::tuple<int, _1, cute::tuple<cute::tuple<int, int>, int>>; // Q D (H_G
@@ -105,7 +114,8 @@ struct KernelForward {
           NeighborhoodAttentionMask<Causal>,
           QTileShape,
           KVTileShape,
-          NADim>;
+          NADim,
+          kIsVarlen>;
   using Operation = cutlass::fna::device::FnaSm100<
       cutlass::fna::kernel::Sm100FnaFwdKernelTmaWarpspecialized<
           ProblemShapeType,
@@ -142,6 +152,12 @@ struct KernelForward {
       NADim window_size,
       NADim stride,
       NADim dilation,
+      // varlen parameters
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      void* ptr_token_layouts,
       // init/launch params
       int device_id) {
     auto problem_shape_regular = cute::make_tuple(
@@ -156,8 +172,24 @@ struct KernelForward {
     ProblemShapeType problem_shape_launch;
     decltype(problem_shape_regular) problem_shape_memory;
 
-    problem_shape_memory = problem_shape_regular;
-    problem_shape_launch = problem_shape_regular;
+    if constexpr (kIsVarlen) {
+      problem_shape_memory = problem_shape_regular;
+      get<3, 1>(problem_shape_memory) = 1;
+
+      get<0>(problem_shape_launch) = VariableLength{
+          max_seqlen_Q,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_Q),
+          seqlen_Q};
+      get<1>(problem_shape_launch) = VariableLength{
+          max_seqlen_KV,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_KV),
+          seqlen_KV};
+      get<2>(problem_shape_launch) = get<2>(problem_shape_regular);
+      get<3>(problem_shape_launch) = get<3>(problem_shape_regular);
+    } else {
+      problem_shape_memory = problem_shape_regular;
+      problem_shape_launch = problem_shape_regular;
+    }
 
     // get<2>(problem_shape_memory) =
     //     cutlass::round_up(get<2>(problem_shape_memory), 8); // alignment
@@ -182,6 +214,14 @@ struct KernelForward {
     auto stride_LSE =
         make_stride(H, make_stride(make_stride(_1{}, H_Q), SQ * H));
 
+    if (kIsVarlen) {
+      get<2, 1>(stride_Q) = 0;
+      get<2, 1>(stride_K) = 0;
+      get<2, 1>(stride_V) = 0;
+      get<2, 1>(stride_O) = 0;
+      get<1, 1>(stride_LSE) = 0;
+    }
+
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;
     hw_info.sm_count =
@@ -202,6 +242,7 @@ struct KernelForward {
          window_size,
          stride,
          dilation,
+         reinterpret_cast<NADim*>(ptr_token_layouts), // varlen only
          attn_scale},
         {reinterpret_cast<Element*>(ptr_O),
          stride_O,

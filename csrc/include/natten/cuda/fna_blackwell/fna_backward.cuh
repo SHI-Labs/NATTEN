@@ -45,7 +45,8 @@ template <
     class Causal,
     class QTileShape,
     class KVTileShape,
-    class TileShape>
+    class TileShape,
+    bool kIsVarlen>
 struct KernelBackward {
   static_assert(
       rank(QTileShape{}) == 1 || rank(QTileShape{}) == 2 ||
@@ -61,10 +62,19 @@ struct KernelBackward {
           cute::tuple<int>>>;
 
   using ElementAccumulator = float;
+  using VariableLength = cutlass::fmha::collective::VariableLength;
 
   // Q K D D_VO ((H_R, H_K) B)
-  using ProblemShapeType =
+  using ProblemShapeRegular =
       cute::tuple<int, int, int, int, cute::tuple<cute::tuple<int, int>, int>>;
+  using ProblemShapeVarlen = cute::tuple<
+      VariableLength,
+      VariableLength,
+      int,
+      int,
+      cute::tuple<cute::tuple<int, int>, int>>;
+  using ProblemShapeType =
+      std::conditional_t<kIsVarlen, ProblemShapeVarlen, ProblemShapeRegular>;
 
   using Operation = cutlass::fna::device::FnaBwdSm100<
       ProblemShapeType,
@@ -104,6 +114,12 @@ struct KernelBackward {
       NADim window_size,
       NADim stride,
       NADim dilation,
+      // varlen parameters
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      void* ptr_token_layouts,
       // init/launch params
       int device_id) {
     auto problem_shape_regular = cute::make_tuple(
@@ -118,8 +134,26 @@ struct KernelBackward {
     ProblemShapeType problem_shape_launch;
     decltype(problem_shape_regular) problem_shape_memory;
 
-    problem_shape_memory = problem_shape_regular;
-    problem_shape_launch = problem_shape_regular;
+    if constexpr (kIsVarlen) {
+      problem_shape_memory = problem_shape_regular;
+      get<4, 1>(problem_shape_memory) = 1;
+
+      get<0>(problem_shape_launch) = VariableLength{
+          max_seqlen_Q,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_Q),
+          seqlen_Q};
+      get<1>(problem_shape_launch) = VariableLength{
+          max_seqlen_KV,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_KV),
+          seqlen_KV};
+      get<2>(problem_shape_launch) = get<2>(problem_shape_regular);
+      get<3>(problem_shape_launch) = get<3>(problem_shape_regular);
+      get<4>(problem_shape_launch) = get<4>(problem_shape_regular);
+    } else {
+      problem_shape_memory = problem_shape_regular;
+      problem_shape_launch = problem_shape_regular;
+    }
+
     int SQ = size<0>(problem_shape_memory);
     int SK = size<1>(problem_shape_memory);
     int D = size<2>(problem_shape_memory);
@@ -184,6 +218,7 @@ struct KernelBackward {
         window_size,
         stride,
         dilation,
+        reinterpret_cast<NADim*>(ptr_token_layouts), // varlen only
         attn_scale,
         hw_info};
 

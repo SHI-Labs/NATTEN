@@ -34,6 +34,7 @@
 
 #include "cute/tensor.hpp"
 #include "cutlass/cutlass.h"
+#include "natten/cuda/fmha_blackwell/collective/fmha_fusion.hpp"
 
 namespace cutlass::fna::collective {
 
@@ -605,5 +606,7 @@ CUTE_HOST_DEVICE bool is_dilated(NADim dilation) {
         get<2>(dilation) != 1;
   }
 }
+
+// We reuse VariableLength from FMHA
 
 } // namespace cutlass::fna::collective

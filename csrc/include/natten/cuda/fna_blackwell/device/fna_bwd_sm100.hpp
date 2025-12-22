@@ -107,6 +107,7 @@ class FnaBwdSm100 {
     NADim window_size;
     NADim stride;
     NADim dilation;
+    NADim* ptr_token_layouts;
 
     ElementAccumulator softmax_scale;
 
@@ -224,7 +225,8 @@ class FnaBwdSm100 {
          args.qkv_shape,
          args.window_size,
          args.stride,
-         args.dilation},
+         args.dilation,
+         args.ptr_token_layouts},
         {args.ptr_Q,
          args.stride_Q,
          args.ptr_K,

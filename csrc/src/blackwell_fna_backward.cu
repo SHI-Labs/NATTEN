@@ -76,7 +76,13 @@ void blackwell_fna_generic_backward(
     const StdNADim&
         qkv_shape_, // before token permute and padding, not including extra KV
     const StdNADim& query_tile_shape_,
-    const StdNADim& key_tile_shape_) {
+    const StdNADim& key_tile_shape_,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    const at::optional<at::Tensor>& token_layouts,
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
   static_assert(
       std::tuple_size_v<StdNADim> > 0 && std::tuple_size_v<StdNADim> < 4);
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
@@ -84,18 +90,6 @@ void blackwell_fna_generic_backward(
 
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
-
-  CHECK_CUDA(query);
-  CHECK_CUDA(key);
-  CHECK_CUDA(value);
-  CHECK_CUDA(out);
-  CHECK_CUDA(grad_query);
-  CHECK_CUDA(grad_key);
-  CHECK_CUDA(grad_value);
-  CHECK_CUDA(grad_out);
-  CHECK_CUDA(logsumexp);
-
-  at::cuda::OptionalCUDAGuard device_guard(query.device());
 
   CHECK_CONTIGUOUS(query);
   CHECK_CONTIGUOUS(key);
@@ -107,8 +101,23 @@ void blackwell_fna_generic_backward(
   CHECK_CONTIGUOUS(grad_out);
   CHECK_CONTIGUOUS(logsumexp);
 
+  CHECK_CUDA(query);
+  CHECK_CUDA(key);
+  CHECK_CUDA(value);
+  CHECK_CUDA(out);
+  CHECK_CUDA(grad_query);
+  CHECK_CUDA(grad_key);
+  CHECK_CUDA(grad_value);
+  CHECK_CUDA(grad_out);
+  CHECK_CUDA(logsumexp);
+
+  // varlen
+  bool is_varlen = cumulative_seqlen_Q.has_value() ||
+      cumulative_seqlen_KV.has_value() || token_layouts.has_value();
+
+  at::cuda::OptionalCUDAGuard device_guard(query.device());
+
   CheckArgs(kernel_size, stride_, dilation_);
-  CheckArgsAgainstDim(qkv_shape_, kernel_size, dilation_);
   CheckIfPropertiesMatch(query, key, value);
   CheckIfPropertiesMatch(grad_value, grad_out, out);
   CheckIfPropertiesMatch(grad_query, grad_key, grad_value);
@@ -169,6 +178,14 @@ void blackwell_fna_generic_backward(
   int heads_kv = key.size(2);
   int dim = query.size(3);
 
+  TORCH_CHECK(
+      dim == 32 || dim == 64 || dim == 128,
+      "Blackwell FNA backward only supports head dims 32, 64, and 128 for now.");
+
+  if (not is_varlen) {
+    CheckArgsAgainstDim(qkv_shape_, kernel_size, dilation_);
+  }
+
   auto qkv_shape = std_tuple_to_cute_tuple(qkv_shape_);
   auto q_shape = std_tuple_to_cute_tuple(q_shape_);
   auto kv_shape = std_tuple_to_cute_tuple(kv_shape_);
@@ -181,33 +198,19 @@ void blackwell_fna_generic_backward(
   auto dilation = std_tuple_to_cute_tuple(dilation_);
   auto is_causal = std_tuple_to_cute_tuple(is_causal_);
 
-  TORCH_CHECK(
-      dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FNA backward only supports head dims 32, 64, and 128 for now.");
+  if (not is_varlen) {
+    TORCH_CHECK(
+        size(q_shape) == seqlen_q,
+        "Blackwell FNA backward: Q sequence length (q.shape[1]) must match the size of Q shape.");
+    TORCH_CHECK(
+        size(kv_shape) == seqlen_kv,
+        "Blackwell FNA backward: KV sequence length ({k,v}.shape[1]) must match the size of KV shape.");
 
-  TORCH_CHECK(
-      size(q_shape) == seqlen_q,
-      "Blackwell FNA backward: Q sequence length (q.shape[1]) must match the size of Q shape.");
-  TORCH_CHECK(
-      size(kv_shape) == seqlen_kv,
-      "Blackwell FNA backward: KV sequence length ({k,v}.shape[1]) must match the size of KV shape.");
-
-  TORCH_CHECK(
-      cute::evenly_divides(q_shape, query_tile_shape) &&
-          cute::evenly_divides(kv_shape, key_tile_shape),
-      "Blackwell FNA backward: Tile shapes must evenly divide input. Please pad your inputs.");
-
-  TORCH_CHECK(
-      query.scalar_type() == torch::kFloat16 ||
-          query.scalar_type() == torch::kBFloat16,
-      "Blackwell FNA backward only supports FP16 and BF16.");
-
-  TORCH_CHECK(
-      not at::globalContext().deterministicAlgorithms(),
-      "Blackwell FNA backward is non-deterministic, "
-      "but PyTorch's deterministic mode is enabled. "
-      "NATTEN Python API should have avoided this; which means "
-      "you're probably calling the C function directly.");
+    TORCH_CHECK(
+        cute::evenly_divides(q_shape, query_tile_shape) &&
+            cute::evenly_divides(kv_shape, key_tile_shape),
+        "Blackwell FNA backward: Tile shapes must evenly divide input. Please pad your inputs.");
+  }
 
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
@@ -217,6 +220,93 @@ void blackwell_fna_generic_backward(
   TORCH_CHECK(
       cc == 100 || cc == 103,
       "Blackwell FMHA backward can only run on the Blackwell (datacenter-class) architecture (SM100, SM103).");
+
+  TORCH_CHECK(
+      query.scalar_type() == torch::kFloat16 ||
+          query.scalar_type() == torch::kBFloat16,
+      "Blackwell FNA backward only supports FP16 and BF16.");
+
+  void* ptr_cumulative_seqlen_Q = nullptr;
+  void* ptr_cumulative_seqlen_KV = nullptr;
+  void* ptr_token_layouts = nullptr;
+  if (is_varlen) {
+    TORCH_CHECK(
+        cumulative_seqlen_Q.has_value() && cumulative_seqlen_KV.has_value() &&
+            token_layouts.has_value(),
+        "Blackwell FNA: cumulative_seqlen_Q, cumulative_seqlen_KV, and token_layouts must all be specified when using varlen.");
+
+    TORCH_CHECK(
+        batch_size == 1,
+        "Blackwell FNA: Tensor batch size must be 1 (packed sequence layout), got ",
+        batch_size);
+
+    auto& cumulative_seqlen_Q_tensor = cumulative_seqlen_Q.value();
+    auto& cumulative_seqlen_KV_tensor = cumulative_seqlen_KV.value();
+    auto& token_layouts_tensor = token_layouts.value();
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.dim() == 1,
+        "Blackwell FMHA: cumulative_seqlen_Q is expected to be a 1-D tensor.");
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.dim() == 1,
+        "Blackwell FMHA: cumulative_seqlen_KV is expected to be a 1-D tensor.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) ==
+            cumulative_seqlen_KV_tensor.size(0),
+        "Blackwell FNA: cumulative_seqlen_Q and cumulative_seqlen_KV must be the same size.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) > 1,
+        "Blackwell FNA: cumulative_seqlen_Q and cumulative_seqlen_KV size must be greater than 1.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.scalar_type() == torch::kInt,
+        "Blackwell FNA: cumulative_seqlen_Q is expected to be an int32 tensor, got ",
+        cumulative_seqlen_Q_tensor.scalar_type());
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.scalar_type() == torch::kInt,
+        "Blackwell FNA: cumulative_seqlen_KV is expected to be an int32 tensor, got ",
+        cumulative_seqlen_KV_tensor.scalar_type());
+
+    batch_size = cumulative_seqlen_Q_tensor.size(0) - 1;
+
+    TORCH_CHECK(
+        token_layouts_tensor.dim() == 2,
+        "Blackwell FNA: token_layouts is expected to be a 2-D tensor.");
+
+    TORCH_CHECK(
+        token_layouts_tensor.size(0) == batch_size,
+        "Blackwell FNA: token_layouts.shape[0] must be cumulative_seqlen_{Q,KV}.shape[0] - 1.");
+
+    TORCH_CHECK(
+        token_layouts_tensor.size(1) == kNADim,
+        "Blackwell FNA",
+        kNADim,
+        "-D: token_layouts.shape[1] must be ",
+        kNADim,
+        ", got ",
+        token_layouts_tensor.size(1),
+        ".");
+
+    TORCH_CHECK(
+        token_layouts_tensor.scalar_type() == torch::kInt,
+        "Blackwell FNA: token_layouts is expected to be an int32 tensor, got ",
+        token_layouts_tensor.scalar_type());
+
+    ptr_cumulative_seqlen_Q =
+        static_cast<void*>(cumulative_seqlen_Q_tensor.data_ptr());
+    ptr_cumulative_seqlen_KV =
+        static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
+    ptr_token_layouts = static_cast<void*>(token_layouts_tensor.data_ptr());
+  }
+
+  TORCH_CHECK(
+      not at::globalContext().deterministicAlgorithms(),
+      "Blackwell FNA backward is non-deterministic, "
+      "but PyTorch's deterministic mode is enabled. "
+      "NATTEN Python API should have avoided this; which means "
+      "you're probably calling the C function directly.");
 
 #if defined(CUTLASS_ARCH_MMA_SM100_SUPPORTED)
 
@@ -250,6 +340,13 @@ void blackwell_fna_generic_backward(
       window_size,
       stride,
       dilation,
+      // varlen parameters
+      is_varlen,
+      max_seqlen_Q,
+      max_seqlen_KV,
+      ptr_cumulative_seqlen_Q,
+      ptr_cumulative_seqlen_KV,
+      ptr_token_layouts,
       // init/launch params
       device_id,
       cuda_stream,
@@ -286,7 +383,13 @@ void blackwell_na1d_backward(
     const std::tuple<int32_t>& kv_shape,
     const std::tuple<int32_t>& qkv_shape,
     const std::tuple<int32_t>& query_tile_shape,
-    const std::tuple<int32_t>& key_tile_shape) {
+    const std::tuple<int32_t>& key_tile_shape,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    const at::optional<at::Tensor>& token_layouts,
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   blackwell_fna_generic_backward(
@@ -308,7 +411,12 @@ void blackwell_na1d_backward(
       kv_shape,
       qkv_shape,
       query_tile_shape,
-      key_tile_shape);
+      key_tile_shape,
+      cumulative_seqlen_Q,
+      cumulative_seqlen_KV,
+      token_layouts,
+      max_seqlen_Q,
+      max_seqlen_KV);
 }
 
 void blackwell_na2d_backward(
@@ -330,7 +438,13 @@ void blackwell_na2d_backward(
     const std::tuple<int32_t, int32_t>& kv_shape,
     const std::tuple<int32_t, int32_t>& qkv_shape,
     const std::tuple<int32_t, int32_t>& query_tile_shape,
-    const std::tuple<int32_t, int32_t>& key_tile_shape) {
+    const std::tuple<int32_t, int32_t>& key_tile_shape,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    const at::optional<at::Tensor>& token_layouts,
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   blackwell_fna_generic_backward(
@@ -352,7 +466,12 @@ void blackwell_na2d_backward(
       kv_shape,
       qkv_shape,
       query_tile_shape,
-      key_tile_shape);
+      key_tile_shape,
+      cumulative_seqlen_Q,
+      cumulative_seqlen_KV,
+      token_layouts,
+      max_seqlen_Q,
+      max_seqlen_KV);
 }
 
 void blackwell_na3d_backward(
@@ -374,7 +493,13 @@ void blackwell_na3d_backward(
     const std::tuple<int32_t, int32_t, int32_t>& kv_shape,
     const std::tuple<int32_t, int32_t, int32_t>& qkv_shape,
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape,
-    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape) {
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    const at::optional<at::Tensor>& token_layouts,
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   blackwell_fna_generic_backward(
@@ -396,7 +521,12 @@ void blackwell_na3d_backward(
       kv_shape,
       qkv_shape,
       query_tile_shape,
-      key_tile_shape);
+      key_tile_shape,
+      cumulative_seqlen_Q,
+      cumulative_seqlen_KV,
+      token_layouts,
+      max_seqlen_Q,
+      max_seqlen_KV);
 }
 
 } // namespace natten

@@ -32,7 +32,9 @@ from natten.utils.environment import is_torch_compiling
 from natten.utils.tuples import ceil_div_tuple, idx2crd, mul_tuple
 
 
-def _get_dilated_token_layouts(token_layout: DimensionType, dilation: DimensionType):
+def _get_dilated_token_layouts(
+    token_layout: DimensionType, dilation: DimensionType, flip_tiled_dims: bool
+):
     """
     Tiles token_layout into dilation groups, and returns a list of the token layout within each
     dilation group. Number of dilation groups is always size(dilation).
@@ -42,20 +44,30 @@ def _get_dilated_token_layouts(token_layout: DimensionType, dilation: DimensionT
     if math.prod(dilation) == 1:
         return [token_layout]
 
+    if flip_tiled_dims:
+        dilation_ = tuple(x for x in reversed(dilation))
+        token_layout_ = tuple(x for x in reversed(token_layout))
+    else:
+        dilation_ = dilation
+        token_layout_ = token_layout
+
     num_dilation_groups = math.prod(dilation)
     token_layout_list = []
     for dig in range(num_dilation_groups):
-        dig_crd = idx2crd(dig, dilation)
+        dig_crd = idx2crd(dig, dilation_)
 
         # Fixup
         dilation_group_padding = tuple(
             1 - ((dg + (d - (x % d))) // d)
-            for dg, d, x in zip(dig_crd, dilation, token_layout)
+            for dg, d, x in zip(dig_crd, dilation_, token_layout_)
         )
         token_layout_dig = tuple(
             (x // d) + p
-            for p, d, x in zip(dilation_group_padding, dilation, token_layout)
+            for p, d, x in zip(dilation_group_padding, dilation_, token_layout_)
         )
+
+        if flip_tiled_dims:
+            token_layout_dig = tuple(x for x in reversed(token_layout_dig))
 
         token_layout_list.append(token_layout_dig)
 
@@ -66,6 +78,7 @@ def generate_fna_varlen_metadata(
     token_layout_list: List[DimensionType],
     tile_shape: DimensionType,
     device: torch.device,
+    flip_tiled_dims: bool,
     dilation: Optional[DimensionType] = None,
 ) -> dict:
     """
@@ -97,6 +110,8 @@ def generate_fna_varlen_metadata(
         tile_shape (tuple): integer tuple representing multi-dimensional tile shape.
 
         device (torch.device): Target torch device for performing Token Permute and FNA.
+
+        flip_tiled_dims (bool): flip_tiled_dims argument from TokPerm.
 
         dilation (Optional[tuple]): dilation parameter, if intended.
 
@@ -213,6 +228,7 @@ def generate_fna_varlen_metadata(
     # scheduling/launch.
     max_seqlen_pre_permute = 0
     max_seqlen_post_permute = 0
+    max_seqlen_kernel = 0
 
     for i, token_layout in enumerate(token_layout_list):
 
@@ -223,7 +239,9 @@ def generate_fna_varlen_metadata(
         max_seqlen_pre_permute = max(max_seqlen_pre_permute, math.prod(token_layout))
 
         token_layouts_post_dilation = _get_dilated_token_layouts(
-            token_layout, dilation_
+            token_layout,
+            dilation_,
+            flip_tiled_dims=flip_tiled_dims,
         )
 
         token_layout_padded = mul_tuple(
@@ -240,6 +258,10 @@ def generate_fna_varlen_metadata(
         seqlen_per_dilation_group_padded = math.prod(
             ceil_div_tuple(token_layout_padded, dilation_)
         )
+
+        # TODO: DOES THIS NEED TO BE DIFFERENT?
+        max_seqlen_kernel = max(max_seqlen_kernel, seqlen_per_dilation_group_padded)
+
         for j, token_layout_dilation_group in enumerate(token_layouts_post_dilation):
 
             offset = i * num_dilation_groups + j
@@ -287,6 +309,7 @@ def generate_fna_varlen_metadata(
         "total_seqlen_post_permute": total_seqlen_post_permute,
         "max_seqlen_pre_permute": max_seqlen_pre_permute,
         "max_seqlen_post_permute": max_seqlen_post_permute,
+        "max_seqlen_kernel": max_seqlen_kernel,
     }
 
 

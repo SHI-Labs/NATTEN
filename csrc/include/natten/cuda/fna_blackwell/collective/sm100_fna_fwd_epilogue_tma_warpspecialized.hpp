@@ -36,7 +36,11 @@
 #include "cutlass/epilogue/collective/collective_builder.hpp"
 #include "cutlass/gemm/collective/collective_builder.hpp"
 
+#include "natten/cuda/fna_blackwell/collective/fna_common.hpp"
+
 namespace cutlass::fna::collective {
+
+using namespace cutlass::fmha::collective;
 
 template <
     class Element,
@@ -117,6 +121,19 @@ struct Sm100FnaFwdEpilogueTmaWarpspecialized {
 
     auto problem_shape_O = get_problem_shape_O(problem_shape);
 
+    if constexpr (is_variable_length_v<tuple_element_t<0, ProblemShape>>) {
+      auto cumulative_length_q = get<0>(problem_shape).cumulative_length;
+      if (cumulative_length_q != nullptr) {
+        int max_length_q = get<0>(problem_shape).max_length;
+        // for variable sequence lenght, the batch is in units of row_stride
+        get<2, 1>(dO) = get<0>(dO);
+        get<2, 1>(problem_shape_O) =
+            max_length_q * (1 + get<2, 1>(problem_shape_O));
+        // offset ptr by the amount we add back in later
+        ptr_O -= max_length_q * get<0>(dO);
+      }
+    }
+
     auto tma_store_o = make_tma_copy(
         SM90_TMA_STORE{},
         make_tensor(ptr_O, problem_shape_O, dO),
@@ -160,6 +177,18 @@ struct Sm100FnaFwdEpilogueTmaWarpspecialized {
     // so in total this achieves
     int offs_0 = 0;
     int offs_2_1 = 0;
+
+    if constexpr (is_variable_length_v<
+                      tuple_element_t<0, ParamsProblemShape>>) {
+      auto cumulative_length_q = get<0>(params_problem_shape).cumulative_length;
+      if (cumulative_length_q != nullptr) {
+        int max_length_q = get<0>(params_problem_shape).max_length;
+        offs_0 = max_length_q - get<0>(problem_shape);
+        offs_2_1 =
+            cumulative_length_q[get<2, 1>(blk_coord)] + get<0>(problem_shape);
+        get<2, 1>(blk_coord) = 0;
+      }
+    }
 
     Tensor mO_qdl = domain_offset(
         make_coord(offs_0, _0{}, make_coord(_0{}, offs_2_1)), mO_qdl_p);

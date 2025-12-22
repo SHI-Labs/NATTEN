@@ -325,6 +325,40 @@ class TokenPermuteVarlenTest(unittest.TestCase):
     def test_permute_varlen_kernel_cuda(self):
         torch.set_default_device("cuda")
         problem_sizes = [
+            ([(47, 2), (56, 2)], 3, 32, (8, 16), (2, 1)),
+            ([(47, 2), (56, 2)], 3, 32, (8, 32), (2, 1)),
+            (
+                [
+                    (37, 21),
+                    (35, 75),
+                    (72, 37),
+                    (78, 58),
+                    (78, 55),
+                    (50, 32),
+                    (21, 69),
+                    (67, 15),
+                ],
+                3,
+                32,
+                (8, 32),
+                (6, 1),
+            ),
+            (
+                [
+                    (37, 21),
+                    (35, 75),
+                    (72, 37),
+                    (78, 58),
+                    (78, 55),
+                    (50, 32),
+                    (21, 69),
+                    (67, 15),
+                ],
+                3,
+                32,
+                (8, 16),
+                (6, 1),
+            ),
             ([(3, 5), (4, 4)], 1, 1, (2, 2), (1, 2)),
             ([(5, 10), (8, 8)], 1, 1, (4, 4), (1, 2)),
             ([(48, 80), (8, 8)], 1, 1, (4, 4), (1, 2)),
@@ -420,6 +454,7 @@ class TokenPermuteVarlenTest(unittest.TestCase):
             tile_shape=tile_shape,
             device=device,
             dilation=dilation,
+            flip_tiled_dims=flip_dims,
         )
 
         total_seqlen_pre_permute = metadata["total_seqlen_pre_permute"]
