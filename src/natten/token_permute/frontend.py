@@ -34,7 +34,7 @@ from natten.token_permute.cutlass_impl import (
     token_unpermute_varlen_cutlass,
 )
 from natten.token_permute.torch_impl import token_permute_torch, token_unpermute_torch
-from natten.token_permute.varlen import verify_fna_varlen_metadata
+from natten.token_permute.varlen import verify_tokperm_varlen_metadata
 from natten.types import DimensionType
 from natten.utils import log
 from natten.utils.tuples import ceil_div_tuple, mul_tuple
@@ -153,7 +153,7 @@ def token_permute_varlen_operation(
 
     dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
 
-    verify_fna_varlen_metadata(
+    verify_tokperm_varlen_metadata(
         tensor=tensor,
         metadata=metadata,
         tile_shape=tile_shape,
@@ -191,7 +191,7 @@ def token_unpermute_varlen_operation(
 
     dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
 
-    verify_fna_varlen_metadata(
+    verify_tokperm_varlen_metadata(
         tensor=tensor,
         metadata=metadata,
         tile_shape=tile_shape,

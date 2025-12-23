@@ -24,21 +24,22 @@
 
 from typing import List
 
-from ..utils import log
+from natten.utils import log
 
 logger = log.get_logger(__name__)
 
 import torch  # noqa: F401
 from torch import Tensor
 
-from .blackwell_fmha import cutlass_blackwell_fmha
-from .blackwell_fna import (
+from natten.backends.blackwell_fmha import cutlass_blackwell_fmha
+from natten.backends.blackwell_fna import (
     cutlass_blackwell_fna_generic,
+    cutlass_blackwell_fna_varlen_generic,
     na1d_cutlass_blackwell_fna,
     na2d_cutlass_blackwell_fna,
     na3d_cutlass_blackwell_fna,
 )
-from .configs import (
+from natten.backends.configs import (
     get_bwd_configs_for_cutlass_blackwell_fmha,
     get_bwd_configs_for_cutlass_blackwell_fna,
     get_bwd_configs_for_cutlass_fmha,
@@ -54,7 +55,7 @@ from .configs import (
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
 )
-from .configs.checks import (
+from natten.backends.configs.checks import (
     can_run_cutlass_blackwell_fmha,
     can_run_cutlass_blackwell_fna,
     can_run_cutlass_fna,
@@ -62,16 +63,22 @@ from .configs.checks import (
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
 )
-from .flex import flex_fmha, flex_fna_generic, na1d_flex, na2d_flex, na3d_flex
-from .fmha import can_run_cutlass_fmha, cutlass_fmha
-from .fna import (
+from natten.backends.flex import (
+    flex_fmha,
+    flex_fna_generic,
+    na1d_flex,
+    na2d_flex,
+    na3d_flex,
+)
+from natten.backends.fmha import can_run_cutlass_fmha, cutlass_fmha
+from natten.backends.fna import (
     cutlass_fna_generic,
     na1d_cutlass_fna,
     na2d_cutlass_fna,
     na3d_cutlass_fna,
 )
-from .hopper_fmha import cutlass_hopper_fmha
-from .hopper_fna import (
+from natten.backends.hopper_fmha import cutlass_hopper_fmha
+from natten.backends.hopper_fna import (
     cutlass_hopper_fna_generic,
     na1d_cutlass_hopper_fna,
     na2d_cutlass_hopper_fna,
@@ -218,6 +225,7 @@ __all__ = [
     "na3d_cutlass_fna",
     "cutlass_blackwell_fmha",
     "cutlass_blackwell_fna_generic",
+    "cutlass_blackwell_fna_varlen_generic",
     "cutlass_hopper_fmha",
     "cutlass_hopper_fna_generic",
     "na1d_cutlass_blackwell_fna",

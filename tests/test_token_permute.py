@@ -26,7 +26,7 @@ import unittest
 
 import torch
 from natten.token_permute import (
-    generate_fna_varlen_metadata,
+    generate_tokperm_varlen_metadata,
     token_permute_operation,
     token_permute_varlen_operation,
     token_unpermute_operation,
@@ -449,7 +449,7 @@ class TokenPermuteVarlenTest(unittest.TestCase):
         na_dim = len(tile_shape)
         batch = len(token_layout_list)
 
-        metadata = generate_fna_varlen_metadata(
+        metadata = generate_tokperm_varlen_metadata(
             token_layout_list=token_layout_list,
             tile_shape=tile_shape,
             device=device,

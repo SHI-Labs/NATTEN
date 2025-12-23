@@ -226,11 +226,15 @@ def cutlass_blackwell_fmha(
     forward_config = check_cutlass_blackwell_fmha_forward_config(
         input_tensor=query, q_tile_size=q_tile_size, kv_tile_size=kv_tile_size
     )
-    backward_config = check_cutlass_blackwell_fmha_backward_config(
-        input_tensor=query,
-        q_tile_size=backward_q_tile_size,
-        kv_tile_size=backward_kv_tile_size,
-    )
+
+    requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
+    backward_config = None
+    if requires_grad:
+        backward_config = check_cutlass_blackwell_fmha_backward_config(
+            input_tensor=query,
+            q_tile_size=backward_q_tile_size,
+            kv_tile_size=backward_kv_tile_size,
+        )
 
     scale = scale or query.shape[-1] ** -0.5
 

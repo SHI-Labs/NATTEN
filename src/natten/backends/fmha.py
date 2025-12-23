@@ -146,10 +146,11 @@ class CutlassFmhaAutogradFn(Function):
 
         if not compute_delta_with_pt and torch.are_deterministic_algorithms_enabled():
             compute_delta_with_pt = True
-            logger.warning(
-                "You enabled PyTorch's deterministic mode, but tried to use backward_use_pt_reduction "
-                ", which is non-deterministic. Overriding."
-            )
+            # Silent override
+            # logger.warning(
+            #    "You enabled PyTorch's deterministic mode, but tried to use CUTLASS's reduction kernel"
+            #    ", which is non-deterministic. Overriding."
+            # )
 
         seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else ctx.max_seqlen_KV
         num_kv_tiles = (seqlen_kv + k_tile_size - 1) // k_tile_size

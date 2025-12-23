@@ -27,15 +27,15 @@ import torch
 
 
 def is_cuda(device: torch.device) -> bool:
-    return torch.cuda.is_available() and torch.version.cuda and device.type == "cuda"  # type: ignore
+    return torch.cuda.is_available() and torch.version.cuda and (device == "cuda" or device.type == "cuda")  # type: ignore
 
 
 def is_rocm(device: torch.device) -> bool:
-    return torch.cuda.is_available() and torch.version.hip and device.type == "cuda"  # type: ignore
+    return torch.cuda.is_available() and torch.version.hip and (device == "cuda" or device.type == "cuda")  # type: ignore
 
 
 def is_cpu(device: torch.device) -> bool:
-    return device.type == "cpu"
+    return device == "cpu" or device.type == "cpu"
 
 
 def get_device_cc(device: Optional[torch.device] = None) -> int:

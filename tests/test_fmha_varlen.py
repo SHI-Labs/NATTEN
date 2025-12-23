@@ -38,7 +38,6 @@ from natten.backends.configs.cutlass_blackwell import (
 )
 from natten.functional import attention
 from natten.utils import log
-from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
@@ -456,16 +455,18 @@ class FMHAVarlenTest(unittest.TestCase):
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
             backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
             assert len(forward_configs) > 0
-            assert len(backward_configs) > 0
+            test_backprop = len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
                 q_tile_size, kv_tile_size = forward_configs[i]
-                backward_q_tile_size, backward_kv_tile_size = backward_configs[
-                    i % len(backward_configs)
-                ]
+                backward_q_tile_size, backward_kv_tile_size = None, None
+                if test_backprop:
+                    backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                        i % len(backward_configs)
+                    ]
 
                 for run_persistent_kernel in [True, False]:
                     self._test_against_manual_varlen(
@@ -481,7 +482,7 @@ class FMHAVarlenTest(unittest.TestCase):
                         atol_bwd=atol_bwd,
                         backend="blackwell-fmha",
                         reference_backend="blackwell-fmha",
-                        test_backprop=not is_fp8(dtype),
+                        test_backprop=test_backprop,
                         q_tile_size=q_tile_size,
                         kv_tile_size=kv_tile_size,
                         backward_q_tile_size=backward_q_tile_size,

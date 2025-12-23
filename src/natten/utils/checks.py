@@ -482,6 +482,28 @@ def check_all_args(
     return kernel_size_out, stride_out, dilation_out, is_causal_out
 
 
+def check_args_against_token_layout(
+    token_layout: DimensionType,
+    kernel_size: DimensionType,
+    stride: DimensionType,
+    dilation: DimensionType,
+    is_causal: CausalArgType,
+):
+    assert len(token_layout) in [1, 2, 3]
+
+    if any(k * d > x for x, k, d in zip(token_layout, kernel_size, dilation)):
+        raise ValueError(
+            "The product of kernel size and dilation cannot be larger than token layout shape "
+            f"along any dimension, got {token_layout=}, {kernel_size=}, {dilation=}."
+        )
+
+    if any(s > k for k, s in zip(kernel_size, stride)):
+        raise ValueError(
+            "Stride cannot be larger than kernel size along any dimension, got "
+            f"{kernel_size=}, {stride=}."
+        )
+
+
 def check_args_against_input(
     input_tensor: Tensor,
     kernel_size: DimensionType,
@@ -491,20 +513,15 @@ def check_args_against_input(
 ):
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3
-    input_size = input_tensor.shape[1 : 1 + na_dim]
+    token_layout_: DimensionType = tuple(x for x in input_tensor.shape[1 : 1 + na_dim])  # type: ignore[assignment]
 
-    if any(k * d > x for x, k, d in zip(input_size, kernel_size, dilation)):
-        raise ValueError(
-            "The product of kernel size and dilation cannot be larger than input size "
-            f"along any dimension, got {input_size=} ({input_tensor.shape=}), "
-            f"{kernel_size=}, {dilation=}."
-        )
-
-    if any(s > k for k, s in zip(kernel_size, stride)):
-        raise ValueError(
-            "Stride cannot be larger than kernel size along any dimension, got "
-            f"{kernel_size=}, {stride=}."
-        )
+    return check_args_against_token_layout(
+        token_layout=token_layout_,
+        kernel_size=kernel_size,
+        stride=stride,
+        dilation=dilation,
+        is_causal=is_causal,
+    )
 
 
 def is_self_attention(

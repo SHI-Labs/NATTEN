@@ -28,21 +28,18 @@ from itertools import product
 
 import torch
 from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
-from natten.backends.blackwell_fna import (
-    cutlass_blackwell_fna_generic,
-    cutlass_blackwell_fna_varlen_generic,
-)
 from natten.backends.configs.cutlass_blackwell import (
     get_all_backward_configs,
     get_all_forward_configs,
 )
+from natten.functional import neighborhood_attention_generic
 from natten.utils import log
-from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
 )
+from natten.varlen import neighborhood_attention_varlen
 
 logger = log.get_logger(__name__)
 
@@ -95,6 +92,8 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
         atol_dq,
         test_backprop: bool,
         #
+        backend: str,
+        #
         heads_kv=None,
         head_dim_v=None,
     ):
@@ -105,7 +104,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
         head_dim_v = head_dim_v or head_dim
 
         logger.debug(
-            "Testing varlen Blackwell FNA:\n"
+            f"Testing {backend} varlen:\n"
             f"{token_layout_list=},\n"
             f"{heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, {dtype=}, {test_backprop=}\n"
             f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=}\n"
@@ -181,7 +180,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                     1, *token_layout, heads, head_dim
                 )
 
-            o_batch, lse_batch = cutlass_blackwell_fna_generic(
+            o_batch, lse_batch = neighborhood_attention_generic(
                 q_batch,
                 k_batch,
                 v_batch,
@@ -189,6 +188,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
+                backend=backend,
                 q_tile_shape=q_tile_shape,
                 kv_tile_shape=kv_tile_shape,
                 backward_q_tile_shape=backward_q_tile_shape,
@@ -227,7 +227,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
             k = k.requires_grad_(True)
             v = v.requires_grad_(True)
 
-        output, lse = cutlass_blackwell_fna_varlen_generic(
+        output, lse = neighborhood_attention_varlen(
             q,
             k,
             v,
@@ -236,6 +236,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
             stride=stride,
             dilation=dilation,
             is_causal=is_causal,
+            backend=backend,
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
             backward_q_tile_shape=backward_q_tile_shape,
@@ -280,6 +281,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
         head_dim_v=None,
         n_configs_to_test=None,
     ):
+        na_dim = len(token_layout_list[0])
         ALLOWED_DTYPES = [
             (torch.float16, (1e-6, 1e-6, 1e-2)),
             (torch.bfloat16, (1e-6, 1e-6, 1e-2)),
@@ -289,13 +291,14 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
 
         for dtype, (atol_fwd, atol_bwd, atol_dq) in ALLOWED_DTYPES:
 
-            dummy = torch.empty(
-                (1, *token_layout_list[0], heads, head_dim), device="cuda", dtype=dtype
+            forward_configs = get_all_forward_configs(
+                na_dim=na_dim, head_dim=head_dim, dtype=dtype, device="cuda"
             )
-            forward_configs = get_all_forward_configs(dummy)
-            backward_configs = get_all_backward_configs(dummy)
+            backward_configs = get_all_backward_configs(
+                na_dim=na_dim, head_dim=head_dim, dtype=dtype, device="cuda"
+            )
             assert len(forward_configs) > 0
-            assert len(backward_configs) > 0
+            test_backprop = len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
@@ -306,9 +309,11 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
 
             for i in range(n_configs):
                 q_tile_shape, kv_tile_shape = forward_configs[i % len(forward_configs)]
-                backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
-                    i % len(backward_configs)
-                ]
+                backward_q_tile_shape, backward_kv_tile_shape = None, None
+                if test_backprop:
+                    backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
+                        i % len(backward_configs)
+                    ]
 
                 for run_persistent_kernel in [True, False]:
                     self._test_dtype(
@@ -330,7 +335,9 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                         atol_fwd=atol_fwd,
                         atol_bwd=atol_bwd,
                         atol_dq=atol_dq,
-                        test_backprop=not is_fp8(dtype),
+                        test_backprop=test_backprop,
+                        #
+                        backend="blackwell-fna",
                         #
                         heads_kv=heads_kv,
                         head_dim_v=head_dim_v,

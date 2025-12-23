@@ -35,7 +35,6 @@ from natten.backends.configs.cutlass_blackwell import (
     get_all_backward_configs,
     get_all_forward_configs,
 )
-from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
@@ -122,22 +121,25 @@ class BlackwellFNABackendTest(unittest.TestCase):
         test_id = 0
         for dtype, atol in ALLOWED_DTYPES:
 
-            dummy = torch.empty(
-                (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
+            forward_configs = get_all_forward_configs(
+                na_dim=na_dim, head_dim=head_dim, dtype=dtype, device="cuda"
             )
-            forward_configs = get_all_forward_configs(dummy)
-            backward_configs = get_all_backward_configs(dummy)
+            backward_configs = get_all_backward_configs(
+                na_dim=na_dim, head_dim=head_dim, dtype=dtype, device="cuda"
+            )
             assert len(forward_configs) > 0
-            assert len(backward_configs) > 0
+            test_backprop = len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
                 q_tile_shape, kv_tile_shape = forward_configs[i % len(forward_configs)]
-                backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
-                    i % len(backward_configs)
-                ]
+                backward_q_tile_shape, backward_kv_tile_shape = None, None
+                if test_backprop:
+                    backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
+                        i % len(backward_configs)
+                    ]
 
                 if additional_kv_length > 0:
                     reset_torch_compile(2)
@@ -152,7 +154,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
                         backward_q_tile_shape=backward_q_tile_shape,
                         backward_kv_tile_shape=backward_kv_tile_shape,
                         run_persistent_kernel=persistent,
-                        test_backprop=not is_fp8(dtype),
+                        test_backprop=test_backprop,
                     )
                     test_id += 1
                     if configs_to_test is not None and test_id > configs_to_test:

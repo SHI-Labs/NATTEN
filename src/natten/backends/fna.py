@@ -169,6 +169,17 @@ def make_cutlass_fna_autograd_fn(na_dim):
                     f"Overriding {kv_splits} to {num_kv_splits}."
                 )
 
+            if (
+                not compute_delta_with_pt
+                and torch.are_deterministic_algorithms_enabled()
+            ):
+                compute_delta_with_pt = True
+                # Silent override
+                # logger.warning(
+                #    "You enabled PyTorch's deterministic mode, but tried to use CUTLASS's reduction kernel"
+                #    ", which is non-deterministic. Overriding."
+                # )
+
             d_query, d_key, d_value = BACKWARD_OPS[na_dim](
                 query,
                 key,

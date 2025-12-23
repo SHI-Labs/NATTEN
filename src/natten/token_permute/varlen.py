@@ -22,12 +22,18 @@
 #################################################################################################
 
 import math
+from functools import partial
 from typing import List, Optional
 
 import torch
 from torch import Tensor
 
-from natten.types import DimensionType
+from natten.types import CausalArgTypeOrDed, DimensionType, DimensionTypeOrDed
+from natten.utils.checks import (
+    check_all_args,
+    check_args_against_token_layout,
+    check_dilation_arg,
+)
 from natten.utils.environment import is_torch_compiling
 from natten.utils.tuples import ceil_div_tuple, idx2crd, mul_tuple
 
@@ -76,10 +82,16 @@ def _get_dilated_token_layouts(
 
 def generate_fna_varlen_metadata(
     token_layout_list: List[DimensionType],
-    tile_shape: DimensionType,
+    q_tile_shape: DimensionType,
+    kv_tile_shape: DimensionType,
+    backward_q_tile_shape: Optional[DimensionType],
+    backward_kv_tile_shape: Optional[DimensionType],
     device: torch.device,
     flip_tiled_dims: bool,
-    dilation: Optional[DimensionType] = None,
+    kernel_size: DimensionTypeOrDed,
+    stride: DimensionTypeOrDed = 1,
+    dilation: DimensionTypeOrDed = 1,
+    is_causal: Optional[CausalArgTypeOrDed] = False,
 ) -> dict:
     """
     Takes list of token layouts and produces metadata required for performing variable-length
@@ -107,13 +119,25 @@ def generate_fna_varlen_metadata(
             sets of tokens / sequences in QKV. All elements must be integer tuples of size 1, 2, or
             3, and match each other in size as well.
 
-        tile_shape (tuple): integer tuple representing multi-dimensional tile shape.
+        q_tile_shape (tuple): query tile shape in the forward pass.
+
+        kv_tile_shape (tuple): key/value tile shape in the forward pass.
+
+        backward_q_tile_shape (tuple): query tile shape in the backward pass.
+
+        backward_kv_tile_shape (tuple): key/value tile shape in the backward pass.
 
         device (torch.device): Target torch device for performing Token Permute and FNA.
 
         flip_tiled_dims (bool): flip_tiled_dims argument from TokPerm.
 
-        dilation (Optional[tuple]): dilation parameter, if intended.
+        kernel_size (tuple): kernel / window size must be provided for verification.
+
+        stride (Optional[tuple]): stride parameter, if used, must be provided for verification.
+
+        dilation (Optional[tuple]): dilation parameter, if used, must be provided for verification.
+
+        is_causal (Optional[tuple]): is_causal parameter, if used, must be provided for verification.
 
     Outputs:
         metadata (dict): Metadata required by token_{permute,unpermute}_varlen_operation and the
@@ -127,6 +151,62 @@ def generate_fna_varlen_metadata(
             "results in graph breaks. Please consider calling ahead of time and pass "
             "the generated metadata directly instead of a token_layout_list."
         )
+
+    na_dim = len(q_tile_shape)
+
+    kernel_size, stride, dilation, is_causal = check_all_args(
+        na_dim, kernel_size, stride, dilation, is_causal
+    )
+
+    gen_metadata = partial(
+        generate_tokperm_varlen_metadata,
+        token_layout_list=token_layout_list,
+        device=device,
+        flip_tiled_dims=flip_tiled_dims,
+        kernel_size=kernel_size,
+        stride=stride,
+        dilation=dilation,
+        is_causal=is_causal,
+    )
+
+    metadata_q = gen_metadata(tile_shape=q_tile_shape)
+    metadata_kv = gen_metadata(tile_shape=kv_tile_shape)
+    metadata_q_bwd, metadata_kv_bwd = None, None
+    if backward_q_tile_shape is not None:
+        metadata_q_bwd = gen_metadata(tile_shape=backward_q_tile_shape)
+    if backward_kv_tile_shape is not None:
+        metadata_kv_bwd = gen_metadata(tile_shape=backward_kv_tile_shape)
+
+    return {
+        "na_dim": na_dim,
+        "kernel_size": kernel_size,
+        "stride": stride,
+        "dilation": dilation,
+        "is_causal": is_causal,
+        "q_tile_shape": q_tile_shape,
+        "kv_tile_shape": kv_tile_shape,
+        "q_tile_shape_bwd": backward_q_tile_shape,
+        "kv_tile_shape_bwd": backward_kv_tile_shape,
+        "metadata_q": metadata_q,
+        "metadata_kv": metadata_kv,
+        "metadata_q_bwd": metadata_q_bwd,
+        "metadata_kv_bwd": metadata_kv_bwd,
+    }
+
+
+def generate_tokperm_varlen_metadata(
+    token_layout_list: List[DimensionType],
+    tile_shape: DimensionType,
+    device: torch.device,
+    flip_tiled_dims: bool,
+    # indicating dilation is always required!
+    dilation: DimensionTypeOrDed,
+    # if we're only interested in running/verifying tokperm, there's no need to verify kernel_size
+    # stride, and is_causal.
+    kernel_size: Optional[DimensionTypeOrDed] = None,
+    stride: DimensionTypeOrDed = 1,
+    is_causal: CausalArgTypeOrDed = False,
+) -> dict:
 
     if not isinstance(tile_shape, tuple):
         raise ValueError(f"tile_shape must be a tuple, got {type(tile_shape)=}.")
@@ -160,8 +240,17 @@ def generate_fna_varlen_metadata(
     if any(any(not isinstance(y, int) for y in x) for x in token_layout_list):
         raise ValueError("Tuples in token_layout_list must be integer tuples.")
 
+    # kernel_size is optional in this internal API so we can test tokperm
+    # users will still be forced to specify kernel_size for validation
+    should_verify = kernel_size is not None
+    if should_verify:
+        kernel_size, stride, dilation, is_causal = check_all_args(
+            na_dim, kernel_size, stride, dilation, is_causal
+        )
+    else:
+        dilation = check_dilation_arg(na_dim, dilation)
+
     batch = len(token_layout_list)
-    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
 
     # Dilation is always implemented as a non-contiguous extra tiling on top of the multi-dim
     # tiling, where we break up a single token layout into "dilation groups".
@@ -178,7 +267,7 @@ def generate_fna_varlen_metadata(
     # to batch, and the FNA kernel does not need to concern itself with anything dilation-related.
     # The exception is when dilation doesn't evenly divide the input, where we'd need to pad, but
     # the kernel also needs to fix up the token layout for getting a correct fine-grained mask.
-    num_dilation_groups = math.prod(dilation_)
+    num_dilation_groups = math.prod(dilation)
 
     # We create two pairs of offsets and extents: "pre-permute" and "post-permute".
     # Pre-permute always corresponds to the "correct" batch size and sequence lengths,
@@ -206,11 +295,6 @@ def generate_fna_varlen_metadata(
     #
     #  * post-permute token layouts: find the EXACT token layout for the current batch for
     #      fine-grained masking.
-    #
-    #
-    # TODO:
-    # We never use the last element in the offsets because we track extents separately,
-    # so we could just remove it?
 
     offset_list_pre_permute = [0 for _ in range(batch + 1)]  # size: batch + 1
     offset_list_post_permute = [
@@ -231,6 +315,15 @@ def generate_fna_varlen_metadata(
     max_seqlen_kernel = 0
 
     for i, token_layout in enumerate(token_layout_list):
+        if should_verify:
+            # Verifies parameters are compatible with each token layout
+            check_args_against_token_layout(
+                token_layout=token_layout,
+                kernel_size=kernel_size,  # type: ignore[arg-type]
+                stride=stride,  # type: ignore[arg-type]
+                dilation=dilation,  # type: ignore[arg-type]
+                is_causal=is_causal,  # type: ignore[arg-type]
+            )
 
         # Identical to counterparts in standard varlen attention
         offset_list_pre_permute[i + 1] = offset_list_pre_permute[i] + math.prod(
@@ -240,14 +333,14 @@ def generate_fna_varlen_metadata(
 
         token_layouts_post_dilation = _get_dilated_token_layouts(
             token_layout,
-            dilation_,
+            dilation,
             flip_tiled_dims=flip_tiled_dims,
         )
 
         token_layout_padded = mul_tuple(
             mul_tuple(
-                ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation_),
-                dilation_,
+                ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation),
+                dilation,
             ),
             tile_shape,
         )
@@ -256,10 +349,10 @@ def generate_fna_varlen_metadata(
         )
 
         seqlen_per_dilation_group_padded = math.prod(
-            ceil_div_tuple(token_layout_padded, dilation_)
+            ceil_div_tuple(token_layout_padded, dilation)
         )
 
-        # TODO: DOES THIS NEED TO BE DIFFERENT?
+        # FNA kernels need the maximum over all dilation groups (post-dilation-tiling)
         max_seqlen_kernel = max(max_seqlen_kernel, seqlen_per_dilation_group_padded)
 
         for j, token_layout_dilation_group in enumerate(token_layouts_post_dilation):
@@ -314,6 +407,53 @@ def generate_fna_varlen_metadata(
 
 
 def verify_fna_varlen_metadata(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    metadata: dict,
+    is_backward: bool,
+):
+    if not is_backward:
+        verify_tokperm_varlen_metadata(
+            tensor=query,
+            metadata=metadata["metadata_q"],
+            tile_shape=metadata["q_tile_shape"],
+            dilation=metadata["dilation"],
+        )
+        verify_tokperm_varlen_metadata(
+            tensor=key,
+            metadata=metadata["metadata_kv"],
+            tile_shape=metadata["kv_tile_shape"],
+            dilation=metadata["dilation"],
+        )
+        verify_tokperm_varlen_metadata(
+            tensor=value,
+            metadata=metadata["metadata_kv"],
+            tile_shape=metadata["kv_tile_shape"],
+            dilation=metadata["dilation"],
+        )
+    else:
+        verify_tokperm_varlen_metadata(
+            tensor=query,
+            metadata=metadata["metadata_q_bwd"],
+            tile_shape=metadata["q_tile_shape_bwd"],
+            dilation=metadata["dilation"],
+        )
+        verify_tokperm_varlen_metadata(
+            tensor=key,
+            metadata=metadata["metadata_kv_bwd"],
+            tile_shape=metadata["kv_tile_shape_bwd"],
+            dilation=metadata["dilation"],
+        )
+        verify_tokperm_varlen_metadata(
+            tensor=value,
+            metadata=metadata["metadata_kv_bwd"],
+            tile_shape=metadata["kv_tile_shape_bwd"],
+            dilation=metadata["dilation"],
+        )
+
+
+def verify_tokperm_varlen_metadata(
     tensor: Tensor,
     metadata: dict,
     tile_shape: DimensionType,
@@ -350,6 +490,7 @@ def verify_fna_varlen_metadata(
         "total_seqlen_post_permute",
         "max_seqlen_pre_permute",
         "max_seqlen_post_permute",
+        "max_seqlen_kernel",
     ]
 
     if any(x not in metadata for x in expected_keys):
@@ -451,6 +592,7 @@ def verify_fna_varlen_metadata(
 
     max_seqlen_pre_permute = metadata["max_seqlen_pre_permute"]
     max_seqlen_post_permute = metadata["max_seqlen_post_permute"]
+    max_seqlen_kernel = metadata["max_seqlen_kernel"]
 
     if not isinstance(max_seqlen_pre_permute, int) or max_seqlen_pre_permute < 1:
         raise ValueError(
@@ -462,8 +604,58 @@ def verify_fna_varlen_metadata(
             f"max_seqlen_post_permute must be a positive integer, got {max_seqlen_post_permute}."
         )
 
+    if not isinstance(max_seqlen_kernel, int) or max_seqlen_kernel < 1:
+        raise ValueError(
+            f"max_seqlen_kernel must be a positive integer, got {max_seqlen_kernel}."
+        )
+
+
+def get_na_dim(
+    varlen_metadata: Optional[dict] = None,
+    token_layout_list: Optional[list] = None,
+) -> int:
+    if varlen_metadata is not None:
+        if not isinstance(varlen_metadata, dict) or "na_dim" not in varlen_metadata:
+            raise ValueError(f"Invalid varlen metadata object {varlen_metadata=}.")
+
+        return varlen_metadata["na_dim"]
+
+    if token_layout_list is not None:
+        if (
+            not isinstance(token_layout_list, list)
+            or len(token_layout_list) < 1
+            or not all(isinstance(x, tuple) for x in token_layout_list)
+        ):
+            raise ValueError(
+                f"token_layout_list must be a non-empty list of tuples, got {token_layout_list=}."
+            )
+
+        na_dim = len(token_layout_list[0])
+
+        if na_dim not in [1, 2, 3]:
+            raise ValueError(
+                f"Token layouts can only be 1, 2, or 3 dimensions, got {na_dim} ({token_layout_list=})."
+            )
+
+        if any(
+            len(x) != na_dim or any(not isinstance(y, int) for y in x)
+            for x in token_layout_list
+        ):
+            raise ValueError(
+                f"Elements in token_layout_list must be integer tuples of size {na_dim}, got {token_layout_list=}."
+            )
+
+        return na_dim
+
+    raise ValueError(
+        "Variable-length/size operations require either varlen_metadata or token_layout_list "
+        "to be passed, but both are None."
+    )
+
 
 __all__ = [
+    "generate_tokperm_varlen_metadata",
     "generate_fna_varlen_metadata",
     "verify_fna_varlen_metadata",
+    "verify_tokperm_varlen_metadata",
 ]

@@ -184,7 +184,17 @@ def get_configs_for_cutlass_blackwell_fna(
     ):
         return []
 
-    return get_all_blackwell_fna_forward_configs(input_tensor=query)
+    if query.dim() not in [4, 5, 6]:
+        raise ValueError(f"Tensors must be rank-4, 5, or 6, got {query.dim()=}.")
+
+    na_dim = query.dim() - 3  # batch, heads, head_dim
+
+    return get_all_blackwell_fna_forward_configs(
+        na_dim=na_dim,
+        head_dim=query.shape[-1],
+        dtype=query.dtype,
+        device=query.device,
+    )
 
 
 def get_bwd_configs_for_cutlass_blackwell_fna(
@@ -216,7 +226,17 @@ def get_bwd_configs_for_cutlass_blackwell_fna(
     ):
         return []
 
-    return get_all_blackwell_fna_backward_configs(input_tensor=query)
+    if query.dim() not in [4, 5, 6]:
+        raise ValueError(f"Tensors must be rank-4, 5, or 6, got {query.dim()=}.")
+
+    na_dim = query.dim() - 3  # batch, heads, head_dim
+
+    return get_all_blackwell_fna_backward_configs(
+        na_dim=na_dim,
+        head_dim=query.shape[-1],
+        dtype=query.dtype,
+        device=query.device,
+    )
 
 
 ### CUTLASS Hopper kernels

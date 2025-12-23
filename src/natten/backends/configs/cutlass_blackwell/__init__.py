@@ -36,6 +36,19 @@ from ....types import (
 from ....utils.checks import check_tile_shape
 from ....utils.device import get_device_cc
 
+SUPPORTED_DTYPES_FWD = [
+    torch.float16,
+    torch.bfloat16,
+    torch.float8_e4m3fn,
+    torch.float8_e5m2,
+]
+
+SUPPORTED_DTYPES_BWD = [
+    torch.float16,
+    torch.bfloat16,
+]
+
+SUPPORTED_HEAD_DIMS = [32, 64, 128]
 
 # The current CUTLASS FMHA forward kernel can only do Q tile size 256, KV tile size 128.
 # This limits 1D tile shapes to just the one, but for 2-D and 3-D we can have many more shapes,
@@ -103,40 +116,61 @@ def _get_default_tile_shapes_forward(
     raise NotImplementedError()
 
 
-def get_all_forward_configs(
-    input_tensor: Tensor,
-) -> List[CutlassBlackwellFnaForwardConfigType]:
-    assert input_tensor.dim() in [4, 5, 6]
-    na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
+# NOTE (ali, 12/22/2025): for various reasons, we want to slowly move away from mapping Tensors to
+# configs/backends, and request specs directly (na_dim, head_dim, dtype, device).
+# We're making all the base APIs "tensor-less" and slowly replacing the old APIs with the new
+# format.
 
-    device_cc = get_device_cc(input_tensor.device)
-    if device_cc not in [100, 103]:
+
+def get_all_forward_configs(
+    na_dim: int,
+    head_dim: int,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> List[CutlassBlackwellFnaForwardConfigType]:
+
+    device_cc = get_device_cc(device)
+    if (
+        device_cc not in [100, 103]
+        or head_dim not in SUPPORTED_HEAD_DIMS
+        or dtype not in SUPPORTED_DTYPES_FWD
+    ):
         return []
 
     return BLACKWELL_FORWARD_TILE_SHAPES[na_dim]  # type: ignore
 
 
 def get_all_backward_configs(
-    input_tensor: Tensor,
+    na_dim: int,
+    head_dim: int,
+    dtype: torch.dtype,
+    device: torch.device,
 ) -> List[CutlassBlackwellFnaBackwardConfigType]:
-    assert input_tensor.dim() in [4, 5, 6]
-    na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
-    device_cc = get_device_cc(input_tensor.device)
-    if device_cc not in [100, 103]:
+    device_cc = get_device_cc(device)
+    if (
+        device_cc not in [100, 103]
+        or head_dim not in SUPPORTED_HEAD_DIMS
+        or dtype not in SUPPORTED_DTYPES_BWD
+    ):
         return []
 
     return BLACKWELL_BACKWARD_TILE_SHAPES[na_dim]  # type: ignore
 
 
-# For FMHA
+# FMHA API
 def get_all_fmha_forward_configs(
     input_tensor: Tensor,
 ) -> List[CutlassBlackwellFmhaForwardConfigType]:
     if input_tensor.dim() != 4:
         raise ValueError("Only 4-D tensors are supported in FMHA.")
 
-    tile_shapes = get_all_forward_configs(input_tensor)
+    tile_shapes = get_all_forward_configs(
+        na_dim=1,
+        head_dim=input_tensor.shape[-1],
+        dtype=input_tensor.dtype,
+        device=input_tensor.device,
+    )
     assert all(len(q_t) == len(kv_t) == 1 for q_t, kv_t in tile_shapes)
 
     tile_sizes = [(q_t[0], kv_t[0]) for q_t, kv_t in tile_shapes]
@@ -144,13 +178,19 @@ def get_all_fmha_forward_configs(
     return tile_sizes
 
 
+# FMHA API
 def get_all_fmha_backward_configs(
     input_tensor: Tensor,
 ) -> List[CutlassBlackwellFmhaBackwardConfigType]:
     if input_tensor.dim() != 4:
         raise ValueError("Only 4-D tensors are supported in FMHA.")
 
-    tile_shapes = get_all_backward_configs(input_tensor)
+    tile_shapes = get_all_backward_configs(
+        na_dim=1,
+        head_dim=input_tensor.shape[-1],
+        dtype=input_tensor.dtype,
+        device=input_tensor.device,
+    )
     assert all(len(q_t) == len(kv_t) == 1 for q_t, kv_t in tile_shapes)
 
     tile_sizes = [(q_t[0], kv_t[0]) for q_t, kv_t in tile_shapes]
@@ -158,15 +198,45 @@ def get_all_fmha_backward_configs(
     return tile_sizes
 
 
+# FNA API
 def get_default_forward_tile_shapes(
     input_tensor: Tensor,
 ) -> CutlassBlackwellFnaForwardConfigType:
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
+    return get_default_forward_tile_shapes_tensorless(
+        na_dim=na_dim,
+        head_dim=input_tensor.shape[-1],
+        dtype=input_tensor.dtype,
+        device=input_tensor.device,
+    )
+
+
+# FNA API - tensor-less
+def get_default_forward_tile_shapes_tensorless(
+    na_dim: int,
+    head_dim: int,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> CutlassBlackwellFnaForwardConfigType:
+    assert na_dim in [1, 2, 3]
+
+    device_cc = get_device_cc(device)
+    if (
+        device_cc not in [100, 103]
+        or head_dim not in SUPPORTED_HEAD_DIMS
+        or dtype not in SUPPORTED_DTYPES_FWD
+    ):
+        raise ValueError(
+            "No configs exist for this use case; Blackwell FMHA/FNA does not support it: "
+            f"{na_dim=}, {head_dim=}, {dtype=}, {device=} ({device_cc=})."
+        )
+
     return _get_default_tile_shapes_forward(na_dim)
 
 
+# FMHA API
 def get_default_forward_tile_sizes(
     input_tensor: Tensor,
 ) -> CutlassBlackwellFmhaForwardConfigType:
@@ -179,21 +249,46 @@ def get_default_forward_tile_sizes(
     return (q_t[0], kv_t[0])
 
 
+# FNA API
 def get_default_backward_tile_shapes(
     input_tensor: Tensor,
 ) -> CutlassBlackwellFnaBackwardConfigType:
-    all_configs = get_all_backward_configs(input_tensor)
+    assert input_tensor.dim() in [4, 5, 6]
+    na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
+
+    return get_default_backward_tile_shapes_tensorless(
+        na_dim=na_dim,
+        head_dim=input_tensor.shape[-1],
+        dtype=input_tensor.dtype,
+        device=input_tensor.device,
+    )
+
+
+# FNA API - tensor-less
+def get_default_backward_tile_shapes_tensorless(
+    na_dim: int,
+    head_dim: int,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> CutlassBlackwellFnaBackwardConfigType:
+    all_configs = get_all_backward_configs(
+        na_dim=na_dim,
+        head_dim=head_dim,
+        dtype=dtype,
+        device=device,
+    )
 
     if len(all_configs) < 1:
-        device_cc = get_device_cc(input_tensor.device)
+        device_cc = get_device_cc(device)
         raise ValueError(
             "No configs exist for this use case; Blackwell FMHA/FNA does not support it: "
-            f"{input_tensor.shape=}, {input_tensor.dtype=}, {device_cc=}."
+            f"{na_dim=}, {head_dim=}, {dtype=}, {device=} ({device_cc=})."
         )
 
     return all_configs[0]
 
 
+# FMHA API
 def get_default_backward_tile_sizes(
     input_tensor: Tensor,
 ) -> CutlassBlackwellFmhaBackwardConfigType:
@@ -206,6 +301,7 @@ def get_default_backward_tile_sizes(
     return (q_t[0], kv_t[0])
 
 
+# FNA API
 def check_cutlass_blackwell_fna_forward_config(
     input_tensor: Tensor,
     q_tile_shape: Optional[DimensionType] = None,
@@ -214,6 +310,27 @@ def check_cutlass_blackwell_fna_forward_config(
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
+    return check_cutlass_blackwell_fna_forward_config_tensorless(
+        na_dim=na_dim,
+        head_dim=input_tensor.shape[-1],
+        dtype=input_tensor.dtype,
+        device=input_tensor.device,
+        q_tile_shape=q_tile_shape,
+        kv_tile_shape=kv_tile_shape,
+    )
+
+
+# FNA API - tensor-less
+def check_cutlass_blackwell_fna_forward_config_tensorless(
+    na_dim: int,
+    head_dim: int,
+    dtype: torch.dtype,
+    device: torch.device,
+    q_tile_shape: Optional[DimensionType] = None,
+    kv_tile_shape: Optional[DimensionType] = None,
+) -> CutlassBlackwellFnaForwardConfigType:
+    assert na_dim in [1, 2, 3]
+
     if (q_tile_shape is None) ^ (kv_tile_shape is None):
         raise ValueError(
             "Please specify both q_tile_shape and kv_tile_shape, or neither one. "
@@ -221,12 +338,19 @@ def check_cutlass_blackwell_fna_forward_config(
         )
 
     if q_tile_shape is None and kv_tile_shape is None:
-        return get_default_forward_tile_shapes(input_tensor=input_tensor)
+        return get_default_forward_tile_shapes_tensorless(
+            na_dim=na_dim, head_dim=head_dim, dtype=dtype, device=device
+        )
 
     q_tile_shape = check_tile_shape(q_tile_shape)
     kv_tile_shape = check_tile_shape(kv_tile_shape)
 
-    tile_shapes = get_all_forward_configs(input_tensor=input_tensor)
+    tile_shapes = get_all_forward_configs(
+        na_dim=na_dim,
+        head_dim=head_dim,
+        dtype=dtype,
+        device=device,
+    )
 
     for q_t, kv_t in tile_shapes:
         if q_t == q_tile_shape and kv_t == kv_tile_shape:
@@ -253,6 +377,7 @@ def check_cutlass_blackwell_fna_forward_config(
     )
 
 
+# FMHA API
 def check_cutlass_blackwell_fmha_forward_config(
     input_tensor: Tensor,
     q_tile_size: Optional[int] = None,
@@ -299,6 +424,7 @@ def check_cutlass_blackwell_fmha_forward_config(
     )
 
 
+# FNA API
 def check_cutlass_blackwell_fna_backward_config(
     input_tensor: Tensor,
     q_tile_shape: Optional[DimensionType] = None,
@@ -307,6 +433,26 @@ def check_cutlass_blackwell_fna_backward_config(
     assert input_tensor.dim() in [4, 5, 6]
     na_dim = input_tensor.dim() - 3  # batch, heads, head_dim
 
+    return check_cutlass_blackwell_fna_backward_config_tensorless(
+        na_dim=na_dim,
+        head_dim=input_tensor.shape[-1],
+        dtype=input_tensor.dtype,
+        device=input_tensor.device,
+        q_tile_shape=q_tile_shape,
+        kv_tile_shape=kv_tile_shape,
+    )
+
+
+# FNA API - tensor-less
+def check_cutlass_blackwell_fna_backward_config_tensorless(
+    na_dim: int,
+    head_dim: int,
+    dtype: torch.dtype,
+    device: torch.device,
+    q_tile_shape: Optional[DimensionType] = None,
+    kv_tile_shape: Optional[DimensionType] = None,
+) -> CutlassBlackwellFnaBackwardConfigType:
+
     if (q_tile_shape is None) ^ (kv_tile_shape is None):
         raise ValueError(
             "Please specify both q_tile_shape and kv_tile_shape, or neither one. "
@@ -314,12 +460,19 @@ def check_cutlass_blackwell_fna_backward_config(
         )
 
     if q_tile_shape is None and kv_tile_shape is None:
-        return get_default_backward_tile_shapes(input_tensor=input_tensor)
+        return get_default_backward_tile_shapes_tensorless(
+            na_dim=na_dim, head_dim=head_dim, dtype=dtype, device=device
+        )
 
     q_tile_shape = check_tile_shape(q_tile_shape)
     kv_tile_shape = check_tile_shape(kv_tile_shape)
 
-    tile_shapes = get_all_backward_configs(input_tensor=input_tensor)
+    tile_shapes = get_all_backward_configs(
+        na_dim=na_dim,
+        head_dim=head_dim,
+        dtype=dtype,
+        device=device,
+    )
 
     for q_t, kv_t in tile_shapes:
         if q_t == q_tile_shape and kv_t == kv_tile_shape:
@@ -346,6 +499,7 @@ def check_cutlass_blackwell_fna_backward_config(
     )
 
 
+# FMHA API
 def check_cutlass_blackwell_fmha_backward_config(
     input_tensor: Tensor,
     q_tile_size: Optional[int] = None,

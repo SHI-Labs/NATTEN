@@ -27,12 +27,22 @@ from natten.token_permute.frontend import (
     token_unpermute_operation,
     token_unpermute_varlen_operation,
 )
-from natten.token_permute.varlen import generate_fna_varlen_metadata
+from natten.token_permute.varlen import (
+    generate_fna_varlen_metadata,
+    generate_tokperm_varlen_metadata,
+    get_na_dim,
+    verify_fna_varlen_metadata,
+    verify_tokperm_varlen_metadata,
+)
 
 __all__ = [
     "token_permute_operation",
     "token_unpermute_operation",
     "token_permute_varlen_operation",
     "token_unpermute_varlen_operation",
+    "get_na_dim",
+    "generate_tokperm_varlen_metadata",
     "generate_fna_varlen_metadata",
+    "verify_fna_varlen_metadata",
+    "verify_tokperm_varlen_metadata",
 ]

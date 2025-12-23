@@ -203,7 +203,11 @@ class NattenBackendTester:
                 additional_keys=additional_k_ref,
                 additional_values=additional_v_ref,
                 backend=reference_backend,
-                attention_kwargs={"backend": reference_fmha_backend},
+                attention_kwargs={
+                    "backend": reference_fmha_backend,
+                    "backward_use_pt_reduction": True,
+                },
+                backward_use_pt_reduction=True,
             )
 
         self.out_ref = out_ref_.data.clone().float()  # type: ignore[union-attr]
@@ -248,7 +252,7 @@ class NattenBackendTester:
         backward_q_tile_shape: Optional[DimensionType] = None,
         backward_kv_tile_shape: Optional[DimensionType] = None,
         backward_kv_splits: Optional[DimensionType] = None,
-        backward_use_pt_reduction: bool = False,
+        backward_use_pt_reduction: bool = True,
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         torch_compile: bool = False,

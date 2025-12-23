@@ -565,16 +565,18 @@ class FMHABackendTest(unittest.TestCase):
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
             backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
             assert len(forward_configs) > 0
-            assert len(backward_configs) > 0
+            test_backprop = len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
                 q_tile_size, kv_tile_size = forward_configs[i]
-                backward_q_tile_size, backward_kv_tile_size = backward_configs[
-                    i % len(backward_configs)
-                ]
+                backward_q_tile_size, backward_kv_tile_size = None, None
+                if test_backprop:
+                    backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                        i % len(backward_configs)
+                    ]
 
                 self._test_against_torch_sdpa(
                     batch=batch,
@@ -585,7 +587,7 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_kv=seqlen_kv,
                     is_causal=is_causal,
                     dtype=dtype,
-                    test_backprop=not is_fp8(dtype),
+                    test_backprop=test_backprop,
                     atol=atol,
                     rtol=rtol,
                     backend="blackwell-fmha",
@@ -738,16 +740,18 @@ class FMHABackendTest(unittest.TestCase):
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
             backward_configs = get_all_blackwell_fmha_backward_configs(dummy)
             assert len(forward_configs) > 0
-            assert len(backward_configs) > 0
+            test_backprop = len(backward_configs) > 0
 
             random.shuffle(forward_configs)
             random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
                 q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
-                backward_q_tile_size, backward_kv_tile_size = backward_configs[
-                    i % len(backward_configs)
-                ]
+                backward_q_tile_size, backward_kv_tile_size = None, None
+                if test_backprop:
+                    backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                        i % len(backward_configs)
+                    ]
 
                 self._test_against_natten_cutlass_fmha(
                     batch=batch,
@@ -757,7 +761,7 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_kv=seqlen_kv,
                     is_causal=is_causal,
                     dtype=dtype,
-                    test_backprop=True,
+                    test_backprop=test_backprop,
                     test_lse=True,
                     atol=atol,
                     rtol=rtol,

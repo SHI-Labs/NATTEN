@@ -26,12 +26,16 @@ import math
 import torch
 from torch import Tensor
 
-from ..._environment import _IS_TORCH_COMPILE_SUPPORTED, _TORCH_VERSION
-from ..._libnatten import HAS_LIBNATTEN
-from ...context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
-from ...utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_checks
-from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
-from ...utils.dtype import is_fp8
+from natten._environment import _IS_TORCH_COMPILE_SUPPORTED, _TORCH_VERSION
+from natten._libnatten import HAS_LIBNATTEN
+from natten.backends.configs.cutlass_blackwell import (
+    SUPPORTED_DTYPES_BWD as BLACKWELL_FMHA_SUPPORTED_DTYPES_BWD,
+    SUPPORTED_DTYPES_FWD as BLACKWELL_FMHA_SUPPORTED_DTYPES_FWD,
+    SUPPORTED_HEAD_DIMS as BLACKWELL_FMHA_SUPPORTED_HEAD_DIMS,
+)
+from natten.context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
+from natten.utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_checks
+from natten.utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
 
 
 ### Blackwell FMHA/FNA
@@ -101,29 +105,24 @@ def can_run_cutlass_blackwell_fmha(
         )
         return False
 
-    if query.dtype not in [
-        torch.float16,
-        torch.bfloat16,
-        torch.float8_e4m3fn,
-        torch.float8_e5m2,
-    ]:
+    if query.dtype not in BLACKWELL_FMHA_SUPPORTED_DTYPES_FWD:
         target_fn(
-            "Can't run Blackwell FMHA; it only supports FP16, BF16, FP8-E4M3 and FP8-E5M2.",
+            f"Can't run Blackwell FMHA; supported dtypes (forward pass): {BLACKWELL_FMHA_SUPPORTED_DTYPES_FWD}.",
             exception=ValueError,
         )
         return False
 
-    if query.requires_grad and is_fp8(query.dtype):
+    if query.requires_grad and query.dtype not in BLACKWELL_FMHA_SUPPORTED_DTYPES_BWD:
         target_fn(
-            "Blackwell FMHA does not support FP8 backward pass, but "
-            f"got {query.requires_grad=}, {query.dtype=}.",
+            f"Blackwell FMHA does not support {query.dtype=} in the backward pass, but "
+            f"got {query.requires_grad=}. Supported dtypes: {BLACKWELL_FMHA_SUPPORTED_DTYPES_BWD}.",
             exception=ValueError,
         )
         return False
 
-    if head_dim not in [32, 64, 128]:
+    if head_dim not in BLACKWELL_FMHA_SUPPORTED_HEAD_DIMS:
         target_fn(
-            "Can't run Blackwell FMHA; it only supports head dims 32, 64, and 128 for now.",
+            f"Can't run Blackwell FMHA; it only supports these head dims for now: {BLACKWELL_FMHA_SUPPORTED_HEAD_DIMS}.",
             exception=NotImplementedError,
         )
         return False
@@ -191,29 +190,24 @@ def can_run_cutlass_blackwell_fna(
         )
         return False
 
-    if query.dtype not in [
-        torch.float16,
-        torch.bfloat16,
-        torch.float8_e4m3fn,
-        torch.float8_e5m2,
-    ]:
+    if query.dtype not in BLACKWELL_FMHA_SUPPORTED_DTYPES_FWD:
         target_fn(
-            "Can't run Blackwell FNA; it only supports FP16, BF16, FP8-E4M3 and FP8-E5M2.",
+            f"Can't run Blackwell FNA; supported dtypes (forward pass): {BLACKWELL_FMHA_SUPPORTED_DTYPES_FWD}.",
             exception=ValueError,
         )
         return False
 
-    if query.requires_grad and is_fp8(query.dtype):
+    if query.requires_grad and query.dtype not in BLACKWELL_FMHA_SUPPORTED_DTYPES_BWD:
         target_fn(
-            "Blackwell FNA does not support FP8 backward pass, but "
-            f"got {query.requires_grad=}, {query.dtype=}.",
+            f"Blackwell FNA does not support {query.dtype=} in the backward pass, but "
+            f"got {query.requires_grad=}. Supported dtypes: {BLACKWELL_FMHA_SUPPORTED_DTYPES_BWD}.",
             exception=ValueError,
         )
         return False
 
-    if head_dim not in [32, 64, 128]:
+    if head_dim not in BLACKWELL_FMHA_SUPPORTED_HEAD_DIMS:
         target_fn(
-            "Can't run Blackwell FNA; it only supports head dims 32, 64, and 128 for now.",
+            f"Can't run Blackwell FNA; it only supports these head dims for now: {BLACKWELL_FMHA_SUPPORTED_HEAD_DIMS}.",
             exception=NotImplementedError,
         )
         return False
