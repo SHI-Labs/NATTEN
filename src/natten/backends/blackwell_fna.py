@@ -431,6 +431,8 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 tile_shape=q_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,
+                # in case there's any extra padding
+                output_seqlen=query.shape[1],
             )
             logsumexp = token_unpermute_varlen_operation(
                 logsumexp_perm.unsqueeze(-1),
@@ -438,6 +440,8 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 tile_shape=q_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,
+                # in case there's any extra padding
+                output_seqlen=query.shape[1],
             ).squeeze(-1)
             # Token un-permute end
 
@@ -578,6 +582,8 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 tile_shape=q_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,
+                # in case there's any extra padding
+                output_seqlen=query.shape[1],
             )
             d_key = token_unpermute_varlen_operation(
                 d_key_perm,
@@ -585,6 +591,8 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,
+                # in case there's any extra padding
+                output_seqlen=key.shape[1],
             )
             d_value = token_unpermute_varlen_operation(
                 d_value_perm,
@@ -592,6 +600,8 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=True,
+                # in case there's any extra padding
+                output_seqlen=value.shape[1],
             )
             # Token un-permute end
 

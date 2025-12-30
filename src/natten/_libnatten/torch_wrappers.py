@@ -1564,6 +1564,7 @@ def make_token_permute_varlen_ops(na_dim):
         tile_shape: list[int],
         dilation: list[int],
         flip_tiled_dims: bool,
+        output_seqlen: Optional[int],
     ) -> Tensor:
         input_tensor = maybe_contiguous(input_tensor)
         offsets_pre_permute = maybe_contiguous(offsets_pre_permute)
@@ -1573,13 +1574,14 @@ def make_token_permute_varlen_ops(na_dim):
         assert input_tensor.shape[0] == 1
         output_shape = [
             1,
-            total_seqlen_pre_permute,
+            output_seqlen if output_seqlen is not None else total_seqlen_pre_permute,
             input_tensor.shape[-2],
             input_tensor.shape[-1],
         ]
-        output = torch.empty(
+        init_fn = torch.zeros if output_seqlen is not None else torch.empty
+        output = init_fn(
             output_shape, device=input_tensor.device, dtype=input_tensor.dtype
-        )
+        )  # type: ignore[operator]
         unpermute_handle(
             output,
             input_tensor,
@@ -1605,6 +1607,7 @@ def make_token_permute_varlen_ops(na_dim):
         tile_shape: list[int],
         dilation: list[int],
         flip_tiled_dims: bool,
+        output_seqlen: Optional[int],
     ) -> Tensor:
         input_tensor = maybe_contiguous(input_tensor)
         offsets_pre_permute = maybe_contiguous(offsets_pre_permute)
@@ -1614,7 +1617,7 @@ def make_token_permute_varlen_ops(na_dim):
         assert input_tensor.shape[0] == 1
         output_shape = [
             1,
-            total_seqlen_pre_permute,
+            output_seqlen if output_seqlen is not None else total_seqlen_pre_permute,
             input_tensor.shape[-2],
             input_tensor.shape[-1],
         ]

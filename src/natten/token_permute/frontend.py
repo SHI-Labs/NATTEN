@@ -184,6 +184,8 @@ def token_unpermute_varlen_operation(
     tile_shape: DimensionType,
     dilation: Optional[DimensionType] = None,
     flip_tiled_dims: bool = True,
+    # allow overriding output seqlen for optional padding
+    output_seqlen: Optional[int] = None,
     use_torch: bool = USE_TORCH_IMPL_DEFAULT,
 ) -> Tensor:
     na_dim = len(tile_shape)
@@ -207,6 +209,7 @@ def token_unpermute_varlen_operation(
             tile_shape=tile_shape,
             dilation=dilation_,
             flip_tiled_dims=flip_tiled_dims,
+            output_seqlen=output_seqlen,
         )
     else:
         raise NotImplementedError(

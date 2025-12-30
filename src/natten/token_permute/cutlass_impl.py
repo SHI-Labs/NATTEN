@@ -22,7 +22,7 @@
 #################################################################################################
 
 import functools
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
@@ -317,6 +317,7 @@ def make_cutlass_token_unpermute_varlen_autograd_fn(na_dim):
             tile_shape: DimensionType,
             dilation: DimensionType,
             flip_tiled_dims: bool,
+            output_seqlen: Optional[int],
         ) -> Tensor:
 
             output = VARLEN_UNPERMUTE_OPS[na_dim](
@@ -329,6 +330,7 @@ def make_cutlass_token_unpermute_varlen_autograd_fn(na_dim):
                 tile_shape=tile_shape,
                 dilation=dilation,
                 flip_tiled_dims=flip_tiled_dims,
+                output_seqlen=output_seqlen,
             )
 
             ctx.save_for_backward(
@@ -356,6 +358,7 @@ def make_cutlass_token_unpermute_varlen_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
+            NoneType,
         ]:
 
             offsets_pre_permute, offsets_post_permute, token_layouts_pre_permute = (
@@ -375,6 +378,7 @@ def make_cutlass_token_unpermute_varlen_autograd_fn(na_dim):
 
             return (
                 d_output_permuted,
+                None,
                 None,
                 None,
                 None,
@@ -549,6 +553,8 @@ def token_unpermute_varlen_cutlass(
     tile_shape: DimensionType,
     dilation: DimensionType,
     flip_tiled_dims: bool,
+    # allow overriding output seqlen for optional padding
+    output_seqlen: Optional[int] = None,
 ) -> Tensor:
     na_dim = len(tile_shape)
     assert na_dim in [1, 2, 3]
@@ -575,6 +581,7 @@ def token_unpermute_varlen_cutlass(
         tile_shape,
         dilation,
         flip_tiled_dims,
+        output_seqlen,
     )
 
     return output
