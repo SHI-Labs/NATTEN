@@ -21,12 +21,18 @@
 #
 #################################################################################################
 
-from typing import List
+import functools
+from typing import List, Tuple
 
 import torch
 from torch import Tensor
+from torch.amp import custom_bwd, custom_fwd
+from torch.autograd import Function
 
-from ._environment import _IS_TORCH_COMPILE_SUPPORTED
+amp_fwd = functools.partial(custom_fwd, device_type="cuda")
+amp_bwd = functools.partial(custom_bwd, device_type="cuda")
+
+from natten._environment import _IS_TORCH_COMPILE_SUPPORTED
 
 
 def maybe_torch_compile(*args, **kwargs):
@@ -39,11 +45,14 @@ def maybe_torch_compile(*args, **kwargs):
 
 
 # TODO: if use cases for this grow, we might want to do a custom kernel
-def merge_attentions_fn(outputs: List[Tensor], lse_tensors: List[Tensor]) -> Tensor:
+def merge_attentions_fn(
+    outputs: List[Tensor], lse_tensors: List[Tensor]
+) -> Tuple[Tensor, Tensor]:
 
     assert len(outputs) >= 2, "Expected at least two tensors."
-    assert len(outputs) == len(
-        lse_tensors
+    num_splits = len(outputs)
+    assert (
+        len(lse_tensors) == num_splits
     ), "Expected number of outputs and LSE tensors to match."
 
     assert all(
@@ -66,43 +75,197 @@ def merge_attentions_fn(outputs: List[Tensor], lse_tensors: List[Tensor]) -> Ten
     accum_type = torch.float32
     output_type = outputs[0].dtype
 
-    lse_tensors = [lse.to(accum_type) for lse in lse_tensors]
+    lse_tensors = [lse.to(accum_type).unsqueeze(-1) for lse in lse_tensors]
 
     outputs = [output.to(accum_type) for output in outputs]
 
-    lse_max = torch.maximum(lse_tensors[0], lse_tensors[1])
-    for i in range(2, len(lse_tensors)):
-        lse_max = torch.maximum(lse_max, lse_tensors[i])
-
-    exp_diffs = [torch.exp(lse - lse_max).unsqueeze(-1) for lse in lse_tensors]
-
-    outputs_rescaled = [
-        output * exp_diff for output, exp_diff in zip(outputs, exp_diffs)
-    ]
-
-    assert all(
-        [
-            output_rescaled.shape == output.shape
-            for output, output_rescaled in zip(outputs, outputs_rescaled)
-        ]
+    # New approach based on https://github.com/zhuzilin/ring-flash-attention/pull/34
+    output = outputs[0] - torch.nn.functional.sigmoid(
+        lse_tensors[1] - lse_tensors[0]
+    ) * (outputs[0] - outputs[1])
+    logsumexp = lse_tensors[0] - torch.nn.functional.logsigmoid(
+        lse_tensors[0] - lse_tensors[1]
     )
-
-    sum_of_exps = exp_diffs[0] + exp_diffs[1]
-    sum_of_outs = outputs_rescaled[0] + outputs_rescaled[1]
-    for i in range(2, len(exp_diffs)):
-        sum_of_exps += exp_diffs[i]
-        sum_of_outs += outputs_rescaled[i]
-
-    output = sum_of_outs / sum_of_exps
+    for i in range(2, num_splits):
+        output = output - torch.nn.functional.sigmoid(lse_tensors[i] - logsumexp) * (
+            output - outputs[i]
+        )
+        logsumexp = logsumexp - torch.nn.functional.logsigmoid(
+            logsumexp - lse_tensors[i]
+        )
 
     output = output.to(output_type)
+    logsumexp = logsumexp.squeeze(-1)
 
-    return output
+    assert logsumexp.dim() == 3
+    assert logsumexp.shape[0] == batch
+    assert logsumexp.shape[1] == seqlen
+    assert logsumexp.shape[2] == heads
+
+    return output, logsumexp
 
 
 # TODO: if use cases for this grow, we might want to do a custom kernel
 @maybe_torch_compile(fullgraph=True)
 def merge_attentions_compile(
     outputs: List[Tensor], lse_tensors: List[Tensor]
-) -> Tensor:
+) -> Tuple[Tensor, Tensor]:
     return merge_attentions_fn(outputs, lse_tensors)
+
+
+def merge_attentions_op(
+    outputs: List[Tensor], lse_tensors: List[Tensor], torch_compile: bool = True
+) -> Tuple[Tensor, Tensor]:
+
+    if torch_compile:
+        return merge_attentions_fn(
+            [output.contiguous() for output in outputs],
+            [lse.contiguous() for lse in lse_tensors],
+        )
+
+    return merge_attentions_compile(
+        [output.contiguous() for output in outputs],
+        [lse.contiguous() for lse in lse_tensors],
+    )
+
+
+class MergeAttentionsAutogradFn(Function):
+    @staticmethod
+    @amp_fwd
+    def forward(
+        ctx,
+        output_0: Tensor,
+        output_1: Tensor,
+        lse_0: Tensor,
+        lse_1: Tensor,
+        torch_compile: bool,
+    ) -> Tuple[Tensor, Tensor]:
+
+        merged_output, merged_lse = merge_attentions_op(
+            [output_0.contiguous(), output_1.contiguous()],
+            [lse_0.contiguous(), lse_1.contiguous()],
+        )
+
+        ctx.save_for_backward(
+            output_0, output_1, lse_0, lse_1, merged_output, merged_lse
+        )
+
+        return merged_output, merged_lse
+
+    @staticmethod
+    @amp_bwd
+    def backward(
+        ctx, grad_out: Tensor, grad_lse: Tensor
+    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, None]:
+
+        output_0, output_1, lse_0, lse_1, merged_output, merged_lse = ctx.saved_tensors
+
+        # Outputs and LSEs from the originating attention ops must be replaced with
+        # the merged ones inplace so that we get correct behavior, and not break torch.compile
+        # graphs in the process.
+        output_0.data.copy_(merged_output.data.reshape(output_0.shape))
+        output_1.data.copy_(merged_output.data.reshape(output_1.shape))
+
+        lse_0.data.copy_(merged_lse.data.reshape(lse_0.shape))
+        lse_1.data.copy_(merged_lse.data.reshape(lse_1.shape))
+
+        return grad_out, grad_out, grad_lse, grad_lse, None
+
+
+def merge_attentions(
+    outputs: List[Tensor], lse_tensors: List[Tensor], torch_compile: bool = True
+) -> Tuple[Tensor, Tensor]:
+    """Takes multiple attention *outputs* originating from the same query tensor, and their
+    corresponding logsumexps, and merges them as if their context (key/value pair) had been
+    concatenated.
+
+    This operation is used to implement cross-neighborhood attention, and can also be used for
+    distributed setups, such as context-parallelism.
+
+    This operation also attempts to use `torch.compile` to fuse the elementwise operations. This
+    can be disabled by passing `torch_compile=False`.
+
+    Warning:
+        This operation only supports backpropagation with pairs (when `len(outputs) == 2`).
+
+    Parameters:
+        outputs (List[Tensor]): List of 4-D attention output tensors, with the heads last layout
+            (`[batch, seqlen, heads, head_dim]`)
+
+        lse_tensors (List[Tensor]): List of 3-D logsumexp tensors, with the heads last layout
+            (`[batch, seqlen, heads]`)
+
+        torch_compile (bool): Attempt to use `torch.compile` to fuse the underlying elementwise
+            operations.
+
+    Returns:
+        output (Tensor): merged attention output.
+
+        logsumexp (Tensor): updated logsumexp.
+    """
+
+    if len(outputs) < 2:
+        raise ValueError("`merge_attentions` expects at least two tensors.")
+
+    if len(outputs) != len(lse_tensors):
+        raise ValueError(
+            "`merge_attentions` expected number of outputs and LSE tensors to match, "
+            f"got {len(outputs)=} != {len(lse_tensors)}."
+        )
+
+    requires_grad = outputs[0].requires_grad
+    shape = outputs[0].shape
+
+    for i, (output, lse) in enumerate(zip(outputs, lse_tensors)):
+        if output.dim() != 4 or not output.is_contiguous():
+            raise ValueError(
+                "Output tensors must be rank-4 tensors with (batch, seq, heads, dim), "
+                f"but got output {i} with rank={output.dim()}."
+            )
+
+        if output.shape != shape:
+            raise ValueError(
+                f"Output tensors must must match in shape, but got output {i} "
+                f"with shape={output.shape}."
+            )
+
+        if lse.dim() != 3:
+            raise ValueError(
+                "LSE tensors must be rank-3 tensors with (batch, seq, heads)"
+                f"but got LSE {i} with rank={lse.dim()}."
+            )
+
+        if lse.shape != shape[:3]:
+            raise ValueError(
+                f"LSE tensors must must match outputs in shape except last dim "
+                f"({shape=}), but got LSE {i} with shape={lse.shape}."
+            )
+
+        if output.requires_grad and not requires_grad:
+            raise ValueError(
+                "Either all attentions must require grad, or none of them."
+            )
+
+    # This path is the correct way to do backward pass, but since we can't have lists as inputs to
+    # autograd functions, we're forced to specialize it for 2-way for now.
+    if requires_grad and len(outputs) == 2:
+        assert len(outputs) == len(lse_tensors)
+
+        merged_output, merged_lse = MergeAttentionsAutogradFn.apply(
+            outputs[0], outputs[1], lse_tensors[0], lse_tensors[1], torch_compile
+        )
+
+        return merged_output, merged_lse
+
+    if requires_grad:
+        raise NotImplementedError(
+            "'merge_attentions' only supports backwards pass with two inputs, "
+            f"got {len(outputs)=}."
+        )
+
+    # Less accurate generic path
+    return merge_attentions_op(
+        [output.contiguous() for output in outputs],
+        [lse.contiguous() for lse in lse_tensors],
+        torch_compile=torch_compile,
+    )

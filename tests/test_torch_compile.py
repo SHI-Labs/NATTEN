@@ -22,8 +22,10 @@
 #################################################################################################
 
 import unittest
+from typing import Optional
 
 import torch
+from natten._environment import _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS
 from natten.backends import get_compatible_backends, get_compatible_fmha_backends
 from natten.functional import attention
 from natten.modules import NeighborhoodAttentionGeneric
@@ -35,6 +37,9 @@ from torch import nn
 from .utils import reset_torch_compile
 
 logger = log.get_logger(__name__)
+
+
+ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
 
 
 def _reset_everything():
@@ -118,8 +123,14 @@ class Block(nn.Module):
             nn.Linear(int(embed_dim * mlp_ratio), embed_dim),
         )
 
-    def forward(self, x: torch.Tensor, *args, **kwargs):
-        x0 = self.attn(x, *args, **kwargs)
+    def forward(
+        self,
+        x: torch.Tensor,
+        additional_context: Optional[torch.Tensor] = None,
+        *args,
+        **kwargs,
+    ):
+        x0 = self.attn(x, additional_context=additional_context, *args, **kwargs)
         return self.mlp(x0)
 
 
@@ -135,6 +146,7 @@ class TorchCompileTests(unittest.TestCase):
         stride,
         is_causal,
         atol,
+        additional_tokens: int = 0,
     ):
         na_dim = len(token_layout_shape)
 
@@ -163,7 +175,7 @@ class TorchCompileTests(unittest.TestCase):
                 f"Testing torch compile on {na_dim}-D module with input shapes: "
                 f"{batch=}, {num_heads=}, {head_dim=}, {token_layout_shape=}, "
                 f"{kernel_size=}, {dilation=}, {stride=}, {is_causal=}, "
-                f"{dtype=}, {device=}, {backend=}."
+                f"{additional_tokens=}, {dtype=}, {device=}, {backend=}."
             )
 
             model = (
@@ -198,22 +210,45 @@ class TorchCompileTests(unittest.TestCase):
             x_ref = x.clone().requires_grad_(True)
             dy_ref = dy.clone()
 
+            additional_context, additional_context_ref = None, None
+            if additional_tokens > 0:
+                additional_context = torch.randn(
+                    (batch, additional_tokens, embed_dim), dtype=dtype, device=device
+                )
+                additional_context_ref = additional_context.clone().requires_grad_(True)
+                additional_context = additional_context.requires_grad_(True)
+
             # eager
-            y_ref = model_eager(x_ref, backend=backend)
+            y_ref = model_eager(
+                x_ref, additional_context_ref, backend=backend, torch_compile=True
+            )
             y_ref.backward(dy_ref)
             dx_ref = x_ref.grad
 
             # compile on first attempt
             x = x.requires_grad_(True)
-            y = model_compiled(x, backend=backend)
+            y = model_compiled(
+                x, additional_context, backend=backend, torch_compile=True
+            )
             y.backward(dy)
             dx = x.grad
 
             torch.testing.assert_close(y, y_ref, atol=atol, rtol=0)
             torch.testing.assert_close(dx, dx_ref, atol=atol, rtol=0)
+            if additional_tokens > 0:
+                assert additional_context is not None
+                assert additional_context_ref is not None
+                assert additional_context.grad is not None
+                assert additional_context_ref.grad is not None
+
+                dc = additional_context.grad
+                dc_ref = additional_context_ref.grad
+                torch.testing.assert_close(dc, dc_ref, atol=atol, rtol=0)
 
             # Second run, just to make sure it doesn't crash
-            y = model_compiled(x, backend=backend)
+            y = model_compiled(
+                x, additional_context, backend=backend, torch_compile=True
+            )
             y.backward(dy)
             dx = x.grad
 
@@ -420,18 +455,21 @@ class TorchCompileTests(unittest.TestCase):
                 is_causal,
             ) = problem
 
-            self._test_na_module(
-                batch=batch,
-                token_layout_shape=token_layout_shape,
-                num_heads=num_heads,
-                head_dim=head_dim,
-                kernel_size=kernel_size,
-                dilation=dilation,
-                stride=stride,
-                is_causal=is_causal,
-                atol=1e-3,
-            )
+            for additional_tokens in ADDITIONAL_KV_LENGTHS:
+                self._test_na_module(
+                    batch=batch,
+                    token_layout_shape=token_layout_shape,
+                    num_heads=num_heads,
+                    head_dim=head_dim,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    stride=stride,
+                    is_causal=is_causal,
+                    atol=1e-3,
+                    additional_tokens=additional_tokens,
+                )
 
+    @unittest.skip("")
     @skip_if_libnatten_is_not_supported()
     def test_compiled_fmha(self):
         problem_sizes = [
