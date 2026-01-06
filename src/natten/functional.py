@@ -526,6 +526,9 @@ def neighborhood_attention_generic(
         assert additional_values is not None
 
         attention_kwargs = attention_kwargs or {}
+        if "torch_compile" not in attention_kwargs:
+            attention_kwargs["torch_compile"] = torch_compile
+
         additional_output, additional_lse = attention(
             query.flatten(1, na_dim),
             additional_keys,
@@ -536,9 +539,16 @@ def neighborhood_attention_generic(
             **attention_kwargs,
         )
 
+        # NOTE: Flex unfused should not use the autograd fix
+        is_flex = backend == "flex-fna" or (
+            "backend" in attention_kwargs and attention_kwargs["backend"] == "flex-fmha"
+        )
+        use_autograd_fix = not is_flex or torch_compile
+
         merged_output, merged_lse = merge_attentions(
             [output.flatten(1, na_dim), additional_output],
             [lse.flatten(1, na_dim), additional_lse],
+            use_autograd_fix=use_autograd_fix,
         )
         merged_output = merged_output.reshape(output.shape)
         merged_lse = merged_lse.reshape(output.shape[:-1])

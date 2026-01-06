@@ -173,7 +173,10 @@ class MergeAttentionsAutogradFn(Function):
 
 
 def merge_attentions(
-    outputs: List[Tensor], lse_tensors: List[Tensor], torch_compile: bool = True
+    outputs: List[Tensor],
+    lse_tensors: List[Tensor],
+    torch_compile: bool = True,
+    use_autograd_fix: bool = True,
 ) -> Tuple[Tensor, Tensor]:
     """Takes multiple attention *outputs* originating from the same query tensor, and their
     corresponding logsumexps, and merges them as if their context (key/value pair) had been
@@ -196,7 +199,11 @@ def merge_attentions(
             (`[batch, seqlen, heads]`)
 
         torch_compile (bool): Attempt to use `torch.compile` to fuse the underlying elementwise
-            operations.
+            operations. Default: True.
+
+        use_autograd_fix (bool): use NATTEN's autograd fix for attention merging. Only compatible
+            with fused attention operations (Flash/FMHA/FNA). Must be disabled when using unfused
+            Attention, which includes Flex without torch.compile. Default: True.
 
     Returns:
         output (Tensor): merged attention output.
@@ -248,22 +255,22 @@ def merge_attentions(
 
     # This path is the correct way to do backward pass, but since we can't have lists as inputs to
     # autograd functions, we're forced to specialize it for 2-way for now.
-    if requires_grad and len(outputs) == 2:
-        assert len(outputs) == len(lse_tensors)
+    if use_autograd_fix:
+        if requires_grad and len(outputs) == 2:
+            assert len(outputs) == len(lse_tensors)
 
-        merged_output, merged_lse = MergeAttentionsAutogradFn.apply(
-            outputs[0], outputs[1], lse_tensors[0], lse_tensors[1], torch_compile
-        )
+            merged_output, merged_lse = MergeAttentionsAutogradFn.apply(
+                outputs[0], outputs[1], lse_tensors[0], lse_tensors[1], torch_compile
+            )
 
-        return merged_output, merged_lse
+            return merged_output, merged_lse
 
-    if requires_grad:
-        raise NotImplementedError(
-            "'merge_attentions' only supports backwards pass with two inputs, "
-            f"got {len(outputs)=}."
-        )
+        if requires_grad:
+            raise NotImplementedError(
+                "'merge_attentions' only supports backwards pass with two inputs, "
+                f"got {len(outputs)=}."
+            )
 
-    # Less accurate generic path
     return merge_attentions_op(
         [output.contiguous() for output in outputs],
         [lse.contiguous() for lse in lse_tensors],

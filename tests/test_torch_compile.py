@@ -469,7 +469,6 @@ class TorchCompileTests(unittest.TestCase):
                     additional_tokens=additional_tokens,
                 )
 
-    @unittest.skip("")
     @skip_if_libnatten_is_not_supported()
     def test_compiled_fmha(self):
         problem_sizes = [
