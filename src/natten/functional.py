@@ -749,6 +749,7 @@ def na1d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
+        return_lse=return_lse
     )
 
 
@@ -947,6 +948,7 @@ def na2d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
+        return_lse=return_lse
     )
 
 
@@ -1145,4 +1147,5 @@ def na3d(
         run_persistent_kernel=run_persistent_kernel,
         kernel_schedule=kernel_schedule,
         torch_compile=torch_compile,
+        return_lse=return_lse
     )

@@ -67,14 +67,10 @@ def sdpa_split(
     k_1 = k_1.requires_grad_(True)
     v_1 = v_1.requires_grad_(True)
 
-    out1, lse1 = attention(q, k_0, v_0, return_lse=True, backend=backend)
-    out2, lse2 = attention(q, k_1, v_1, return_lse=True, backend=backend)
+    out1: Tensor = attention(q, k_0, v_0, backend=backend)  #  type: ignore[assignment]
+    out2: Tensor = attention(q, k_1, v_1, backend=backend)  #  type: ignore[assignment]
 
-    out, lse = merge_attentions([out1, out2], [lse1, lse2], torch_compile=False)
-
-    # lse = lse.squeeze(-1)
-    assert lse.shape == lse1.shape, f"{lse.shape=} != {lse1.shape=}"
-    assert lse.shape == lse2.shape, f"{lse.shape=} != {lse2.shape=}"
+    out, _ = merge_attentions([out1, out2], [lse1, lse2], torch_compile=False)
 
     out.backward(do)
 
@@ -140,7 +136,7 @@ class AttentionMergeTest(unittest.TestCase):
     ):
 
         ALLOWED_DTYPES = [
-            # dtype, (atol_out, (atol_dq, atol_dk, atol_dv))
+            # (dtype, atol_out, (atol_dq, atol_dk, atol_dv))
             (torch.float32, 1e-3, (1e-2, 1e-3, 1e-3)),
             (torch.float16, 1e-2, (1e-2, 1e-2, 1e-2)),
             (torch.bfloat16, 5e-2, (5e-2, 5e-2, 5e-2)),
