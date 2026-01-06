@@ -78,13 +78,15 @@ class NeighborhoodAttentionGeneric(nn.Module):
 
         self.expected_input_tensor_rank = self.na_dim + 2  # batch, embedding dim
 
-        self.qkv = nn.Linear(self.embed_dim, self.embed_dim * 3, bias=qkv_bias)
+        self.q = nn.Linear(self.embed_dim, self.embed_dim, bias=qkv_bias)
+        self.kv = nn.Linear(self.embed_dim, self.embed_dim * 2, bias=qkv_bias)
         self.proj = nn.Linear(self.embed_dim, self.embed_dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(
         self,
         x: Tensor,
+        additional_context: Optional[Tensor] = None,
         # SDPA fast path
         attention_kwargs: Optional[Dict] = None,
         # Optional perf-related args
@@ -113,19 +115,43 @@ class NeighborhoodAttentionGeneric(nn.Module):
                 f"Expected embedding dimension {self.embed_dim}, got {C} ({x.shape=})."
             )
 
+        # batch, *input_shape, heads, head_dim
+        permutation_q = (
+            [0]
+            + [x + 1 for x in range(self.na_dim)]
+            + [self.na_dim + 1, self.na_dim + 2]
+        )
+
         # 3, batch, *input_shape, heads, head_dim
-        permutation = (
+        permutation_kv = (
             [self.na_dim + 1, 0]
             + [x + 1 for x in range(self.na_dim)]
             + [self.na_dim + 2, self.na_dim + 3]
         )
-        qkv = (
-            self.qkv(x)
-            .reshape(B, *input_shape, 3, self.num_heads, self.head_dim)
-            .permute(*permutation)
+
+        q = (
+            self.q(x)
+            .reshape(B, *input_shape, self.num_heads, self.head_dim)
+            .permute(*permutation_q)
         )
-        q, k, v = qkv[0], qkv[1], qkv[2]
-        x = neighborhood_attention_generic(
+
+        kv = (
+            self.kv(x)
+            .reshape(B, *input_shape, 2, self.num_heads, self.head_dim)
+            .permute(*permutation_kv)
+        )
+        k, v = kv[0], kv[1]
+
+        add_k, add_v = None, None
+        if additional_context is not None:
+            add_kv = (
+                self.kv(additional_context)
+                .reshape(B, -1, 2, self.num_heads, self.head_dim)
+                .permute(2, 0, 1, 3, 4)
+            )
+            add_k, add_v = add_kv[0], add_kv[1]
+
+        x = neighborhood_attention_generic(  #  type: ignore[assignment]
             q,
             k,
             v,
@@ -147,6 +173,8 @@ class NeighborhoodAttentionGeneric(nn.Module):
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
             torch_compile=torch_compile,
+            additional_keys=add_k,
+            additional_values=add_v,
         )
         x = x.reshape(B, *input_shape, C)
 

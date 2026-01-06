@@ -237,7 +237,9 @@ class NattenBackendTester:
 
     def test(
         self,
-        eps: Union[float, Tuple[float, float]],
+        eps: Union[
+            float, Tuple[float, float], Tuple[float, Tuple[float, float, float]]
+        ],
         dtype: torch.dtype,
         target_backend: str,
         target_fmha_backend: str,
@@ -306,28 +308,30 @@ class NattenBackendTester:
         torch.cuda.synchronize()
         start_time = time.time()
 
-        out_ = neighborhood_attention_generic(
-            q,
-            k,
-            v,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilation=dilation,
-            is_causal=is_causal,
-            additional_keys=additional_k,
-            additional_values=additional_v,
-            #
-            backend=target_backend,
-            q_tile_shape=q_tile_shape,
-            kv_tile_shape=kv_tile_shape,
-            backward_q_tile_shape=backward_q_tile_shape,
-            backward_kv_tile_shape=backward_kv_tile_shape,
-            backward_kv_splits=backward_kv_splits,
-            backward_use_pt_reduction=backward_use_pt_reduction,
-            run_persistent_kernel=run_persistent_kernel,
-            kernel_schedule=kernel_schedule,
-            torch_compile=torch_compile,
-            attention_kwargs={"backend": target_fmha_backend},
+        out_: torch.Tensor = (
+            neighborhood_attention_generic(  #  type: ignore[assignment]
+                q,
+                k,
+                v,
+                kernel_size=kernel_size,
+                stride=stride,
+                dilation=dilation,
+                is_causal=is_causal,
+                additional_keys=additional_k,
+                additional_values=additional_v,
+                #
+                backend=target_backend,
+                q_tile_shape=q_tile_shape,
+                kv_tile_shape=kv_tile_shape,
+                backward_q_tile_shape=backward_q_tile_shape,
+                backward_kv_tile_shape=backward_kv_tile_shape,
+                backward_kv_splits=backward_kv_splits,
+                backward_use_pt_reduction=backward_use_pt_reduction,
+                run_persistent_kernel=run_persistent_kernel,
+                kernel_schedule=kernel_schedule,
+                torch_compile=torch_compile,
+                attention_kwargs={"backend": target_fmha_backend},
+            )
         )
         out = out_.data.clone().float()
 
@@ -366,15 +370,22 @@ class NattenBackendTester:
         torch.testing.assert_close(out, self.out_ref, atol=eps_forward, rtol=0)
 
         if test_backprop_safe:
-            torch.testing.assert_close(dq, self.dq_ref, atol=eps_backward, rtol=0)
-            torch.testing.assert_close(dk, self.dk_ref, atol=eps_backward, rtol=0)
-            torch.testing.assert_close(dv, self.dv_ref, atol=eps_backward, rtol=0)
+            if isinstance(eps_backward, tuple):
+                assert len(eps_backward) == 3
+                eps_dq, eps_dk, eps_dv = eps_backward
+            else:
+                assert isinstance(eps_backward, float)
+                eps_dq, eps_dk, eps_dv = eps_backward, eps_backward, eps_backward
+
+            torch.testing.assert_close(dq, self.dq_ref, atol=eps_dq, rtol=0)
+            torch.testing.assert_close(dk, self.dk_ref, atol=eps_dk, rtol=0)
+            torch.testing.assert_close(dv, self.dv_ref, atol=eps_dv, rtol=0)
             if additional_kv_length > 0:
                 torch.testing.assert_close(
-                    d_additional_k, self.d_additional_k_ref, atol=eps_backward, rtol=0
+                    d_additional_k, self.d_additional_k_ref, atol=eps_dk, rtol=0
                 )
                 torch.testing.assert_close(
-                    d_additional_v, self.d_additional_v_ref, atol=eps_backward, rtol=0
+                    d_additional_v, self.d_additional_v_ref, atol=eps_dv, rtol=0
                 )
 
 

@@ -111,12 +111,42 @@ class FNABackendTest(unittest.TestCase):
             dtype=torch.float32,
         )
 
-        # TODO: write note on why backprop eps is different when additional_kv_length > 0
-        is_gqa = heads_kv is not None and heads != heads_kv
+        # GQA is implemented with graph transformations, and will therefore
+        # have a different error threshold since it involves reductions in bwd pass.
+        # MLA will also involve a reduction in bwd pass and needs higher error thresholds
+        is_gqa_or_mla = (
+            heads_kv is not None and heads != heads_kv
+        ) or head_dim_v != head_dim
+
+        # Additional KVs are handled with a separate attention op and attention merging,
+        # but we shouldn't need beyond 1e-1 threshold (when correcting autograd, which natten
+        # does in all libnatten backends.)
+        # There is a separate attention merging test that compares backends to themselves, and can
+        # therefore have a higher threshold.
+        has_add_kv = additional_kv_length > 0
+
+        # (dtype, is_gqa_or_mla, has_additional_kv) -> atol_dq, atol_dk, atol_dv
+        bwd_atols = {
+            (torch.float32, False, False): (1e-2, 1e-4, 1e-4),
+            (torch.float32, False, True): (1e-1, 1e-1, 1e-1),
+            (torch.float32, True, False): (7e-1, 7e-1, 7e-1),
+            (torch.float32, True, True): (7e-1, 7e-1, 7e-1),
+            #
+            (torch.float16, False, False): (1e-1, 1e-2, 1e-2),
+            (torch.float16, False, True): (1e-1, 1e-1, 1e-1),
+            (torch.float16, True, False): (7e-1, 7e-1, 7e-1),
+            (torch.float16, True, True): (7e-1, 7e-1, 7e-1),
+            #
+            (torch.bfloat16, False, False): (1e-1, 1e-2, 1e-2),
+            (torch.bfloat16, False, True): (1e-1, 1e-1, 1e-1),
+            (torch.bfloat16, True, False): (7e-1, 7e-1, 7e-1),
+            (torch.bfloat16, True, True): (7e-1, 7e-1, 7e-1),
+        }
+
         ALLOWED_DTYPES = [
             (
                 torch.float32,
-                (1e-4, 1e-4 if not is_gqa and additional_kv_length == 0 else 7e-1),
+                (1e-4, bwd_atols[(torch.float32, is_gqa_or_mla, has_add_kv)]),
             ),
         ]
 
@@ -124,7 +154,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.float16,
-                    (1e-2, 1e-2 if not is_gqa and additional_kv_length == 0 else 7e-1),
+                    (1e-2, bwd_atols[(torch.float16, is_gqa_or_mla, has_add_kv)]),
                 )
             )
 
@@ -132,7 +162,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.bfloat16,
-                    (1e-1, 1e-1 if not is_gqa and additional_kv_length == 0 else 7e-1),
+                    (1e-1, bwd_atols[(torch.bfloat16, is_gqa_or_mla, has_add_kv)]),
                 )
             )
 
