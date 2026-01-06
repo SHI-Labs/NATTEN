@@ -35,7 +35,7 @@ amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 from natten._environment import _IS_TORCH_COMPILE_SUPPORTED
 
 
-def maybe_torch_compile(*args, **kwargs):
+def _maybe_torch_compile(*args, **kwargs):
     def decorator(f):
         if _IS_TORCH_COMPILE_SUPPORTED:
             return torch.compile(f, *args, **kwargs)
@@ -45,7 +45,7 @@ def maybe_torch_compile(*args, **kwargs):
 
 
 # TODO: if use cases for this grow, we might want to do a custom kernel
-def merge_attentions_fn(
+def _merge_attentions_fn(
     outputs: List[Tensor], lse_tensors: List[Tensor]
 ) -> Tuple[Tensor, Tensor]:
 
@@ -105,25 +105,24 @@ def merge_attentions_fn(
     return output, logsumexp
 
 
-# TODO: if use cases for this grow, we might want to do a custom kernel
-@maybe_torch_compile(fullgraph=True)
-def merge_attentions_compile(
+@_maybe_torch_compile(fullgraph=True)
+def _merge_attentions_compile(
     outputs: List[Tensor], lse_tensors: List[Tensor]
 ) -> Tuple[Tensor, Tensor]:
-    return merge_attentions_fn(outputs, lse_tensors)
+    return _merge_attentions_fn(outputs, lse_tensors)
 
 
-def merge_attentions_op(
+def _merge_attentions_op(
     outputs: List[Tensor], lse_tensors: List[Tensor], torch_compile: bool = True
 ) -> Tuple[Tensor, Tensor]:
 
-    if torch_compile:
-        return merge_attentions_fn(
+    if not torch_compile:
+        return _merge_attentions_fn(
             [output.contiguous() for output in outputs],
             [lse.contiguous() for lse in lse_tensors],
         )
 
-    return merge_attentions_compile(
+    return _merge_attentions_compile(
         [output.contiguous() for output in outputs],
         [lse.contiguous() for lse in lse_tensors],
     )
@@ -141,9 +140,10 @@ class MergeAttentionsAutogradFn(Function):
         torch_compile: bool,
     ) -> Tuple[Tensor, Tensor]:
 
-        merged_output, merged_lse = merge_attentions_op(
+        merged_output, merged_lse = _merge_attentions_op(
             [output_0.contiguous(), output_1.contiguous()],
             [lse_0.contiguous(), lse_1.contiguous()],
+            torch_compile=torch_compile,
         )
 
         ctx.save_for_backward(
@@ -188,9 +188,6 @@ def merge_attentions(
     This operation also attempts to use `torch.compile` to fuse the elementwise operations. This
     can be disabled by passing `torch_compile=False`.
 
-    Warning:
-        This operation only supports backpropagation with pairs (when `len(outputs) == 2`).
-
     Parameters:
         outputs (List[Tensor]): List of 4-D attention output tensors, with the heads last layout
             (`[batch, seqlen, heads, head_dim]`)
@@ -201,9 +198,11 @@ def merge_attentions(
         torch_compile (bool): Attempt to use `torch.compile` to fuse the underlying elementwise
             operations. Default: True.
 
-        use_autograd_fix (bool): use NATTEN's autograd fix for attention merging. Only compatible
-            with fused attention operations (Flash/FMHA/FNA). Must be disabled when using unfused
-            Attention, which includes Flex without torch.compile. Default: True.
+        use_autograd_fix (bool): fix backpropagation by using a custom autograd function. Only
+            compatible with fused attention operations (Flash/FMHA/FNA), and must be disabled when
+            using unfused Attention, which includes Flex without torch.compile.
+            This operation only supports backpropagation with pairs (when `len(outputs) == 2`).
+            Default: True.
 
     Returns:
         output (Tensor): merged attention output.
@@ -271,8 +270,11 @@ def merge_attentions(
                 f"got {len(outputs)=}."
             )
 
-    return merge_attentions_op(
+    return _merge_attentions_op(
         [output.contiguous() for output in outputs],
         [lse.contiguous() for lse in lse_tensors],
         torch_compile=torch_compile,
     )
+
+
+__all__ = ["merge_attentions"]
