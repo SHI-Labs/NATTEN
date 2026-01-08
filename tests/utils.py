@@ -392,7 +392,7 @@ class NattenBackendTester:
             torch.testing.assert_close(dv.to(self.dv_ref.device), self.dv_ref, atol=eps_dv, rtol=0)
             if additional_kv_length > 0:
                 torch.testing.assert_close(
-                    d_additional_k.to(self.d_attentional_k_ref.device), self.d_additional_k_ref, atol=eps_dk, rtol=0
+                    d_additional_k.to(self.d_additional_k_ref.device), self.d_additional_k_ref, atol=eps_dk, rtol=0
                 )
                 torch.testing.assert_close(
                     d_additional_v.to(self.d_additional_v_ref.device), self.d_additional_v_ref, atol=eps_dv, rtol=0
