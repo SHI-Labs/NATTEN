@@ -32,10 +32,30 @@
 #include "natten/fmha.h"
 #include "natten/blackwell_fmha.h"
 #include "natten/hopper_fmha.h"
+#include "natten/token_permute.h"
 
 namespace natten {
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
+  // Token Permute kernels
+  m.def(
+      "token_permute_1d", &natten::token_permute_1d, "Token Permute 1D");
+
+  m.def(
+      "token_permute_2d", &natten::token_permute_2d, "Token Permute 2D");
+
+  m.def(
+      "token_permute_3d", &natten::token_permute_3d, "Token Permute 3D");
+
+  m.def(
+      "token_unpermute_1d", &natten::token_unpermute_1d, "Token UnPermute 1D");
+
+  m.def(
+      "token_unpermute_2d", &natten::token_unpermute_2d, "Token UnPermute 2D");
+
+  m.def(
+      "token_unpermute_3d", &natten::token_unpermute_3d, "Token UnPermute 3D");
+
   // CUTLASS 3.X kernels
   //// SM100 - Blackwell FNA
   m.def(

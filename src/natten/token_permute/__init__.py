@@ -21,4 +21,12 @@
 #
 #################################################################################################
 
-__version__ = "0.21.5.dev9"
+from natten.token_permute.frontend import (
+    token_permute_operation,
+    token_unpermute_operation,
+)
+
+__all__ = [
+    "token_permute_operation",
+    "token_unpermute_operation",
+]

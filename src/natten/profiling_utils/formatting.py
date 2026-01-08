@@ -42,6 +42,7 @@ class LibNattenOp(Enum):
     # Misc
     Reduction = 5
     Elementwise = 6
+    TokenPermute = 7
 
 
 NATTEN_TAGS = {
@@ -77,6 +78,9 @@ NATTEN_TAGS = {
     ],
     LibNattenOp.Elementwise: [
         "cutlass::fmha::kernel::FmhaKernelBwdConvert",
+    ],
+    LibNattenOp.TokenPermute: [
+        "natten::tokperm::kernel",
     ],
 }
 
@@ -126,6 +130,11 @@ class Result:
 
         elif op in [LibNattenOp.Elementwise]:
             self.kernel_type = "elementwise"
+            self.framework = "CUTLASS"
+            self.tag = "-"
+
+        elif op in [LibNattenOp.TokenPermute]:
+            self.kernel_type = "token permute"
             self.framework = "CUTLASS"
             self.tag = "-"
 

@@ -30,8 +30,16 @@ from natten.utils.environment import (
     _TORCH_VERSION,
     parse_env_flag,
     parse_env_int,
+    parse_env_str,
 )
 
+
+# Default tokperm implementation; choices:
+# NATTEN_TOKPERM_DEFAULT_IMPL="cutlass"
+# NATTEN_TOKPERM_DEFAULT_IMPL="torch"
+USE_TORCH_IMPL_DEFAULT = (
+    parse_env_str("NATTEN_TOKPERM_DEFAULT_IMPL", "cutlass") == "torch"
+)
 
 # Unit tests
 _RUN_EXTENDED_TESTS = parse_env_flag("NATTEN_RUN_EXTENDED_TESTS", False)

@@ -30,7 +30,10 @@ from itertools import product
 
 import torch
 from natten import allow_flex_compile
-from natten._environment import _RUN_FLEX_TESTS as RUN_FLEX_TESTS
+from natten._environment import (
+    _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS,
+    _RUN_FLEX_TESTS as RUN_FLEX_TESTS,
+)
 from natten.backends.configs.flex import FLEX_FORWARD_TILE_SHAPES
 from natten.utils import log
 from natten.utils.testing import (
@@ -47,6 +50,8 @@ from .utils import NattenBackendTester, reset_torch_compile
 
 logger = log.get_logger(__name__)
 
+
+ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
 
 # TODO: enable when Flex is stable / check with new PT releases
 ENABLE_FLEX_COMPILE_TESTS = False
@@ -270,7 +275,7 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in [0, 64]:
+            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                 for causal in [True, False]:
                     is_causal = (causal,)
                     self._test_all_dtypes_against_cutlass_2x_fna(
@@ -315,7 +320,7 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in [0, 64]:
+            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                 for causal in [True, False]:
                     is_causal = (causal,)
                     self._test_all_dtypes_against_cutlass_2x_fna(
@@ -358,7 +363,7 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in [0, 64]:
+            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                 for causal_x, causal_y in product([True, False], [True, False]):
                     is_causal = (causal_x, causal_y)
                     self._test_all_dtypes_against_cutlass_2x_fna(
@@ -407,7 +412,7 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in [0, 64]:
+            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                 for causal_x, causal_y in product([True, False], [True, False]):
                     is_causal = (causal_x, causal_y)
                     self._test_all_dtypes_against_cutlass_2x_fna(
@@ -572,7 +577,7 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in [0, 64]:
+            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                 for causal_x, causal_y, causal_z in product(
                     [True, False], [True, False], [True, False]
                 ):
@@ -621,7 +626,7 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in [0, 64]:
+            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
                 for causal_x, causal_y, causal_z in product(
                     [True, False], [True, False], [True, False]
                 ):
@@ -680,6 +685,15 @@ class FlexBackendTest(unittest.TestCase):
                 for x, k in zip(input_shape, kernel_size)
             )
             is_causal = tuple(random.choice([False, True]) for _ in range(na_dim))
+
+            # Prevent accidentally targeting flex-fmha with causal mask, which is not supported
+            if na_dim == 1 and is_causal[0] and kernel_size[0] == input_shape[0]:
+                kernel_size = (kernel_size[0] - 1,)
+                stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
+                dilation = tuple(
+                    random.choice(range(1, x // k + 1))
+                    for x, k in zip(input_shape, kernel_size)
+                )
 
             self._test_all_dtypes_against_cutlass_2x_fna(
                 batch=batch,

@@ -116,6 +116,11 @@ check_one() {
 URL_PREFIX="https://github.com/SHI-Labs/NATTEN/releases/download/"
 
 # v0.17.4
+check_one 0.17.4 cu124 2.5.0 $URL_PREFIX
+check_one 0.17.4 cu121 2.5.0 $URL_PREFIX
+check_one 0.17.4 cu118 2.5.0 $URL_PREFIX
+check_one 0.17.4 cpu   2.5.0 $URL_PREFIX
+
 check_one 0.17.4 cu124 2.4.0 $URL_PREFIX
 check_one 0.17.4 cu121 2.4.0 $URL_PREFIX
 check_one 0.17.4 cu118 2.4.0 $URL_PREFIX
