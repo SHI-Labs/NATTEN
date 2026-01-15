@@ -86,10 +86,12 @@ constexpr Config get_config() {
 }
 
 
-template <int Arch, typename Element, int HeadDim, int kBlockM, int kBlockN, bool Deterministic>
+template <int Arch, typename Element, int HeadDim, int kBlockM, int kBlockN, 
+    class NADim, class QTileShape, class KVTileShape, class Causal,
+    bool Deterministic>
 struct FlashFnaBackwardKernel {
 
-  void run(Flash_fna_bwd_params params, cudaStream_t stream) {
+  void run(Flash_fna_bwd_params<NADim> params, cudaStream_t stream) {
 
     static constexpr Config config = get_config<HeadDim, Arch>();
 
@@ -99,6 +101,10 @@ struct FlashFnaBackwardKernel {
       /* kBlockM= */            kBlockM,
       /* kBlockN= */            kBlockN,
       /* Element= */            Element,
+      /* NADim= */              NADim,
+      /* QTileShape= */         QTileShape,
+      /* KVTileShape= */        KVTileShape,
+      /* Causal= */             Causal,
       /* Deterministic= */      Deterministic,
       /* GQA= */                false,
       /* Stages_dO= */          config.Stages_dO,

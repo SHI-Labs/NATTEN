@@ -82,5 +82,70 @@ void flash_na3d_forward(
     const std::tuple<int32_t, int32_t, int32_t>& query_tile_size,
     const std::tuple<int32_t, int32_t, int32_t>& key_tile_size);
 
+void flash_na1d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t>& kernel_size,
+    const std::tuple<int32_t>& stride_,
+    const std::tuple<int32_t>& dilation_,
+    const std::tuple<bool>& is_causal_,
+    float attn_scale,
+    const std::tuple<int32_t>& q_shape_,   //  after token permute and padding
+    const std::tuple<int32_t>& kv_shape_,  //  after token permute and padding
+    const std::tuple<int32_t>& qkv_shape_, // before token permute and padding
+    const std::tuple<int32_t>& query_tile_shape_,
+    const std::tuple<int32_t>& key_tile_shape_,
+    bool deterministic);
+
+void flash_na2d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t>& stride_,
+    const std::tuple<int32_t, int32_t>& dilation_,
+    const std::tuple<bool, bool>& is_causal_,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t>& q_shape_,   //  after token permute and padding
+    const std::tuple<int32_t, int32_t>& kv_shape_,  //  after token permute and padding
+    const std::tuple<int32_t, int32_t>& qkv_shape_, // before token permute and padding
+    const std::tuple<int32_t, int32_t>& query_tile_shape_,
+    const std::tuple<int32_t, int32_t>& key_tile_shape_,
+    bool deterministic);
+
+void flash_na3d_backward(
+    at::Tensor& grad_query,
+    at::Tensor& grad_key,
+    at::Tensor& grad_value,
+    const at::Tensor& query,
+    const at::Tensor& key,
+    const at::Tensor& value,
+    const at::Tensor& out,
+    const at::Tensor& grad_out,
+    const at::Tensor& logsumexp,
+    const std::tuple<int32_t, int32_t, int32_t>& kernel_size,
+    const std::tuple<int32_t, int32_t, int32_t>& stride_,
+    const std::tuple<int32_t, int32_t, int32_t>& dilation_,
+    const std::tuple<bool, bool, bool>& is_causal_,
+    float attn_scale,
+    const std::tuple<int32_t, int32_t, int32_t>& q_shape_,   //  after token permute and padding
+    const std::tuple<int32_t, int32_t, int32_t>& kv_shape_,  //  after token permute and padding
+    const std::tuple<int32_t, int32_t, int32_t>& qkv_shape_, // before token permute and padding
+    const std::tuple<int32_t, int32_t, int32_t>& query_tile_shape_,
+    const std::tuple<int32_t, int32_t, int32_t>& key_tile_shape_,
+    bool deterministic);
 
 } // namespace natten

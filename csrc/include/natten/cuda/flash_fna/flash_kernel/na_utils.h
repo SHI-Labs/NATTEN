@@ -171,6 +171,189 @@ CUTE_HOST_DEVICE auto get_window_end(
   }
 }
 
+template <bool IsCausal>
+CUTE_HOST_DEVICE int get_bwd_win_start(
+    int index,
+    int stride_group_offset,
+    int window_left,
+    int window_right,
+    int window_size,
+    int stride,
+    int length) {
+  if constexpr (IsCausal) {
+    return index;
+  } else {
+    auto window_start_pre_trunc =
+        (index >= window_size) * (index - window_right + stride_group_offset);
+    return (window_start_pre_trunc / stride) * stride;
+  }
+}
+
+template <bool IsCausal>
+CUTE_HOST_DEVICE int get_bwd_win_end(
+    int index,
+    int stride_group_offset,
+    int window_left,
+    int window_right,
+    int window_size,
+    int stride,
+    int length) {
+  if constexpr (IsCausal) {
+    // Window end is always the last query that attends to this key/value + 1
+    // In the strided case, it will always be the last query in a stride
+    // group + 1, which means it will always be a multiple of stride.
+    // In the case of incomplete stridegroups (input size % stride != 0),
+    // we must correct backward window end by incrementing first non-attending
+    // stridegroup by 1.
+    auto first_non_attending_stride_group_idx =
+        (index + window_size) / stride + (index + window_size >= length);
+    return cutlass::fast_min(
+        first_non_attending_stride_group_idx * stride, length);
+
+  } else {
+    auto bound_check = (index >= (length - window_size));
+    auto window_end =
+        ((index + window_left + stride_group_offset + 1) / stride) * stride;
+    return (bound_check * length) + ((1 - bound_check) * window_end);
+  }
+}
+
+template <class Causal, class NADim, class Coord>
+CUTE_HOST_DEVICE auto get_bwd_window_start(
+    Coord index,
+    NADim stride_group_offset,
+    NADim window_left,
+    NADim window_right,
+    NADim window_size,
+    NADim stride,
+    NADim length) {
+  static_assert(rank(index) > 0 && rank(index) < 4);
+  static_assert(rank(index) == rank(Causal{}));
+  static_assert(rank(index) == rank(length));
+  if constexpr (rank(index) == 1) {
+    return make_tuple(get_bwd_win_start<get<0>(Causal{})>(
+        get<0>(index),
+        get<0>(stride_group_offset),
+        get<0>(window_left),
+        get<0>(window_right),
+        get<0>(window_size),
+        get<0>(stride),
+        get<0>(length)));
+  } else if constexpr (rank(index) == 2) {
+    return make_tuple(
+        get_bwd_win_start<get<0>(Causal{})>(
+            get<0>(index),
+            get<0>(stride_group_offset),
+            get<0>(window_left),
+            get<0>(window_right),
+            get<0>(window_size),
+            get<0>(stride),
+            get<0>(length)),
+        get_bwd_win_start<get<1>(Causal{})>(
+            get<1>(index),
+            get<1>(stride_group_offset),
+            get<1>(window_left),
+            get<1>(window_right),
+            get<1>(window_size),
+            get<1>(stride),
+            get<1>(length)));
+  } else {
+    return make_tuple(
+        get_bwd_win_start<get<0>(Causal{})>(
+            get<0>(index),
+            get<0>(stride_group_offset),
+            get<0>(window_left),
+            get<0>(window_right),
+            get<0>(window_size),
+            get<0>(stride),
+            get<0>(length)),
+        get_bwd_win_start<get<1>(Causal{})>(
+            get<1>(index),
+            get<1>(stride_group_offset),
+            get<1>(window_left),
+            get<1>(window_right),
+            get<1>(window_size),
+            get<1>(stride),
+            get<1>(length)),
+        get_bwd_win_start<get<2>(Causal{})>(
+            get<2>(index),
+            get<2>(stride_group_offset),
+            get<2>(window_left),
+            get<2>(window_right),
+            get<2>(window_size),
+            get<2>(stride),
+            get<2>(length)));
+  }
+}
+
+template <class Causal, class NADim, class Coord>
+CUTE_HOST_DEVICE auto get_bwd_window_end(
+    Coord index,
+    NADim stride_group_offset,
+    NADim window_left,
+    NADim window_right,
+    NADim window_size,
+    NADim stride,
+    NADim length) {
+  static_assert(rank(index) > 0 && rank(index) < 4);
+  static_assert(rank(index) == rank(Causal{}));
+  static_assert(rank(index) == rank(length));
+  if constexpr (rank(index) == 1) {
+    return make_tuple(get_bwd_win_end<get<0>(Causal{})>(
+        get<0>(index),
+        get<0>(stride_group_offset),
+        get<0>(window_left),
+        get<0>(window_right),
+        get<0>(window_size),
+        get<0>(stride),
+        get<0>(length)));
+  } else if constexpr (rank(index) == 2) {
+    return make_tuple(
+        get_bwd_win_end<get<0>(Causal{})>(
+            get<0>(index),
+            get<0>(stride_group_offset),
+            get<0>(window_left),
+            get<0>(window_right),
+            get<0>(window_size),
+            get<0>(stride),
+            get<0>(length)),
+        get_bwd_win_end<get<1>(Causal{})>(
+            get<1>(index),
+            get<1>(stride_group_offset),
+            get<1>(window_left),
+            get<1>(window_right),
+            get<1>(window_size),
+            get<1>(stride),
+            get<1>(length)));
+  } else {
+    return make_tuple(
+        get_bwd_win_end<get<0>(Causal{})>(
+            get<0>(index),
+            get<0>(stride_group_offset),
+            get<0>(window_left),
+            get<0>(window_right),
+            get<0>(window_size),
+            get<0>(stride),
+            get<0>(length)),
+        get_bwd_win_end<get<1>(Causal{})>(
+            get<1>(index),
+            get<1>(stride_group_offset),
+            get<1>(window_left),
+            get<1>(window_right),
+            get<1>(window_size),
+            get<1>(stride),
+            get<1>(length)),
+        get_bwd_win_end<get<2>(Causal{})>(
+            get<2>(index),
+            get<2>(stride_group_offset),
+            get<2>(window_left),
+            get<2>(window_right),
+            get<2>(window_size),
+            get<2>(stride),
+            get<2>(length)));
+  }
+}
+
 template <class Coord, class NADim>
 CUTE_HOST_DEVICE bool is_neighbor(
     Coord kv_coord,
@@ -377,6 +560,12 @@ CUTE_HOST_DEVICE bool is_dilated(NADim dilation) {
     return get<0>(dilation) != 1 || get<1>(dilation) != 1 ||
         get<2>(dilation) != 1;
   }
+}
+
+template <class NADim>
+CUTE_HOST_DEVICE constexpr auto get_bwd_stride_offset(NADim const& stride) {
+  return transform_leaf(
+      stride, [&](auto const& s) { return (s - (s / 2) - 1); });
 }
 
 } // namespace flash_fna

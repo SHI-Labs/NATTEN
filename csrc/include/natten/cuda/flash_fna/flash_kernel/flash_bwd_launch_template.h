@@ -38,7 +38,7 @@ namespace flash_fna {
 using namespace cute;
 
 template <int Arch, int kHeadDim, int kBlockM, int kBlockN, typename Element,
-          class NADim,
+          class NADim, class QTileShape, class KVTileShape, class Causal,
           bool Deterministic, bool GQA,
           int Stages_dO=2, int Stages_dS_or_QSm80=2,
           bool SdP_swapAB=true, bool dKV_swapAB=false, bool dQ_swapAB=false,
@@ -104,7 +104,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     //         SdP_swapAB, dKV_swapAB, dQ_swapAB, NumMmaWarpGroups, AtomLayoutMSdP, AtomLayoutNdKV, AtomLayoutMdQ, V_in_regs>
     // >;
     using CollectiveMainloop = flash_fna::CollectiveMainloopBwdSm80<Stages, Stages_dO, TileShape_MNK, Element, ElementAccum, cutlass::arch::Sm80,
-            Deterministic,
+            Deterministic, NADim, QTileShape, KVTileShape, Causal,
             SdP_swapAB, dKV_swapAB, dQ_swapAB, NumMmaWarpGroups, AtomLayoutMSdP, AtomLayoutNdKV, AtomLayoutMdQ, V_in_regs>;
     using CollectiveEpilogue = std::conditional_t<
         !GQA,
@@ -148,7 +148,15 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
         {_1{}, seqlen_q_rounded, params.h * params.seqlen_q_rounded},  // stride_dPsum
         params.scale_softmax,
         params.b,
-        params.dq_semaphore
+        params.dq_semaphore,
+        // NA Args
+        params.qkv_shape,
+        params.q_shape,
+        params.kv_shape,
+        params.window_size,
+        params.stride,
+        params.dilation,
+        params.num_heads_actual
     };
     // The case work with GQA is ugly but idk how to fix it.
     typename CollectiveEpilogue::Arguments epilogue_args {

@@ -125,11 +125,13 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       "flash_na2d_forward", &natten::flash_na2d_forward, "Flash FNA forward");
   m.def(
       "flash_na3d_forward", &natten::flash_na3d_forward, "Flash FNA forward");
+  m.def(
+      "flash_na1d_backward", &natten::flash_na1d_backward, "Flash FNA backward");
+  m.def(
+      "flash_na2d_backward", &natten::flash_na2d_backward, "Flash FNA backward");
+  m.def(
+      "flash_na3d_backward", &natten::flash_na3d_backward, "Flash FNA backward");
 
-  // NOTE (aditya): Not yet implemented
-  // m.def(
-  //     "flash_fna_backward", &natten::flash_fna_backward, "Flash FNA backward");
-  
   //// SM50/SM70/SM75/SM80 - Original FNA
   m.def(
       "na1d_forward", &natten::na1d_forward, "NA1D forward (fused)");

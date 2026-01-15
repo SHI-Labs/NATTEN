@@ -63,9 +63,11 @@ AUTOGEN_POLICY = os.getenv("NATTEN_AUTOGEN_POLICY", "default")
 AUTOGEN_POLICY = AUTOGEN_POLICY if AUTOGEN_POLICY != "" else "default"
 
 tmp_dir = tempfile.TemporaryDirectory()
+print(f"***************** {tmp_dir=}")
 NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", tmp_dir.name)
 if not os.path.isdir(NATTEN_BUILD_DIR):
     NATTEN_BUILD_DIR = tmp_dir.name
+print(f"***************** {NATTEN_BUILD_DIR=}")
 
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
 try:
@@ -182,6 +184,7 @@ NUM_SPLITS = {
         "fna": 64,
         "fmha": 6,
         "flash-fna": 64,
+        "flash-fna-bwd": 64,
         "flash-fmha": 6,
         "flash-fmha-bwd": 6,
         "hopper-fna": 8,
@@ -198,6 +201,7 @@ NUM_SPLITS = {
         "fna": 128,
         "fmha": 12,
         "flash-fna": 128,
+        "flash-fna-bwd": 128,
         "flash-fmha": 12,
         "flash-fmha-bwd": 12,
         "hopper-fna": 16,
@@ -214,6 +218,7 @@ NUM_SPLITS = {
         "fna": 32,
         "fmha": 3,
         "flash-fna": 32,
+        "flash-fna-bwd": 32,
         "flash-fmha": 3,
         "flash-fmha-bwd": 3,
         "hopper-fna": 4,
@@ -291,6 +296,7 @@ def autogen_kernel_instantitations(
         "fna": ("autogen_fna.py", "fna"),
         "fmha": ("autogen_fmha.py", "fmha"),
         "flash-fna": ("autogen_flash_fna.py", "flash_fna"),
+        "flash-fna-bwd": ("autogen_flash_fna_bwd.py", "flash_fna_bwd"),
         "flash-fmha": ("autogen_flash_fmha.py", "flash_fmha"),
         "flash-fmha-bwd": ("autogen_flash_fmha_bwd.py", "flash_fmha_bwd"),
     }

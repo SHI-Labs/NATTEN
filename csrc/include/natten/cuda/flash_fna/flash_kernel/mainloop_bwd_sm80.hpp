@@ -1,6 +1,6 @@
 /******************************************************************************
- * Copyright (c) 2024, Tri Dao.
- ******************************************************************************/
+* Copyright (c) 2024, Tri Dao.
+******************************************************************************/
 
 #pragma once
 
@@ -13,9 +13,10 @@
 
 #include "block.h"
 #include "seqlen.h"
-#include "mask.h"
+#include "bwd_mask.h"
 #include "softmax.h"
 #include "utils.h"
+#include "na_utils.h"
 // #include "natten/cuda/flash_fmha/block.h"
 // #include "natten/cuda/flash_fmha/seqlen.h"
 // #include "natten/cuda/flash_fmha/mask.h"
@@ -31,7 +32,7 @@ using namespace cute;
 template <int Stages, int Stages_dO, class TileShape_MNK_, class Element_, class ElementAccum_, class ArchTag_,
         // bool Is_causal_, bool Is_local_,
         // bool Has_softcap_, bool Varlen_,
-        bool Deterministic,
+        bool Deterministic, class NADim, class QTileShape, class KVTileShape, class Causal,
         bool SdP_swapAB_, bool dKV_swapAB_, bool dQ_swapAB_,
         int NumMmaWarpGroups=2, int AtomLayoutMSdP=1, int AtomLayoutNdKV=8, int AtomLayoutMdQ=1,
         bool V_in_regs=false>
@@ -61,7 +62,8 @@ struct CollectiveMainloopBwdSm80 {
     static constexpr int kHeadDim = get<2>(TileShape_MNK{});
 
     using SeqlenInfo_t = flash_fna::SeqlenInfoQK</* Varlen= */false, kBlockM>;
-    using BlockMN_t = flash_fna::BlockMN<SeqlenInfo_t, kBlockM, kBlockN>;
+    // using BlockMN_t = flash_fna::BlockMN<SeqlenInfo_t, kBlockM, kBlockN>;
+    using NABlockMN_t = flash_fna::NABlockMN<SeqlenInfo_t, kBlockM, kBlockN, NADim, QTileShape, KVTileShape, Causal>;
 
     static_assert(ArchTag::kMinComputeCapability >= 80);
 
@@ -315,6 +317,13 @@ struct CollectiveMainloopBwdSm80 {
         // int const* const cu_seqlens_k = nullptr;
         // int const* const seqused_q = nullptr;
         // int const* const seqused_k = nullptr;
+        NADim qkv_shape;
+        NADim q_shape;
+        NADim kv_shape;
+        NADim window_size;
+        NADim stride;
+        NADim dilation;
+        int num_heads_actual;
     };
 
     // Device side kernel params
@@ -346,6 +355,21 @@ struct CollectiveMainloopBwdSm80 {
         // float const softcap_val;
         int const num_batch;
         int *const dq_semaphore;
+
+        // NA Args
+        NADim qkv_shape;
+        NADim q_shape;
+        NADim kv_shape;
+        NADim window_size;
+        NADim window_left;
+        NADim window_right;
+        NADim stride;
+        NADim dilation;
+        int num_heads_actual;
+        bool is_fully_block_sparse;
+        bool has_q_padding;
+        bool requires_qkv_fixup;
+        bool is_dilated;
         // int const *const cu_seqlens_q = nullptr;
         // int const *const cu_seqlens_k = nullptr;
         // int const *const seqused_q = nullptr;
@@ -367,6 +391,20 @@ struct CollectiveMainloopBwdSm80 {
         // (1 - tanh^2) * softmax_scale / softcap_val * softcap_val = (1 - tanh^2) * softmax_scale.
         // Instead we multiply by (1 - tanh^2) and multiply dK and dV by params.softmax_scale
         // (the original softmax_scale) at the end.
+        bool requires_qkv_fixup_ = not evenly_divides(args.qkv_shape, args.dilation);
+        bool has_q_padding_ = not evenly_divides(args.qkv_shape, QTileShape{});
+        bool is_dilated_ = is_dilated(args.dilation);
+        bool is_fully_block_sparse_ = fully_block_sparse<Causal>(
+            args.qkv_shape,
+            args.window_size,
+            args.stride,
+            QTileShape{},
+            KVTileShape{}
+        );
+
+        auto window_left = get_window_left(args.window_size);
+        auto window_right = get_window_right(args.window_size);
+
         return {args.ptr_Q, args.shape_Q, args.stride_Q,
                 args.ptr_K, args.shape_K, args.stride_K,
                 args.ptr_V, args.shape_V, args.stride_V,
@@ -381,6 +419,9 @@ struct CollectiveMainloopBwdSm80 {
                 attention_chunk_divmod,
                 // !Has_softcap ? 0.f : args.softmax_scale / args.softcap_val,
                 args.num_batch, args.dq_semaphore,
+                args.qkv_shape, args.q_shape, args.kv_shape, args.window_size, window_left, window_right,
+                args.stride, args.dilation, args.num_heads_actual,
+                is_fully_block_sparse_, has_q_padding_, requires_qkv_fixup_, is_dilated_
                 // args.cu_seqlens_q, args.cu_seqlens_k, args.seqused_q, args.seqused_k
         };
     }
@@ -403,11 +444,55 @@ struct CollectiveMainloopBwdSm80 {
             bidb, get<0>(params.shape_Q), size<0>(params.shape_K),
             // params.cu_seqlens_q, params.cu_seqlens_k, params.seqused_q, params.seqused_k
         };
-        auto m_block_min_max = BlockMN_t::get_m_block_min_max(
-            seqlen_info, n_block, bidb);
+
+        int head_idx = bidh;
+        auto qkv_shape = params.qkv_shape;
+        bool is_fully_block_sparse = params.is_fully_block_sparse;
+        bool has_q_padding = params.has_q_padding;
+
+        if (params.requires_qkv_fixup) {
+          qkv_shape = correct_qkv_shape(params.qkv_shape, head_idx, params.dilation, params.num_heads_actual);
+          is_fully_block_sparse = fully_block_sparse<Causal>(
+              qkv_shape,
+              params.window_size,
+              params.stride,
+              QTileShape{},
+              KVTileShape{});
+          has_q_padding = not evenly_divides(qkv_shape, QTileShape{});
+        } else if (params.is_dilated) {
+          qkv_shape = ceil_div(params.qkv_shape, params.dilation);
+          is_fully_block_sparse = fully_block_sparse<Causal>(
+              qkv_shape,
+              params.window_size,
+              params.stride,
+              QTileShape{},
+              KVTileShape{});
+          has_q_padding = not evenly_divides(qkv_shape, QTileShape{});
+        }
+
+
+        // auto m_block_min_max = NABlockMN_t::get_m_block_min_max(
+        //     seqlen_info, n_block, bidb);
+        auto [q_start_coord, num_q_tiles] = NABlockMN_t::get_m_block_min_max(
+            seqlen_info, n_block, bidb,
+            params.qhead_per_khead_divmod,
+            params.kv_shape, qkv_shape, params.window_size, params.window_left,
+            params.window_right, params.stride);
         //    params.window_size_left, params.window_size_right, 0 /*sink_token_length*/);
-        int const m_block_min = get<0>(m_block_min_max);
-        int const m_block_max = get<1>(m_block_min_max);
+        int const m_block_min = 0;
+        int const m_block_max = size(num_q_tiles);
+
+        auto q_start_tile = ceil_div(q_start_coord, QTileShape{});
+
+        auto q_tiled = ceil_div(params.q_shape, QTileShape{});
+        auto ctr = make_identity_tensor(num_q_tiles);
+        auto ctr_offset = domain_offset(q_start_tile, ctr);
+
+        auto q_tiled_layout = make_layout(q_tiled);
+
+        auto iter_to_tile_map = [&ctr_offset, &q_tiled_layout](int iter) {
+          return crd2idx(ctr_offset(iter), q_tiled_layout);
+        };
         // It's possible to have m_block_max <= m_block_min. Exit early
         
         // NOTE (aditya): All these are going to be false
@@ -555,12 +640,10 @@ struct CollectiveMainloopBwdSm80 {
         int const seqlen_q = seqlen_info.seqlen_q;
         int const seqlen_k = seqlen_info.seqlen_k;
 
-        flash_fna::Mask<kBlockM, kBlockN, false /*PackGQA*/, TiledMmaSdP, SdP_swapAB> mask(
-            thread_idx, seqlen_q, seqlen_k, 
-            // params.window_size_left, params.window_size_right, 0 /*sink_token_length*/,
-            // params.attention_chunk_divmod,
-            params.qhead_per_khead_divmod
-        );
+        flash_fna::BwdNAMask<kBlockM, kBlockN, NADim, QTileShape, KVTileShape, Causal, /*PackGQA= */ false, TiledMmaSdP, decltype(iter_to_tile_map), SdP_swapAB>
+            na_mask (thread_idx, seqlen_q, seqlen_k, params.qhead_per_khead_divmod, params.window_size, params.window_left,
+            params.window_right, params.stride, qkv_shape, params.q_shape, params.kv_shape, q_start_coord, num_q_tiles,
+            iter_to_tile_map, is_fully_block_sparse, has_q_padding);
 
         {
             Tensor tKgK = gmem_thr_copy_QKV.partition_S(gK);  // (KCPY, KCPY_N, KCPY_K, nblocksN)
@@ -631,17 +714,19 @@ struct CollectiveMainloopBwdSm80 {
 
         auto load_Q_LSE = [&] (int const m_block, int const smem_pipe_write) {
             // if (cute::thread0()) { printf("Inside load_Q_LSE, m_block = %d, smem_pipe_write = %d\n", m_block, smem_pipe_write); }
+
+            int const q_tile_idx = iter_to_tile_map(m_block);
             Tensor tQsQ_cur = tQsQ(_, _, _, smem_pipe_write);
-            Tensor tQgQ_cur = tQgQ(_, _, _, m_block);
+            Tensor tQgQ_cur = tQgQ(_, _, _, q_tile_idx);
             // Instead of passing in tQcQ, we pass in t0QcQ and subtract the offset from the limit
-            // (seqlen_q - m_block * kBlockM). This is because the entries of t0QcQ are known at compile time.
+            // (seqlen_q - q_tile_idx * kBlockM). This is because the entries of t0QcQ are known at compile time.
             // int const seqlenq_row_limit = -int(get<0>(tQcQ(_0{}, _0{}, _0{}))) + (EvenM
-            //     ? seqlen_info.seqlen_q - m_block * kBlockM
-            //     : std::min(seqlen_info.seqlen_q - m_block * kBlockM, kBlockM));
+            //     ? seqlen_info.seqlen_q - q_tile_idx * kBlockM
+            //     : std::min(seqlen_info.seqlen_q - q_tile_idx * kBlockM, kBlockM));
             // Need Clear_OOB_MN to be true here since the gemm will sum over the kBlockM dimension
             // flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/true, /*Clear_OOB_K=*/true>(
-            //     gmem_tiled_copy_QKV, tQgQ(_, _, _, m_block), tQsQ_cur, t0QcQ, tQpQ, seqlenq_row_limit);
-            int const seqlenq_row_limit = seqlen_info.seqlen_q - m_block * kBlockM - get<0>(tQcQ(_0{}, _0{}, _0{}));
+            //     gmem_tiled_copy_QKV, tQgQ(_, _, _, q_tile_idx), tQsQ_cur, t0QcQ, tQpQ, seqlenq_row_limit);
+            int const seqlenq_row_limit = seqlen_info.seqlen_q - q_tile_idx * kBlockM - get<0>(tQcQ(_0{}, _0{}, _0{}));
             #pragma unroll
             for (int m = 0; m < size<1>(tQsQ); ++m) {
                 // If kBlockM doesn't evenly divide the tiled copy, only the last `m` needs to be checked
@@ -653,7 +738,7 @@ struct CollectiveMainloopBwdSm80 {
                     }
                 }
             }
-            Tensor tLSEgLSE_cur = tLSEgLSE(_, _, m_block);
+            Tensor tLSEgLSE_cur = tLSEgLSE(_, _, q_tile_idx);
             Tensor tLSEsLSE_cur = tLSEsLSE(_, _, smem_pipe_write);
             // We made sure LSE length is padded so we read `kBlockM` elements so that all
             // elements in sLSE are filled. Without this we might have uninitialized sLSE values.
@@ -667,14 +752,15 @@ struct CollectiveMainloopBwdSm80 {
 
         auto load_dO_dPsum = [&] (int const m_block, int const smem_pipe_write) {
             // if (cute::thread0()) { printf("Inside load_dO_dPsum, m_block = %d, smem_pipe_write = %d\n", m_block, smem_pipe_write); }
+            int const q_tile_idx = iter_to_tile_map(m_block);
             Tensor tdOsdO_cur = tdOsdO(_, _, _, smem_pipe_write);
-            Tensor tdOgdO_cur = tdOgdO(_, _, _, m_block);
+            Tensor tdOgdO_cur = tdOgdO(_, _, _, q_tile_idx);
             // int const seqlenq_row_limit = -int(get<0>(tQcQ(_0{}, _0{}, _0{}))) + (EvenM
-            //     ? seqlen_info.seqlen_q - m_block * kBlockM
-            //     : std::min(seqlen_info.seqlen_q - m_block * kBlockM, kBlockM));
+            //     ? seqlen_info.seqlen_q - q_tile_idx * kBlockM
+            //     : std::min(seqlen_info.seqlen_q - q_tile_idx * kBlockM, kBlockM));
             // flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/true, /*Clear_OOB_K=*/true>(
-            //     gmem_tiled_copy_QKV, tdOgdO(_, _, _, m_block), tdOsdO_cur, t0QcQ, tQpQ, seqlenq_row_limit);
-            int const seqlenq_row_limit = seqlen_info.seqlen_q - m_block * kBlockM - get<0>(tQcQ(_0{}, _0{}, _0{}));
+            //     gmem_tiled_copy_QKV, tdOgdO(_, _, _, q_tile_idx), tdOsdO_cur, t0QcQ, tQpQ, seqlenq_row_limit);
+            int const seqlenq_row_limit = seqlen_info.seqlen_q - q_tile_idx * kBlockM - get<0>(tQcQ(_0{}, _0{}, _0{}));
             #pragma unroll
             for (int m = 0; m < size<1>(tdOsdO); ++m) {
                 // If kBlockM doesn't evenly divide the tiled copy, only the last `m` needs to be checked
@@ -686,7 +772,7 @@ struct CollectiveMainloopBwdSm80 {
                     }
                 }
             }
-            Tensor tLSEgdPsum_cur = tLSEgdPsum(_, _, m_block);
+            Tensor tLSEgdPsum_cur = tLSEgdPsum(_, _, q_tile_idx);
             Tensor tLSEsdPsum_cur = tLSEsdPsum(_, _, smem_pipe_write);
             #pragma unroll
             for (int m = 0; m < size<1>(tLSEsdPsum); ++m) {
@@ -857,7 +943,8 @@ struct CollectiveMainloopBwdSm80 {
                 // if (cute::thread0()) { print_tensor(tdQrdQ); }
                 // We can reuse r2s_thr_copy_dQaccum for this partitioning
                 Tensor tdQrdQ_atomic = r2s_thr_copy_dQaccum.retile_S(tdQrdQ);
-                Tensor tdQgdQaccum_atomic = tdQgdQaccum(_, _, m_block);
+                int const q_tile_idx = iter_to_tile_map(m_block);
+                Tensor tdQgdQaccum_atomic = tdQgdQaccum(_, _, q_tile_idx);
                 static_assert(CUTE_STATIC_V(size(tdQrdQ_atomic)) == CUTE_STATIC_V(size(tdQgdQaccum_atomic)));
                 #pragma unroll
                 for (int i = 0; i < size(tdQrdQ_atomic); ++i) { atomicAdd(&tdQgdQaccum_atomic(i), tdQrdQ_atomic(i)); }
@@ -907,10 +994,17 @@ struct CollectiveMainloopBwdSm80 {
         //    : std::min(m_block_max, (n_block * kBlockN + seqlen_q - seqlen_k + params.window_size_left) / kBlockM);
 
         // auto mask_fn = [&](auto& tSrS, int m_block) { mask.template apply<true /*Seqlenk_mask*/, Is_causal && !SeparateMaskingIterations, Is_local && !SeparateMaskingIterations>(tSrS, m_block, n_block); };
-        auto mask_fn = [&](auto& tSrS, int m_block) { mask.template apply<true /*Seqlenk_mask*/>(tSrS, m_block, n_block); };
+        // auto mask_fn = [&](auto& tSrS, int m_block) { mask.template apply<true /*Seqlenk_mask*/>(tSrS, m_block, n_block); };
+        auto na_mask_fn = [&](auto& tSrS, int m_block) {
+          if (not is_fully_block_sparse) {
+            na_mask.apply_na_mask(tSrS, m_block, n_block);
+          } else if (has_q_padding) {
+            na_mask.apply_padding(tSrS, m_block, n_block);
+          }
+        };
         CUTLASS_PRAGMA_NO_UNROLL
         for (; m_block < m_block_max_before_local_mask; ++m_block) {
-            bwd_step(m_block, mask_fn);
+            bwd_step(m_block, na_mask_fn);
         }
 
         // if constexpr (Is_local && SeparateMaskingIterations) {
