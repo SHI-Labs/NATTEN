@@ -258,9 +258,13 @@ Flash_fna_bwd_params<NADim> set_flash_fna_bwd_params(
     void* dk_semaphore_ptr,
     void* dv_semaphore_ptr,
     void* dq_accum_ptr,
-    int query_tile_size,
-    int key_tile_size,
     float attn_scale,
+    NADim q_shape,
+    NADim kv_shape,
+    NADim qkv_shape,
+    NADim window_size,
+    NADim stride,
+    NADim dilation,
     bool deterministic) {
 
   // Allocate all pointers and dimensions.
@@ -268,11 +272,18 @@ Flash_fna_bwd_params<NADim> set_flash_fna_bwd_params(
 
   int B = query.size(0);
   int Q = query.size(1);
-  int Q_rounded = inline_round_up(Q, query_tile_size);
   int K = key.size(1);
   int H = query.size(2);
   int D = query.size(3);
   int D_v = value.size(3);
+
+  params.q_shape = q_shape;
+  params.kv_shape = kv_shape;
+  params.qkv_shape = qkv_shape;
+  params.window_size = window_size;
+  params.stride = stride;
+  params.dilation = dilation;
+  params.num_heads_actual = H / product(dilation);
 
   params.q_ptr = static_cast<void*>(query.data_ptr());
   params.k_ptr = static_cast<void*>(key.data_ptr());
@@ -340,8 +351,8 @@ Flash_fna_bwd_params<NADim> set_flash_fna_bwd_params(
   params.h_k = H;
   params.seqlen_q = Q;
   params.seqlen_k = K;
-  params.seqlen_q_rounded = inline_round_up(Q, query_tile_size);
-  params.seqlen_k_rounded = inline_round_up(K, key_tile_size);
+  params.seqlen_q_rounded = Q;
+  params.seqlen_k_rounded = K;
   params.d = D;
   params.d_rounded = D;
   params.dv = D;

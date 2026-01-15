@@ -58,6 +58,67 @@ struct NABlockMN {
 
       return {kv_start, kv_diff_tiles};
     }
+
+    static
+    CUTLASS_DEVICE
+    cute::tuple<NADim, NADim> get_m_block_min_max(
+      SeqlenInfo_t const& seqlen_info,
+      int const n_block, int const bidb,
+      cutlass::FastDivmod const& qhead_per_khead_divmod,
+      // NA Args
+      NADim kv_shape, NADim qkv_shape,
+      NADim window_size, NADim window_left, NADim window_right, NADim stride
+    ) {
+
+      auto stride_group_offset = get_bwd_stride_offset(stride);
+
+      auto q_tile_shape = QTileShape{};
+      auto kv_tile_shape = KVTileShape{};
+
+      auto kv_tiled = ceil_div(kv_shape, kv_tile_shape);
+
+      // Map KV index back to coord
+      auto kv_tile_coord = idx2crd(n_block, kv_tiled);
+      auto kv_coord = tuple_mul(kv_tile_coord, kv_tile_shape);
+
+      auto kv_tile_offset_last = idx2crd(size(kv_tile_shape) - 1, kv_tile_shape);
+      auto kv_coord_last = tuple_add(kv_coord, kv_tile_offset_last);
+
+      // q start and end instead of kv like in forward pass
+      auto q_start_actual = get_bwd_window_start<Causal>(
+          kv_coord,
+          stride_group_offset,
+          window_left,
+          window_right,
+          window_size,
+          stride,
+          qkv_shape);
+
+      auto last_q_start_actual = get_bwd_window_start<Causal>(
+          kv_coord_last,
+          stride_group_offset,
+          window_left,
+          window_right,
+          window_size,
+          stride,
+          qkv_shape);
+      auto q_end_actual = get_bwd_window_end<Causal>(
+          kv_coord_last,
+          stride_group_offset,
+          window_left,
+          window_right,
+          window_size,
+          stride,
+          qkv_shape);
+
+      auto q_start = floor_tuple(q_start_actual, q_tile_shape);
+      auto q_end = ceil_tuple(q_end_actual, q_tile_shape);
+
+      auto q_diff = tuple_sub(q_end, q_start);
+      auto q_diff_tiles = ceil_div(q_diff, q_tile_shape);
+
+      return {q_start, q_diff_tiles};
+    }
 };
 
 template <class SeqlenInfo_t, int kBlockM, int kBlockN, bool PackGQA=false>

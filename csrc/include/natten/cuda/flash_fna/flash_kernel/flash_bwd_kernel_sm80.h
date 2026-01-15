@@ -5,6 +5,7 @@
 #pragma once
 
 #include "cute/tensor.hpp"
+#include "cute/util/debug.hpp"
 
 #include <cutlass/cutlass.h>
 #include <cutlass/array.h>

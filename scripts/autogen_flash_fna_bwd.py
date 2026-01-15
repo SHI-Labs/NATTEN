@@ -18,46 +18,46 @@ from typing import List, Tuple
 
 DEFAULT_OUTPUT_DIR = "csrc/"
 
-SUPPORTED_CONFIGS_FORWARD = {
+SUPPORTED_CONFIGS_BACKWARD = {
     80: {
-        32: [(128, 112, 32), (128, 64, 32)],
-        64: [(128, 112, 64), (128, 64, 64)],
-        96: [(128, 64, 96)],
-        128: [(128, 128, 128), (128, 96, 128), (128, 64, 128), (128, 48, 128)],
-        192: [(128, 96, 192)],
-        256: [(128, 96, 256)],
+        32: [(128, 128, 32)],
+        64: [(128, 128, 64)],
+        96: [(64, 128, 96)],
+        128: [(64, 128, 128)],
+        192: [(64, 80, 192)],
+        256: [(64, 64, 256)],
     },
     86: {
-        32: [(128, 112, 32)],
-        64: [(128, 64, 64)],
-        96: [(128, 64, 96)],
-        128: [(128, 128, 128)],
-        192: [(128, 96, 192)],
-        256: [(128, 64, 256)],
+        32: [(64, 128, 32)],
+        64: [(64, 128, 64)],
+        96: [(64, 128, 96)],
+        128: [(64, 96, 128)],
+        192: [(64, 64, 192)],
+        256: [(32, 64, 256)],
     },
     89: {
-        32: [(128, 112, 32)],
-        64: [(128, 64, 64)],
-        96: [(128, 64, 96)],
-        128: [(128, 128, 128)],
-        192: [(128, 96, 192)],
-        256: [(128, 64, 256)],
+        32: [(64, 128, 32)],
+        64: [(64, 128, 64)],
+        96: [(64, 128, 96)],
+        128: [(64, 96, 128)],
+        192: [(64, 64, 192)],
+        256: [(32, 64, 256)],
     },
 }
 
 KERNEL_DECL_TEMPLATE = """
 void {kernel_name}(
-    natten::cuda::flash_fna::Flash_fna_fwd_params<{DimType}> params,
+    natten::cuda::flash_fna::Flash_fna_bwd_params<{DimType}> params,
     cudaStream_t stream);
 """
 
 
 KERNEL_IMPL_TEMPLATE = """
 void {kernel_name}(
-    natten::cuda::flash_fna::Flash_fna_fwd_params<{DimType}> params,
+    natten::cuda::flash_fna::Flash_fna_bwd_params<{DimType}> params,
     cudaStream_t stream) {{
 
-    using FnaKernel = natten::cuda::flash_fna::FlashFnaForwardKernel<
+    using FnaKernel = natten::cuda::flash_fna::FlashFnaBackwardKernel<
       /* Arch= */ {cc},
       /* Element= */ {dtype},
       /* HeadDim= */ {GEMMShape[2]},
@@ -66,12 +66,13 @@ void {kernel_name}(
       /* NADim= */ {DimType},
       /* QTileShape= */ {QTileShape},
       /* KVTileShape= */ {KVTileShape},
-      /* Causal= */ {Causal}
+      /* Causal= */ {Causal},
+      /* Deterministic= */ {Deterministic}
     >;
 
-    FnaKernel flash_fna_fwd_kernel;
+    FnaKernel flash_fna_bwd_kernel;
 
-    flash_fna_fwd_kernel.run(params, stream);
+    flash_fna_bwd_kernel.run(params, stream);
 }}
 """
 
@@ -97,30 +98,7 @@ def get_dim_type(na_dim: int) -> str:
     return f"cute::tuple<{shape}>"
 
 
-# def kernel_type_to_str(kernel_type: KernelType) -> str:
-#     namespace = "natten::cuda::hopper::HopperKernelSchedule::"
-#     if kernel_type == KernelType.NonPersistent:
-#         return namespace + "NonPersistent"
-#     if kernel_type == KernelType.WSCooperative:
-#         return namespace + "WSCooperative"
-#     if kernel_type == KernelType.WSPingpong:
-#         return namespace + "WSPingpong"
-# 
-#     raise NotImplementedError()
-# 
-# 
-# def kernel_type_to_tag(kernel_type: KernelType) -> str:
-#     if kernel_type == KernelType.NonPersistent:
-#         return ""
-#     if kernel_type == KernelType.WSCooperative:
-#         return "_coop"
-#     if kernel_type == KernelType.WSPingpong:
-#         return "_pp"
-# 
-#     raise NotImplementedError()
-
-
-class FlashFnaInstance:
+class FlashFnaBwdInstance:
     def __init__(
         self,
         na_dim: int,
@@ -129,7 +107,8 @@ class FlashFnaInstance:
         q_tile_shape: tuple,
         kv_tile_shape: tuple,
         causal: tuple,
-        cc: int
+        cc: int,
+        deterministic: str
     ):
         assert 0 < na_dim <= 3
         assert len(gemm_shape) == 3
@@ -144,6 +123,7 @@ class FlashFnaInstance:
         self.dtype = dtype
         self.max_head_dim = gemm_shape[2]
         self.cc = cc
+        self.deterministic = deterministic
 
     def get_q_tile_shape_cute(self) -> str:
         return iterable_to_static_cute_tuple(self.q_tile_shape)
@@ -161,13 +141,14 @@ class FlashFnaInstance:
         return iterable_to_static_cute_tuple(self.gemm_shape)
 
     def get_name(self) -> str:
-        name = f"flash_fna{self.na_dim}d"
+        name = f"flash_fna{self.na_dim}d_bwd"
         name += f"_{self.dtype.short_name}"
         name += "_" + "x".join([str(x) for x in self.gemm_shape])
         name += "_Q" + "x".join([str(x) for x in self.q_tile_shape])
         name += "_KV" + "x".join([str(x) for x in self.kv_tile_shape])
         name += "_causal" + "x".join(["1" if c else "0" for c in self.causal])
         name += f"_sm{self.cc}"
+        name += f"_deterministic" if self.deterministic == "true" else "_nondeterministic"
         return name
 
     def get_decl(self) -> str:
@@ -184,7 +165,8 @@ class FlashFnaInstance:
             KVTileShape=self.get_kv_tile_shape_cute(),
             GEMMShape=self.gemm_shape,
             dtype=self.dtype.name,
-            cc=self.cc
+            cc=self.cc,
+            Deterministic=self.deterministic
         )
 
 
@@ -204,7 +186,7 @@ def write_combined_source_file(path, filename, headers, kernels):
     source_head += ["#include <natten/natten.h>\n"]
     source_head += ["#include <natten/helpers.h>\n"]
 
-    source_head += ["#include <natten/cuda/flash_fna/flash_fna_forward.cuh>\n"]
+    source_head += ["#include <natten/cuda/flash_fna/flash_fna_backward.cuh>\n"]
 
     for header in headers:
         source_head += [f"#include <{header}>\n"]
@@ -240,7 +222,7 @@ class NaDimDispatcher:
     def __init__(
         self,
     ):
-        self.name = "DISPATCH_FLASH_FNA_FORWARD"
+        self.name = "DISPATCH_FLASH_FNA_BACKWARD"
         self.dims = []
 
     def append(self, na_dim: int):
@@ -248,7 +230,7 @@ class NaDimDispatcher:
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(rank, dtype, dim, is_causal, cc, q_tile_shape, kv_tile_shape, ...) \\\n"
+        dispatcher_str += f"#define {self.name}(rank, dtype, dim, deterministic, is_causal, cc, q_tile_shape, kv_tile_shape, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, na_dim in enumerate(self.dims):
             dispatcher_str += "    "
@@ -257,7 +239,7 @@ class NaDimDispatcher:
             dispatcher_str += f"if constexpr (rank == {na_dim})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}_{na_dim}D(dtype, dim, is_causal, cc, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
+            dispatcher_str += f"  {self.name}_{na_dim}D(dtype, dim, deterministic, is_causal, cc, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "Flash FNA kernel launch failed!" \\\n'
@@ -276,14 +258,14 @@ class DTypeDispatcher:
     def __init__(self, na_dim: int):
         self.dtypes: List[DataType] = []
         self.na_dim = na_dim
-        self.name = f"DISPATCH_FLASH_FNA_FORWARD_{self.na_dim}D"
+        self.name = f"DISPATCH_FLASH_FNA_BACKWARD_{self.na_dim}D"
 
     def append(self, dtype: DataType):
         self.dtypes.append(dtype)
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(dtype, dim, is_causal, cc, q_tile_shape, kv_tile_shape, ...) \\\n"
+        dispatcher_str += f"#define {self.name}(dtype, dim, deterministic, is_causal, cc, q_tile_shape, kv_tile_shape, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, dtype in enumerate(self.dtypes):
             dispatcher_str += "    "
@@ -292,7 +274,7 @@ class DTypeDispatcher:
             dispatcher_str += f"if (dtype == {dtype.torch_name})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}_{dtype.short_name}(dim, is_causal, cc, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
+            dispatcher_str += f"  {self.name}_{dtype.short_name}(dim, deterministic, is_causal, cc, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "Flash FNA kernel launch failed!" \\\n'
@@ -314,7 +296,7 @@ class HeadDimDispatcher:
         self.na_dim = na_dim
         self.dtype = dtype
         self.name = (
-            f"DISPATCH_FLASH_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}"
+            f"DISPATCH_FLASH_FNA_BACKWARD_{self.na_dim}D_{self.dtype.short_name}"
         )
 
         self.dims: List[int] = []
@@ -324,7 +306,7 @@ class HeadDimDispatcher:
 
     def get_dispatcher(self):
         dispatcher_str = ""
-        dispatcher_str += f"#define {self.name}(dim, is_causal, cc, q_tile_shape, kv_tile_shape, ...) \\\n"
+        dispatcher_str += f"#define {self.name}(dim, deterministic, is_causal, cc, q_tile_shape, kv_tile_shape, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
         for i, dim in enumerate(self.dims):
             dispatcher_str += "    "
@@ -333,13 +315,60 @@ class HeadDimDispatcher:
             dispatcher_str += f"if (dim == {dim})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
-            dispatcher_str += f"  {self.name}_headdim{dim}(is_causal, cc, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
+            dispatcher_str += f"  {self.name}_headdim{dim}(deterministic, is_causal, cc, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += '      std::cerr << "Flash FNA kernel launch failed!" \\\n'
         dispatcher_str += (
             '                << "'
             + f"Flash FNA-{self.na_dim}D does not support this head dim."
+            + '" \\\n'
+        )
+        dispatcher_str += "                << std::endl; \\\n"
+        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
+        dispatcher_str += "    } \\\n"
+        dispatcher_str += "}();"
+        dispatcher_str += "\n\n"
+        return dispatcher_str
+
+class DeterministicDispatcher:
+    def __init__(
+        self,
+        na_dim: int,
+        dtype: DataType,
+        head_dim: int,
+    ):
+        self.na_dim = na_dim
+        self.dtype = dtype
+        self.head_dim = head_dim
+
+        self.name = f"DISPATCH_FLASH_FNA_BACKWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
+
+        self.deterministics: List = []
+
+    def append(self, deterministic):
+        assert deterministic in ["true", "false"]
+        self.deterministics.append(deterministic)
+
+    def get_dispatcher(self):
+        dispatcher_str = ""
+        dispatcher_str += f"#define {self.name}(deterministic, q_tile_size, kv_tile_size, ...) \\\n"
+        dispatcher_str += "  [&] { \\\n"
+        for i, d in enumerate(self.deterministics):
+            deterministic_str = "_deterministic" if d == "true" else "_nondeterministic"
+            dispatcher_str += "    "
+            if i > 0:
+                dispatcher_str += "else "
+            dispatcher_str += f"if (deterministic == {d})"
+            dispatcher_str += " { \\\n"
+            dispatcher_str += "    "
+            dispatcher_str += f"  {self.name}{deterministic_str}(q_tile_size, kv_tile_size, __VA_ARGS__); \\\n"
+            dispatcher_str += "    } \\\n"
+        dispatcher_str += "    else { \\\n"
+        dispatcher_str += '      std::cerr << "Flash FNA backward kernel launch failed!" \\\n'
+        dispatcher_str += (
+            '                << "'
+            + "Flash FNA does not support this deterministic option."
             + '" \\\n'
         )
         dispatcher_str += "                << std::endl; \\\n"
@@ -356,12 +385,17 @@ class CausalMaskDispatcher:
         na_dim: int,
         dtype: DataType,
         head_dim: int,
+        deterministic: str
     ):
         self.na_dim = na_dim
         self.dtype = dtype
         self.head_dim = head_dim
+        self.deterministic = deterministic
+        self.deterministic_str = "deterministic" if self.deterministic == "true" else "nondeterministic"
 
-        self.name = f"DISPATCH_FLASH_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
+        self.name = (
+            f"DISPATCH_FLASH_FNA_BACKWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}_{self.deterministic_str}"
+        )
 
         self.cms: List = []
 
@@ -416,18 +450,21 @@ class ArchDispatcher:
         na_dim: int,
         dtype: DataType,
         head_dim: int,
+        deterministic: str,
         causal_mask: tuple
     ):
         self.na_dim = na_dim
         self.dtype = dtype
         self.head_dim = head_dim
         self.causal_mask = causal_mask
+        self.deterministic = deterministic
+        self.deterministic_str = "deterministic" if self.deterministic == "true" else "nondeterministic"
 
         cm_str = "causal" + "x".join(["1" if c else "0" for c in self.causal_mask])
         self.cm_str = cm_str
 
         self.name =\
-        f"DISPATCH_FLASH_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}_{cm_str}"
+        f"DISPATCH_FLASH_FNA_BACKWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}_{self.deterministic_str}_{cm_str}"
 
         self.ccs: List[int] = []
 
@@ -468,6 +505,7 @@ class ConfigDispatcher:
         na_dim: int,
         dtype: DataType,
         head_dim: int,
+        deterministic: str,
         cc: int,
         causal_mask: tuple,
     ):
@@ -476,9 +514,14 @@ class ConfigDispatcher:
         self.head_dim = head_dim
         self.cc = cc
         self.causal_mask = causal_mask
+        self.deterministic = deterministic
+        self.deterministic_str = "deterministic" if self.deterministic == "true" else "nondeterministic"
         cm_str = "_causal" + "x".join(["1" if c else "0" for c in self.causal_mask])
 
-        self.name = f"DISPATCH_FLASH_FNA_FORWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}"
+        self.name = (
+        f"DISPATCH_FLASH_FNA_BACKWARD_{self.na_dim}D_{self.dtype.short_name}_headdim{head_dim}_{self.deterministic_str}"
+        )
+
         self.name += cm_str
         self.name += f"_sm{self.cc}"
 
@@ -497,19 +540,20 @@ class ConfigDispatcher:
         gemm_shape = (gemm_M, gemm_N, gemm_K)
         config = gemm_shape
 
-        supported_configs = SUPPORTED_CONFIGS_FORWARD[self.cc][self.head_dim]
+        supported_configs = SUPPORTED_CONFIGS_BACKWARD[self.cc][self.head_dim]
         assert (
             config in supported_configs
         ), f"{config=} not in supported configs {supported_configs=}"
 
-        kernel = FlashFnaInstance(
+        kernel = FlashFnaBwdInstance(
             na_dim=self.na_dim,
             dtype=self.dtype,
             gemm_shape=gemm_shape,
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
             causal=self.causal_mask,
-            cc=self.cc
+            cc=self.cc,
+            deterministic=self.deterministic
         )
 
         return kernel
@@ -608,6 +652,8 @@ def generate_flash_fna_kernels(path, num_splits=2):
 
     HEAD_DIMS = [32, 64, 96, 128, 192, 256]
 
+    DETERMINISTICS = ["true", "false"]
+
     CAUSAL_MASKS = {
         1: [(False,), (True,)],
         2: [(False, False), (False, True), (True, False), (True, True)],
@@ -628,326 +674,229 @@ def generate_flash_fna_kernels(path, num_splits=2):
     CONFIGS = {
         1: {
             80: {
-                32: [((128,), (112,))],
-                64: [((128,), (112,))],
-                96: [((128,), (64,))],
-                128: [((128,), (128,)), ((128,), (96,)), ((128,), (64,)), ((128,), (48,))],
-                192: [((128,), (96,))],
-                256: [((128,), (96,))],
+                32:  [((128,), (128,))],
+                64:  [((128,), (128,))],
+                96:  [((64,), (128,))],
+                128: [((64,), (128,))],
+                192: [((64,), (80,))],
+                256: [((64,), (64,))],
             },
             86: {
-                32: [((128,), (112,))],
-                64: [((128,), (64,))],
-                96: [((128,), (64,))],
-                128: [((128,), (128,))],
-                192: [((128,), (96,))],
-                256: [((128,), (64,))],
+                32:  [((64,), (128,))],
+                64:  [((64,), (128,))],
+                96:  [((64,), (128,))],
+                128: [((64,), (96,))],
+                192: [((64,), (64,))],
+                256: [((32,), (64,))],
             },
             89: {
-                32: [((128,), (112,))],
-                64: [((128,), (64,))],
-                96: [((128,), (64,))],
-                128: [((128,), (128,))],
-                192: [((128,), (96,))],
-                256: [((128,), (64,))],
+                32:  [((64,), (128,))],
+                64:  [((64,), (128,))],
+                96:  [((64,), (128,))],
+                128: [((64,), (96,))],
+                192: [((64,), (64,))],
+                256: [((32,), (64,))],
             },
         },
         2: {
             80: {
                 32: [
-                    ((8, 16), (8, 14)),
-                    ((8, 16), (14, 8)),
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((16, 8), (8, 14)),
-                    # ((16, 8), (14, 8)),
-                    # ((8, 16), (4, 28)),
+                    ((8, 16), (8, 16)),
+                    ((16, 8), (16, 8)),
+                    # ((4, 32), (4, 32)),
                 ],
                 64: [
-                    ((8, 16), (8, 14)),
-                    ((8, 16), (14, 8)),
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((16, 8), (8, 14)),
-                    # ((16, 8), (14, 8)),
-                    # ((8, 16), (4, 28)),
+                    ((8, 16), (8, 16)),
+                    ((16, 8), (16, 8)),
+                    # ((4, 32), (4, 32)),
                 ],
                 96: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((8, 8), (8, 16)),
+                    ((4, 16), (8, 16)),
+                    # ((8, 8), (4, 32)),
                 ],
                 128: [
-                    ((8, 16), (8, 16)),
-                    ((8, 16), (16, 8)),
-                    # ((16, 8), (8, 16)),
-                    # ((16, 8), (16, 8)),
-                    # ((4, 32), (8, 16)),
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 192: [
-                    ((8, 16), (8, 12)),
-                    ((8, 16), (12, 8)),
-                    # ((16, 8), (8, 12)),
-                    # ((16, 8), (12, 8)),
-                    # ((8, 16), (6, 16)),
+                    ((8, 8), (8, 10)),
+                    # ((4, 16), (8, 10)),
+                    ((8, 8), (5, 16)),
                 ],
                 256: [
-                    ((8, 16), (8, 12)),
-                    ((8, 16), (12, 8)),
-                    # ((16, 8), (8, 12)),
-                    # ((16, 8), (12, 8)),
-                    # ((8, 16), (6, 16)),
+                    ((8, 8), (8, 8)),
+                    ((4, 16), (4, 16)),
+                    # ((16, 4), (16, 4)),
                 ],
             },
             86: {
                 32: [
-                    ((8, 16), (8, 14)),
-                    ((8, 16), (14, 8)),
-                    # ((16, 8), (8, 14)),
-                    # ((16, 8), (14, 8)),
-                    # ((8, 16), (4, 28)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 64: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 96: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 128: [
-                    ((8, 16), (8, 16)),
-                    ((8, 16), (16, 8)),
-                    # ((16, 8), (8, 16)),
-                    # ((16, 8), (16, 8)),
-                    # ((4, 32), (8, 16)),
+                    ((8, 8), (8, 12)),
+                    # ((4, 16), (8, 12)),
+                    ((8, 8), (6, 16)),
                 ],
                 192: [
-                    ((8, 16), (8, 12)),
-                    ((8, 16), (12, 8)),
-                    # ((16, 8), (8, 12)),
-                    # ((16, 8), (12, 8)),
-                    # ((8, 16), (6, 16)),
+                    ((8, 8), (8, 8)),
+                    # ((4, 16), (4, 16)),
+                    ((16, 4), (16, 4)),
                 ],
                 256: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((4, 8), (8, 8)),
+                    # ((2, 16), (8, 8)),
+                    ((8, 4), (4, 16)),
                 ],
             },
             89: {
                 32: [
-                    ((8, 16), (8, 14)),
-                    ((8, 16), (14, 8)),
-                    # ((16, 8), (8, 14)),
-                    # ((16, 8), (14, 8)),
-                    # ((8, 16), (4, 28)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 64: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 96: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((8, 8), (8, 16)),
+                    # ((4, 16), (8, 16)),
+                    ((8, 8), (4, 32)),
                 ],
                 128: [
-                    ((8, 16), (8, 16)),
-                    ((8, 16), (16, 8)),
-                    # ((16, 8), (8, 16)),
-                    # ((16, 8), (16, 8)),
-                    # ((4, 32), (8, 16)),
+                    ((8, 8), (8, 12)),
+                    # ((4, 16), (8, 12)),
+                    ((8, 8), (6, 16)),
                 ],
                 192: [
-                    ((8, 16), (8, 12)),
-                    ((8, 16), (12, 8)),
-                    # ((16, 8), (8, 12)),
-                    # ((16, 8), (12, 8)),
-                    # ((8, 16), (6, 16)),
+                    ((8, 8), (8, 8)),
+                    # ((4, 16), (4, 16)),
+                    ((16, 4), (16, 4)),
                 ],
                 256: [
-                    ((8, 16), (8, 8)),
-                    ((16, 8), (8, 8)),
-                    # ((8, 16), (4, 16)),
-                    # ((8, 16), (16, 4)),
-                    # ((16, 8), (4, 16)),
+                    ((4, 8), (8, 8)),
+                    # ((2, 16), (8, 8)),
+                    ((8, 4), (4, 16)),
                 ],
-            },
+            }
         },
         3: {
             80: {
                 32: [
-                    ((4, 4, 8), (2, 4, 14)),
-                    ((4, 4, 8), (2, 14, 4)),
-                    ((2, 8, 8), (2, 8, 4)),
-                    ((2, 8, 8), (2, 4, 8)),
-                    # ((4, 4, 8), (4, 2, 14)),
-                    # ((4, 4, 8), (4, 14, 2)),
-                    # ((4, 4, 8), (14, 2, 4)),
+                    ((4,4,8), (4,4,8)),
+                    # ((2,4,16), (2,4,16)),
+                    ((2,8,8), (2,8,8)),
                 ],
                 64: [
-                    ((4, 4, 8), (2, 4, 14)),
-                    ((4, 4, 8), (2, 14, 4)),
-                    ((2, 8, 8), (2, 8, 4)),
-                    ((2, 8, 8), (2, 4, 8)),
-                    # ((4, 4, 8), (4, 2, 14)),
-                    # ((4, 4, 8), (4, 14, 2)),
-                    # ((4, 4, 8), (14, 2, 4)),
+                    ((4,4,8), (4,4,8)),
+                    # ((2,4,16), (2,4,16)),
+                    ((2,8,8), (2,8,8)),
                 ],
                 96: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    ((2, 8, 8), (2, 8, 4)),
-                    ((2, 8, 8), (2, 4, 8)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((4,4,4), (4,4,8)),
+                    # ((2,4,8), (2,4,16)),
+                    ((2,8,4), (4,4,8)),
                 ],
                 128: [
-                    ((4, 4, 8), (4, 4, 8)),
-                    ((4, 4, 8), (4, 8, 4)),
-                    ((4, 4, 8), (8, 4, 4)),
-                    ((4, 8, 4), (4, 4, 8)),
-                    ((4, 8, 4), (4, 8, 4)),
-                    ((2, 8, 8), (2, 8, 8)),
-                    ((2, 8, 8), (2, 8, 4)),
-                    ((2, 8, 8), (2, 4, 8)),
-                    # ((4, 4, 8), (4, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((4,4,4), (4,4,8)),
+                    # ((2,4,8), (2,4,16)),
+                    ((2,8,4), (4,4,8)),
                 ],
                 192: [
-                    ((4, 4, 8), (4, 4, 6)),
-                    ((4, 4, 8), (4, 6, 4)),
-                    # ((4, 4, 8), (6, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 6)),
-                    # ((4, 8, 4), (4, 6, 4)),
+                    ((4,4,4), (4,4,5)),
+                    # ((2,4,8), (2,5,8)),
+                    ((4,4,4), (4,2,10)),
                 ],
                 256: [
-                    ((4, 4, 8), (4, 4, 6)),
-                    ((4, 4, 8), (4, 6, 4)),
-                    # ((4, 4, 8), (6, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 6)),
-                    # ((4, 8, 4), (4, 6, 4)),
+                    ((4,4,4), (4,4,4)),
+                    ((2,4,8), (2,4,8)),
+                    # ((2,8,4), (8,2,4)),
                 ],
             },
             86: {
                 32: [
-                    ((4, 4, 8), (2, 4, 14)),
-                    ((4, 4, 8), (2, 14, 4)),
-                    # ((4, 4, 8), (4, 2, 14)),
-                    # ((4, 4, 8), (4, 14, 2)),
-                    # ((4, 4, 8), (14, 2, 4)),
+                    ((4,4,4), (4,4,8)),
+                    ((2,4,8), (2,4,16)),
+                    # ((2,8,4), (4,4,8)),
                 ],
                 64: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((4,4,4), (4,4,8)),
+                    ((2,4,8), (2,4,16)),
+                    # ((2,8,4), (4,4,8)),
                 ],
                 96: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((4,4,4), (4,4,8)),
+                    ((2,4,8), (2,4,16)),
+                    # ((2,8,4), (4,4,8)),
                 ],
                 128: [
-                    ((4, 4, 8), (4, 4, 8)),
-                    ((4, 4, 8), (4, 8, 4)),
-                    # ((4, 4, 8), (8, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 8)),
-                    # ((4, 8, 4), (4, 8, 4)),
+                    ((4,4,4), (4,4,6)),
+                    # ((2,4,8), (4,4,6)),
+                    ((4,4,4), (2,8,6)),
                 ],
                 192: [
-                    ((4, 4, 8), (4, 4, 6)),
-                    ((4, 4, 8), (4, 6, 4)),
-                    # ((4, 4, 8), (6, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 6)),
-                    # ((4, 8, 4), (4, 6, 4)),
+                    ((4,4,4), (4,4,4)),
+                    ((2,4,8), (2,4,8)),
+                    # ((8,2,4), (4,2,8)),
                 ],
                 256: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((2,4,4), (4,4,4)),
                 ],
             },
             89: {
                 32: [
-                    ((4, 4, 8), (2, 4, 14)),
-                    ((4, 4, 8), (2, 14, 4)),
-                    # ((4, 4, 8), (4, 2, 14)),
-                    # ((4, 4, 8), (4, 14, 2)),
-                    # ((4, 4, 8), (14, 2, 4)),
+                    ((4,4,4), (4,4,8)),
+                    ((2,4,8), (2,4,16)),
+                    # ((2,8,4), (4,4,8)),
                 ],
                 64: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((4,4,4), (4,4,8)),
+                    ((2,4,8), (2,4,16)),
+                    # ((2,8,4), (4,4,8)),
                 ],
                 96: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((4,4,4), (4,4,8)),
+                    ((2,4,8), (2,4,16)),
+                    # ((2,8,4), (4,4,8)),
                 ],
                 128: [
-                    ((4, 4, 8), (4, 4, 8)),
-                    ((4, 4, 8), (4, 8, 4)),
-                    # ((4, 4, 8), (8, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 8)),
-                    # ((4, 8, 4), (4, 8, 4)),
+                    ((4,4,4), (4,4,6)),
+                    ((2,4,8), (4,4,6)),
+                    # ((4,4,4), (2,8,6)),
                 ],
                 192: [
-                    ((4, 4, 8), (4, 4, 6)),
-                    ((4, 4, 8), (4, 6, 4)),
-                    # ((4, 4, 8), (6, 4, 4)),
-                    # ((4, 8, 4), (4, 4, 6)),
-                    # ((4, 8, 4), (4, 6, 4)),
+                    ((4,4,4), (4,4,4)),
+                    ((2,4,8), (2,4,8)),
+                    # ((8,2,4), (4,2,8)),
                 ],
                 256: [
-                    ((4, 4, 8), (4, 4, 4)),
-                    ((4, 8, 4), (4, 4, 4)),
-                    # ((8, 4, 4), (4, 4, 4)),
-                    # ((2, 8, 8), (4, 4, 4)),
-                    # ((8, 2, 8), (4, 4, 4)),
+                    ((2,4,4), (4,4,4)),
                 ],
-            },
+            }
         },
     }
 
 
+    rank_dispatchers = []
     dtype_dispatchers = []
     head_dim_dispatchers = []
+    deterministic_dispatchers = []
     cm_dispatchers = []
     arch_dispatchers = []
     config_dispatchers = []
@@ -962,49 +911,56 @@ def generate_flash_fna_kernels(path, num_splits=2):
             dtype_dispatcher.append(dtype)
 
             head_dim_dispatcher = HeadDimDispatcher(dtype=dtype, na_dim=na_dim)
-
             for head_dim in HEAD_DIMS:
                 head_dim_dispatcher.append(head_dim)
 
-                cm_dispatcher = CausalMaskDispatcher(
-                    na_dim=na_dim, dtype=dtype, head_dim=head_dim
-                )
-                for cm in CAUSAL_MASKS[na_dim]:
-                    cm_dispatcher.append(cm)
+                deterministic_dispatcher = DeterministicDispatcher(dtype=dtype, na_dim=na_dim,
+                                                                   head_dim=head_dim)
+                for deterministic in DETERMINISTICS:
+                    deterministic_dispatcher.append(deterministic)
 
-                    arch_dispatcher = ArchDispatcher(
-                        na_dim=na_dim, dtype=dtype, head_dim=head_dim, causal_mask=cm
+                    cm_dispatcher = CausalMaskDispatcher(
+                        na_dim=na_dim, dtype=dtype, head_dim=head_dim, deterministic=deterministic
                     )
-                    for cc in ARCHS:
-                        arch_dispatcher.append(cc)
+                    for cm in CAUSAL_MASKS[na_dim]:
+                        cm_dispatcher.append(cm)
 
-                        config_dispatcher = ConfigDispatcher(
-                            dtype=dtype,
-                            head_dim=head_dim,
-                            na_dim=na_dim,
-                            causal_mask=cm,
-                            cc=cc
+                        arch_dispatcher = ArchDispatcher(
+                            na_dim=na_dim, dtype=dtype, head_dim=head_dim, causal_mask=cm, deterministic=deterministic
                         )
+                        for cc in ARCHS:
+                            arch_dispatcher.append(cc)
 
-                        for q_tile_shape, kv_tile_shape in CONFIGS[na_dim][cc][head_dim]:
-                            config_dispatcher.append(
-                                (q_tile_shape, kv_tile_shape)
+                            config_dispatcher = ConfigDispatcher(
+                                dtype=dtype,
+                                head_dim=head_dim,
+                                na_dim=na_dim,
+                                causal_mask=cm,
+                                cc=cc,
+                                deterministic=deterministic
                             )
-                            kernels.append(
-                                config_dispatcher.get_kernel_instance(
-                                    q_tile_shape, kv_tile_shape
+
+                            for q_tile_shape, kv_tile_shape in CONFIGS[na_dim][cc][head_dim]:
+                                config_dispatcher.append(
+                                    (q_tile_shape, kv_tile_shape)
                                 )
-                            )
-                        config_dispatchers.append(config_dispatcher)
-                    arch_dispatchers.append(arch_dispatcher)
-                cm_dispatchers.append(cm_dispatcher)
+                                kernels.append(
+                                    config_dispatcher.get_kernel_instance(
+                                        q_tile_shape, kv_tile_shape
+                                    )
+                                )
+                            config_dispatchers.append(config_dispatcher)
+                        arch_dispatchers.append(arch_dispatcher)
+                    cm_dispatchers.append(cm_dispatcher)
+                deterministic_dispatchers.append(deterministic_dispatcher)
             head_dim_dispatchers.append(head_dim_dispatcher)
         dtype_dispatchers.append(dtype_dispatcher)
+    rank_dispatchers.append(rank_dispatcher)
 
     #
 
-    path_to_sources = f"{path}/autogen/src/cuda/flash_fna/"
-    rel_header = "natten_autogen/cuda/flash_fna/"
+    path_to_sources = f"{path}/autogen/src/cuda/flash_fna_bwd/"
+    rel_header = "natten_autogen/cuda/flash_fna_bwd/"
     path_to_header_dir = f"{path}/autogen/include/{rel_header}"
 
     os.makedirs(path_to_sources, exist_ok=False)
@@ -1014,18 +970,23 @@ def generate_flash_fna_kernels(path, num_splits=2):
     path_rank = f"{path_to_header_dir}interface.h"
     path_dtype = f"{path_to_header_dir}dispatch_dtype.h"
     path_head_dim = f"{path_to_header_dir}dispatch_head_dim.h"
+    path_deterministic = f"{path_to_header_dir}dispatch_deterministic.h"
     path_cm = f"{path_to_header_dir}dispatch_cm.h"
     path_arch = f"{path_to_header_dir}dispatch_arch.h"
     path_tile_shape = f"{path_to_header_dir}dispatch_tile_shape.h"
 
+    rel_path_rank = f"{rel_header}interface.h"
     rel_path_headers = f"{rel_header}kernels.h"
     rel_path_dtype = f"{rel_header}dispatch_dtype.h"
+    rel_path_deterministic = f"{rel_header}dispatch_deterministic.h"
     rel_path_head_dim = f"{rel_header}dispatch_head_dim.h"
     rel_path_cm = f"{rel_header}dispatch_cm.h"
     rel_path_arch = f"{rel_header}dispatch_arch.h"
     rel_path_tile_shape = f"{rel_header}dispatch_tile_shape.h"
 
-    rank_disp = rank_dispatcher.get_dispatcher()
+    rank_disp = ""
+    for dispatcher in rank_dispatchers:
+        rank_disp += dispatcher.get_dispatcher()
 
     dtype_disp = ""
     for dispatcher in dtype_dispatchers:
@@ -1034,6 +995,10 @@ def generate_flash_fna_kernels(path, num_splits=2):
     head_dim_disp = ""
     for dispatcher in head_dim_dispatchers:
         head_dim_disp += dispatcher.get_dispatcher()
+
+    deterministic_disp = ""
+    for dispatcher in deterministic_dispatchers:
+        deterministic_disp += dispatcher.get_dispatcher()
 
     cm_disp = ""
     for dispatcher in cm_dispatchers:
@@ -1095,14 +1060,17 @@ def generate_flash_fna_kernels(path, num_splits=2):
         "torch/extension.h",
         "natten/natten.h",
         "natten/helpers.h",
-        "natten/cuda/flash_fna/flash_fna_forward.cuh",
+        "natten/cuda/flash_fna/flash_fna_backward.cuh",
     ]
     write_header_file(rank_disp, path_rank, namespaces, cuda_headers + [rel_path_dtype])
     write_header_file(
         dtype_disp, path_dtype, namespaces, cuda_headers + [rel_path_head_dim]
     )
     write_header_file(
-        head_dim_disp, path_head_dim, namespaces, cuda_headers + [rel_path_cm]
+        head_dim_disp, path_head_dim, namespaces, cuda_headers + [rel_path_deterministic]
+    )
+    write_header_file(
+        deterministic_disp, path_deterministic, namespaces, cuda_headers + [rel_path_cm]
     )
     write_header_file(
         cm_disp, path_cm, namespaces, cuda_headers + [rel_path_arch]

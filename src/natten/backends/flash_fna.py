@@ -37,9 +37,9 @@ from .._libnatten import (
     flash_na1d_forward,
     flash_na2d_forward,
     flash_na3d_forward,
-    # flash_na1d_backward,
-    # flash_na2d_backward,
-    # flash_na3d_backward,
+    flash_na1d_backward,
+    flash_na2d_backward,
+    flash_na3d_backward,
 )
 from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
 from ..types import (
@@ -61,6 +61,8 @@ from ..types import (
     NoneType,
 )
 from ..utils.checks import check_all_args, check_args_against_input, na_tensor_checks
+from ..context import are_deterministic_algorithms_enabled as\
+    natten_are_deterministic_algorithms_enabled
 
 from .configs.checks import can_run_flash_fna
 from .configs.flash import (
@@ -79,9 +81,9 @@ def make_flash_fna_autograd_fn(na_dim):
     }
 
     BACKWARD_OPS = {
-        1: lambda *args, **kwargs: None, # flash_na1d_backward,
-        2: lambda *args, **kwargs: None, # flash_na2d_backward,
-        3: lambda *args, **kwargs: None, # flash_na3d_backward,
+        1: flash_na1d_backward,
+        2: flash_na2d_backward,
+        3: flash_na3d_backward,
     }
 
     class FlashFnaGenericAutogradFn(Function):
@@ -99,6 +101,7 @@ def make_flash_fna_autograd_fn(na_dim):
             scale: float,
             forward_config:  FlashFnaForwardConfigType,
             backward_config: FlashFnaBackwardConfigType,
+            deterministic: bool
         ) -> Tuple[Tensor, Tensor]:
             kernel_size, stride, dilation, is_causal = check_all_args(
                 na_dim, kernel_size, stride, dilation, is_causal
@@ -124,17 +127,6 @@ def make_flash_fna_autograd_fn(na_dim):
             value_perm, v_shape, vR = token_permute(
                 value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-
-
-            # print("---- Debug Info ----")
-            # print(f"kernel_size={kernel_size}, stride={stride}, dilation={dilation}, is_causal={is_causal}")
-            # print(f"qkv_shape={qkv_shape}")
-            # print(f"q_tile_shape={q_tile_shape}")
-            # print(f"kv_tile_shape={kv_tile_shape}")
-            # print(f"q_perm: shape={tuple(query_perm.shape)}, dtype={query_perm.dtype}")
-            # print(f"k_perm: shape={tuple(key_perm.shape)}, dtype={key_perm.dtype}")
-            # print(f"v_perm: shape={tuple(value_perm.shape)}, dtype={value_perm.dtype}")
-            # print("---------------------")
 
             assert k_shape == v_shape
             kv_shape = k_shape
@@ -202,6 +194,7 @@ def make_flash_fna_autograd_fn(na_dim):
             ctx.is_causal = is_causal
             ctx.scale = scale
             ctx.backward_config = backward_config
+            ctx.deterministic = deterministic
 
             return output, logsumexp
 
@@ -218,14 +211,16 @@ def make_flash_fna_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
+            NoneType,
         ]:
             query, key, value, logsumexp, output = ctx.saved_tensors
-            kernel_size, stride, dilation, is_causal, scale = (
+            kernel_size, stride, dilation, is_causal, scale, deterministic = (
                 ctx.kernel_size,
                 ctx.stride,
                 ctx.dilation,
                 ctx.is_causal,
                 ctx.scale,
+                ctx.deterministic
             )
 
             q_tile_shape, kv_tile_shape = ctx.backward_config
@@ -275,10 +270,9 @@ def make_flash_fna_autograd_fn(na_dim):
             d_query_perm = torch.empty_like(query_perm)
             d_key_perm = torch.empty_like(key_perm)
             d_value_perm = torch.empty_like(value_perm)
-            logsumexp_perm = logsumexp_perm.squeeze(-1)
 
             # TODO: this can definitely be done with token permute.
-            logsumexp_perm = logsumexp_perm.transpose(-2, -1).contiguous()
+            logsumexp_perm = logsumexp_perm.squeeze(-1).transpose(1, 2).contiguous()
 
             BACKWARD_OPS[na_dim](
                 d_query_perm,
@@ -300,6 +294,7 @@ def make_flash_fna_autograd_fn(na_dim):
                 qkv_shape,
                 q_tile_shape,
                 kv_tile_shape,
+                deterministic
             )
 
             # Token un-permute begin
@@ -346,6 +341,7 @@ def make_flash_fna_autograd_fn(na_dim):
                 d_query,
                 d_key,
                 d_value,
+                None,
                 None,
                 None,
                 None,
@@ -409,14 +405,22 @@ def flash_fna_generic(
         q_tile_shape=q_tile_shape,
         kv_tile_shape=kv_tile_shape,
     )
-    # TODO (aditya): Change later
-    # backward_config = check_flash_fna_backward_config(
-    #     input_tensor=query,
-    #     q_tile_shape=backward_q_tile_shape,
-    #     kv_tile_shape=backward_kv_tile_shape,
-    # )
+    backward_config = check_flash_fna_backward_config(
+        input_tensor=query,
+        q_tile_shape=backward_q_tile_shape,
+        kv_tile_shape=backward_kv_tile_shape,
+    )
 
     scale = scale or query.shape[-1] ** -0.5
+
+    torch_deterministic = torch.are_deterministic_algorithms_enabled()
+    natten_deterministic = natten_are_deterministic_algorithms_enabled()
+    if natten_deterministic ^ torch_deterministic:
+        raise RuntimeError(
+            "The provided deterministic argument does not "
+            f"match with PyTorch's global setting: \n \t PyTorch: {torch_deterministic}, "
+            f"NATTEN: {natten_deterministic}"
+        )
 
     output, lse = FlashFNAAutogradFns[na_dim].apply(
         query,
@@ -428,7 +432,8 @@ def flash_fna_generic(
         is_causal,
         scale,
         forward_config,
-        None, # backward_config
+        backward_config,
+        natten_deterministic
     )
 
     if return_lse:

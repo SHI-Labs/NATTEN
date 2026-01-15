@@ -377,6 +377,7 @@ def _profile_na_with_torch(
             disable_backward,
             add_kv,
         )
+    print(prof.key_averages())
 
     return prof
 

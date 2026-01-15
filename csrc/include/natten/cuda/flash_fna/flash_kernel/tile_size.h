@@ -66,6 +66,13 @@ constexpr std::tuple<int, int, int, int, bool> tile_size_fwd_sm8x(
         } else if (headdim <= 128) {
             // return {128, sm86_or_89 ? 128 : 64, sm86_or_89 ? 8 : 4, 1, sm86_or_89};
             return {128, sm86_or_89 ? 128 : 64, 8, 1, sm86_or_89};
+            // return {128, sm86_or_89 ? 128 : 64, 8, 1, true};
+            // return {128, sm86_or_89 ? 128 : 64, 8, 1, true};
+            // bool const use_8_warps = sm86_or_89;
+            // return {128, use_8_warps ? 96 : 48, use_8_warps ? 8 : 4, 1, use_8_warps};
+            // return {128, 64, 4, 1, false}; // 186 ms
+            // return {128, 64, 8, 1, true}; // 24.185 ms
+            // return {128, 64, 8, 1, false}; // 25.185 ms
         } else if (headdim <= 192) {
             return {128, 96, 8, sm86_or_89 ? 1 : 2, true};
         } else {
