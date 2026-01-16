@@ -336,7 +336,6 @@ def convert_to_natten_profiler_ops(
         framework = get_framework(evt.key)
         kernel_type, op_str = strip_str_name(evt.key)
 
-        print(evt.count)
         if time_total > 0:
             result = Result(
                 op=natten_op,
