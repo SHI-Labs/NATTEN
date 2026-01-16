@@ -156,7 +156,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
         params.window_size,
         params.stride,
         params.dilation,
-        params.num_heads_actual
+        params.batch_size_actual
     };
     // The case work with GQA is ugly but idk how to fix it.
     typename CollectiveEpilogue::Arguments epilogue_args {

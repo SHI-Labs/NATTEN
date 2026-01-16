@@ -93,7 +93,7 @@ void run_flash_fwd(Flash_fna_fwd_params<NADim> &params, cudaStream_t stream) {
         {params.v_descale_batch_stride, params.v_descale_head_stride},
         params.num_splits,
         // NA Args
-        params.qkv_shape, params.q_shape, params.kv_shape, params.window_size, params.stride, params.dilation, params.num_heads_actual
+        params.qkv_shape, params.q_shape, params.kv_shape, params.window_size, params.stride, params.dilation, params.batch_size_actual
     };
     typename CollectiveEpilogue::Arguments epilogue_args {
         static_cast<ElementOut*>(params.o_ptr),

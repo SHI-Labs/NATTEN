@@ -434,11 +434,11 @@ CUTLASS_DEVICE auto correct_qkv_shape(
     NADim const& qkv_shape, // this is pre-padding, pre-token permute, just
                                // the original shape of the sequence mode in
                                // the self attention
-    int head_idx,
+    int batch_idx,
     NADim const& dilation,
-    int num_heads_actual) {
+    int batch_size_actual) {
 
-  auto dilation_group_idx = head_idx / num_heads_actual;
+  auto dilation_group_idx = batch_idx % product(dilation);
   auto dilation_group_crd = idx2crd(dilation_group_idx, dilation);
 
   return correct_qkv_shape_wrt_dilation(

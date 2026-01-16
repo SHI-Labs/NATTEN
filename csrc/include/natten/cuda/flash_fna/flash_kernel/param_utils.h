@@ -86,7 +86,7 @@ Flash_fna_fwd_params<NADim> set_flash_fna_fwd_params(
   params.window_size = window_size;
   params.stride = stride;
   params.dilation = dilation;
-  params.num_heads_actual = H / product(dilation);
+  params.batch_size_actual = B / product(dilation);
 
   params.is_bf16 = query.scalar_type() == torch::kBFloat16;
   params.is_e4m3 = false;
@@ -283,7 +283,7 @@ Flash_fna_bwd_params<NADim> set_flash_fna_bwd_params(
   params.window_size = window_size;
   params.stride = stride;
   params.dilation = dilation;
-  params.num_heads_actual = H / product(dilation);
+  params.batch_size_actual = B / product(dilation);
 
   params.q_ptr = static_cast<void*>(query.data_ptr());
   params.k_ptr = static_cast<void*>(key.data_ptr());

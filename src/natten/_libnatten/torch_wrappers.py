@@ -291,7 +291,10 @@ def flash_fmha_forward_torch_op(
     output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
     output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
-    logsumexp = torch.empty(query.shape[:-1], dtype=torch.float32, device=query.device)
+    B, S, H, D = query.shape
+    logsumexp = torch.empty(
+        (B, H, S), dtype=torch.float32, device=query.device
+    )
 
     flash_fmha_forward_cxx(
         output,
@@ -321,7 +324,10 @@ def flash_fmha_forward_torch_fake_op(
     output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
     output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
-    logsumexp = torch.empty(query.shape[:-1], dtype=torch.float32, device=query.device)
+    B, S, H, D = query.shape
+    logsumexp = torch.empty(
+        (B, H, S), dtype=torch.float32, device=query.device
+    )
 
     return output, logsumexp
 
@@ -342,6 +348,7 @@ def flash_fmha_backward_torch_op(
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
+    deterministic: bool
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
@@ -365,6 +372,7 @@ def flash_fmha_backward_torch_op(
         scale,
         q_tile_size,
         kv_tile_size,
+        deterministic
     )
 
     return d_query, d_key, d_value
@@ -381,6 +389,7 @@ def flash_fmha_backward_torch_fake_op(
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
+    deterministic: bool
 ):
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
@@ -1080,16 +1089,21 @@ def make_flash_fna_ops(na_dim):
         dilation: list[int],
         is_causal: list[bool],
         scale: float,
+        q_shape: list[int],
+        kv_shape: list[int],
+        qkv_shape: list[int],
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
+
     ) -> Tuple[Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
         output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
         output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
+        B, S, H, D = query.shape
         logsumexp = torch.empty(
-            query.shape[:-1], dtype=torch.float32, device=query.device
+            (B, H, S), dtype=torch.float32, device=query.device
         )
 
         fwd_handle(
@@ -1103,6 +1117,9 @@ def make_flash_fna_ops(na_dim):
             dilation,
             is_causal,
             scale,
+            q_shape,
+            kv_shape,
+            qkv_shape,
             q_tile_shape,
             kv_tile_shape,
         )
@@ -1119,6 +1136,9 @@ def make_flash_fna_ops(na_dim):
         dilation: list[int],
         is_causal: list[bool],
         scale: float,
+        q_shape: list[int],
+        kv_shape: list[int],
+        qkv_shape: list[int],
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
     ) -> Tuple[Tensor, Tensor]:
@@ -1127,8 +1147,9 @@ def make_flash_fna_ops(na_dim):
         output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
         output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
+        B, S, H, D = query.shape
         logsumexp = torch.empty(
-            query.shape[:-1], dtype=torch.float32, device=query.device
+            (B, H, S), dtype=torch.float32, device=query.device
         )
 
         return output, logsumexp
@@ -1151,10 +1172,12 @@ def make_flash_fna_ops(na_dim):
         dilation: list[int],
         is_causal: list[bool],
         scale: float,
+        q_shape: list[int],
+        kv_shape: list[int],
+        qkv_shape: list[int],
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
-        num_kv_splits: list[int],
-        compute_delta_with_pt: bool,
+        deterministic: bool
     ) -> Tuple[Tensor, Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
         output, d_output, logsumexp = [
@@ -1180,15 +1203,17 @@ def make_flash_fna_ops(na_dim):
             dilation,
             is_causal,
             scale,
+            q_shape,
+            kv_shape,
+            qkv_shape,
             q_tile_shape,
             kv_tile_shape,
-            num_kv_splits,
-            compute_delta_with_pt,
+            deterministic
         )
 
         return d_query, d_key, d_value
 
-    @register_fake(f"flash_natten::na{na_dim}d_backward")
+    @register_fake(f"natten::flash_na{na_dim}d_backward")
     def flash_fna_backward_torch_fake_op(
         query: Tensor,
         key: Tensor,
@@ -1201,10 +1226,12 @@ def make_flash_fna_ops(na_dim):
         dilation: list[int],
         is_causal: list[bool],
         scale: float,
+        q_shape: list[int],
+        kv_shape: list[int],
+        qkv_shape: list[int],
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
-        num_kv_splits: list[int],
-        compute_delta_with_pt: bool,
+        deterministic: bool
     ) -> Tuple[Tensor, Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
         output, d_output, logsumexp = [
@@ -1769,6 +1796,25 @@ def make_token_permute_ops(na_dim):
 ) = make_hopper_fna_ops(3)
 
 (
+    flash_na1d_forward_torch_op,
+    flash_na1d_forward_torch_fake_op,
+    flash_na1d_backward_torch_op,
+    flash_na1d_backward_torch_fake_op,
+) = make_flash_fna_ops(1)
+(
+    flash_na2d_forward_torch_op,
+    flash_na2d_forward_torch_fake_op,
+    flash_na2d_backward_torch_op,
+    flash_na2d_backward_torch_fake_op,
+) = make_flash_fna_ops(2)
+(
+    flash_na3d_forward_torch_op,
+    flash_na3d_forward_torch_fake_op,
+    flash_na3d_backward_torch_op,
+    flash_na3d_backward_torch_fake_op,
+) = make_flash_fna_ops(3)
+
+(
     na1d_forward_torch_op,
     na1d_forward_torch_fake_op,
     na1d_backward_torch_op,
@@ -1837,6 +1883,9 @@ if DISABLE_TORCH_OPS:
     fmha_forward = fmha_forward_torch_op
     fmha_backward = fmha_backward_torch_op
 
+    flash_fmha_forward = flash_fmha_forward_torch_op
+    flash_fmha_backward = flash_fmha_backward_torch_op
+
     blackwell_na1d_forward = blackwell_na1d_forward_torch_op
     blackwell_na1d_backward = blackwell_na1d_backward_torch_op
 
@@ -1854,6 +1903,15 @@ if DISABLE_TORCH_OPS:
 
     hopper_na3d_forward = hopper_na3d_forward_torch_op
     hopper_na3d_backward = hopper_na3d_backward_torch_op
+
+    flash_na1d_forward = flash_na1d_forward_torch_op
+    flash_na1d_backward = flash_na1d_backward_torch_op
+
+    flash_na2d_forward = flash_na2d_forward_torch_op
+    flash_na2d_backward = flash_na2d_backward_torch_op
+
+    flash_na3d_forward = flash_na3d_forward_torch_op
+    flash_na3d_backward = flash_na3d_backward_torch_op
 
     na1d_forward = na1d_forward_torch_op
     na1d_backward = na1d_backward_torch_op
@@ -1892,6 +1950,9 @@ else:
     fmha_forward = torch.ops.natten.fmha_forward
     fmha_backward = torch.ops.natten.fmha_backward
 
+    flash_fmha_forward = torch.ops.natten.flash_fmha_forward
+    flash_fmha_backward = torch.ops.natten.flash_fmha_backward
+
     blackwell_na1d_forward = torch.ops.natten.blackwell_na1d_forward
     blackwell_na1d_backward = torch.ops.natten.blackwell_na1d_backward
 
@@ -1918,6 +1979,15 @@ else:
 
     na3d_forward = torch.ops.natten.na3d_forward
     na3d_backward = torch.ops.natten.na3d_backward
+
+    flash_na1d_forward = torch.ops.natten.flash_na1d_forward
+    flash_na1d_backward = torch.ops.natten.flash_na1d_backward
+
+    flash_na2d_forward = torch.ops.natten.flash_na2d_forward
+    flash_na2d_backward = torch.ops.natten.flash_na2d_backward
+
+    flash_na3d_forward = torch.ops.natten.flash_na3d_forward
+    flash_na3d_backward = torch.ops.natten.flash_na3d_backward
 
     reference_na1d_forward = torch.ops.natten.reference_na1d_forward
     reference_na1d_backward = torch.ops.natten.reference_na1d_backward

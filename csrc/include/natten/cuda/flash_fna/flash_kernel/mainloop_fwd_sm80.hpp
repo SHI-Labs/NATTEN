@@ -196,7 +196,7 @@ struct CollectiveMainloopFwdSm80 {
         NADim window_size;
         NADim stride;
         NADim dilation;
-        int num_heads_actual;
+        int batch_size_actual;
     };
 
     // Device side kernel params
@@ -227,7 +227,7 @@ struct CollectiveMainloopFwdSm80 {
         NADim window_right;
         NADim stride;
         NADim dilation;
-        int num_heads_actual;
+        int batch_size_actual;
         bool is_fully_block_sparse;
         bool has_kv_padding;
         bool requires_qkv_fixup;
@@ -277,7 +277,7 @@ struct CollectiveMainloopFwdSm80 {
                 args.stride_q_descale, args.stride_k_descale, args.stride_v_descale,
                 1 /* args.num_splits */,
                 args.qkv_shape, args.q_shape, args.kv_shape, args.window_size, window_left, window_right,
-                args.stride, args.dilation, args.num_heads_actual,
+                args.stride, args.dilation, args.batch_size_actual,
                 is_fully_block_sparse, has_kv_padding, requires_qkv_fixup, is_dilated_
                };
     }
@@ -304,12 +304,11 @@ struct CollectiveMainloopFwdSm80 {
         int const split_idx = get<3>(block_coord);
         int const bidh_kv = !PackGQA ? params.qhead_per_khead_divmod.divide(bidh) : bidh;
 
-        int head_idx = bidh;
         auto qkv_shape = params.qkv_shape;
         bool is_fully_block_sparse = params.is_fully_block_sparse;
         bool has_kv_padding = params.has_kv_padding;
         if (params.requires_qkv_fixup) {
-          qkv_shape = correct_qkv_shape(params.qkv_shape, head_idx, params.dilation, params.num_heads_actual);
+          qkv_shape = correct_qkv_shape(params.qkv_shape, bidb, params.dilation, params.batch_size_actual);
           is_fully_block_sparse = fully_block_sparse<Causal>(
               qkv_shape,
               params.window_size,

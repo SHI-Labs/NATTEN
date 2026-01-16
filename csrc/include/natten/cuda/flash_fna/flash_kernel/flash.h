@@ -22,7 +22,7 @@ struct NA_params {
   NADim stride;
   NADim dilation;
 
-  int num_heads_actual;
+  int batch_size_actual;
 
 };
 

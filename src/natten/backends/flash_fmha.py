@@ -68,20 +68,12 @@ class FlashFmhaAutogradFn(Function):
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()
-        output = torch.empty_like(query)
-
-        B, Q, H, D = query.shape
-        logsumexp = torch.empty(
-            (B, H, Q), dtype=torch.float32, device=query.device
-        )
-
         q_tile_size, kv_tile_size = forward_config
-        flash_fmha_forward(
-            output,
+
+        output, logsumexp = flash_fmha_forward(
             query,
             key,
             value,
-            logsumexp,
             scale,
             q_tile_size,
             kv_tile_size,
@@ -111,16 +103,10 @@ class FlashFmhaAutogradFn(Function):
         logsumexp = logsumexp.transpose(1, 2).contiguous()
 
         d_output = grad_out.contiguous()  # noqa: F841
-        d_query = torch.empty_like(query)
-        d_key = torch.empty_like(key)
-        d_value = torch.empty_like(value)
 
         q_tile_size, k_tile_size = ctx.backward_config
 
-        flash_fmha_backward(
-            d_query,
-            d_key,
-            d_value,
+        d_query, d_key, d_value = flash_fmha_backward(
             query,
             key,
             value,

@@ -63,11 +63,9 @@ AUTOGEN_POLICY = os.getenv("NATTEN_AUTOGEN_POLICY", "default")
 AUTOGEN_POLICY = AUTOGEN_POLICY if AUTOGEN_POLICY != "" else "default"
 
 tmp_dir = tempfile.TemporaryDirectory()
-print(f"***************** {tmp_dir=}")
 NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", tmp_dir.name)
 if not os.path.isdir(NATTEN_BUILD_DIR):
     NATTEN_BUILD_DIR = tmp_dir.name
-print(f"***************** {NATTEN_BUILD_DIR=}")
 
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
 try:
