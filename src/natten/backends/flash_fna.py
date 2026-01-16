@@ -41,7 +41,7 @@ from .._libnatten import (
     flash_na2d_backward,
     flash_na3d_backward,
 )
-from ..token_permute import maybe_pad, maybe_unpad, token_permute, token_unpermute
+from ..token_permute import token_permute_operation, token_unpermute_operation
 from ..types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
@@ -107,25 +107,20 @@ def make_flash_fna_autograd_fn(na_dim):
                 na_dim, kernel_size, stride, dilation, is_causal
             )
 
-
             q_tile_shape, kv_tile_shape = forward_config
 
             # Token permute begin
             # Shape before padding and token permute
             qkv_shape = query.shape[1 : 1 + na_dim]
 
-            query_pad, padding = maybe_pad(query, q_tile_shape, dilation=dilation)
-            key_pad, _ = maybe_pad(key, kv_tile_shape, dilation=dilation)
-            value_pad, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
-
-            query_perm, q_shape, qR = token_permute(
-                query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            query_perm, _, q_shape = token_permute_operation(
+                query, q_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            key_perm, k_shape, kR = token_permute(
-                key_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            key_perm, _, k_shape = token_permute_operation(
+                key, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            value_perm, v_shape, vR = token_permute(
-                value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            value_perm, _, v_shape = token_permute_operation(
+                value, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
 
             assert k_shape == v_shape
@@ -137,17 +132,10 @@ def make_flash_fna_autograd_fn(na_dim):
             value_perm = value_perm.contiguous()
             output_perm = torch.empty_like(query_perm)
 
-            B, *Q, H, D = query_perm.shape
-            logsumexp_perm = torch.empty(
-                (B, H, math.prod(Q)), dtype=torch.float32, device=query.device
-            )
-
-            FORWARD_OPS[na_dim](
-                output_perm,
+            output_perm, logsumexp_perm = FORWARD_OPS[na_dim](
                 query_perm,
                 key_perm,
                 value_perm,
-                logsumexp_perm,
                 kernel_size,
                 stride,
                 dilation,
@@ -162,27 +150,19 @@ def make_flash_fna_autograd_fn(na_dim):
             logsumexp_perm = logsumexp_perm.transpose(1, 2)
 
             # Token un-permute begin
-            output = maybe_unpad(
-                token_unpermute(
-                    output_perm,
-                    q_tile_shape,
-                    q_shape,
-                    qR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding,
+            output = token_unpermute_operation(
+                output_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            logsumexp = maybe_unpad(
-                token_unpermute(
-                    logsumexp_perm.unsqueeze(-1),
-                    q_tile_shape,
-                    q_shape,
-                    qR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding,
+            logsumexp = token_unpermute_operation(
+                logsumexp_perm.unsqueeze(-1),
+                token_layout_shape=qkv_shape,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             ).squeeze(-1)
 
             # Token un-permute end
@@ -229,32 +209,29 @@ def make_flash_fna_autograd_fn(na_dim):
             # Shape before padding and token permute
             qkv_shape = query.shape[1 : 1 + na_dim]
 
-            query_pad, padding_q = maybe_pad(query, q_tile_shape, dilation=dilation)
-            key_pad, padding_kv = maybe_pad(key, kv_tile_shape, dilation=dilation)
-            value_pad, _ = maybe_pad(value, kv_tile_shape, dilation=dilation)
-            logsumexp_pad, _ = maybe_pad(
-                logsumexp.unsqueeze(-1), q_tile_shape, dilation=dilation
+            query_perm, qkv_shape, q_shape = token_permute_operation(
+                query, tile_shape=q_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            output_pad, _ = maybe_pad(output, q_tile_shape, dilation=dilation)
-            d_output_pad, _ = maybe_pad(d_output, q_tile_shape, dilation=dilation)
-
-            query_perm, q_shape, qR = token_permute(
-                query_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            output_perm, _, o_shape = token_permute_operation(
+                output, tile_shape=q_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            output_perm, o_shape, oR = token_permute(
-                output_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            d_output_perm, _, d_o_shape = token_permute_operation(
+                d_output,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            d_output_perm, d_o_shape, doR = token_permute(
-                d_output_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            logsumexp_perm, _, _ = token_permute_operation(
+                logsumexp.unsqueeze(-1),
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            logsumexp_perm, _, _ = token_permute(
-                logsumexp_pad, q_tile_shape, dilation=dilation, flip_tiled_dims=True
+            key_perm, _, k_shape = token_permute_operation(
+                key, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
-            key_perm, k_shape, kR = token_permute(
-                key_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
-            )
-            value_perm, v_shape, vR = token_permute(
-                value_pad, kv_tile_shape, dilation=dilation, flip_tiled_dims=True
+            value_perm, _, v_shape = token_permute_operation(
+                value, tile_shape=kv_tile_shape, dilation=dilation, flip_tiled_dims=True
             )
 
             assert q_shape == o_shape == d_o_shape
@@ -267,17 +244,10 @@ def make_flash_fna_autograd_fn(na_dim):
             value_perm = value_perm.contiguous()
             output_perm = output_perm.contiguous()
             d_output_perm = d_output_perm.contiguous()
-            d_query_perm = torch.empty_like(query_perm)
-            d_key_perm = torch.empty_like(key_perm)
-            d_value_perm = torch.empty_like(value_perm)
 
-            # TODO: this can definitely be done with token permute.
             logsumexp_perm = logsumexp_perm.squeeze(-1).transpose(1, 2).contiguous()
 
-            BACKWARD_OPS[na_dim](
-                d_query_perm,
-                d_key_perm,
-                d_value_perm,
+            d_query_perm, d_key_perm, d_value_perm = BACKWARD_OPS[na_dim](
                 query_perm,
                 key_perm,
                 value_perm,
@@ -298,38 +268,26 @@ def make_flash_fna_autograd_fn(na_dim):
             )
 
             # Token un-permute begin
-            d_query = maybe_unpad(
-                token_unpermute(
-                    d_query_perm,
-                    q_tile_shape,
-                    q_shape,
-                    qR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding_q,
+            d_query = token_unpermute_operation(
+                d_query_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=q_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            d_key = maybe_unpad(
-                token_unpermute(
-                    d_key_perm,
-                    kv_tile_shape,
-                    kv_shape,
-                    kR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding_kv,
+            d_key = token_unpermute_operation(
+                d_key_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=kv_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
-            d_value = maybe_unpad(
-                token_unpermute(
-                    d_value_perm,
-                    kv_tile_shape,
-                    kv_shape,
-                    vR,
-                    dilation=dilation,
-                    flip_tiled_dims=True,
-                ),
-                padding_kv,
+            d_value = token_unpermute_operation(
+                d_value_perm,
+                token_layout_shape=qkv_shape,
+                tile_shape=kv_tile_shape,
+                dilation=dilation,
+                flip_tiled_dims=True,
             )
             # Token un-permute end
 

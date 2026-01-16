@@ -643,6 +643,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=False,
                     dtype=dtype,
                     test_backprop=True,
                     atol=atol,
@@ -698,6 +699,7 @@ class FMHABackendTest(unittest.TestCase):
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
+                    is_causal=False,
                     dtype=dtype,
                     test_backprop=True,
                     test_lse=True,
@@ -1198,6 +1200,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=False,
                 backend="flash-fmha",
             )
             self._test_backend_against_natten_cutlass_fmha(
@@ -1206,6 +1209,7 @@ class FMHABackendTest(unittest.TestCase):
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
+                is_causal=False,
                 backend="flash-fmha",
             )
 

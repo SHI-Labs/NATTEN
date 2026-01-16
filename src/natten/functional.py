@@ -422,7 +422,7 @@ def neighborhood_attention_generic(
         kernel_size=kernel_size,
         is_causal=is_causal,
         has_additional_attention=has_additional_attention,
-    ):
+    ) and backend != "flash-fna":
         logger.debug(
             f"{query.shape=} with {kernel_size=}, {has_additional_attention=} and {is_causal=} is "
             "self attention. Calling attention instead of neighborhood attention directly."
@@ -500,7 +500,7 @@ def neighborhood_attention_generic(
         )
 
     elif backend == "flash-fna":
-        outputs = flash_fna_generic(
+        output, lse = flash_fna_generic(
             query=query,
             key=key,
             value=value,
@@ -513,7 +513,7 @@ def neighborhood_attention_generic(
             kv_tile_shape=kv_tile_shape,
             backward_q_tile_shape=backward_q_tile_shape,
             backward_kv_tile_shape=backward_kv_tile_shape,
-            return_lse=has_additional_attention,
+            return_lse=True,
         )
 
     elif backend == "cutlass-fna":

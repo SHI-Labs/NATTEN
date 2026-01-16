@@ -323,7 +323,7 @@ struct CollectiveMainloopBwdSm80 {
         NADim window_size;
         NADim stride;
         NADim dilation;
-        int num_heads_actual;
+        int batch_size_actual;
     };
 
     // Device side kernel params
@@ -365,7 +365,7 @@ struct CollectiveMainloopBwdSm80 {
         NADim window_right;
         NADim stride;
         NADim dilation;
-        int num_heads_actual;
+        int batch_size_actual;
         bool is_fully_block_sparse;
         bool has_q_padding;
         bool requires_qkv_fixup;
@@ -420,7 +420,7 @@ struct CollectiveMainloopBwdSm80 {
                 // !Has_softcap ? 0.f : args.softmax_scale / args.softcap_val,
                 args.num_batch, args.dq_semaphore,
                 args.qkv_shape, args.q_shape, args.kv_shape, args.window_size, window_left, window_right,
-                args.stride, args.dilation, args.num_heads_actual,
+                args.stride, args.dilation, args.batch_size_actual,
                 is_fully_block_sparse_, has_q_padding_, requires_qkv_fixup_, is_dilated_
                 // args.cu_seqlens_q, args.cu_seqlens_k, args.seqused_q, args.seqused_k
         };
@@ -445,13 +445,12 @@ struct CollectiveMainloopBwdSm80 {
             // params.cu_seqlens_q, params.cu_seqlens_k, params.seqused_q, params.seqused_k
         };
 
-        int head_idx = bidh;
         auto qkv_shape = params.qkv_shape;
         bool is_fully_block_sparse = params.is_fully_block_sparse;
         bool has_q_padding = params.has_q_padding;
 
         if (params.requires_qkv_fixup) {
-          qkv_shape = correct_qkv_shape(params.qkv_shape, head_idx, params.dilation, params.num_heads_actual);
+          qkv_shape = correct_qkv_shape(params.qkv_shape, bidb, params.dilation, params.batch_size_actual);
           is_fully_block_sparse = fully_block_sparse<Causal>(
               qkv_shape,
               params.window_size,
