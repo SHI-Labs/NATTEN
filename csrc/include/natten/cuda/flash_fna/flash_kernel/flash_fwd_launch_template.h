@@ -13,18 +13,20 @@
 #include "cutlass/kernel_launch.h"
 
 #include "flash.h"
-#include "tile_size.h"
-#include "tile_scheduler.hpp"
-#include "flash_fwd_kernel_sm80.h"
 #include "mainloop_fwd_sm80.hpp"
-#include "epilogue_fwd.hpp"
 
-// #include "natten/cuda/flash_fmha/flash.h"
-// #include "natten/cuda/flash_fmha/tile_size.h"
-// #include "natten/cuda/flash_fmha/tile_scheduler.hpp"
-// #include "natten/cuda/flash_fmha/flash_fwd_kernel_sm80.h"
-// #include "natten/cuda/flash_fmha/mainloop_fwd_sm80.hpp"
-// #include "natten/cuda/flash_fmha/epilogue_fwd.hpp"
+#include "natten/cuda/flash_fmha/flash_kernel/tile_size.h"
+#include "natten/cuda/flash_fmha/flash_kernel/tile_scheduler.hpp"
+#include "natten/cuda/flash_fmha/flash_kernel/flash_fwd_kernel_sm80.h"
+#include "natten/cuda/flash_fmha/flash_kernel/epilogue_fwd.hpp"
+
+// #include "tile_size.h"
+// #include "tile_scheduler.hpp"
+// #include "flash_fwd_kernel_sm80.h"
+// #include "epilogue_fwd.hpp"
+
+// #include "natten/cuda/flash_fmha/flash_kernel/flash.h"
+// #include "natten/cuda/flash_fmha/flash_kernel/mainloop_fwd_sm80.hpp"
 
 namespace natten {
 namespace cuda {
@@ -40,8 +42,8 @@ void run_flash_fwd(Flash_fna_fwd_params<NADim> &params, cudaStream_t stream) {
     using ArchTag = std::conditional_t<Arch >= 90, cutlass::arch::Sm90, cutlass::arch::Sm80>;
 
     // Can't use structured binding since it's not compatible with constexpr
-    static constexpr std::tuple<int, int, bool, bool> kBlockMN_RS_IntraWGOverlap = tile_size_fwd_sm90(kHeadDim, kHeadDimV, sizeof(Element) /*element_size*/, V_colmajor);
-    static constexpr std::tuple<int, int, int, int, bool> kBlockMN_kNWarps_Stages_RS = tile_size_fwd_sm8x(Arch == 86 || Arch == 89, kHeadDim, kHeadDimV, sizeof(Element), /* varlen_and_split= */ false);
+    static constexpr std::tuple<int, int, bool, bool> kBlockMN_RS_IntraWGOverlap = flash::tile_size_fwd_sm90(kHeadDim, kHeadDimV, sizeof(Element) /*element_size*/, V_colmajor);
+    static constexpr std::tuple<int, int, int, int, bool> kBlockMN_kNWarps_Stages_RS = flash::tile_size_fwd_sm8x(Arch == 86 || Arch == 89, kHeadDim, kHeadDimV, sizeof(Element), /* varlen_and_split= */ false);
     // static constexpr int kBlockM = Arch >= 90 ? std::get<0>(kBlockMN_RS_IntraWGOverlap) : std::get<0>(kBlockMN_kNWarps_Stages_RS);
     // static constexpr int kBlockN = Arch >= 90 ? std::get<1>(kBlockMN_RS_IntraWGOverlap) : std::get<1>(kBlockMN_kNWarps_Stages_RS);
     static constexpr bool MmaPV_is_RS = std::get<2>(kBlockMN_RS_IntraWGOverlap);
@@ -54,17 +56,17 @@ void run_flash_fwd(Flash_fna_fwd_params<NADim> &params, cudaStream_t stream) {
     using TileShape_MNK_PV = cute::Shape<Int<kBlockM>, Int<kHeadDimV>, Int<kBlockN>>;
     using ClusterShape = cute::Shape<_1, _1, _1>;
     using CollectiveMainloop = flash_fna::CollectiveMainloopFwdSm80<kNWarps, kStages, Q_in_regs, TileShape_MNK, kHeadDimV, Element, float, cutlass::arch::Sm80, PackGQA, NADim, QTileShape, KVTileShape, Causal>;
-    using CollectiveEpilogue = flash_fna::CollectiveEpilogueFwd<TileShape_MNK_PV, ClusterShape, ElementOut, ArchTag, CollectiveMainloop::NumMmaThreads, PackGQA, FP8_TransposeV>;
+    using CollectiveEpilogue = flash::CollectiveEpilogueFwd<TileShape_MNK_PV, ClusterShape, ElementOut, ArchTag, CollectiveMainloop::NumMmaThreads, PackGQA, FP8_TransposeV>;
 
-    using SchedulerPersistent = flash_fna::StaticPersistentTileScheduler;
-    using SchedulerSingleTile = flash_fna::SingleTileScheduler<PackGQA, kBlockM>;
+    using SchedulerPersistent = flash::StaticPersistentTileScheduler;
+    using SchedulerSingleTile = flash::SingleTileScheduler<PackGQA, kBlockM>;
     // If Split then we probably don't have enough work for PersistentScheduler to be useful.
     // However, if Varlen (e.g., during decode where we have max_seqlens), using PersistentScheduler is better
     // since we'll avoid launching a bunch of thread blocks that immediately exit.
     // On Sm80, noncausal persistent seems a bit slower.
     static constexpr bool UsePersistentScheduler = false;
     using Scheduler = std::conditional_t<!UsePersistentScheduler, SchedulerSingleTile, SchedulerPersistent>;
-    using AttnKernel = flash_fna::enable_sm80_to_sm89<flash_fna::FlashAttnFwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>;
+    using AttnKernel = flash::enable_sm80_to_sm89<flash::FlashAttnFwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>;
 
     // bool const is_varlen_q = false; // params.cu_seqlens_q;
     // bool const is_varlen_k = false; // params.cu_seqlens_k;
@@ -113,7 +115,7 @@ void run_flash_fwd(Flash_fna_fwd_params<NADim> &params, cudaStream_t stream) {
     int qhead_per_khead = !PackGQA ? 1 : cutlass::ceil_div(params.h, params.h_k);
     int num_blocks_m = cutlass::ceil_div(params.seqlen_q * qhead_per_khead, get<0>(TileShape_MNK{}));
     num_blocks_m = cutlass::round_up(num_blocks_m, size<0>(ClusterShape{}));
-    typename flash_fna::TileSchedulerArguments scheduler_args {
+    typename flash::TileSchedulerArguments scheduler_args {
         num_blocks_m, !PackGQA ? params.h : params.h_k, params.b, params.num_splits,
         params.h / params.h_k,
         params.seqlen_q,

@@ -417,12 +417,17 @@ def neighborhood_attention_generic(
         additional_keys is not None and additional_values is not None
     )
 
-    if is_self_attention(
+    if backend == "flash-na" and is_causal:
+        is_flash_sa = False
+    else:
+        is_flash_sa = True
+
+    if is_flash_sa and is_self_attention(
         query,
         kernel_size=kernel_size,
         is_causal=is_causal,
         has_additional_attention=has_additional_attention,
-    ) and backend != "flash-fna":
+    ):
         logger.debug(
             f"{query.shape=} with {kernel_size=}, {has_additional_attention=} and {is_causal=} is "
             "self attention. Calling attention instead of neighborhood attention directly."

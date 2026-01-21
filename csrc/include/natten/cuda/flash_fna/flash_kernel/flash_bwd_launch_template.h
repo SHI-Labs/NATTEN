@@ -12,21 +12,19 @@
 #include "cutlass/kernel_launch.h"  // For kernel_launch
 #include "cutlass/cluster_launch.hpp"  // For ClusterLauncher
 
+// FNA specific headers 
 #include "flash.h"
-#include "flash_bwd_preprocess_kernel.h"
-#include "flash_bwd_postprocess_kernel.h"
-#include "tile_scheduler.hpp"
 #include "mainloop_bwd_sm80.hpp"
-#include "epilogue_bwd.hpp"
-#include "flash_bwd_kernel_sm80.h"
 
-// #include "natten/cuda/flash_fmha/flash.h"
-// #include "natten/cuda/flash_fmha/flash_bwd_preprocess_kernel.h"
-// #include "natten/cuda/flash_fmha/flash_bwd_postprocess_kernel.h"
-// #include "natten/cuda/flash_fmha/tile_scheduler.hpp"
-// #include "natten/cuda/flash_fmha/mainloop_bwd_sm80.hpp"
-// #include "natten/cuda/flash_fmha/epilogue_bwd.hpp"
-// #include "natten/cuda/flash_fmha/flash_bwd_kernel_sm80.h"
+// Can reuse from FMHA
+#include "natten/cuda/flash_fmha/flash_kernel/flash_bwd_preprocess_kernel.h"
+#include "natten/cuda/flash_fmha/flash_kernel/flash_bwd_postprocess_kernel.h"
+#include "natten/cuda/flash_fmha/flash_kernel/tile_scheduler.hpp"
+#include "natten/cuda/flash_fmha/flash_kernel/epilogue_bwd.hpp"
+#include "natten/cuda/flash_fmha/flash_kernel/flash_bwd_kernel_sm80.h"
+
+// #include "natten/cuda/flash_fmha/flash_kernel/flash.h"
+// #include "natten/cuda/flash_fmha/flash_kernel/mainloop_bwd_sm80.hpp"
 
 // #include "flash_bwd_kernel_sm90.h"
 // #include "static_switch.h"
@@ -59,7 +57,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     int batch_k = params.b;
 
     using TileShape_MK = cute::Shape<Int<kBlockM>, Int<kHeadDim>>;
-    using PreprocessKernel = flash_fna::FlashAttnBwdPreprocess<TileShape_MK, Element, ElementAccum, ArchTag, /*Clear_dQaccum=*/true>;
+    using PreprocessKernel = flash::FlashAttnBwdPreprocess<TileShape_MK, Element, ElementAccum, ArchTag, /*Clear_dQaccum=*/true>;
     typename PreprocessKernel::Arguments preprocess_args {
         static_cast<Element const*>(params.o_ptr),
         {seqlen_q, params.dv, params.h, batch_q},  // shape_O
@@ -108,8 +106,8 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
             SdP_swapAB, dKV_swapAB, dQ_swapAB, NumMmaWarpGroups, AtomLayoutMSdP, AtomLayoutNdKV, AtomLayoutMdQ, V_in_regs>;
     using CollectiveEpilogue = std::conditional_t<
         !GQA,
-        flash_fna::CollectiveEpilogueBwd<TileShape_MNK, Element, ArchTag, CollectiveMainloop::NumMmaThreads, dKV_swapAB, NumMmaWarpGroups * (Arch >= 90 ? 1 : cutlass::NumWarpsPerWarpGroup) / AtomLayoutNdKV>,
-        flash_fna::CollectiveEpilogueBwdGQA<TileShape_MNK, ElementAccum, ArchTag, CollectiveMainloop::NumMmaThreads, Deterministic>
+        flash::CollectiveEpilogueBwd<TileShape_MNK, Element, ArchTag, CollectiveMainloop::NumMmaThreads, dKV_swapAB, NumMmaWarpGroups * (Arch >= 90 ? 1 : cutlass::NumWarpsPerWarpGroup) / AtomLayoutNdKV>,
+        flash::CollectiveEpilogueBwdGQA<TileShape_MNK, ElementAccum, ArchTag, CollectiveMainloop::NumMmaThreads, Deterministic>
     >;
     // using Scheduler = std::conditional_t<
     //     Is_causal && !Varlen,
@@ -117,13 +115,13 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     //     // flash_fna::SingleTileScheduler<Varlen, false /*Split*/, false /*PackGQA*/, kBlockN>
     //     flash_fna::SingleTileScheduler</* PackGQA= */ false, kBlockN>
     // >;
-    using Scheduler = flash_fna::SingleTileScheduler</* PackGQA= */ false, kBlockN>;
+    using Scheduler = flash::SingleTileScheduler</* PackGQA= */ false, kBlockN>;
     // using AttnKernel = std::conditional_t<
     //     Arch >= 90,
     //     flash_fna::enable_sm90_or_later<flash_fna::FlashAttnBwdSm90<CollectiveMainloop, CollectiveEpilogue, Scheduler>>,
     //     flash_fna::enable_sm80_to_sm89<flash_fna::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>
     // >;
-    using AttnKernel = flash_fna::enable_sm80_to_sm89<flash_fna::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>;
+    using AttnKernel = flash::enable_sm80_to_sm89<flash::FlashAttnBwdSm80<CollectiveMainloop, CollectiveEpilogue, Scheduler>>;
 
     typename CollectiveMainloop::Arguments mainloop_args {
         static_cast<Element const*>(params.q_ptr),
@@ -199,7 +197,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
 
     int num_blocks_n = cutlass::ceil_div(params.seqlen_k, get<1>(TileShape_MNK{}));
     num_blocks_n = cutlass::round_up(num_blocks_n, size<1>(ClusterShape{}));
-    typename flash_fna::TileSchedulerArguments scheduler_args {
+    typename flash::TileSchedulerArguments scheduler_args {
         num_blocks_n, params.h, params.b, 1 /*num_splits*/,
         params.h / params.h_k,
         params.seqlen_k,
@@ -260,7 +258,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
     }
     FLASH_CHECK_CUDA_KERNEL_LAUNCH();
 
-    using PostprocessKernel = flash_fna::FlashAttnBwdPostprocessConvertdQ<TileShape_MK, Element, ElementAccum, ArchTag,
+    using PostprocessKernel = flash::FlashAttnBwdPostprocessConvertdQ<TileShape_MK, Element, ElementAccum, ArchTag,
         AttnKernel::CollectiveMainloop::NumMmaThreads,
         typename AttnKernel::CollectiveMainloop::TiledMmadQ,
         AttnKernel::CollectiveMainloop::dQ_swapAB
@@ -286,7 +284,7 @@ void run_flash_bwd(Flash_fna_bwd_params<NADim> &params, cudaStream_t stream) {
 
     if constexpr (GQA) {
         using TileShape_NK = cute::Shape<Int<kBlockN>, Int<kHeadDim>>;
-        using PostprocessKerneldKV = flash_fna::FlashAttnBwdPostprocessConvertdQ<TileShape_NK, Element, ElementAccum, ArchTag,
+        using PostprocessKerneldKV = flash::FlashAttnBwdPostprocessConvertdQ<TileShape_NK, Element, ElementAccum, ArchTag,
             AttnKernel::CollectiveEpilogue::NumEpilogueThreads,
             typename AttnKernel::CollectiveMainloop::TiledMmadKV,
             AttnKernel::CollectiveMainloop::dKV_swapAB

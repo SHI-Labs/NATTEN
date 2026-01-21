@@ -6,7 +6,7 @@
 #include "cute/util/print.hpp"
 
 #include "flash.h"
-// #include "natten/cuda/flash_fmha/flash.h"
+// #include "natten/cuda/flash_fmha/flash_kernel/flash.h"
 
 namespace natten {
 namespace cuda {

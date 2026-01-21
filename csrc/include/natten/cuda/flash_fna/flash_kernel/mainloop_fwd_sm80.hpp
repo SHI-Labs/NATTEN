@@ -12,17 +12,17 @@
 #include "cute/tensor.hpp"
 #include "cute/util/print.hpp"
 
-#include "seqlen.h"
+// #include "seqlen.h"
+// #include "mask.h"
+// #include "pack_gqa.h"
+// #include "utils.h"
+#include "na_utils.h"
 #include "block.h"
 #include "mask.h"
-#include "pack_gqa.h"
-#include "utils.h"
-#include "na_utils.h"
-// #include "natten/cuda/flash_fmha/seqlen.h"
-// #include "natten/cuda/flash_fmha/block.h"
-// #include "natten/cuda/flash_fmha/mask.h"
-// #include "natten/cuda/flash_fmha/pack_gqa.h"
-// #include "natten/cuda/flash_fmha/utils.h"
+
+#include "natten/cuda/flash_fmha/flash_kernel/seqlen.h"
+#include "natten/cuda/flash_fmha/flash_kernel/pack_gqa.h"
+#include "natten/cuda/flash_fmha/flash_kernel/utils.h"
 
 // #include "paged_kv.h"
 // #include "rotary.h"
@@ -56,9 +56,9 @@ struct CollectiveMainloopFwdSm80 {
     static constexpr int kBlockN = get<1>(TileShape_MNK{});
     static constexpr int kHeadDim = get<2>(TileShape_MNK{});
 
-    // using SeqlenInfo_t = flash_fna::SeqlenInfoQKNewK<Varlen, AppendKV>;
-    using SeqlenInfo_t = flash_fna::SeqlenInfoQKNewK<false, false>;
-    using BlockMN_t = flash_fna::BlockMN<SeqlenInfo_t, kBlockM, kBlockN, PackGQA>;
+    // using SeqlenInfo_t = flash::SeqlenInfoQKNewK<Varlen, AppendKV>;
+    using SeqlenInfo_t = flash::SeqlenInfoQKNewK<false, false>;
+    // using BlockMN_t = flash::BlockMN<SeqlenInfo_t, kBlockM, kBlockN, PackGQA>;
     using NABlockMN_t = flash_fna::NABlockMN<SeqlenInfo_t, kBlockM, kBlockN, NADim, QTileShape, KVTileShape, Causal, PackGQA>;
 
     using MMA_Atom_Arch = std::conditional_t<
@@ -429,11 +429,11 @@ struct CollectiveMainloopFwdSm80 {
             // Instead of passing in tQcQ, we pass in t0QcQ and subtract the offset from the limit
             // (seqlen_q - m_block * kBlockM). This is because the entries of t0QcQ are known at compile time.
             // We don't need to clear the sQ smem tiles since we'll only write out the valid outputs
-            flash_fna::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/true>(
+            flash::copy</*Is_even_MN=*/false, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/true>(
                 gmem_tiled_copy_QKV, tQgQ, tQsQ, t0QcQ, tQpQ, seqlen_info.seqlen_q - m_block * kBlockM - get<0>(tQcQ(_0{}, _0{}, _0{}))
             );
         } else {
-            using PackGQAt = flash_fna::PackGQAManager<get<0>(TileShape_MNK{}), get<2>(TileShape_MNK{}), NumMmaThreads, Element>;
+            using PackGQAt = flash::PackGQAManager<get<0>(TileShape_MNK{}), get<2>(TileShape_MNK{}), NumMmaThreads, Element>;
             PackGQAt::load_Q(mQ, sQ, params.qhead_per_khead_divmod, thread_idx, seqlen_q, m_block);
         }
         cute::cp_async_fence();
@@ -465,7 +465,7 @@ struct CollectiveMainloopFwdSm80 {
                 ? seqlen_info.seqlen_k - kv_tile_idx * kBlockN
                 : (!Seqlenk_mask ? kBlockN : std::min(seqlen_info.seqlen_k - kv_tile_idx * kBlockN, kBlockN)));
             // We don't need to clear the sK smem tiles since we'll mask out the scores anyway.
-            flash_fna::copy</*Is_even_MN=*/!Seqlenk_mask && EvenN, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/true>(
+            flash::copy</*Is_even_MN=*/!Seqlenk_mask && EvenN, /*Is_even_K=*/false, /*Clear_OOB_MN=*/false, /*Clear_OOB_K=*/true>(
                 gmem_tiled_copy_QKV, tKgK(_, _, _, kv_tile_idx), tKsK_cur, t0KVcKV, tKVpKV, seqlenk_row_limit);
         };
 
@@ -476,7 +476,7 @@ struct CollectiveMainloopFwdSm80 {
             // Do we need bound check to make sure the row doesn't go above kBlockN
             static constexpr bool EvenN = kBlockN % CUTE_STATIC_V(shape<0>(GmemLayoutAtom{})) == 0;
             Tensor tVsV_cur = tVsV(_, _, _, smem_pipe_write);
-            // We don't call flash_fna::copy since it doesn't support bound checking
+            // We don't call flash::copy since it doesn't support bound checking
             // to not overshot kBlockN when writing to smem.
             Tensor tVgV_cur = tVgV(_, _, _, kv_tile_idx);
             int const seqlenk_row_limit = seqlen_info.seqlen_k - kv_tile_idx * kBlockN - get<0>(tKVcKV(_0{}, _0{}, _0{}));
@@ -494,7 +494,7 @@ struct CollectiveMainloopFwdSm80 {
         };
 
         auto preprocess_Q = [&] {
-            flash_fna::cp_async_wait<Share_QV_Smem ? 1 : kStages * 2 - 1>();
+            flash::cp_async_wait<Share_QV_Smem ? 1 : kStages * 2 - 1>();
             if constexpr (Q_in_regs) {
                 __syncthreads();
                 Tensor tSrQ_copy_view = smem_thr_copy_Q.retile_D(tSrQ);
@@ -538,7 +538,7 @@ struct CollectiveMainloopFwdSm80 {
 
         if constexpr (!Share_QV_Smem) { preprocess_Q(); }
 
-        // flash_fna::Mask<kBlockM, kBlockN, PackGQA, TiledMma> mask(
+        // flash::Mask<kBlockM, kBlockN, PackGQA, TiledMma> mask(
         //     thread_idx, seqlen_q, seqlen_k, 
         //     // params.window_size_left, params.window_size_right, 0 /*sink_token_length*/, params.attention_chunk_divmod, 
         //     params.qhead_per_khead_divmod
@@ -559,7 +559,7 @@ struct CollectiveMainloopFwdSm80 {
         };
 
         auto sync = [&] {
-            flash_fna::cp_async_wait<kStages * 2 - 2>();
+            flash::cp_async_wait<kStages * 2 - 2>();
             __syncthreads();
         };
 
@@ -582,7 +582,7 @@ struct CollectiveMainloopFwdSm80 {
             Tensor tSrK = thr_mma.partition_fragment_B(sK(_, _, _0{}));
 
 
-            flash_fna::gemm_sm80<Q_in_regs>(
+            flash::gemm_sm80<Q_in_regs>(
                 tSrS, tSrQ_cur, tSrK, tSsQ, tSsK(_, _, _, kStages > 1 ? smem_pipe_read : 0),
                 tiled_mma, smem_tiled_copy_Q, smem_tiled_copy_K, smem_thr_copy_Q, smem_thr_copy_K, load_V_next
             );
@@ -593,14 +593,14 @@ struct CollectiveMainloopFwdSm80 {
             mask_fn(tSrS, n_block);
             Tensor scores_scale = softmax.template max_get_scale</*Is_first=*/Is_first_iter, Check_inf>(tSrS);
             softmax.template online_softmax</*Is_first=*/Is_first_iter, Check_inf>(tSrS);
-            if constexpr (Is_FP8) { flash_fna::permute_Cregs_fp8(tSrS); }
-            Tensor tOrP_acc = make_tensor(tSrS.data(), flash_fna::convert_layout_acc_Aregs<TiledMma>(tSrS.layout()));
+            if constexpr (Is_FP8) { flash::permute_Cregs_fp8(tSrS); }
+            Tensor tOrP_acc = make_tensor(tSrS.data(), flash::convert_layout_acc_Aregs<TiledMma>(tSrS.layout()));
             Tensor tOrP = make_tensor_like<Element>(tOrP_acc);
-            convert_type_out(tOrP_acc, tOrP);
+            flash::convert_type_out(tOrP_acc, tOrP);
             if constexpr (!Is_first_iter) { softmax.rescale_o(tOrO, scores_scale); }
             if constexpr (kStages > 1) { sync(); }
             Tensor tOrV = thr_mma.partition_fragment_B(sVt(_, _, _0{}));
-            flash_fna::gemm_rs_sm80(tOrO, tOrP, tOrV, tOsVt(_, _, _, kStages > 1 ? smem_pipe_read : 0), tiled_mma, smem_tiled_copy_V, smem_thr_copy_V);
+            flash::gemm_rs_sm80(tOrO, tOrP, tOrV, tOsVt(_, _, _, kStages > 1 ? smem_pipe_read : 0), tiled_mma, smem_tiled_copy_V, smem_thr_copy_V);
             if constexpr (kStages > 1) { load_K_next(); }
             smem_pipe_read = smem_pipe_read < kStages - 1 ? smem_pipe_read + 1 : 0;
         };
@@ -650,7 +650,7 @@ struct CollectiveMainloopFwdSm80 {
         float const v_descale = !Is_FP8 || params.ptr_v_descale == nullptr ? 1.0f : params.ptr_v_descale[bidb * get<0>(params.stride_v_descale) + bidh_kv * get<1>(params.stride_v_descale)];
         Tensor scores_scale = softmax.finalize(v_descale);
         softmax.rescale_o(tOrO, scores_scale);
-        if constexpr (Is_FP8) { flash_fna::permute_output_fp8(tOrO); }
+        if constexpr (Is_FP8) { flash::permute_output_fp8(tOrO); }
         return true;
     }
 };

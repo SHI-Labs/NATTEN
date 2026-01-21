@@ -72,17 +72,6 @@ struct Flash_fwd_params : public Qkv_params {
 
     // The scaling factors for the kernel.
     float scale_softmax;
-    // float softcap;
-
-    // array of length b+1 holding starting offset of each sequence.
-    // int * __restrict__ cu_seqlens_q;
-    // int * __restrict__ cu_seqlens_k;
-    // int * __restrict__ cu_seqlens_knew;
-    // int * __restrict__ leftpad_k;
-
-    // If provided, the actual length of each q/k sequence.
-    // int *__restrict__ seqused_q;
-    // int *__restrict__ seqused_k;
 
     // The stride between rows of Oaccum.
     index_t oaccum_split_stride;
@@ -94,38 +83,6 @@ struct Flash_fwd_params : public Qkv_params {
     index_t lseaccum_split_stride;
     index_t lseaccum_batch_stride;
     index_t lseaccum_head_stride;
-
-    // The K_new and V_new matrices.
-    // void * __restrict__ knew_ptr;
-    // void * __restrict__ vnew_ptr;
-
-    // The stride between rows of the Q, K and V matrices.
-    // index_t knew_batch_stride;
-    // index_t vnew_batch_stride;
-    // index_t knew_row_stride;
-    // index_t vnew_row_stride;
-    // index_t knew_head_stride;
-    // index_t vnew_head_stride;
-
-    // void *__restrict__ qv_ptr;
-    // index_t qv_batch_stride;
-    // index_t qv_row_stride;
-    // index_t qv_head_stride;
-
-    // The cos and sin matrices for rotary embedding.
-    // void * __restrict__ rotary_cos_ptr;
-    // void * __restrict__ rotary_sin_ptr;
-    // int *__restrict__ seqlens_rotary;
-
-    // The indices to index into the KV cache.
-    // int * __restrict__ kv_batch_idx;
-
-    // Paged KV cache
-    // int * __restrict__ page_table;
-    // index_t page_table_batch_stride;
-    // int page_size;
-    // int num_pages;
-    // bool pagedkv_tma;
 
     // The dropout probability (probability of keeping an activation).
     float p_dropout;
@@ -221,10 +178,3 @@ struct Flash_bwd_params : public Flash_fwd_params {
 } // namespace natten
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// template <int Arch, typename T, int kHeadDim, int kHeadDimV, bool Split, bool PagedKVNonTMA, bool Has_softcap, bool PackGQA>
-// void run_mha_fwd_(Flash_fwd_params &params, cudaStream_t stream);
-// void prepare_varlen_num_blocks(Flash_fwd_params &params, cudaStream_t stream, bool packgqa, int blockM, int blockN, bool enable_pdl);
-// template <int Arch, typename T, int kHeadDim, bool Has_softcap>
-// void run_mha_bwd_(Flash_bwd_params &params, cudaStream_t stream);
-// template <typename T, typename Tpartial, int kBlockK>
-// void run_mha_fwd_combine_(Flash_fwd_params &params, cudaStream_t stream, bool enable_pdl);
