@@ -34,11 +34,14 @@ from ..backends import (
     can_run_cutlass_hopper_fmha,
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
+    can_run_flash_fmha,
+    can_run_flash_fna,
     choose_backend,
     choose_fmha_backend,
     get_bwd_configs_for_cutlass_blackwell_fmha,
     get_bwd_configs_for_cutlass_blackwell_fna,
     get_bwd_configs_for_cutlass_fmha,
+    get_bwd_configs_for_flash_fmha,
     get_bwd_configs_for_cutlass_fna,
     get_bwd_configs_for_cutlass_hopper_fmha,
     get_bwd_configs_for_cutlass_hopper_fna,
@@ -52,6 +55,8 @@ from ..backends import (
     get_configs_for_cutlass_hopper_fna,
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
+    get_configs_for_flash_fmha,
+    get_configs_for_flash_fna,
 )
 from ..types import DimensionType, KernelSchedule
 from ..utils import log
@@ -63,8 +68,8 @@ from .profiling import measure_natten_runtime
 logger = log.get_logger(__name__)
 
 # TODO: these are duplicated from profiler.py
-NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna"]
-NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha"]
+NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna", "flash-fna"]
+NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha", "flash-fmha"]
 
 
 def dry_run_for_backend(
@@ -159,6 +164,19 @@ def dry_run_for_backend(
             fwd_configs = get_configs_for_flex_fmha(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_size", "kv_tile_size")
 
+        elif fmha_backend == "flash-fmha":
+            assert can_run_flash_fmha(
+                q, k, v, raise_error=True
+            )
+            fwd_configs = get_configs_for_flash_fmha(q, k, v)  # type: ignore[assignment]
+            fwd_config_keys = ("q_tile_size", "kv_tile_size")
+            bwd_configs = get_bwd_configs_for_flash_fmha(q, k, v)  # type: ignore[assignment]
+            bwd_config_keys = (
+                "backward_q_tile_size",
+                "backward_kv_tile_size",
+            )
+
+
         else:
             raise NotImplementedError()
 
@@ -203,6 +221,13 @@ def dry_run_for_backend(
             )
             fwd_configs = get_configs_for_flex_fna(q, k, v)  # type: ignore[assignment]
             fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
+        elif backend == "flash-fna":
+            assert can_run_flash_fna(
+                q, k, v, raise_error=True
+            )
+            fwd_configs = get_configs_for_flash_fna(q, k, v)  # type: ignore[assignment]
+            fwd_config_keys = ("q_tile_shape", "kv_tile_shape")  # type: ignore[assignment]
+
 
         else:
             raise NotImplementedError()
