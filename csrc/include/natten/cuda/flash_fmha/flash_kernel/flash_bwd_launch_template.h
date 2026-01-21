@@ -221,7 +221,6 @@ void run_flash_bwd(Flash_bwd_params &params, cudaStream_t stream) {
     // int smem_size_v = sizeof(decltype((typename CollectiveMainloop::TensorStorage{}).smem_v));
     // int smem_size_lse = sizeof(decltype((typename CollectiveMainloop::TensorStorage{}).smem_lse));
     // int smem_size_dpsum = sizeof(decltype((typename CollectiveMainloop::TensorStorage{}).smem_dpsum));
-    // printf("smem_size = %d, q = %d, k = %d, v = %d, do = %d, ds = %d, dqacc = %d, lse = %d, dpsum = %d\n", smem_size, smem_size_q, smem_size_k, smem_size_v, smem_size_do, smem_size_ds, smem_size_dqacc, smem_size_lse, smem_size_dpsum);
     void const* kernel = (void const*) cutlass::device_kernel<AttnKernel>;
     if constexpr (size(ClusterShape{}) > 1) {
         if (smem_size >= 48 * 1024) {

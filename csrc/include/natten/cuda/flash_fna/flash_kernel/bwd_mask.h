@@ -8,9 +8,8 @@
 
 #include "cutlass/fast_math.h"  // For cutlass::FastDivmod
 
-#include "utils.h"
 #include "na_utils.h"
-// #include "natten/cuda/flash_fmha/utils.h"
+#include "natten/cuda/flash_fmha/flash_kernel/utils.h"
 
 namespace natten {
 namespace cuda {
@@ -73,8 +72,8 @@ struct BwdNAMask {
         Tensor cS = cute::make_identity_tensor(Shape<Int<!SwapAB ? kBlockM : kBlockN>, Int<!SwapAB ? kBlockN : kBlockM>>{});
         Tensor tScS = thread_mma.partition_C(cS);
 
-        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
-        Tensor tScS_rowcol = make_tensor(tScS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
+        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
+        Tensor tScS_rowcol = make_tensor(tScS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
 
         if constexpr (!SwapAB) {
           tScS_rowcol.data() = tScS_rowcol.data() + E<0>{} * m_block * kBlockM + E<0>{} * size(q_blk_offset);
@@ -165,8 +164,8 @@ struct BwdNAMask {
         Tensor cS = cute::make_identity_tensor(Shape<Int<!SwapAB ? kBlockM : kBlockN>, Int<!SwapAB ? kBlockN : kBlockM>>{});
         Tensor tScS = thread_mma.partition_C(cS);
 
-        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
-        Tensor tScS_rowcol = make_tensor(tScS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
+        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
+        Tensor tScS_rowcol = make_tensor(tScS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
 
         if constexpr (!SwapAB) {
           tScS_rowcol.data() = tScS_rowcol.data() + E<0>{} * m_block * kBlockM + E<0>{} * size(q_blk_offset);

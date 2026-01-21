@@ -10,8 +10,8 @@
 
 #include "cutlass/fast_math.h"  // For cutlass::FastDivmod
 
-#include "utils.h"
-// #include "natten/cuda/flash_fmha/utils.h"
+// #include "utils.h"
+#include "natten/cuda/flash_fmha/flash_kernel/utils.h"
 
 namespace natten {
 namespace cuda {
@@ -72,8 +72,8 @@ struct NAMask {
         Tensor cS = cute::make_identity_tensor(Shape<Int<!SwapAB ? kBlockM : kBlockN>, Int<!SwapAB ? kBlockN : kBlockM>>{});
         Tensor tScS = thread_mma.partition_C(cS);
 
-        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
-        Tensor tScS_rowcol = make_tensor(tScS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
+        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
+        Tensor tScS_rowcol = make_tensor(tScS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
 
         // TODO (aditya): This doesn't consider SwapAB, fix.
         tScS_rowcol.data() = tScS_rowcol.data() + E<0>{} * m_block * kBlockM;
@@ -205,8 +205,8 @@ static_cast<int>(is_neigh)
       Tensor cS = cute::make_identity_tensor(Shape<Int<!SwapAB ? kBlockM : kBlockN>, Int<!SwapAB ? kBlockN : kBlockM>>{});
       Tensor tScS = thread_mma.partition_C(cS);
 
-      Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
-      Tensor tScS_rowcol = make_tensor(tScS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
+      Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
+      Tensor tScS_rowcol = make_tensor(tScS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
 
       // TODO (aditya): This doesn't consider SwapAB, fix.
       tScS_rowcol.data() = tScS_rowcol.data() + E<0>{} * m_block * kBlockM;
@@ -291,10 +291,10 @@ struct Mask {
    
         Tensor cS = cute::make_identity_tensor(Shape<Int<!SwapAB ? kBlockM : kBlockN>, Int<!SwapAB ? kBlockN : kBlockM>>{});
         Tensor tScS = thread_mma.partition_C(cS);
-        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
-        Tensor tScS_rowcol = make_tensor(tScS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
+        Tensor tSrS_rowcol = make_tensor(tSrS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tSrS.layout()));
+        Tensor tScS_rowcol = make_tensor(tScS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(tScS.layout()));
         Tensor t0ScS = thread0_mma.partition_C(cS);
-        Tensor t0ScS_rowcol = make_tensor(t0ScS.data(), flash_fna::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(t0ScS.layout()));
+        Tensor t0ScS_rowcol = make_tensor(t0ScS.data(), flash::convert_layout_acc_rowcol</*Transposed=*/SwapAB>(t0ScS.layout()));
         // We want to use the col indices of thread0 to compare, since that is known at compile time.
         // So we subtract the limit by the first col index of this thread (get<Col>(tScS_rowcol(_0{}, _0{})))
         int const thread_col_offset = get<Col>(tScS_rowcol(_0{}, _0{}));
