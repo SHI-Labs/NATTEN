@@ -54,8 +54,13 @@ void blackwell_na1d_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations);
 
 void blackwell_na2d_forward(
     at::Tensor& out,
@@ -78,8 +83,13 @@ void blackwell_na2d_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations);
 
 void blackwell_na3d_forward(
     at::Tensor& out,
@@ -102,8 +112,13 @@ void blackwell_na3d_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations);
 
 // Backward
 
@@ -131,8 +146,13 @@ void blackwell_na1d_backward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations);
 
 void blackwell_na2d_backward(
     at::Tensor& grad_query,
@@ -158,8 +178,13 @@ void blackwell_na2d_backward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations);
 
 void blackwell_na3d_backward(
     at::Tensor& grad_query,
@@ -185,7 +210,12 @@ void blackwell_na3d_backward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations);
 
 } // namespace natten

@@ -134,6 +134,24 @@ class Block(nn.Module):
         return self.mlp(x0)
 
 
+class Model(nn.Module):
+    def __init__(self, *modules):
+        super().__init__()
+        self.layers = nn.ModuleList([*modules])
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        additional_context: Optional[torch.Tensor] = None,
+        *args,
+        **kwargs,
+    ):
+        for layer in self.layers:
+            x = layer(x, additional_context=additional_context, *args, **kwargs)
+
+        return x
+
+
 class TorchCompileTests(unittest.TestCase):
     def _test_na_module(
         self,
@@ -179,15 +197,37 @@ class TorchCompileTests(unittest.TestCase):
             )
 
             model = (
-                Block(
-                    na_dim=na_dim,
-                    embed_dim=embed_dim,
-                    mlp_ratio=2,
-                    num_heads=num_heads,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    stride=stride,
-                    is_causal=is_causal,
+                Model(
+                    Block(
+                        na_dim=na_dim,
+                        embed_dim=embed_dim,
+                        mlp_ratio=2,
+                        num_heads=num_heads,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        stride=stride,
+                        is_causal=is_causal,
+                    ),
+                    Block(
+                        na_dim=na_dim,
+                        embed_dim=embed_dim,
+                        mlp_ratio=4,
+                        num_heads=num_heads,
+                        kernel_size=kernel_size,
+                        dilation=dilation,
+                        stride=stride,
+                        is_causal=is_causal,
+                    ),
+                    Block(
+                        na_dim=na_dim,
+                        embed_dim=embed_dim,
+                        mlp_ratio=4,
+                        num_heads=num_heads,
+                        kernel_size=token_layout_shape,
+                        dilation=1,
+                        stride=1,
+                        is_causal=False,
+                    ),
                 )
                 .to(dtype)
                 .to(device)

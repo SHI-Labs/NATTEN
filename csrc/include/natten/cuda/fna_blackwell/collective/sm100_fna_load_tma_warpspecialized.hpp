@@ -65,7 +65,7 @@ template <
     class NADim,
     bool IsVarlen>
 struct Sm100FnaLoadTmaWarpspecialized {
-  using MultiDimTileShape = cute::tuple<QTileShape, KVTileShape>;
+  using BatchMap = cute::tuple<int32_t, int32_t>;
 
   static_assert(
       size(QTileShape{}) == get<0>(TileShape{}),
@@ -90,7 +90,15 @@ struct Sm100FnaLoadTmaWarpspecialized {
     NADim window_size;
     NADim stride;
     NADim dilation;
+
+    // varlen (varsized)
     NADim* token_layout_ptr;
+    BatchMap* batch_map_ptr;
+
+    // var-param
+    NADim* window_sizes_ptr;
+    NADim* strides_ptr;
+    NADim* dilations_ptr;
   };
 
   using TMA_Q = typename CollectiveMmaQK::Params::TMA_A;
@@ -98,6 +106,8 @@ struct Sm100FnaLoadTmaWarpspecialized {
   using TMA_V = typename CollectiveMmaPV::Params::TMA_B;
 
   struct ParamsStandard {
+    using NADimType = NADim;
+
     TMA_Q tma_load_q;
     TMA_K tma_load_k;
     TMA_V tma_load_v;
@@ -107,7 +117,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
     cute::tuple<NADim, NADim, NADim, NADim>
         na_params; // win, win_left, win_right, stride
     bool is_fully_block_sparse;
-    bool has_kv_padding;
+    bool has_padding;
     NADim dilation;
     bool requires_qkv_fixup;
     bool is_dilated;
@@ -115,13 +125,22 @@ struct Sm100FnaLoadTmaWarpspecialized {
   };
 
   struct ParamsVarlen {
+    using NADimType = NADim;
+
     TMA_Q tma_load_q;
     TMA_K tma_load_k;
     TMA_V tma_load_v;
     cute::tuple<NADim, NADim, NADim, NADim>
         na_params; // win, win_left, win_right, stride
-    NADim* token_layout_ptr;
+    NADim dilation;
     int num_dilation_groups;
+
+    NADim* token_layout_ptr;
+    BatchMap* batch_map_ptr;
+
+    NADim* window_sizes_ptr;
+    NADim* strides_ptr;
+    NADim* dilations_ptr;
   };
 
   using Params = cute::conditional_t<IsVarlen, ParamsVarlen, ParamsStandard>;
@@ -195,7 +214,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
               args.stride,
               QTileShape{},
               KVTileShape{}),
-          /* has_kv_padding */
+          /* has_padding */
           not evenly_divides(args.qkv_shape, KVTileShape{}),
           /* dilation */ args.dilation,
           /* requires_qkv_fixup */
@@ -208,8 +227,15 @@ struct Sm100FnaLoadTmaWarpspecialized {
           params_qk.tma_load_b,
           params_pv.tma_load_b,
           make_tuple(args.window_size, window_left, window_right, args.stride),
+          /* dilation */ args.dilation,
+          /* num_dilation_groups */ size(args.dilation),
           args.token_layout_ptr,
-          /* num_dilation_groups */ size(args.dilation)};
+          args.batch_map_ptr,
+          // var-param
+          args.window_sizes_ptr,
+          args.strides_ptr,
+          args.dilations_ptr,
+      };
     }
   }
 
@@ -233,6 +259,7 @@ struct Sm100FnaLoadTmaWarpspecialized {
       typename PipelineKV::PipelineState& pipeline_kv_producer_state) {
     BlkCoord blk_coord_q = blk_coord_in;
     BlkCoord blk_coord_kv = blk_coord_in;
+    BlkCoord blk_coord_correction = blk_coord_in;
 
     static_assert(
         IsVarlen ==
@@ -240,47 +267,18 @@ struct Sm100FnaLoadTmaWarpspecialized {
         IsVarlen ==
             is_variable_length_v<tuple_element_t<1, ParamsProblemShape>>);
 
-    // Token Layout Shape Correction
-    NADim qkv_shape;
-    NADim q_shape;
-    NADim kv_shape;
-    if constexpr (IsVarlen) {
-      qkv_shape = params.token_layout_ptr[get<2, 1>(blk_coord_q)];
-      // Really hacky way to get the correct q_shape and kv_shape.
-      // q_shape and kv_shape are shared across different dilation groups of the
-      // same input. But qkv_shape itself might be different, and if that
-      // difference is within 1 point from a tile shape boundary.... the first
-      // dilation group, regardless of dimensionality, has the maximum size,
-      // which gives us the correct q_shape and kv_shape values.
-      auto max_idx = (get<2, 1>(blk_coord_q) / params.num_dilation_groups) *
-          params.num_dilation_groups;
-      auto qkv_shape_max = params.token_layout_ptr[max_idx];
-      q_shape = tuple_mul(ceil_div(qkv_shape_max, QTileShape{}), QTileShape{});
-      kv_shape =
-          tuple_mul(ceil_div(qkv_shape_max, KVTileShape{}), KVTileShape{});
-    } else {
-      if (params.requires_qkv_fixup) {
-        qkv_shape = Mask{}.correct_qkv_shape(
-            problem_shape,
-            params.qkv_shape,
-            blk_coord_in,
-            params.dilation,
-            params.num_dilation_groups);
-      } else if (params.is_dilated) {
-        qkv_shape = ceil_div(params.qkv_shape, params.dilation);
-      } else {
-        qkv_shape = params.qkv_shape;
-      }
-      q_shape = params.q_shape;
-      kv_shape = params.kv_shape;
-    }
+    auto
+        [qkv_shape,
+         q_shape,
+         kv_shape,
+         na_params,
+         is_fully_block_sparse,
+         has_padding] =
+            update_params<IsVarlen, /* IsBackward = */ false, Mask>(
+                params, blk_coord_in, problem_shape);
 
-    auto [kv_start, num_tiles] = Mask{}.get_trip_count(
-        blk_coord_in,
-        MultiDimTileShape{},
-        q_shape,
-        qkv_shape,
-        params.na_params);
+    auto [kv_start, num_tiles] =
+        Mask{}.get_trip_count(blk_coord_in, q_shape, qkv_shape, na_params);
 
     int mask_tile_count = size(num_tiles);
 

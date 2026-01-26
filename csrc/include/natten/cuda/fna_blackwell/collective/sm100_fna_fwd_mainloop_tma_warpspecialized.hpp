@@ -82,7 +82,6 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
   using NADim = NADim_;
   using QTileShape = QTileShape_;
   using KVTileShape = KVTileShape_;
-  using MultiDimTileShape = cute::tuple<QTileShape, KVTileShape>;
 
   static_assert(
       size(QTileShape{}) == get<0>(TileShape{}),
@@ -273,8 +272,20 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       ProblemShape const& problem_shape,
       Arguments const& args) {
     if constexpr (IsVarlen) {
-      return tuple_leq(
-          args.load.stride, args.load.window_size); // This is a joke :)
+      // variable-dilations needs the extra batch map tensor
+      if (args.load.dilations_ptr != nullptr &&
+          args.load.batch_map_ptr == nullptr) {
+        return false;
+      }
+
+      // NA parameter verification is done during metadata construction
+      // (host-side, ahead of time)
+      if (args.load.strides_ptr == nullptr &&
+          args.load.window_sizes_ptr == nullptr) {
+        return tuple_leq(args.load.stride, args.load.window_size);
+      }
+
+      return args.load.token_layout_ptr != nullptr;
     } else {
       return evenly_divides(args.load.q_shape, QTileShape{}) &&
           evenly_divides(args.load.kv_shape, KVTileShape{}) &&
@@ -354,39 +365,18 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
     auto pipeline_q_release_state = pipeline_q_consumer_state;
     auto pipeline_kv_release_state = pipeline_kv_consumer_state;
 
-    NADim qkv_shape;
-    NADim q_shape;
-    if constexpr (IsVarlen) {
-      qkv_shape = params.load.token_layout_ptr[get<2, 1>(blk_coord)];
-      // Really hacky way to get the correct q_shape:
-      // the first dilation group, regardless of dimensionality, has the maximum
-      // size, which gives us the correct q_shape value.
-      auto max_idx = (get<2, 1>(blk_coord) / params.load.num_dilation_groups) *
-          params.load.num_dilation_groups;
-      auto qkv_shape_max = params.load.token_layout_ptr[max_idx];
-      q_shape = tuple_mul(ceil_div(qkv_shape_max, QTileShape{}), QTileShape{});
-    } else {
-      if (params.load.requires_qkv_fixup) {
-        qkv_shape = Mask{}.correct_qkv_shape(
-            problem_shape,
-            params.load.qkv_shape,
-            blk_coord,
-            params.load.dilation,
-            params.load.num_dilation_groups);
-      } else if (params.load.is_dilated) {
-        qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
-      } else {
-        qkv_shape = params.load.qkv_shape;
-      }
-      q_shape = params.load.q_shape;
-    }
+    auto
+        [qkv_shape,
+         q_shape,
+         kv_shape,
+         na_params,
+         is_fully_block_sparse,
+         has_padding] =
+            update_params<IsVarlen, /* IsBackward = */ false, Mask>(
+                params.load, blk_coord, problem_shape);
 
-    int mask_tile_count = size(get<1>(Mask{}.get_trip_count(
-        blk_coord,
-        MultiDimTileShape{},
-        q_shape,
-        qkv_shape,
-        params.load.na_params)));
+    int mask_tile_count = size(get<1>(
+        Mask{}.get_trip_count(blk_coord, q_shape, qkv_shape, na_params)));
 
     typename CollectiveMmaQK::TiledMma mma_qk;
     ThrMMA thr_mma_qk = mma_qk.get_slice(0);
@@ -638,14 +628,16 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       class BlkCoord,
       class CoordTensor,
       class ProblemShape,
-      class NADim>
+      class NADim,
+      class NAParams>
   CUTLASS_DEVICE auto softmax_step(
       NADim const& qkv_shape,
       bool is_fully_block_sparse,
-      bool has_kv_padding,
+      bool has_padding,
       NADim const& kv_offset,
       NADim const& kv_tiles,
       NADim const& q_shape,
+      NAParams const& na_params,
       float& row_max,
       float& row_sum,
       Stage stage,
@@ -722,19 +714,17 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
         Mask{}.apply_mask(
             tTMEM_LOADrS,
             tTMEM_LOADcS,
-            MultiDimTileShape{},
             q_shape,
             qkv_shape,
-            params.load.na_params,
+            na_params,
             kv_offset,
             kv_tiles);
-      } else if (has_kv_padding) {
+      } else if (has_padding) {
         Mask{}.apply_padded_mask(
             tTMEM_LOADrS,
             tTMEM_LOADcS,
-            MultiDimTileShape{},
             qkv_shape,
-            params.load.na_params,
+            na_params,
             kv_offset,
             kv_tiles);
       }
@@ -896,66 +886,18 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       PipelineC& pipeline_c,
       typename PipelineC::PipelineState& pipeline_c_producer_state,
       OrderBarrierSoftmax& order_s) {
-    NADim qkv_shape;
-    NADim q_shape;
-    bool is_fully_block_sparse = false;
-    bool has_kv_padding = false;
-    if constexpr (IsVarlen) {
-      qkv_shape = params.load.token_layout_ptr[get<2, 1>(blk_coord)];
+    auto
+        [qkv_shape,
+         q_shape,
+         kv_shape,
+         na_params,
+         is_fully_block_sparse,
+         has_padding] =
+            update_params<IsVarlen, /* IsBackward = */ false, Mask>(
+                params.load, blk_coord, problem_shape);
 
-      // Really hacky way to get the correct q_shape:
-      // the first dilation group, regardless of dimensionality, has the maximum
-      // size, which gives us the correct q_shape value.
-      auto max_idx = (get<2, 1>(blk_coord) / params.load.num_dilation_groups) *
-          params.load.num_dilation_groups;
-      auto qkv_shape_max = params.load.token_layout_ptr[max_idx];
-      q_shape = tuple_mul(ceil_div(qkv_shape_max, QTileShape{}), QTileShape{});
-
-      is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
-          qkv_shape,
-          get<0>(params.load.na_params),
-          get<3>(params.load.na_params),
-          QTileShape{},
-          KVTileShape{});
-      has_kv_padding = not evenly_divides(qkv_shape, KVTileShape{});
-    } else {
-      is_fully_block_sparse = params.load.is_fully_block_sparse;
-      has_kv_padding = params.load.has_kv_padding;
-      if (params.load.requires_qkv_fixup) {
-        qkv_shape = Mask{}.correct_qkv_shape(
-            problem_shape,
-            params.load.qkv_shape,
-            blk_coord,
-            params.load.dilation,
-            params.load.num_dilation_groups);
-        is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
-            qkv_shape,
-            get<0>(params.load.na_params),
-            get<3>(params.load.na_params),
-            QTileShape{},
-            KVTileShape{});
-        has_kv_padding = not evenly_divides(qkv_shape, KVTileShape{});
-      } else if (params.load.is_dilated) {
-        qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
-        is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
-            qkv_shape,
-            get<0>(params.load.na_params),
-            get<3>(params.load.na_params),
-            QTileShape{},
-            KVTileShape{});
-        has_kv_padding = not evenly_divides(qkv_shape, KVTileShape{});
-      } else {
-        qkv_shape = params.load.qkv_shape;
-      }
-      q_shape = params.load.q_shape;
-    }
-
-    auto [kv_offset, num_tiles] = Mask{}.get_trip_count(
-        blk_coord,
-        MultiDimTileShape{},
-        q_shape,
-        qkv_shape,
-        params.load.na_params);
+    auto [kv_offset, num_tiles] =
+        Mask{}.get_trip_count(blk_coord, q_shape, qkv_shape, na_params);
     int mask_tile_count = size(num_tiles);
 
     ElementQK row_max = -INFINITY;
@@ -976,10 +918,11 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       softmax_step<true /* need_apply_mask */>(
           qkv_shape,
           is_fully_block_sparse,
-          has_kv_padding,
+          has_padding,
           kv_offset,
           num_tiles,
           q_shape,
+          na_params,
           row_max,
           row_sum,
           stage,
@@ -1215,39 +1158,18 @@ struct Sm100FnaFwdMainloopTmaWarpspecialized {
       PipelineE& pipeline_epi,
       typename PipelineE::PipelineState& pipeline_epi_producer_state,
       CollectiveEpilogue& epilogue) {
-    NADim qkv_shape;
-    NADim q_shape;
-    if constexpr (IsVarlen) {
-      qkv_shape = params.load.token_layout_ptr[get<2, 1>(blk_coord)];
-      // Really hacky way to get the correct q_shape:
-      // the first dilation group, regardless of dimensionality, has the maximum
-      // size, which gives us the correct q_shape value.
-      auto max_idx = (get<2, 1>(blk_coord) / params.load.num_dilation_groups) *
-          params.load.num_dilation_groups;
-      auto qkv_shape_max = params.load.token_layout_ptr[max_idx];
-      q_shape = tuple_mul(ceil_div(qkv_shape_max, QTileShape{}), QTileShape{});
-    } else {
-      if (params.load.requires_qkv_fixup) {
-        qkv_shape = Mask{}.correct_qkv_shape(
-            problem_shape,
-            params.load.qkv_shape,
-            blk_coord,
-            params.load.dilation,
-            params.load.num_dilation_groups);
-      } else if (params.load.is_dilated) {
-        qkv_shape = ceil_div(params.load.qkv_shape, params.load.dilation);
-      } else {
-        qkv_shape = params.load.qkv_shape;
-      }
-      q_shape = params.load.q_shape;
-    }
+    auto
+        [qkv_shape,
+         q_shape,
+         kv_shape,
+         na_params,
+         is_fully_block_sparse,
+         has_padding] =
+            update_params<IsVarlen, /* IsBackward = */ false, Mask>(
+                params.load, blk_coord, problem_shape);
 
-    int mask_tile_count = size(get<1>(Mask{}.get_trip_count(
-        blk_coord,
-        MultiDimTileShape{},
-        q_shape,
-        qkv_shape,
-        params.load.na_params)));
+    int mask_tile_count = size(get<1>(
+        Mask{}.get_trip_count(blk_coord, q_shape, qkv_shape, na_params)));
 
     int thread_idx = threadIdx.x % (4 * cutlass::NumThreadsPerWarp);
 

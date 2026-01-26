@@ -111,7 +111,7 @@ struct KernelForward {
           StrideQ,
           StrideK,
           StrideV,
-          NeighborhoodAttentionMask<Causal>,
+          NeighborhoodAttentionMask<QTileShape, KVTileShape, Causal>,
           QTileShape,
           KVTileShape,
           NADim,
@@ -129,6 +129,7 @@ struct KernelForward {
           TileScheduler>>;
 
   using Arguments = typename Operation::Arguments;
+  using BatchMap = typename Operation::Kernel::BatchMap;
 
   Operation op;
 
@@ -158,6 +159,11 @@ struct KernelForward {
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       void* ptr_token_layouts,
+      void* ptr_batch_map,
+      // var-param parameters
+      void* ptr_window_sizes,
+      void* ptr_strides,
+      void* ptr_dilations,
       // init/launch params
       int device_id) {
     auto problem_shape_regular = cute::make_tuple(
@@ -242,7 +248,14 @@ struct KernelForward {
          window_size,
          stride,
          dilation,
-         reinterpret_cast<NADim*>(ptr_token_layouts), // varlen only
+         // varlen (var-sized)
+         reinterpret_cast<NADim*>(ptr_token_layouts),
+         reinterpret_cast<BatchMap*>(ptr_batch_map),
+         // var-param
+         reinterpret_cast<NADim*>(ptr_window_sizes),
+         reinterpret_cast<NADim*>(ptr_strides),
+         reinterpret_cast<NADim*>(ptr_dilations),
+         //
          attn_scale},
         {reinterpret_cast<Element*>(ptr_O),
          stride_O,

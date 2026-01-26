@@ -130,15 +130,22 @@ struct FmhaKernelBwdConvert {
       StrideDest const& stride_dest,
       Count const& count,
       int d_dim) {
-    auto ptr_src_bh = ptr_src + get<2, 0, 0>(stride_src) * blockIdx.y +
-        get<2, 1>(stride_src) * blockIdx.z;
-    auto ptr_dest_bh = ptr_dest + get<2, 0, 0>(stride_dest) * blockIdx.y +
-        get<2, 1>(stride_dest) * blockIdx.z;
+    auto ptr_src_bh = ptr_src +
+        (static_cast<int64_t>(get<2, 0, 0>(stride_src)) *
+         static_cast<int64_t>(blockIdx.y)) +
+        (static_cast<int64_t>(get<2, 1>(stride_src)) *
+         static_cast<int64_t>(blockIdx.z));
+    auto ptr_dest_bh = ptr_dest +
+        (static_cast<int64_t>(get<2, 0, 0>(stride_dest)) *
+         static_cast<int64_t>(blockIdx.y)) +
+        (static_cast<int64_t>(get<2, 1>(stride_dest)) *
+         static_cast<int64_t>(blockIdx.z));
 
     int seqlen = count;
     if constexpr (is_variable_length_v<decltype(count)>) {
       int offset = count.cumulative_length[blockIdx.z];
-      ptr_dest_bh += offset * get<0>(stride_dest);
+      ptr_dest_bh += static_cast<int64_t>(offset) *
+          static_cast<int64_t>(get<0>(stride_dest));
       seqlen = count.cumulative_length[blockIdx.z + 1] - offset;
     }
 
@@ -147,8 +154,12 @@ struct FmhaKernelBwdConvert {
       int idx_s = idx_s_t + kBlockSeq * blockIdx.x;
       if (idx_s >= seqlen)
         continue;
-      auto ptr_src_bhs = ptr_src_bh + idx_s * get<0>(stride_src);
-      auto ptr_dest_bhs = ptr_dest_bh + idx_s * get<0>(stride_dest);
+      auto ptr_src_bhs = ptr_src_bh +
+          (static_cast<int64_t>(idx_s) *
+           static_cast<int64_t>(get<0>(stride_src)));
+      auto ptr_dest_bhs = ptr_dest_bh +
+          (static_cast<int64_t>(idx_s) *
+           static_cast<int64_t>(get<0>(stride_dest)));
 
       for (int idx_d = threadIdx.x * kElementsPerLoad; idx_d < d_dim;
            idx_d += kElementsPerLoad * kNumThreadsD) {

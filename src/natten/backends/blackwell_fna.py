@@ -22,7 +22,7 @@
 #################################################################################################
 
 import functools
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 from torch import Tensor
 from torch.amp import custom_bwd, custom_fwd
@@ -47,8 +47,6 @@ from natten.backends.configs.cutlass_blackwell import (
     check_cutlass_blackwell_fna_forward_config_tensorless,
 )
 from natten.token_permute import (
-    generate_fna_varlen_metadata,
-    get_na_dim,
     token_permute_operation,
     token_permute_varlen_operation,
     token_unpermute_operation,
@@ -160,8 +158,13 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
                 None,
                 None,
                 None,
+                None,
                 0,
                 0,
+                # var-param
+                None,
+                None,
+                None,
             )
 
             # Token un-permute begin
@@ -277,8 +280,13 @@ def make_cutlass_blackwell_fna_autograd_fn(na_dim):
                 None,
                 None,
                 None,
+                None,
                 0,
                 0,
+                # var-param
+                None,
+                None,
+                None,
             )
 
             # Token un-permute begin
@@ -341,17 +349,18 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
             query: Tensor,
             key: Tensor,
             value: Tensor,
-            kernel_size: DimensionType,
-            stride: DimensionType,
-            dilation: DimensionType,
-            is_causal: CausalArgType,
             scale: float,
             run_persistent_kernel: bool,
             varlen_metadata: dict,
         ) -> Tuple[Tensor, Tensor]:
-            kernel_size, stride, dilation, is_causal = check_all_args(
-                na_dim, kernel_size, stride, dilation, is_causal
-            )
+            kernel_size = varlen_metadata["kernel_size"]
+            stride = varlen_metadata["stride"]
+            dilation = varlen_metadata["dilation"]
+            is_causal = varlen_metadata["is_causal"]
+            # var-param (optional)
+            kernel_sizes = varlen_metadata["kernel_sizes"]
+            strides = varlen_metadata["strides"]
+            dilations = varlen_metadata["dilations"]
 
             q_tile_shape, kv_tile_shape = (
                 varlen_metadata["q_tile_shape"],
@@ -372,6 +381,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             key_perm = token_permute_varlen_operation(
@@ -379,6 +389,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_kv,
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             value_perm = token_permute_varlen_operation(
@@ -386,15 +397,17 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_kv,
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
 
-            cumulative_seqlen_Q = metadata_q["offsets_post_permute"]
-            cumulative_seqlen_KV = metadata_kv["offsets_post_permute"]
-            # this should be identical for q and kv
-            token_layouts = metadata_q["token_layouts_post_permute"]
+            cumulative_seqlen_Q = metadata_q["offsets_kernel"]
+            cumulative_seqlen_KV = metadata_kv["offsets_kernel"]
             max_seqlen_Q = metadata_q["max_seqlen_kernel"]
             max_seqlen_KV = metadata_kv["max_seqlen_kernel"]
+            # TODO: these two should be identical for q and kv, make them once?
+            token_layouts = metadata_q["token_layouts"]
+            batch_map = metadata_q["batch_map"]
             # Token permute end
 
             query_perm = query_perm.contiguous()
@@ -420,8 +433,13 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 cumulative_seqlen_Q,
                 cumulative_seqlen_KV,
                 token_layouts,
+                batch_map,
                 max_seqlen_Q,
                 max_seqlen_KV,
+                # var-param
+                kernel_sizes,
+                strides,
+                dilations,
             )
 
             # Token un-permute begin
@@ -430,6 +448,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
                 # in case there's any extra padding
                 output_seqlen=query.shape[1],
@@ -439,13 +458,16 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
                 # in case there's any extra padding
                 output_seqlen=query.shape[1],
             ).squeeze(-1)
             # Token un-permute end
 
-            ctx.save_for_backward(query, key, value, logsumexp, output)
+            ctx.save_for_backward(
+                query, key, value, logsumexp, output, kernel_sizes, strides, dilations
+            )
             ctx.kernel_size = kernel_size
             ctx.stride = stride
             ctx.dilation = dilation
@@ -464,12 +486,10 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
-            NoneType,
-            NoneType,
-            NoneType,
-            NoneType,
         ]:
-            query, key, value, logsumexp, output = ctx.saved_tensors
+            query, key, value, logsumexp, output, kernel_sizes, strides, dilations = (
+                ctx.saved_tensors
+            )
             kernel_size, stride, dilation, is_causal, scale = (
                 ctx.kernel_size,
                 ctx.stride,
@@ -497,6 +517,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             output_perm = token_permute_varlen_operation(
@@ -504,6 +525,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             d_output_perm = token_permute_varlen_operation(
@@ -511,6 +533,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             logsumexp_perm = token_permute_varlen_operation(
@@ -518,6 +541,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             key_perm = token_permute_varlen_operation(
@@ -525,6 +549,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_kv,
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
             value_perm = token_permute_varlen_operation(
@@ -532,15 +557,18 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_kv,
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
             )
 
-            cumulative_seqlen_Q = metadata_q["offsets_post_permute"]
-            cumulative_seqlen_KV = metadata_kv["offsets_post_permute"]
+            cumulative_seqlen_Q = metadata_q["offsets_kernel"]
+            cumulative_seqlen_KV = metadata_kv["offsets_kernel"]
             # this should be identical for q and kv
-            token_layouts = metadata_q["token_layouts_post_permute"]
             max_seqlen_Q = metadata_q["max_seqlen_kernel"]
             max_seqlen_KV = metadata_kv["max_seqlen_kernel"]
+            # TODO: these two should be identical for q and kv, make them once?
+            token_layouts = metadata_q["token_layouts"]
+            batch_map = metadata_q["batch_map"]
             # Token permute end
 
             query_perm = query_perm.contiguous()
@@ -571,8 +599,13 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 cumulative_seqlen_Q,
                 cumulative_seqlen_KV,
                 token_layouts,
+                batch_map,
                 max_seqlen_Q,
                 max_seqlen_KV,
+                # var-param
+                kernel_sizes,
+                strides,
+                dilations,
             )
 
             # Token un-permute begin
@@ -581,6 +614,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_q,
                 tile_shape=q_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
                 # in case there's any extra padding
                 output_seqlen=query.shape[1],
@@ -590,6 +624,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_kv,
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
                 # in case there's any extra padding
                 output_seqlen=key.shape[1],
@@ -599,6 +634,7 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 metadata=metadata_kv,
                 tile_shape=kv_tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=True,
                 # in case there's any extra padding
                 output_seqlen=value.shape[1],
@@ -613,10 +649,6 @@ def make_cutlass_blackwell_fna_varlen_autograd_fn(na_dim):
                 d_query,
                 d_key,
                 d_value,
-                None,
-                None,
-                None,
-                None,
                 None,
                 None,
                 None,
@@ -825,13 +857,7 @@ def cutlass_blackwell_fna_varlen_generic(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-    kernel_size: DimensionTypeOrDed,
-    stride: DimensionTypeOrDed = 1,
-    dilation: DimensionTypeOrDed = 1,
-    is_causal: Optional[CausalArgTypeOrDed] = False,
-    # Varlen-specific args: at least one must be specified
-    token_layout_list: Optional[List[DimensionType]] = None,
-    varlen_metadata: Optional[dict] = None,
+    varlen_metadata: dict,  # provides all the necessary parameters, already verified
     #
     scale: Optional[float] = None,
     q_tile_shape: Optional[DimensionType] = None,
@@ -842,43 +868,30 @@ def cutlass_blackwell_fna_varlen_generic(
     return_lse: bool = False,
 ) -> Union[Tensor, Tuple[Tensor, Tensor]]:
 
-    # get_na_dim acts as a type verifier
-    na_dim = get_na_dim(
-        varlen_metadata=varlen_metadata, token_layout_list=token_layout_list
-    )
-    assert na_dim in [1, 2, 3]
+    if varlen_metadata is None:
+        raise ValueError("'varlen_metadata' must be passed.")
 
     requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
 
-    kernel_size, stride, dilation, is_causal = check_all_args(
-        na_dim, kernel_size, stride, dilation, is_causal
+    verify_fna_varlen_metadata(
+        query=query,
+        key=key,
+        value=value,
+        metadata=varlen_metadata,
+        requires_grad=requires_grad,
     )
 
-    if varlen_metadata is not None:
-        verify_fna_varlen_metadata(
-            query=query,
-            key=key,
-            value=value,
-            metadata=varlen_metadata,
-            is_backward=False,
-        )
-        if requires_grad:
-            verify_fna_varlen_metadata(
-                query=query,
-                key=key,
-                value=value,
-                metadata=varlen_metadata,
-                is_backward=True,
-            )
-        # We need to verify the tile shapes used to generate the metadata are compatible
-        q_tile_shape, kv_tile_shape = (
-            varlen_metadata["q_tile_shape"],
-            varlen_metadata["kv_tile_shape"],
-        )
-        backward_q_tile_shape, backward_kv_tile_shape = (
-            varlen_metadata["q_tile_shape_bwd"],
-            varlen_metadata["kv_tile_shape_bwd"],
-        )
+    na_dim = varlen_metadata["na_dim"]
+
+    # We need to verify the tile shapes used to generate the metadata are compatible
+    q_tile_shape, kv_tile_shape = (
+        varlen_metadata["q_tile_shape"],
+        varlen_metadata["kv_tile_shape"],
+    )
+    backward_q_tile_shape, backward_kv_tile_shape = (
+        varlen_metadata["q_tile_shape_bwd"],
+        varlen_metadata["kv_tile_shape_bwd"],
+    )
 
     q_tile_shape, kv_tile_shape = check_cutlass_blackwell_fna_forward_config_tensorless(
         na_dim=na_dim,
@@ -903,22 +916,6 @@ def cutlass_blackwell_fna_varlen_generic(
     else:
         backward_q_tile_shape, backward_kv_tile_shape = None, None
 
-    if varlen_metadata is None and token_layout_list is not None:
-        varlen_metadata = generate_fna_varlen_metadata(
-            token_layout_list=token_layout_list,
-            q_tile_shape=q_tile_shape,
-            kv_tile_shape=kv_tile_shape,
-            backward_q_tile_shape=backward_q_tile_shape,
-            backward_kv_tile_shape=backward_kv_tile_shape,
-            device=query.device,
-            flip_tiled_dims=True,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilation=dilation,
-            is_causal=is_causal,
-        )
-    assert varlen_metadata is not None
-
     # We use FMHA verifiers here because tensors are sequence-packed
     fmha_tensor_checks(
         query,
@@ -932,7 +929,7 @@ def cutlass_blackwell_fna_varlen_generic(
     assert can_run_cutlass_blackwell_fna(query, key, value, raise_error=True)
 
     # kernel_size, stride, dilation, and is_causal are verified in
-    # generate_fna_varlen_metadata
+    # generate_fna_varlen_metadata, so are potential variable parameters
 
     scale = scale or query.shape[-1] ** -0.5
 
@@ -940,10 +937,6 @@ def cutlass_blackwell_fna_varlen_generic(
         query,
         key,
         value,
-        kernel_size,
-        stride,
-        dilation,
-        is_causal,
         scale,
         run_persistent_kernel,
         varlen_metadata,

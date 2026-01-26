@@ -64,6 +64,26 @@ template <
     class NADim>
 class FnaBwdSm100 {
  public:
+  using OperationSumOdO = cutlass::fna::device::FnaSm100<
+      cutlass::fmha::kernel::
+          FmhaKernelBwdSumOdO<ProblemShape, Element, ElementAccumulator>>;
+  using OperationConvert = cutlass::fna::device::FnaSm100<
+      cutlass::fmha::kernel::
+          FmhaKernelBwdConvert<ProblemShape, Element, ElementAccumulator>>;
+
+  using Operation = cutlass::fna::device::FnaSm100<
+      cutlass::fna::kernel::Sm100FnaBwdKernelTmaWarpSpecialized<
+          ProblemShape,
+          Element,
+          ElementAccumulator,
+          TileShape,
+          Mask,
+          QTileShape,
+          KVTileShape,
+          NADim>>;
+  using Kernel = typename Operation::Kernel;
+  using BatchMap = typename Kernel::BatchMap;
+
   /// Argument structure: User API
   struct Arguments {
     // Q K D D_VO HB
@@ -107,31 +127,18 @@ class FnaBwdSm100 {
     NADim window_size;
     NADim stride;
     NADim dilation;
+    // varlen (var-sized)
     NADim* ptr_token_layouts;
+    BatchMap* ptr_batch_map;
+    // var-param
+    NADim* ptr_window_sizes;
+    NADim* ptr_strides;
+    NADim* ptr_dilations;
 
     ElementAccumulator softmax_scale;
 
     cutlass::KernelHardwareInfo hw_info;
   };
-
-  using OperationSumOdO = cutlass::fna::device::FnaSm100<
-      cutlass::fmha::kernel::
-          FmhaKernelBwdSumOdO<ProblemShape, Element, ElementAccumulator>>;
-  using OperationConvert = cutlass::fna::device::FnaSm100<
-      cutlass::fmha::kernel::
-          FmhaKernelBwdConvert<ProblemShape, Element, ElementAccumulator>>;
-
-  using Operation = cutlass::fna::device::FnaSm100<
-      cutlass::fna::kernel::Sm100FnaBwdKernelTmaWarpSpecialized<
-          ProblemShape,
-          Element,
-          ElementAccumulator,
-          TileShape,
-          Mask,
-          QTileShape,
-          KVTileShape,
-          NADim>>;
-  using Kernel = typename Operation::Kernel;
 
   struct Params {
     OperationSumOdO op_sum_OdO;
@@ -220,13 +227,21 @@ class FnaBwdSm100 {
     return typename Operation::Arguments{
         args.problem_shape,
         // FNA args
-        {args.q_shape,
-         args.kv_shape,
-         args.qkv_shape,
-         args.window_size,
-         args.stride,
-         args.dilation,
-         args.ptr_token_layouts},
+        {
+            args.q_shape,
+            args.kv_shape,
+            args.qkv_shape,
+            args.window_size,
+            args.stride,
+            args.dilation,
+            // varlen (var-sized)
+            args.ptr_token_layouts,
+            args.ptr_batch_map,
+            // var-param
+            args.ptr_window_sizes,
+            args.ptr_strides,
+            args.ptr_dilations,
+        },
         {args.ptr_Q,
          args.stride_Q,
          args.ptr_K,

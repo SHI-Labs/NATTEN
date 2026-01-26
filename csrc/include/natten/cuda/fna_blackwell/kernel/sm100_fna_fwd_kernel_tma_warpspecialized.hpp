@@ -99,6 +99,8 @@ template <
     class TileScheduler,
     class KernelSchedule = Sm100FnaCtxKernelWarpspecializedSchedule>
 struct Sm100FnaFwdKernelTmaWarpspecialized {
+  using BatchMap = typename CollectiveMainloop::Load::BatchMap;
+
   using TileShape = typename CollectiveMainloop::TileShape;
   using ProblemShape = ProblemShapeIn;
 

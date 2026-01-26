@@ -47,6 +47,7 @@ template <
     int kElementsPerLoad = 4>
 struct TokenPermuteVarlenKernel {
   using OffsetType = ElementOffset;
+  using OffsetTypeInternal = uint64_t;
 
   using TokenLayout =
       cute::conditional_t<IsUnpermute, TokenLayoutDst, TokenLayoutSrc>;
@@ -70,8 +71,9 @@ struct TokenPermuteVarlenKernel {
     int head_dim;
 
     TokenLayout* token_layout_array; // size: batch * size(dilation)
-    OffsetType* ptr_offsets_pre_permute; // size: batch + 1
-    OffsetType* ptr_offsets_post_permute; // size: batch * size(dilation) + 1
+    TokenLayout* dilation_array; // size: batch * size(dilation)
+    OffsetType* ptr_offsets_original; // size: batch + 1
+    OffsetType* ptr_offsets_tokperm; // size: batch + 1
 
     ElementSrc* ptr_src;
     ElementDst* ptr_dst;
@@ -89,8 +91,9 @@ struct TokenPermuteVarlenKernel {
     int head_dim;
 
     TokenLayout* token_layout_array;
-    OffsetType* ptr_offsets_pre_permute;
-    OffsetType* ptr_offsets_post_permute;
+    TokenLayout* dilation_array;
+    OffsetType* ptr_offsets_original;
+    OffsetType* ptr_offsets_tokperm;
 
     ElementSrc* ptr_src;
     ElementDst* ptr_dst;
@@ -99,9 +102,10 @@ struct TokenPermuteVarlenKernel {
     TokenLayout dilation;
     bool flip_tiled_dims;
 
-    int num_dilation_groups;
-    OffsetType stride_seq = static_cast<OffsetType>(heads * head_dim);
-    OffsetType stride_heads = static_cast<OffsetType>(head_dim);
+    bool has_variable_dilations;
+    OffsetTypeInternal stride_seq =
+        static_cast<OffsetTypeInternal>(heads * head_dim);
+    OffsetTypeInternal stride_heads = static_cast<OffsetTypeInternal>(head_dim);
   };
 
   static const int MinBlocksPerMultiprocessor = 1;
@@ -147,8 +151,9 @@ struct TokenPermuteVarlenKernel {
         args.head_dim,
         //
         args.token_layout_array,
-        args.ptr_offsets_pre_permute,
-        args.ptr_offsets_post_permute,
+        args.dilation_array,
+        args.ptr_offsets_original,
+        args.ptr_offsets_tokperm,
         //
         args.ptr_src,
         args.ptr_dst,
@@ -157,14 +162,14 @@ struct TokenPermuteVarlenKernel {
         args.dilation,
         args.flip_tiled_dims,
         //
-        size(args.dilation),
-        static_cast<OffsetType>(args.heads * args.head_dim),
-        static_cast<OffsetType>(args.head_dim)};
+        args.dilation_array != nullptr,
+        static_cast<OffsetTypeInternal>(args.heads * args.head_dim),
+        static_cast<OffsetTypeInternal>(args.head_dim)};
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
-    OffsetType batch_offset_src = 0;
-    OffsetType batch_offset_dst = 0;
+    OffsetTypeInternal batch_offset_src = 0;
+    OffsetTypeInternal batch_offset_dst = 0;
 
     ProblemShapeSrc problem_shape_src;
     ProblemShapeDst problem_shape_dst;
@@ -172,13 +177,18 @@ struct TokenPermuteVarlenKernel {
     StrideDst stride_dst;
 
     TokenLayout token_layout = params.token_layout_array[blockIdx.z];
+    TokenLayout dilation = params.dilation;
+    if (params.has_variable_dilations) {
+      dilation = params.dilation_array[blockIdx.z];
+    }
     TokenLayout rest =
-        ceil_div(ceil_div(token_layout, params.tile_shape), params.dilation);
+        ceil_div(ceil_div(token_layout, params.tile_shape), dilation);
 
     if constexpr (IsUnpermute) {
-      batch_offset_src = params.ptr_offsets_post_permute
-                             [blockIdx.z * params.num_dilation_groups];
-      batch_offset_dst = params.ptr_offsets_pre_permute[blockIdx.z];
+      batch_offset_src = static_cast<OffsetTypeInternal>(
+          params.ptr_offsets_tokperm[blockIdx.z]);
+      batch_offset_dst = static_cast<OffsetTypeInternal>(
+          params.ptr_offsets_original[blockIdx.z]);
 
       problem_shape_dst =
           cute::make_tuple(token_layout, params.heads * params.head_dim);
@@ -187,7 +197,7 @@ struct TokenPermuteVarlenKernel {
       auto layout_src = make_token_permuted_layout_varlen(
           rest,
           params.tile_shape,
-          params.dilation,
+          dilation,
           params.flip_tiled_dims,
           get<1>(problem_shape_dst));
 
@@ -195,9 +205,10 @@ struct TokenPermuteVarlenKernel {
       stride_src = layout_src.stride();
 
     } else {
-      batch_offset_src = params.ptr_offsets_pre_permute[blockIdx.z];
-      batch_offset_dst = params.ptr_offsets_post_permute
-                             [blockIdx.z * params.num_dilation_groups];
+      batch_offset_src = static_cast<OffsetTypeInternal>(
+          params.ptr_offsets_original[blockIdx.z]);
+      batch_offset_dst = static_cast<OffsetTypeInternal>(
+          params.ptr_offsets_tokperm[blockIdx.z]);
 
       problem_shape_src =
           cute::make_tuple(token_layout, params.heads * params.head_dim);
@@ -206,7 +217,7 @@ struct TokenPermuteVarlenKernel {
       auto layout_dst = make_token_permuted_layout_varlen(
           rest,
           params.tile_shape,
-          params.dilation,
+          dilation,
           params.flip_tiled_dims,
           get<1>(problem_shape_src));
 
@@ -214,10 +225,12 @@ struct TokenPermuteVarlenKernel {
       stride_dst = layout_dst.stride();
     }
 
-    auto ptr_src_bh = params.ptr_src + params.stride_seq * batch_offset_src +
-        params.stride_heads * blockIdx.y;
-    auto ptr_dst_bh = params.ptr_dst + params.stride_seq * batch_offset_dst +
-        params.stride_heads * blockIdx.y;
+    auto ptr_src_bh = params.ptr_src +
+        (params.stride_seq * batch_offset_src +
+         params.stride_heads * static_cast<OffsetTypeInternal>(blockIdx.y));
+    auto ptr_dst_bh = params.ptr_dst +
+        (params.stride_seq * batch_offset_dst +
+         params.stride_heads * static_cast<OffsetTypeInternal>(blockIdx.y));
 
     auto token_layout_src =
         make_layout(get<0>(problem_shape_src), get<0>(stride_src));
@@ -238,11 +251,9 @@ struct TokenPermuteVarlenKernel {
 
       TokenLayoutSrc crd_src;
       if constexpr (IsUnpermute) {
-        crd_src =
-            unperm2perm(crd_dst, rest, params.tile_shape, params.dilation);
+        crd_src = unperm2perm(crd_dst, rest, params.tile_shape, dilation);
       } else {
-        crd_src =
-            perm2unperm(crd_dst, rest, params.tile_shape, params.dilation);
+        crd_src = perm2unperm(crd_dst, rest, params.tile_shape, dilation);
       }
 
       pred = elem_less(crd_src, src_shape);

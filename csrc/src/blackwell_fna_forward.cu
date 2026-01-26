@@ -76,8 +76,13 @@ void blackwell_fna_generic_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV) {
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations) {
   static_assert(
       std::tuple_size_v<StdNADim> > 0 && std::tuple_size_v<StdNADim> < 4);
   static constexpr int kNADim = std::tuple_size_v<StdNADim>;
@@ -99,10 +104,14 @@ void blackwell_fna_generic_forward(
   // varlen
   bool is_varlen = cumulative_seqlen_Q.has_value() ||
       cumulative_seqlen_KV.has_value() || token_layouts.has_value();
+  bool is_varparam =
+      kernel_sizes.has_value() || strides.has_value() || dilations.has_value();
 
   at::cuda::OptionalCUDAGuard device_guard(query.device());
 
-  CheckArgs(kernel_size, stride_, dilation_);
+  if (not is_varparam) {
+    CheckArgs(kernel_size, stride_, dilation_);
+  }
   CheckIfPropertiesMatch(query, key, value);
 
   // NOTE (alih): q and kv might have slightly different shapes because we're
@@ -218,6 +227,12 @@ void blackwell_fna_generic_forward(
   void* ptr_cumulative_seqlen_Q = nullptr;
   void* ptr_cumulative_seqlen_KV = nullptr;
   void* ptr_token_layouts = nullptr;
+  void* ptr_batch_map = nullptr;
+
+  void* ptr_window_sizes = nullptr;
+  void* ptr_strides = nullptr;
+  void* ptr_dilations = nullptr;
+
   if (is_varlen) {
     TORCH_CHECK(
         cumulative_seqlen_Q.has_value() && cumulative_seqlen_KV.has_value() &&
@@ -232,6 +247,14 @@ void blackwell_fna_generic_forward(
     auto& cumulative_seqlen_Q_tensor = cumulative_seqlen_Q.value();
     auto& cumulative_seqlen_KV_tensor = cumulative_seqlen_KV.value();
     auto& token_layouts_tensor = token_layouts.value();
+
+    CHECK_CONTIGUOUS(cumulative_seqlen_Q_tensor);
+    CHECK_CONTIGUOUS(cumulative_seqlen_KV_tensor);
+    CHECK_CONTIGUOUS(token_layouts_tensor);
+
+    CHECK_CUDA(cumulative_seqlen_Q_tensor);
+    CHECK_CUDA(cumulative_seqlen_KV_tensor);
+    CHECK_CUDA(token_layouts_tensor);
 
     TORCH_CHECK(
         cumulative_seqlen_Q_tensor.dim() == 1,
@@ -259,14 +282,16 @@ void blackwell_fna_generic_forward(
         cumulative_seqlen_KV_tensor.scalar_type());
 
     batch_size = cumulative_seqlen_Q_tensor.size(0) - 1;
+    auto batch_size_original = token_layouts_tensor.size(0);
 
     TORCH_CHECK(
         token_layouts_tensor.dim() == 2,
         "Blackwell FNA: token_layouts is expected to be a 2-D tensor.");
 
-    TORCH_CHECK(
-        token_layouts_tensor.size(0) == batch_size,
-        "Blackwell FNA: token_layouts.shape[0] must be cumulative_seqlen_{Q,KV}.shape[0] - 1.");
+    // TORCH_CHECK(
+    //     token_layouts_tensor.size(0) == batch_size_original,
+    //     "Blackwell FNA: token_layouts.shape[0] must be
+    //     cumulative_seqlen_{Q,KV}.shape[0] - 1.");
 
     TORCH_CHECK(
         token_layouts_tensor.size(1) == kNADim,
@@ -288,6 +313,132 @@ void blackwell_fna_generic_forward(
     ptr_cumulative_seqlen_KV =
         static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
     ptr_token_layouts = static_cast<void*>(token_layouts_tensor.data_ptr());
+
+    if (is_varparam) {
+      if (kernel_sizes.has_value()) {
+        CHECK_CONTIGUOUS(kernel_sizes.value());
+        CHECK_CUDA(kernel_sizes.value());
+        TORCH_CHECK(
+            kernel_sizes.value().dim() == 2,
+            "Blackwell FNA: kernel_sizes is expected to be a 2-D tensor.");
+
+        TORCH_CHECK(
+            kernel_sizes.value().size(0) == batch_size_original,
+            "Blackwell FNA: kernel_sizes.shape[0] must match token_layouts.shape[0].");
+
+        TORCH_CHECK(
+            kernel_sizes.value().size(1) == kNADim,
+            "Blackwell FNA",
+            kNADim,
+            "-D: kernel_sizes.shape[1] must be ",
+            kNADim,
+            ", got ",
+            kernel_sizes.value().size(1),
+            ".");
+
+        TORCH_CHECK(
+            kernel_sizes.value().scalar_type() == torch::kInt,
+            "Blackwell FNA: kernel_sizes is expected to be an int32 tensor, got ",
+            kernel_sizes.value().scalar_type());
+
+        ptr_window_sizes = static_cast<void*>(kernel_sizes.value().data_ptr());
+      }
+
+      if (strides.has_value()) {
+        CHECK_CONTIGUOUS(strides.value());
+        CHECK_CUDA(strides.value());
+        TORCH_CHECK(
+            strides.value().dim() == 2,
+            "Blackwell FNA: strides is expected to be a 2-D tensor.");
+
+        TORCH_CHECK(
+            strides.value().size(0) == batch_size_original,
+            "Blackwell FNA: strides.shape[0] must be token_layouts.shape[0].");
+
+        TORCH_CHECK(
+            strides.value().size(1) == kNADim,
+            "Blackwell FNA",
+            kNADim,
+            "-D: strides.shape[1] must be ",
+            kNADim,
+            ", got ",
+            strides.value().size(1),
+            ".");
+
+        TORCH_CHECK(
+            strides.value().scalar_type() == torch::kInt,
+            "Blackwell FNA: strides is expected to be an int32 tensor, got ",
+            strides.value().scalar_type());
+
+        ptr_strides = static_cast<void*>(strides.value().data_ptr());
+      }
+
+      if (dilations.has_value()) {
+        CHECK_CONTIGUOUS(dilations.value());
+        CHECK_CUDA(dilations.value());
+        TORCH_CHECK(
+            dilations.value().dim() == 2,
+            "Blackwell FNA: dilations is expected to be a 2-D tensor.");
+
+        TORCH_CHECK(
+            dilations.value().size(0) == batch_size_original,
+            "Blackwell FNA: dilations.shape[0] must be token_layouts.shape[0].");
+
+        TORCH_CHECK(
+            dilations.value().size(1) == kNADim,
+            "Blackwell FNA",
+            kNADim,
+            "-D: dilations.shape[1] must be ",
+            kNADim,
+            ", got ",
+            dilations.value().size(1),
+            ".");
+
+        TORCH_CHECK(
+            dilations.value().scalar_type() == torch::kInt,
+            "Blackwell FNA: dilations is expected to be an int32 tensor, got ",
+            dilations.value().scalar_type());
+
+        ptr_dilations = static_cast<void*>(dilations.value().data_ptr());
+
+        // variable dilations requires batch_map
+        TORCH_CHECK(
+            batch_map.has_value(),
+            "Blackwell FNA: batch_map must all be specified when using variable dilations.");
+
+        auto& batch_map_tensor = batch_map.value();
+        CHECK_CONTIGUOUS(batch_map_tensor);
+        CHECK_CUDA(batch_map_tensor);
+
+        TORCH_CHECK(
+            batch_map_tensor.dim() == 2,
+            "Blackwell FNA: batch_map is expected to be a 2-D tensor.");
+
+        TORCH_CHECK(
+            batch_map_tensor.size(0) == batch_size,
+            "Blackwell FNA: batch_map.shape[0] must be cumulative_seqlen_{Q,KV}.shape[0] - 1.");
+
+        TORCH_CHECK(
+            batch_map_tensor.size(1) == 2,
+            "Blackwell FNA: batch_map.shape[1] must be ",
+            2,
+            ", got ",
+            batch_map_tensor.size(1),
+            ".");
+
+        TORCH_CHECK(
+            batch_map_tensor.scalar_type() == torch::kInt,
+            "Blackwell FNA: batch_map is expected to be an int32 tensor, got ",
+            batch_map_tensor.scalar_type());
+
+        ptr_batch_map = static_cast<void*>(batch_map_tensor.data_ptr());
+      }
+    }
+
+  } else {
+    TORCH_CHECK(
+        not is_varparam,
+        "Blackwell FNA: variable-parameter FNA is only supported with variable-length FNA.");
   }
 
 #if defined(CUTLASS_ARCH_MMA_SM100_SUPPORTED)
@@ -327,6 +478,11 @@ void blackwell_fna_generic_forward(
       ptr_cumulative_seqlen_Q,
       ptr_cumulative_seqlen_KV,
       ptr_token_layouts,
+      ptr_batch_map,
+      // var-param parameters
+      ptr_window_sizes,
+      ptr_strides,
+      ptr_dilations,
       // init/launch params
       device_id,
       cuda_stream,
@@ -365,8 +521,13 @@ void blackwell_na1d_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV) {
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   blackwell_fna_generic_forward(
@@ -389,8 +550,12 @@ void blackwell_na1d_forward(
       cumulative_seqlen_Q,
       cumulative_seqlen_KV,
       token_layouts,
+      batch_map,
       max_seqlen_Q,
-      max_seqlen_KV);
+      max_seqlen_KV,
+      kernel_sizes,
+      strides,
+      dilations);
 }
 
 void blackwell_na2d_forward(
@@ -414,8 +579,13 @@ void blackwell_na2d_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV) {
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   blackwell_fna_generic_forward(
@@ -438,8 +608,12 @@ void blackwell_na2d_forward(
       cumulative_seqlen_Q,
       cumulative_seqlen_KV,
       token_layouts,
+      batch_map,
       max_seqlen_Q,
-      max_seqlen_KV);
+      max_seqlen_KV,
+      kernel_sizes,
+      strides,
+      dilations);
 }
 
 void blackwell_na3d_forward(
@@ -463,8 +637,13 @@ void blackwell_na3d_forward(
     const at::optional<at::Tensor>& cumulative_seqlen_Q,
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     const at::optional<at::Tensor>& token_layouts,
+    const at::optional<at::Tensor>& batch_map,
     int max_seqlen_Q,
-    int max_seqlen_KV) {
+    int max_seqlen_KV,
+    // var-param
+    const at::optional<at::Tensor>& kernel_sizes,
+    const at::optional<at::Tensor>& strides,
+    const at::optional<at::Tensor>& dilations) {
   TORCH_CHECK(query.dim() == 4, "Tensors must be 4-D.");
 
   blackwell_fna_generic_forward(
@@ -487,8 +666,12 @@ void blackwell_na3d_forward(
       cumulative_seqlen_Q,
       cumulative_seqlen_KV,
       token_layouts,
+      batch_map,
       max_seqlen_Q,
-      max_seqlen_KV);
+      max_seqlen_KV,
+      kernel_sizes,
+      strides,
+      dilations);
 }
 
 } // namespace natten

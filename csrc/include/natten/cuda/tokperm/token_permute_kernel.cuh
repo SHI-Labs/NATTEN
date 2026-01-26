@@ -163,6 +163,7 @@ template <
     bool IsUnpermute = false,
     int kElementsPerLoad = 4>
 struct TokenPermuteKernel {
+  using OffsetTypeInternal = uint64_t;
   using TokenLayout =
       cute::conditional_t<IsUnpermute, TokenLayoutOut, TokenLayoutIn>;
 
@@ -277,10 +278,16 @@ struct TokenPermuteKernel {
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
-    auto ptr_src_bh = params.ptr_src + get<0>(params.stride_src) * blockIdx.z +
-        get<2>(params.stride_src) * blockIdx.y;
-    auto ptr_dst_bh = params.ptr_dst + get<0>(params.stride_dst) * blockIdx.z +
-        get<2>(params.stride_dst) * blockIdx.y;
+    auto ptr_src_bh = params.ptr_src +
+        (static_cast<OffsetTypeInternal>(get<0>(params.stride_src)) *
+             static_cast<OffsetTypeInternal>(blockIdx.z) +
+         static_cast<OffsetTypeInternal>(get<2>(params.stride_src)) *
+             static_cast<OffsetTypeInternal>(blockIdx.y));
+    auto ptr_dst_bh = params.ptr_dst +
+        (static_cast<OffsetTypeInternal>(get<0>(params.stride_dst)) *
+             static_cast<OffsetTypeInternal>(blockIdx.z) +
+         static_cast<OffsetTypeInternal>(get<2>(params.stride_dst)) *
+             static_cast<OffsetTypeInternal>(blockIdx.y));
 
     auto token_layout_src = make_layout(
         get<1>(params.problem_shape_src), get<1>(params.stride_src));

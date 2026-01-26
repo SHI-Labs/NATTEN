@@ -282,25 +282,27 @@ CUTE_HOST_DEVICE auto correct_qkv_shape_wrt_dilation(
   }
 }
 
-template <class Causal_>
+template <class QTileShape_, class KVTileShape_, class Causal_>
 struct NeighborhoodAttentionMask {
+  using QTileShape = QTileShape_;
+  using KVTileShape = KVTileShape_;
   using Causal = Causal_;
   static_assert(rank(Causal{}) >= 1 && rank(Causal{}) < 4);
+  static_assert(rank(Causal{}) == rank(QTileShape{}));
+  static_assert(rank(Causal{}) == rank(KVTileShape{}));
 
   // QKV shape Correction
   // Only if dilated and input size % dilation != 0
   // NOTE: every warp role has to execute this before using the mask!!
-  template <class ProblemShape, class BlkCoord, class QKVShape, class Dilation>
+  template <class ProblemShape, class QKVShape, class Dilation>
   CUTLASS_DEVICE auto correct_qkv_shape(
       ProblemShape const& problem_shape,
       QKVShape const& qkv_shape, // this is pre-padding, pre-token permute, just
                                  // the original shape of the sequence mode in
                                  // the self attention
-      BlkCoord const& blk_coord,
+      int32_t batch_idx,
       Dilation const& dilation,
       int num_dilation_groups) {
-    auto batch_idx = get<2, 1>(blk_coord);
-
     auto dilation_group_idx = batch_idx % num_dilation_groups;
     auto dilation_group_crd = idx2crd(dilation_group_idx, dilation);
 
@@ -308,28 +310,21 @@ struct NeighborhoodAttentionMask {
         qkv_shape, dilation, dilation_group_crd);
   }
 
-  template <
-      class BlkCoord,
-      class MultiDimTileShape,
-      class QKVShape,
-      class NAParams>
+  template <class BlkCoord, class QKVShape, class NAParams>
   CUTLASS_DEVICE auto get_trip_count(
       BlkCoord const& blk_coord,
-      MultiDimTileShape const& multi_dim_tile_shapes,
       QKVShape const& q_shape,
       QKVShape const& qkv_shape,
       NAParams const& na_params) {
-    auto [q_tile_shape, kv_tile_shape] = multi_dim_tile_shapes;
-
     auto [window_size, window_left, window_right, stride] = na_params;
 
-    auto q_tiled = ceil_div(q_shape, q_tile_shape);
+    auto q_tiled = ceil_div(q_shape, QTileShape{});
 
     // Map query index back to the "original" coord
     auto q_tile_coord = idx2crd(static_cast<int>(get<0>(blk_coord)), q_tiled);
-    auto q_coord = tuple_mul(q_tile_coord, q_tile_shape);
+    auto q_coord = tuple_mul(q_tile_coord, QTileShape{});
 
-    auto q_tile_offset_last = idx2crd(size(q_tile_shape) - 1, q_tile_shape);
+    auto q_tile_offset_last = idx2crd(size(QTileShape{}) - 1, QTileShape{});
     auto q_coord_last = tuple_add(q_coord, q_tile_offset_last);
 
     auto kv_start_actual = get_window_start<Causal>(
@@ -340,61 +335,27 @@ struct NeighborhoodAttentionMask {
     auto kv_end_actual = get_window_end<Causal>(
         q_coord_last, last_kv_start_actual, window_size, qkv_shape);
 
-    auto kv_start = floor_tuple(kv_start_actual, kv_tile_shape);
-    auto kv_end = ceil_tuple(kv_end_actual, kv_tile_shape);
+    auto kv_start = floor_tuple(kv_start_actual, KVTileShape{});
+    auto kv_end = ceil_tuple(kv_end_actual, KVTileShape{});
 
     auto kv_diff = tuple_sub(kv_end, kv_start);
-    auto kv_diff_tiles = ceil_div(kv_diff, kv_tile_shape);
+    auto kv_diff_tiles = ceil_div(kv_diff, KVTileShape{});
 
     return make_tuple(kv_start, kv_diff_tiles);
   }
 
-  template <class MultiDimTileShape>
-  CUTLASS_DEVICE auto get_extra_trip_count(
-      MultiDimTileShape const& multi_dim_tile_shapes,
-      int num_extra_kv) {
-    auto [q_tile_shape, kv_tile_shape] = multi_dim_tile_shapes;
-
-    int num_unmasked_trips = num_extra_kv / size(kv_tile_shape);
-    bool has_masked_trips = num_extra_kv % size(kv_tile_shape) != 0;
-
-    return make_tuple(num_unmasked_trips, has_masked_trips);
-  }
-
-  template <class MultiDimTileShape>
-  CUTLASS_DEVICE auto get_extra_trip_info(
-      MultiDimTileShape const& multi_dim_tile_shapes,
-      int num_extra_kv) {
-    auto [q_tile_shape, kv_tile_shape] = multi_dim_tile_shapes;
-
-    auto [num_trips, has_masked_trips] =
-        get_extra_trip_count(multi_dim_tile_shapes, num_extra_kv);
-    if (has_masked_trips) {
-      num_trips++;
-    }
-
-    return num_trips;
-  }
-
-  template <
-      class AccQK,
-      class IndexQK,
-      class MultiDimTileShape,
-      class QKVShape,
-      class NAParams>
+  template <class AccQK, class IndexQK, class QKVShape, class NAParams>
   CUTLASS_DEVICE void apply_mask(
       AccQK& acc_qk,
       IndexQK const& index_qk,
-      MultiDimTileShape const& multi_dim_tile_shapes,
       QKVShape const& q_shape,
       QKVShape const& qkv_shape,
       NAParams const& na_params,
       QKVShape const& blk_kv_offset,
       QKVShape const& kv_diff_tiles) {
-    auto [q_tile_shape, kv_tile_shape] = multi_dim_tile_shapes;
     auto [window_size, window_left, window_right, stride] = na_params;
 
-    auto q_tiled = ceil_div(q_shape, q_tile_shape);
+    auto q_tiled = ceil_div(q_shape, QTileShape{});
 
     // NOTE: the following assumes each thread owns exactly 1 row, and
     // contiguous columns. This is an assumption made in the FMHA fwd kernel. It
@@ -402,26 +363,26 @@ struct NeighborhoodAttentionMask {
     // Otherwise we'd need a modulo like we have for q_idx.
     auto [q_idx, kv_idx] = index_qk(0);
 
-    int q_tile_idx = q_idx / size(q_tile_shape);
-    int q_tile_res = q_idx % size(q_tile_shape);
+    int q_tile_idx = q_idx / size(QTileShape{});
+    int q_tile_res = q_idx % size(QTileShape{});
 
     auto q_tile_coord = idx2crd(q_tile_idx, q_tiled);
-    auto q_tile_offset = idx2crd(q_tile_res, q_tile_shape);
+    auto q_tile_offset = idx2crd(q_tile_res, QTileShape{});
     auto q_coord =
-        tuple_add(tuple_mul(q_tile_coord, q_tile_shape), q_tile_offset);
+        tuple_add(tuple_mul(q_tile_coord, QTileShape{}), q_tile_offset);
 
     auto kv_start = get_window_start<Causal>(
         q_coord, window_left, window_right, stride, qkv_shape);
     auto kv_end =
         get_window_end<Causal>(q_coord, kv_start, window_size, qkv_shape);
 
-    int kv_tile_idx = kv_idx / size(kv_tile_shape);
+    int kv_tile_idx = kv_idx / size(KVTileShape{});
 
     auto kv_tile_coord = idx2crd(kv_tile_idx, kv_diff_tiles);
     auto kv_tile_offset =
-        tuple_add(blk_kv_offset, tuple_mul(kv_tile_coord, kv_tile_shape));
+        tuple_add(blk_kv_offset, tuple_mul(kv_tile_coord, KVTileShape{}));
 
-    auto kv_ctr = make_identity_tensor(kv_tile_shape);
+    auto kv_ctr = make_identity_tensor(KVTileShape{});
     auto kv_ctr_offset = domain_offset(kv_tile_offset, kv_ctr);
 
     CUTLASS_PRAGMA_UNROLL
@@ -434,35 +395,27 @@ struct NeighborhoodAttentionMask {
     }
   }
 
-  template <
-      class AccQK,
-      class IndexQK,
-      class MultiDimTileShape,
-      class QKVShape,
-      class NAParams>
+  template <class AccQK, class IndexQK, class QKVShape, class NAParams>
   CUTLASS_DEVICE void apply_padded_mask(
       AccQK& acc_qk,
       IndexQK const& index_qk,
-      MultiDimTileShape const& multi_dim_tile_shapes,
       QKVShape const& qkv_shape,
       NAParams const& na_params,
       QKVShape const& blk_kv_offset,
       QKVShape const& kv_diff_tiles) {
-    auto [q_tile_shape, kv_tile_shape] = multi_dim_tile_shapes;
-
     // NOTE: the following assumes each contiguous columns.
     // This is an assumption made in the FMHA fwd kernel.
     // It also assumes the first kv_idx always evenly divides KV tile --size--.
     // Otherwise we'd need a modulo like we have for q_idx.
     auto [q_idx, kv_idx] = index_qk(0);
 
-    int kv_tile_idx = kv_idx / size(kv_tile_shape);
+    int kv_tile_idx = kv_idx / size(KVTileShape{});
 
     auto kv_tile_coord = idx2crd(kv_tile_idx, kv_diff_tiles);
     auto kv_tile_offset =
-        tuple_add(blk_kv_offset, tuple_mul(kv_tile_coord, kv_tile_shape));
+        tuple_add(blk_kv_offset, tuple_mul(kv_tile_coord, KVTileShape{}));
 
-    auto kv_ctr = make_identity_tensor(kv_tile_shape);
+    auto kv_ctr = make_identity_tensor(KVTileShape{});
     auto kv_ctr_offset = domain_offset(kv_tile_offset, kv_ctr);
 
     CUTLASS_PRAGMA_UNROLL
@@ -605,6 +558,142 @@ CUTE_HOST_DEVICE bool is_dilated(NADim dilation) {
     return get<0>(dilation) != 1 || get<1>(dilation) != 1 ||
         get<2>(dilation) != 1;
   }
+}
+
+// Backward only:
+template <class NADim>
+CUTE_HOST_DEVICE constexpr auto get_bwd_stride_offset(NADim const& stride) {
+  return transform_leaf(
+      stride, [&](auto const& s) { return (s - (s / 2) - 1); });
+}
+
+template <
+    bool IsVarlen,
+    bool IsBackward,
+    class Mask,
+    class Params,
+    class BlkCoord,
+    class ProblemShape>
+CUTE_HOST_DEVICE auto update_params(
+    Params const& params,
+    BlkCoord const& blk_coord_in,
+    ProblemShape const& problem_shape) {
+  using NADim = typename Params::NADimType;
+  static constexpr int BatchMode = cute::conditional_t<IsBackward, _4, _2>{};
+  using QTileShape = typename Mask::QTileShape;
+  using KVTileShape = typename Mask::KVTileShape;
+
+  bool qkv_shape_modified = false;
+
+  NADim qkv_shape;
+  NADim q_shape;
+  NADim kv_shape;
+
+  NADim dilation = params.dilation;
+  auto num_dilation_groups = params.num_dilation_groups;
+  auto na_params = params.na_params;
+
+  // NOTE: initial values are necessary
+  bool requires_qkv_fixup = false;
+  bool is_dilated = false;
+
+  bool is_fully_block_sparse = false;
+  bool has_padding = false;
+
+  auto batch_idx = get<BatchMode, 1>(blk_coord_in);
+
+  if constexpr (IsVarlen) {
+    // batch_pre_dilation: pre-TokPerm/dilation batch index, so we can fetch the
+    // correct
+    //     token_layout, and if var-param, parameters.
+    // batch_local: local batch index, so we can correct shape for dilation
+    // group, if dilated
+    auto batch_pre_dilation = batch_idx / num_dilation_groups;
+
+    if (params.dilations_ptr != nullptr) {
+      auto [batch_pre_dilation_, local_batch_idx] =
+          params.batch_map_ptr[batch_idx];
+      batch_pre_dilation = batch_pre_dilation_;
+      batch_idx = local_batch_idx;
+    }
+
+    qkv_shape = params.token_layout_ptr[batch_pre_dilation];
+    qkv_shape_modified = true;
+
+    if (params.window_sizes_ptr != nullptr) {
+      get<0>(na_params) = params.window_sizes_ptr[batch_pre_dilation];
+      get<1>(na_params) = get_window_left(get<0>(na_params));
+      get<2>(na_params) = get_window_right(get<0>(na_params));
+    }
+
+    if (params.strides_ptr != nullptr) {
+      get<3>(na_params) = params.strides_ptr[batch_pre_dilation];
+      // stride group offset
+      if constexpr (IsBackward) {
+        get<4>(na_params) = get_bwd_stride_offset(get<3>(na_params));
+      }
+    }
+
+    if (params.dilations_ptr != nullptr) {
+      dilation = params.dilations_ptr[batch_pre_dilation];
+      num_dilation_groups = size(dilation);
+    }
+
+    // This should be updated last, when we have the correct qkv_shape and
+    // dilation
+    is_dilated = num_dilation_groups > 1;
+    requires_qkv_fixup = not evenly_divides(qkv_shape, dilation);
+  } else {
+    qkv_shape = params.qkv_shape;
+    q_shape = params.q_shape;
+    kv_shape = params.kv_shape;
+
+    requires_qkv_fixup = params.requires_qkv_fixup;
+    is_dilated = params.is_dilated;
+
+    is_fully_block_sparse = params.is_fully_block_sparse;
+    has_padding = params.has_padding;
+  }
+
+  if constexpr (IsVarlen) {
+    // q_shape and kv_shape must be constructed after tiling by dilation
+    auto qkv_shape_max = ceil_div(qkv_shape, dilation);
+    q_shape = tuple_mul(ceil_div(qkv_shape_max, QTileShape{}), QTileShape{});
+    kv_shape = tuple_mul(ceil_div(qkv_shape_max, KVTileShape{}), KVTileShape{});
+  }
+
+  if (requires_qkv_fixup) {
+    qkv_shape = Mask{}.correct_qkv_shape(
+        problem_shape, qkv_shape, batch_idx, dilation, num_dilation_groups);
+    qkv_shape_modified = true;
+  } else if (is_dilated) {
+    qkv_shape = ceil_div(qkv_shape, dilation);
+    qkv_shape_modified = true;
+  }
+
+  if (qkv_shape_modified) {
+    is_fully_block_sparse = fully_block_sparse<typename Mask::Causal>(
+        qkv_shape,
+        /* window_size = */ get<0>(na_params),
+        /* stride = */ get<3>(na_params),
+        QTileShape{},
+        KVTileShape{});
+    if constexpr (IsBackward) {
+      has_padding = not evenly_divides(qkv_shape, QTileShape{});
+    } else {
+      has_padding = not evenly_divides(qkv_shape, KVTileShape{});
+    }
+  }
+
+  // parameters: q_shape, kv_shape, qkv_shape, na_params,
+  // is_fully_block_sparse, has_q_padding, has_kv_padding,
+  return cute::make_tuple(
+      qkv_shape,
+      q_shape,
+      kv_shape,
+      na_params,
+      is_fully_block_sparse,
+      has_padding);
 }
 
 // We reuse VariableLength from FMHA

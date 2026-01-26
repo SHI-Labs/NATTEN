@@ -75,10 +75,15 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
         token_layout_list,
         heads,
         head_dim,
+        #
         kernel_size,
         stride,
         dilation,
         is_causal,
+        #
+        kernel_size_list,
+        stride_list,
+        dilation_list,
         #
         q_tile_shape,
         kv_tile_shape,
@@ -105,9 +110,12 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
 
         logger.debug(
             f"Testing {backend} varlen:\n"
-            f"{token_layout_list=},\n"
             f"{heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, {dtype=}, {test_backprop=}\n"
             f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=}\n"
+            f"{token_layout_list=},\n"
+            f"{kernel_size_list=},\n"
+            f"{stride_list=},\n"
+            f"{dilation_list=},\n"
             f"{q_tile_shape=}, {kv_tile_shape=}, {backward_q_tile_shape=}, {backward_kv_tile_shape=}\n"
             f"{run_persistent_kernel=}."
         )
@@ -180,13 +188,18 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                     1, *token_layout, heads, head_dim
                 )
 
+            kernel_size_ = (
+                kernel_size if kernel_size_list is None else kernel_size_list[i]
+            )
+            stride_ = stride if stride_list is None else stride_list[i]
+            dilation_ = dilation if dilation_list is None else dilation_list[i]
             o_batch, lse_batch = neighborhood_attention_generic(
                 q_batch,
                 k_batch,
                 v_batch,
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
+                kernel_size=kernel_size_,
+                stride=stride_,
+                dilation=dilation_,
                 is_causal=is_causal,
                 backend=backend,
                 q_tile_shape=q_tile_shape,
@@ -232,9 +245,15 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
             k,
             v,
             token_layout_list=token_layout_list,
+            #
             kernel_size=kernel_size,
             stride=stride,
             dilation=dilation,
+            #
+            kernel_size_list=kernel_size_list,
+            stride_list=stride_list,
+            dilation_list=dilation_list,
+            #
             is_causal=is_causal,
             backend=backend,
             q_tile_shape=q_tile_shape,
@@ -273,10 +292,15 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
         token_layout_list,
         heads,
         head_dim,
-        kernel_size,
-        stride,
-        dilation,
-        is_causal,
+        kernel_size=None,
+        stride=None,
+        dilation=None,
+        is_causal=None,
+        #
+        kernel_size_list=None,
+        stride_list=None,
+        dilation_list=None,
+        #
         heads_kv=None,
         head_dim_v=None,
         n_configs_to_test=None,
@@ -325,6 +349,10 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                         dilation=dilation,
                         is_causal=is_causal,
                         #
+                        kernel_size_list=kernel_size_list,
+                        stride_list=stride_list,
+                        dilation_list=dilation_list,
+                        #
                         q_tile_shape=q_tile_shape,
                         kv_tile_shape=kv_tile_shape,
                         backward_q_tile_shape=backward_q_tile_shape,
@@ -346,11 +374,7 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_fixed_use_cases(self):
-        # token_layout_list=[(37, 21), (35, 75), (72, 37), (78, 58), (78, 55), (50, 32), (21, 69), (67, 15)],
-        # heads=3, heads_kv=3, head_dim=32, head_dim_v=32, dtype=torch.float16, test_backprop=True
-        # kernel_size=(3, 15), stride=(1, 3), dilation=(6, 1), is_causal=(True, False)
         problem_sizes = [
-            # ([(9, 2), (9, 2), (28, 2), (28, 2)], 3, 3, 32, (2, 2), (1, 1), (1, 1)),
             ([(18, 2), (56, 2)], 3, 3, 32, (2, 2), (1, 1), (2, 1)),
             ([(48, 2), (56, 2)], 3, 3, 32, (2, 2), (1, 1), (2, 1)),
             ([(18, 3), (50, 3)], 3, 3, 32, (3, 3), (1, 1), (2, 1)),
@@ -413,6 +437,172 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                     n_configs_to_test=5,
                 )
 
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_blackwell_kernels_not_supported()
+    def test_fixed_use_cases_varparam(self):
+        problem_sizes = [
+            (
+                [(32, 32, 32), (128, 64, 16), (32, 32, 32)],
+                3,
+                3,
+                128,
+                [(2, 2, 2) for _ in range(3)],
+                [1 for _ in range(3)],
+                [(1, 1, 1), (1, 1, 1), (8, 8, 2)],
+            ),
+            (
+                [
+                    (72, 23, 5),
+                    (57, 7, 67),
+                    (42, 5, 17),
+                    (78, 4, 71),
+                    (4, 75, 72),
+                    (5, 43, 43),
+                    (90, 4, 9),
+                    (53, 26, 7),
+                    (67, 60, 8),
+                    (65, 35, 4),
+                    (45, 5, 85),
+                    (40, 55, 4),
+                    (19, 80, 5),
+                ],
+                2,
+                1,
+                128,
+                [(2, 2, 2) for _ in range(13)],
+                [1 for _ in range(13)],
+                [
+                    (20, 2, 1),
+                    (10, 1, 17),
+                    (18, 1, 2),
+                    (19, 2, 33),
+                    (1, 6, 31),
+                    (2, 5, 14),
+                    (38, 2, 1),
+                    (21, 3, 3),
+                    (13, 4, 1),
+                    (4, 8, 2),
+                    (14, 2, 2),
+                    (6, 23, 1),
+                    (1, 1, 2),
+                ],
+            ),
+            (
+                [
+                    (47, 38, 12),
+                    (76, 7, 64),
+                    (30, 48, 13),
+                    (87, 4, 68),
+                    (59, 8, 73),
+                    (29, 5, 55),
+                    (83, 69, 6),
+                    (74, 27, 6),
+                    (8, 94, 70),
+                    (77, 67, 4),
+                    (63, 38, 8),
+                    (82, 59, 7),
+                    (84, 11, 70),
+                ],
+                3,
+                3,
+                128,
+                [(8, 3, 3) for _ in range(13)],
+                [(6, 1, 3) for _ in range(13)],
+                [
+                    (2, 7, 3),
+                    (5, 1, 9),
+                    (3, 8, 4),
+                    (4, 1, 5),
+                    (2, 1, 8),
+                    (2, 1, 16),
+                    (9, 14, 2),
+                    (1, 4, 1),
+                    (1, 5, 1),
+                    (5, 9, 1),
+                    (6, 1, 2),
+                    (1, 2, 1),
+                    (6, 3, 10),
+                ],
+            ),
+            (
+                [(128,), (256,), (58,)],
+                3,
+                3,
+                32,
+                [(32,), (64,), (28,)],
+                [(1,), (1,), (2,)],
+                [(2,), (4,), (1,)],
+            ),
+            (
+                [
+                    (5, 73),
+                    (26, 11),
+                    (7, 37),
+                    (73, 9),
+                    (57, 64),
+                    (44, 64),
+                    (89, 15),
+                    (27, 28),
+                    (52, 76),
+                    (14, 42),
+                    (80, 55),
+                ],
+                3,
+                3,
+                128,
+                [
+                    (5, 5),
+                    (18, 4),
+                    (5, 27),
+                    (63, 2),
+                    (19, 4),
+                    (39, 24),
+                    (31, 13),
+                    (5, 10),
+                    (52, 13),
+                    (14, 39),
+                    (56, 9),
+                ],
+                [
+                    (3, 4),
+                    (2, 4),
+                    (5, 21),
+                    (16, 1),
+                    (16, 3),
+                    (36, 18),
+                    (8, 6),
+                    (4, 6),
+                    (7, 13),
+                    (8, 38),
+                    (52, 7),
+                ],
+                [1 for _ in range(11)],
+            ),
+        ]
+        for (
+            token_layout_list,
+            heads,
+            heads_kv,
+            head_dim,
+            kernel_size_list,
+            stride_list,
+            dilation_list,
+        ) in problem_sizes:
+            na_dim = len(token_layout_list[0])
+            for is_causal_ in product(*[[False, True] for _ in range(na_dim)]):
+                is_causal = tuple(is_causal_)
+                self._test_all_dtypes(
+                    token_layout_list=token_layout_list,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    kernel_size_list=kernel_size_list,
+                    stride_list=stride_list,
+                    dilation_list=dilation_list,
+                    is_causal=is_causal,
+                    n_configs_to_test=5,
+                )
+
     def _test_rand_sweep(self, na_dim, max_tests=1000, configs_to_test=None):
         random.seed(42)
         max_seqlen = 2**16
@@ -442,13 +632,92 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                         min(x, y) for x, y in zip(input_shape, min_input_shape)
                     )
 
-            kernel_size = tuple(random.choice(range(2, x + 1)) for x in min_input_shape)
-            stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
-            dilation = tuple(
-                random.choice(range(1, x // k + 1))
-                for x, k in zip(min_input_shape, kernel_size)
-            )
+            def gen_kernel_size(input_shape):
+                kernel_size = tuple(random.choice(range(2, x + 1)) for x in input_shape)
+                # Never generate cases that could be self attn, because reference will map them to
+                # FMHA and throw off the high error thresholds in this test.
+                if all(k == x for k, x in zip(kernel_size, input_shape)):
+                    max_size = max(kernel_size)
+                    assert max_size > 2
+                    kernel_size = tuple(
+                        k if k != max_size else k - 1 for k in kernel_size
+                    )
+
+                return kernel_size
+
+            def gen_stride(kernel_size):
+                return tuple(
+                    random.choice(range(1, max(2, k + 1))) for k in kernel_size
+                )
+
+            def gen_dilation(token_layout_shape, kernel_size):
+                return tuple(
+                    random.choice(range(1, max(2, x // k + 1)))
+                    for x, k in zip(token_layout_shape, kernel_size)
+                )
+
+            def reduce_params(param_list, fn):
+                min_shape = param_list[0]
+                for shape in param_list[1:]:
+                    min_shape = tuple(fn(x, y) for x, y in zip(min_shape, shape))
+                return min_shape
+
+            kernel_size = None
+            stride = 1
+            dilation = 1
             is_causal = tuple(random.choice([False, True]) for _ in range(na_dim))
+
+            # if each parameter's variability is sampled independently, the likelihood that all
+            # three parameters are variable is too little (1/8).
+            if random.choice([False, True]):
+                var_kernel_size, var_stride, var_dilation = True, True, True
+            else:
+                var_kernel_size = random.choice([False, True])
+                var_stride = random.choice([False, True])
+                var_dilation = random.choice([False, True])
+
+            kernel_size_list = None
+            stride_list = None
+            dilation_list = None
+
+            if var_kernel_size:
+                kernel_size_list = []
+                for b in range(batch):
+                    kernel_size_list.append(gen_kernel_size(token_layout_list[b]))
+            else:
+                kernel_size = gen_kernel_size(min_input_shape)
+
+            if var_stride:
+                stride_list = []
+                for b in range(batch):
+                    kernel_size_batch = (
+                        kernel_size if kernel_size_list is None else kernel_size_list[b]
+                    )
+                    stride_list.append(gen_stride(kernel_size_batch))
+            else:
+                min_kernel_size = (
+                    kernel_size
+                    if kernel_size_list is None
+                    else reduce_params(kernel_size_list, fn=min)
+                )
+                stride = gen_stride(min_kernel_size)
+
+            if var_dilation:
+                dilation_list = []
+                for b in range(batch):
+                    kernel_size = (
+                        kernel_size if kernel_size_list is None else kernel_size_list[b]
+                    )
+                    dilation_list.append(
+                        gen_dilation(token_layout_list[b], kernel_size)
+                    )
+            else:
+                max_kernel_size = (
+                    kernel_size
+                    if kernel_size_list is None
+                    else reduce_params(kernel_size_list, fn=max)
+                )
+                dilation = gen_dilation(min_input_shape, max_kernel_size)
 
             self._test_all_dtypes(
                 token_layout_list=token_layout_list,
@@ -459,23 +728,28 @@ class BlackwellFNAVarlenBackendTest(unittest.TestCase):
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
+                #
+                kernel_size_list=kernel_size_list,
+                stride_list=stride_list,
+                dilation_list=dilation_list,
+                #
                 n_configs_to_test=configs_to_test,
             )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_rand_sweep_quick(self):
-        self._test_rand_sweep(1, max_tests=10, configs_to_test=3)
-        self._test_rand_sweep(2, max_tests=10, configs_to_test=3)
         self._test_rand_sweep(3, max_tests=10, configs_to_test=3)
+        self._test_rand_sweep(2, max_tests=10, configs_to_test=3)
+        self._test_rand_sweep(1, max_tests=10, configs_to_test=3)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_rand_sweep_extended(self):
-        self._test_rand_sweep(1, max_tests=RAND_SWEEP_TESTS, configs_to_test=3)
-        self._test_rand_sweep(2, max_tests=RAND_SWEEP_TESTS, configs_to_test=3)
-        self._test_rand_sweep(3, max_tests=RAND_SWEEP_TESTS, configs_to_test=3)
+        self._test_rand_sweep(3, max_tests=RAND_SWEEP_TESTS, configs_to_test=10)
+        self._test_rand_sweep(2, max_tests=RAND_SWEEP_TESTS, configs_to_test=10)
+        self._test_rand_sweep(1, max_tests=RAND_SWEEP_TESTS, configs_to_test=10)
 
 
 if __name__ == "__main__":

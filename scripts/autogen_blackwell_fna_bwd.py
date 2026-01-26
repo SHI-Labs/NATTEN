@@ -56,6 +56,11 @@ void {kernel_name}(
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       void* ptr_token_layouts,
+      void* ptr_batch_map,
+      // var-param parameters
+      void* ptr_window_sizes,
+      void* ptr_strides,
+      void* ptr_dilations,
       // init/launch params
       int device_id,
       cudaStream_t stream,
@@ -95,6 +100,11 @@ void {kernel_name}(
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       void* ptr_token_layouts,
+      void* ptr_batch_map,
+      // var-param parameters
+      void* ptr_window_sizes,
+      void* ptr_strides,
+      void* ptr_dilations,
       // init/launch params
       int device_id,
       cudaStream_t stream,
@@ -139,6 +149,12 @@ void {kernel_name}(
         ptr_cumulative_seqlen_Q,
         ptr_cumulative_seqlen_KV,
         ptr_token_layouts,
+        ptr_batch_map,
+        // var-param
+        ptr_window_sizes,
+        ptr_strides,
+        ptr_dilations,
+        //
         device_id);
 
     auto bytes = static_cast<int64_t>(kernel.get_workspace_size(args));

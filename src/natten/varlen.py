@@ -21,34 +21,26 @@
 #
 #################################################################################################
 
+from collections.abc import Sequence
 from typing import List, Optional, Tuple, Union
 
 import torch
 from torch import Tensor
 
-#    choose_backend,
-#    choose_fmha_backend,
-#    cutlass_blackwell_fmha,
-# )
 from natten.backends import cutlass_blackwell_fna_varlen_generic
 from natten.backends.configs.cutlass_blackwell import (
     check_cutlass_blackwell_fna_backward_config_tensorless,
     check_cutlass_blackwell_fna_forward_config_tensorless,
 )
-from natten.token_permute import generate_fna_varlen_metadata, get_na_dim
+from natten.token_permute import generate_fna_varlen_metadata
 from natten.types import CausalArgTypeOrDed, DimensionType, DimensionTypeOrDed
 from natten.utils import log
 from natten.utils.checks import fmha_tensor_checks
 
-#    check_all_args,
-#    check_args_against_input,
-#    check_kernel_schedule,
-#    is_self_attention,
-#    na_tensor_checks,
-#    varlen_tensor_checks,
-# )
-
 logger = log.get_logger(__name__)
+
+
+VariableDimensionType = Optional[List[DimensionType]]
 
 
 def configure_varlen(
@@ -62,6 +54,10 @@ def configure_varlen(
     stride: DimensionTypeOrDed = 1,
     dilation: DimensionTypeOrDed = 1,
     is_causal: Optional[CausalArgTypeOrDed] = False,
+    #
+    kernel_size_list: VariableDimensionType = None,
+    stride_list: VariableDimensionType = None,
+    dilation_list: VariableDimensionType = None,
     #
     backend: Optional[str] = None,
     q_tile_shape: Optional[DimensionType] = None,
@@ -95,6 +91,19 @@ def configure_varlen(
 
         is_causal (Optional[tuple]): is_causal parameter, if used, must be provided for verification.
 
+        kernel_size_list (Optional[list[tuple]]): list of kernel sizes corresponding to each token
+            layout in 'token_layout_list'. This allows customizing kernel size for varying input
+            sizes. If unspecified / None, uses the static 'kernel_size' for the entire batch
+            instead.
+
+        stride_list (Optional[list[tuple]]): list of stride values corresponding to each token
+            layout in 'token_layout_list'.If unspecified / None, uses the static 'stride' for the
+            entire batch instead.
+
+        dilation_list (Optional[list[tuple]]): list of dilation values corresponding to each token
+            layout in 'token_layout_list'.If unspecified / None, uses the static 'dilation' for the
+            entire batch instead.
+
     Other Parameters:
         backend (str): Backend implementation to run with. Picks the best available one if
             not specified. Refer to [backends](backends.md) for more information.
@@ -113,8 +122,17 @@ def configure_varlen(
         varlen_metadata (dict): Runtime metadata for the current use case.
     """
 
-    # get_na_dim acts as a type verifier
-    na_dim = get_na_dim(token_layout_list=token_layout_list)
+    if (
+        token_layout_list is None
+        or not isinstance(token_layout_list, Sequence)
+        or len(token_layout_list) < 1
+    ):
+        raise ValueError(
+            f"token_layout_list must be a non-empty sequence type (i.e. list), got {token_layout_list=}."
+        )
+
+    # TODO:
+    na_dim = len(token_layout_list[0])
     assert na_dim in [1, 2, 3]
 
     # TODO: make proper backend selectors when we extend to more backends
@@ -160,6 +178,10 @@ def configure_varlen(
         stride=stride,
         dilation=dilation,
         is_causal=is_causal,
+        #
+        kernel_size_list=kernel_size_list,
+        stride_list=stride_list,
+        dilation_list=dilation_list,
     )
 
     return varlen_metadata
@@ -174,8 +196,15 @@ def neighborhood_attention_varlen(
     dilation: DimensionTypeOrDed = 1,
     is_causal: Optional[CausalArgTypeOrDed] = False,
     # Varlen-specific args: at least one must be specified
-    token_layout_list: Optional[List[DimensionType]] = None,
+    # Option 1 (preferred): construct 'varlen_metadata' once ahead of time and reuse
     varlen_metadata: Optional[dict] = None,
+    # Option 2 (incompatible with graphs, torch compile): eagerly construct 'varlen_metadata' from
+    # 'token_layout_list', and the optional 'kernel_size_list', 'stride_list', 'dilation_list' on
+    # every call.
+    token_layout_list: VariableDimensionType = None,
+    kernel_size_list: VariableDimensionType = None,
+    stride_list: VariableDimensionType = None,
+    dilation_list: VariableDimensionType = None,
     #
     scale: Optional[float] = None,
     # Perf-related args
@@ -199,12 +228,6 @@ def neighborhood_attention_varlen(
         backend_name="Variable-length Neighborhood Attention",
     )
 
-    # get_na_dim acts as a type verifier
-    na_dim = get_na_dim(
-        varlen_metadata=varlen_metadata, token_layout_list=token_layout_list
-    )
-    assert na_dim in [1, 2, 3]
-
     # TODO: make proper backend selectors when we extend to more backends
     # TODO: use natten.backends.choose_backend when we extend the tensor-less APIs.
     if backend is not None and backend != "blackwell-fna":
@@ -226,6 +249,10 @@ def neighborhood_attention_varlen(
             dilation=dilation,
             is_causal=is_causal,
             #
+            kernel_size_list=kernel_size_list,
+            stride_list=stride_list,
+            dilation_list=dilation_list,
+            #
             backend=backend,
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
@@ -245,10 +272,6 @@ def neighborhood_attention_varlen(
             key=key,
             value=value,
             varlen_metadata=varlen_metadata,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilation=dilation,
-            is_causal=is_causal,
             scale=scale,
             run_persistent_kernel=run_persistent_kernel,
             return_lse=return_lse,

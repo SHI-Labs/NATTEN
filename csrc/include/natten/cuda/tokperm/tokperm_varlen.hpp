@@ -48,9 +48,10 @@ bool token_permute_varlen_op(
     int seqlen_max,
     int heads,
     int dim,
-    ElementOffset* ptr_offsets_pre_permute, // size: batch + 1
-    ElementOffset* ptr_offsets_post_permute, // size: batch * size(dilation) + 1
+    ElementOffset* ptr_offsets_original, // size: batch + 1
+    ElementOffset* ptr_offsets_tokperm, // size: batch + 1
     CuteTuple* ptr_token_layouts,
+    CuteTuple* ptr_dilations,
     CuteTuple& tile_shape,
     CuteTuple& dilation,
     bool flip_tiled_dims,
@@ -107,8 +108,9 @@ bool token_permute_varlen_op(
         heads,
         dim,
         ptr_token_layouts,
-        ptr_offsets_pre_permute,
-        ptr_offsets_post_permute,
+        ptr_dilations,
+        ptr_offsets_original,
+        ptr_offsets_tokperm,
         ptr_src,
         ptr_dst,
         tile_shape,
@@ -162,9 +164,10 @@ bool token_unpermute_varlen_op(
     int seqlen_max,
     int heads,
     int dim,
-    ElementOffset* ptr_offsets_pre_permute, // size: batch + 1
-    ElementOffset* ptr_offsets_post_permute, // size: batch * size(dilation) + 1
+    ElementOffset* ptr_offsets_original, // size: batch + 1
+    ElementOffset* ptr_offsets_tokperm, // size: batch + 1
     CuteTuple* ptr_token_layouts,
+    CuteTuple* ptr_dilations,
     CuteTuple& tile_shape,
     CuteTuple& dilation,
     bool flip_tiled_dims,
@@ -221,8 +224,9 @@ bool token_unpermute_varlen_op(
         heads,
         dim,
         ptr_token_layouts,
-        ptr_offsets_pre_permute,
-        ptr_offsets_post_permute,
+        ptr_dilations,
+        ptr_offsets_original,
+        ptr_offsets_tokperm,
         ptr_src,
         ptr_dst,
         tile_shape,

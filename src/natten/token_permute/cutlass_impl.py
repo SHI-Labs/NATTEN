@@ -221,32 +221,35 @@ def make_cutlass_token_permute_varlen_autograd_fn(na_dim):
         def forward(
             ctx,
             tensor: Tensor,
-            offsets_pre_permute: Tensor,
-            offsets_post_permute: Tensor,
-            token_layouts_pre_permute: Tensor,
+            offsets_original: Tensor,
+            offsets_tokperm: Tensor,
+            token_layouts: Tensor,
             max_seqlen: int,
             total_seqlen_post_permute: int,
             tile_shape: DimensionType,
             dilation: DimensionType,
+            dilations: Optional[Tensor],
             flip_tiled_dims: bool,
         ) -> Tensor:
 
             output = VARLEN_PERMUTE_OPS[na_dim](
                 tensor,
-                offsets_pre_permute=offsets_pre_permute,
-                offsets_post_permute=offsets_post_permute,
-                token_layouts_pre_permute=token_layouts_pre_permute,
+                offsets_original=offsets_original,
+                offsets_tokperm=offsets_tokperm,
+                token_layouts=token_layouts,
                 max_seqlen=max_seqlen,
                 total_seqlen_post_permute=total_seqlen_post_permute,
                 tile_shape=tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=flip_tiled_dims,
             )
 
             ctx.save_for_backward(
-                offsets_pre_permute,
-                offsets_post_permute,
-                token_layouts_pre_permute,
+                offsets_original,
+                offsets_tokperm,
+                token_layouts,
+                dilations,
             )
             ctx.tile_shape = tile_shape
             ctx.dilation = dilation
@@ -268,25 +271,31 @@ def make_cutlass_token_permute_varlen_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
+            NoneType,
         ]:
 
-            offsets_pre_permute, offsets_post_permute, token_layouts_pre_permute = (
-                ctx.saved_tensors
-            )
+            (
+                offsets_original,
+                offsets_tokperm,
+                token_layouts,
+                dilations,
+            ) = ctx.saved_tensors
             d_output_unpermuted = VARLEN_UNPERMUTE_OPS[na_dim](
                 d_output,
-                offsets_pre_permute=offsets_pre_permute,
-                offsets_post_permute=offsets_post_permute,
-                token_layouts_pre_permute=token_layouts_pre_permute,
+                offsets_original=offsets_original,
+                offsets_tokperm=offsets_tokperm,
+                token_layouts=token_layouts,
                 max_seqlen=ctx.max_seqlen,
                 total_seqlen_pre_permute=ctx.total_seqlen_pre_permute,
                 tile_shape=ctx.tile_shape,
                 dilation=ctx.dilation,
+                dilations=dilations,
                 flip_tiled_dims=ctx.flip_tiled_dims,
             )
 
             return (
                 d_output_unpermuted,
+                None,
                 None,
                 None,
                 None,
@@ -309,34 +318,37 @@ def make_cutlass_token_unpermute_varlen_autograd_fn(na_dim):
         def forward(
             ctx,
             tensor: Tensor,
-            offsets_pre_permute: Tensor,
-            offsets_post_permute: Tensor,
-            token_layouts_pre_permute: Tensor,
+            offsets_original: Tensor,
+            offsets_tokperm: Tensor,
+            token_layouts: Tensor,
             max_seqlen: int,
             total_seqlen_pre_permute: int,
             tile_shape: DimensionType,
             dilation: DimensionType,
+            dilations: Optional[Tensor],
             flip_tiled_dims: bool,
             output_seqlen: Optional[int],
         ) -> Tensor:
 
             output = VARLEN_UNPERMUTE_OPS[na_dim](
                 tensor,
-                offsets_pre_permute=offsets_pre_permute,
-                offsets_post_permute=offsets_post_permute,
-                token_layouts_pre_permute=token_layouts_pre_permute,
+                offsets_original=offsets_original,
+                offsets_tokperm=offsets_tokperm,
+                token_layouts=token_layouts,
                 max_seqlen=max_seqlen,
                 total_seqlen_pre_permute=total_seqlen_pre_permute,
                 tile_shape=tile_shape,
                 dilation=dilation,
+                dilations=dilations,
                 flip_tiled_dims=flip_tiled_dims,
                 output_seqlen=output_seqlen,
             )
 
             ctx.save_for_backward(
-                offsets_pre_permute,
-                offsets_post_permute,
-                token_layouts_pre_permute,
+                offsets_original,
+                offsets_tokperm,
+                token_layouts,
+                dilations,
             )
             ctx.tile_shape = tile_shape
             ctx.dilation = dilation
@@ -359,25 +371,31 @@ def make_cutlass_token_unpermute_varlen_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
+            NoneType,
         ]:
 
-            offsets_pre_permute, offsets_post_permute, token_layouts_pre_permute = (
-                ctx.saved_tensors
-            )
+            (
+                offsets_original,
+                offsets_tokperm,
+                token_layouts,
+                dilations,
+            ) = ctx.saved_tensors
             d_output_permuted = VARLEN_PERMUTE_OPS[na_dim](
                 d_output,
-                offsets_pre_permute=offsets_pre_permute,
-                offsets_post_permute=offsets_post_permute,
-                token_layouts_pre_permute=token_layouts_pre_permute,
+                offsets_original=offsets_original,
+                offsets_tokperm=offsets_tokperm,
+                token_layouts=token_layouts,
                 max_seqlen=ctx.max_seqlen,
                 total_seqlen_post_permute=ctx.total_seqlen_post_permute,
                 tile_shape=ctx.tile_shape,
                 dilation=ctx.dilation,
+                dilations=dilations,
                 flip_tiled_dims=ctx.flip_tiled_dims,
             )
 
             return (
                 d_output_permuted,
+                None,
                 None,
                 None,
                 None,
@@ -515,6 +533,8 @@ def token_permute_varlen_cutlass(
     tile_shape: DimensionType,
     dilation: DimensionType,
     flip_tiled_dims: bool,
+    # variable dilations across different groups of tokens
+    dilations: Optional[Tensor] = None,
 ) -> Tensor:
 
     na_dim = len(tile_shape)
@@ -525,22 +545,23 @@ def token_permute_varlen_cutlass(
             "Use case is not compatible with CUTLASS Token Permute."
         )
 
-    offsets_pre_permute = metadata["offsets_pre_permute"]
-    offsets_post_permute = metadata["offsets_post_permute"]
-    token_layouts_pre_permute = metadata["token_layouts_pre_permute"]
+    offsets_original = metadata["offsets_original"]
+    offsets_tokperm = metadata["offsets_tokperm"]
+    token_layouts = metadata["token_layouts"]
     total_seqlen_post_permute = metadata["total_seqlen_post_permute"]
-    max_seqlen_post_permute = metadata["max_seqlen_post_permute"]
+    max_seqlen_tokperm = metadata["max_seqlen_tokperm"]
 
     tensor = tensor.contiguous()
     output = CutlassTokenPermuteVarlenAutogradFns[na_dim].apply(
         tensor,
-        offsets_pre_permute,
-        offsets_post_permute,
-        token_layouts_pre_permute,
-        max_seqlen_post_permute,
+        offsets_original,
+        offsets_tokperm,
+        token_layouts,
+        max_seqlen_tokperm,
         total_seqlen_post_permute,
         tile_shape,
         dilation,
+        dilations,
         flip_tiled_dims,
     )
 
@@ -553,6 +574,8 @@ def token_unpermute_varlen_cutlass(
     tile_shape: DimensionType,
     dilation: DimensionType,
     flip_tiled_dims: bool,
+    # variable dilations across different groups of tokens
+    dilations: Optional[Tensor] = None,
     # allow overriding output seqlen for optional padding
     output_seqlen: Optional[int] = None,
 ) -> Tensor:
@@ -564,22 +587,23 @@ def token_unpermute_varlen_cutlass(
             "Use case is not compatible with CUTLASS Token UnPermute."
         )
 
-    offsets_pre_permute = metadata["offsets_pre_permute"]
-    offsets_post_permute = metadata["offsets_post_permute"]
-    token_layouts_pre_permute = metadata["token_layouts_pre_permute"]
+    offsets_original = metadata["offsets_original"]
+    offsets_tokperm = metadata["offsets_tokperm"]
+    token_layouts = metadata["token_layouts"]
     total_seqlen_pre_permute = metadata["total_seqlen_pre_permute"]
-    max_seqlen_pre_permute = metadata["max_seqlen_pre_permute"]
+    max_seqlen_original = metadata["max_seqlen_original"]
 
     tensor = tensor.contiguous()
     output = CutlassTokenUnPermuteVarlenAutogradFns[na_dim].apply(
         tensor,
-        offsets_pre_permute,
-        offsets_post_permute,
-        token_layouts_pre_permute,
-        max_seqlen_pre_permute,
+        offsets_original,
+        offsets_tokperm,
+        token_layouts,
+        max_seqlen_original,
         total_seqlen_pre_permute,
         tile_shape,
         dilation,
+        dilations,
         flip_tiled_dims,
         output_seqlen,
     )

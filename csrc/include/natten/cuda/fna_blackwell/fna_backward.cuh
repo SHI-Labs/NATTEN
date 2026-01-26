@@ -81,12 +81,14 @@ struct KernelBackward {
       Element,
       ElementAccumulator,
       TileShape,
-      collective::NeighborhoodAttentionBackwardMask<Causal>,
+      collective::
+          NeighborhoodAttentionBackwardMask<QTileShape, KVTileShape, Causal>,
       QTileShape,
       KVTileShape,
       NADim>;
 
   using Arguments = typename Operation::Arguments;
+  using BatchMap = typename Operation::Kernel::BatchMap;
 
   Operation op;
 
@@ -120,6 +122,11 @@ struct KernelBackward {
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
       void* ptr_token_layouts,
+      void* ptr_batch_map,
+      // var-param parameters
+      void* ptr_window_sizes,
+      void* ptr_strides,
+      void* ptr_dilations,
       // init/launch params
       int device_id) {
     auto problem_shape_regular = cute::make_tuple(
@@ -218,7 +225,14 @@ struct KernelBackward {
         window_size,
         stride,
         dilation,
-        reinterpret_cast<NADim*>(ptr_token_layouts), // varlen only
+        // varlen (var-sized)
+        reinterpret_cast<NADim*>(ptr_token_layouts),
+        reinterpret_cast<BatchMap*>(ptr_batch_map),
+        // var-param
+        reinterpret_cast<NADim*>(ptr_window_sizes),
+        reinterpret_cast<NADim*>(ptr_strides),
+        reinterpret_cast<NADim*>(ptr_dilations),
+        //
         attn_scale,
         hw_info};
 

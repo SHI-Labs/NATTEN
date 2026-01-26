@@ -62,9 +62,11 @@ template <class StdNADim>
 void token_permute_varlen_generic(
     at::Tensor& out,
     const at::Tensor& in,
-    const at::Tensor& offsets_pre_permute,
-    const at::Tensor& offsets_post_permute,
+    const at::Tensor& offsets_original,
+    const at::Tensor& offsets_tokperm,
     const at::Tensor& token_layouts,
+    const at::optional<at::Tensor>&
+        dilations, // per-batch dilations, if desired
     int32_t seqlen_max,
     const StdNADim& tile_shape,
     const StdNADim& dilation,
@@ -120,41 +122,38 @@ void token_permute_varlen_generic(
       in.size(3));
 
   TORCH_CHECK(
-      offsets_pre_permute.dim() == 1 && offsets_post_permute.dim() == 1,
+      offsets_original.dim() == 1 && offsets_tokperm.dim() == 1,
       "Varlen Token Permute offsets must be rank-1 tensors, got "
-      "offsets_pre_permute.dim()=",
-      offsets_pre_permute.dim(),
-      ", offsets_post_permute.dim()=",
-      offsets_post_permute.dim());
+      "offsets_original.dim()=",
+      offsets_original.dim(),
+      ", offsets_tokperm.dim()=",
+      offsets_tokperm.dim());
 
   TORCH_CHECK(
-      offsets_pre_permute.size(0) > 1,
-      "Varlen Token Permute pre-permute offsets must contain at least 2 elements, got "
-      "offsets_pre_permute.shape[0]=",
-      offsets_pre_permute.size(0));
+      offsets_original.size(0) == offsets_tokperm.size(0),
+      "Varlen Token Permute offsets must match in size, got "
+      "offsets_original.shape[0]=",
+      offsets_original.size(0),
+      ", offsets_tokperm.shape[0]=",
+      offsets_tokperm.size(0));
 
-  int batch = offsets_pre_permute.size(0) - 1;
+  TORCH_CHECK(
+      offsets_original.size(0) > 1,
+      "Varlen Token Permute pre-permute offsets must contain at least 2 elements, got "
+      "offsets_original.shape[0]=",
+      offsets_original.size(0));
+
+  int batch = offsets_original.size(0) - 1;
   int seqlen = out.size(1);
   int heads = out.size(2);
   int dim = out.size(3);
 
+  bool has_variable_dilations = dilations.has_value();
+
   auto tile_shape_ = std_tuple_to_cute_tuple(tile_shape);
   auto dilation_ = std_tuple_to_cute_tuple(dilation);
-  auto num_dilation_groups = cute::size(dilation_);
 
-  TORCH_CHECK(
-      offsets_post_permute.size(0) == num_dilation_groups * batch + 1,
-      "Varlen Token Permute post-permute offsets must contain exactly ",
-      "batch (=",
-      batch,
-      ") * math.prod(dilation) (=",
-      num_dilation_groups,
-      ") + 1"
-      "elements, which is = ",
-      num_dilation_groups * batch + 1,
-      ", got ",
-      "offsets_post_permute.shape[0]=",
-      offsets_post_permute.size(0));
+  using CuteTuple = decltype(tile_shape_);
 
   int device_id = in.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
@@ -174,8 +173,8 @@ void token_permute_varlen_generic(
       "Varlen Token Permute only supports FP32, FP16, BF16, and FP8 operands (Blackwell DC-class only) for now.");
 
   TORCH_CHECK(
-      offsets_pre_permute.scalar_type() == torch::kInt &&
-          offsets_post_permute.scalar_type() == torch::kInt,
+      offsets_original.scalar_type() == torch::kInt &&
+          offsets_tokperm.scalar_type() == torch::kInt,
       "Varlen Token Permute only supports Int32 offsets.");
 
   TORCH_CHECK(
@@ -202,7 +201,34 @@ void token_permute_varlen_generic(
       ", got ",
       token_layouts.size(1));
 
-  using CuteTuple = decltype(tile_shape_);
+  CuteTuple* dilations_ptr = nullptr;
+  if (has_variable_dilations) {
+    TORCH_CHECK(
+        dilations.value().scalar_type() == torch::kInt,
+        "Varlen Token Permute expects dilations to be an int32 tensor.");
+
+    TORCH_CHECK(
+        dilations.value().dim() == 2,
+        "Varlen Token Permute expects dilations to be a rank-2 tensor.");
+
+    TORCH_CHECK(
+        dilations.value().size(0) == batch,
+        "Varlen Token Permute expects dilations.shape[0] == batch (=",
+        batch,
+        "), got ",
+        dilations.value().size(0));
+
+    TORCH_CHECK(
+        dilations.value().size(1) == kNADim,
+        "Varlen Token Permute ",
+        kNADim,
+        "-D expects dilations.shape[1] == ",
+        kNADim,
+        ", got ",
+        dilations.value().size(1));
+
+    dilations_ptr = reinterpret_cast<CuteTuple*>(dilations.value().data_ptr());
+  }
 
   bool success = false;
   if (in.scalar_type() == torch::kFloat32) {
@@ -213,9 +239,10 @@ void token_permute_varlen_generic(
         seqlen_max,
         heads,
         dim,
-        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
-        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_original.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_tokperm.data_ptr()),
         reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
+        has_variable_dilations ? dilations_ptr : nullptr,
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -228,9 +255,10 @@ void token_permute_varlen_generic(
         seqlen_max,
         heads,
         dim,
-        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
-        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_original.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_tokperm.data_ptr()),
         reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
+        has_variable_dilations ? dilations_ptr : nullptr,
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -243,9 +271,10 @@ void token_permute_varlen_generic(
         seqlen_max,
         heads,
         dim,
-        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
-        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_original.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_tokperm.data_ptr()),
         reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
+        has_variable_dilations ? dilations_ptr : nullptr,
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -261,9 +290,10 @@ void token_permute_varlen_generic(
         seqlen_max,
         heads,
         dim,
-        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
-        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_original.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_tokperm.data_ptr()),
         reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
+        has_variable_dilations ? dilations_ptr : nullptr,
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -277,9 +307,10 @@ void token_permute_varlen_generic(
         seqlen_max,
         heads,
         dim,
-        reinterpret_cast<int32_t*>(offsets_pre_permute.data_ptr()),
-        reinterpret_cast<int32_t*>(offsets_post_permute.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_original.data_ptr()),
+        reinterpret_cast<int32_t*>(offsets_tokperm.data_ptr()),
         reinterpret_cast<CuteTuple*>(token_layouts.data_ptr()),
+        has_variable_dilations ? dilations_ptr : nullptr,
         tile_shape_,
         dilation_,
         flip_tiled_dims,
@@ -297,9 +328,11 @@ void token_permute_varlen_generic(
 void token_permute_varlen_1d(
     at::Tensor& out,
     const at::Tensor& in,
-    const at::Tensor& offsets_pre_permute,
-    const at::Tensor& offsets_post_permute,
+    const at::Tensor& offsets_original,
+    const at::Tensor& offsets_tokperm,
     const at::Tensor& token_layouts,
+    const at::optional<at::Tensor>&
+        dilations, // per-batch dilations, if desired
     int32_t seqlen_max,
     const std::tuple<int32_t>& tile_shape,
     const std::tuple<int32_t>& dilation,
@@ -307,9 +340,10 @@ void token_permute_varlen_1d(
   token_permute_varlen_generic(
       out,
       in,
-      offsets_pre_permute,
-      offsets_post_permute,
+      offsets_original,
+      offsets_tokperm,
       token_layouts,
+      dilations,
       seqlen_max,
       tile_shape,
       dilation,
@@ -319,9 +353,11 @@ void token_permute_varlen_1d(
 void token_permute_varlen_2d(
     at::Tensor& out,
     const at::Tensor& in,
-    const at::Tensor& offsets_pre_permute,
-    const at::Tensor& offsets_post_permute,
+    const at::Tensor& offsets_original,
+    const at::Tensor& offsets_tokperm,
     const at::Tensor& token_layouts,
+    const at::optional<at::Tensor>&
+        dilations, // per-batch dilations, if desired
     int32_t seqlen_max,
     const std::tuple<int32_t, int32_t>& tile_shape,
     const std::tuple<int32_t, int32_t>& dilation,
@@ -329,9 +365,10 @@ void token_permute_varlen_2d(
   token_permute_varlen_generic(
       out,
       in,
-      offsets_pre_permute,
-      offsets_post_permute,
+      offsets_original,
+      offsets_tokperm,
       token_layouts,
+      dilations,
       seqlen_max,
       tile_shape,
       dilation,
@@ -341,9 +378,11 @@ void token_permute_varlen_2d(
 void token_permute_varlen_3d(
     at::Tensor& out,
     const at::Tensor& in,
-    const at::Tensor& offsets_pre_permute,
-    const at::Tensor& offsets_post_permute,
+    const at::Tensor& offsets_original,
+    const at::Tensor& offsets_tokperm,
     const at::Tensor& token_layouts,
+    const at::optional<at::Tensor>&
+        dilations, // per-batch dilations, if desired
     int32_t seqlen_max,
     const std::tuple<int32_t, int32_t, int32_t>& tile_shape,
     const std::tuple<int32_t, int32_t, int32_t>& dilation,
@@ -351,9 +390,10 @@ void token_permute_varlen_3d(
   token_permute_varlen_generic(
       out,
       in,
-      offsets_pre_permute,
-      offsets_post_permute,
+      offsets_original,
+      offsets_tokperm,
       token_layouts,
+      dilations,
       seqlen_max,
       tile_shape,
       dilation,

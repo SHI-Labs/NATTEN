@@ -37,6 +37,7 @@ from natten.token_permute.torch_impl import token_permute_torch, token_unpermute
 from natten.token_permute.varlen import verify_tokperm_varlen_metadata
 from natten.types import DimensionType
 from natten.utils import log
+from natten.utils.checks import check_dilation_arg
 from natten.utils.tuples import ceil_div_tuple, mul_tuple
 
 logger = log.get_logger(__name__)
@@ -68,26 +69,26 @@ def token_permute_operation(
             f"Expected {na_dim}D dilation for NA{na_dim}D, " f"got {dilation=}."
         )
 
-    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+    dilation = check_dilation_arg(na_dim=na_dim, dilation=dilation)
 
     tensor = tensor.contiguous()
     batch, *token_layout_, heads, dim = tensor.shape
     token_layout: DimensionType = tuple(x for x in token_layout_)  # type: ignore[assignment]
 
-    token_layout_post_dilation: DimensionType = mul_tuple(ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation_), tile_shape)  # type: ignore[assignment]
+    token_layout_post_dilation: DimensionType = mul_tuple(ceil_div_tuple(ceil_div_tuple(token_layout, tile_shape), dilation), tile_shape)  # type: ignore[assignment]
 
     if not use_torch and can_run_cutlass_tokperm(tensor):
         output = token_permute_cutlass(
             tensor,
             tile_shape=tile_shape,
-            dilation=dilation_,
+            dilation=dilation,
             flip_tiled_dims=flip_tiled_dims,
         )
     else:
         output = token_permute_torch(
             tensor,
             tile_shape=tile_shape,
-            dilation=dilation_,
+            dilation=dilation,
             flip_tiled_dims=flip_tiled_dims,
         )
 
@@ -117,7 +118,7 @@ def token_unpermute_operation(
             f"Expected {na_dim}D dilation for NA{na_dim}D, " f"got {dilation=}."
         )
 
-    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+    dilation = check_dilation_arg(na_dim=na_dim, dilation=dilation)
 
     tensor = tensor.contiguous()
     if not use_torch and can_run_cutlass_tokperm(tensor):
@@ -125,7 +126,7 @@ def token_unpermute_operation(
             tensor,
             token_layout_shape,
             tile_shape=tile_shape,
-            dilation=dilation_,
+            dilation=dilation,
             flip_tiled_dims=flip_tiled_dims,
         )
     else:
@@ -133,7 +134,7 @@ def token_unpermute_operation(
             tensor,
             token_layout_shape,
             tile_shape=tile_shape,
-            dilation=dilation_,
+            dilation=dilation,
             flip_tiled_dims=flip_tiled_dims,
         )
 
@@ -146,18 +147,18 @@ def token_permute_varlen_operation(
     tile_shape: DimensionType,
     dilation: Optional[DimensionType] = None,
     flip_tiled_dims: bool = True,
+    # variable dilations across different groups of tokens
+    dilations: Optional[Tensor] = None,
     use_torch: bool = USE_TORCH_IMPL_DEFAULT,
 ) -> Tensor:
     na_dim = len(tile_shape)
     assert na_dim in [1, 2, 3]
 
-    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+    dilation = check_dilation_arg(na_dim=na_dim, dilation=dilation)
 
     verify_tokperm_varlen_metadata(
         tensor=tensor,
         metadata=metadata,
-        tile_shape=tile_shape,
-        dilation=dilation_,
     )
 
     tensor = tensor.contiguous()
@@ -167,7 +168,8 @@ def token_permute_varlen_operation(
             tensor,
             metadata=metadata,
             tile_shape=tile_shape,
-            dilation=dilation_,
+            dilation=dilation,
+            dilations=dilations,
             flip_tiled_dims=flip_tiled_dims,
         )
     else:
@@ -184,6 +186,8 @@ def token_unpermute_varlen_operation(
     tile_shape: DimensionType,
     dilation: Optional[DimensionType] = None,
     flip_tiled_dims: bool = True,
+    # variable dilations across different groups of tokens
+    dilations: Optional[Tensor] = None,
     # allow overriding output seqlen for optional padding
     output_seqlen: Optional[int] = None,
     use_torch: bool = USE_TORCH_IMPL_DEFAULT,
@@ -191,13 +195,11 @@ def token_unpermute_varlen_operation(
     na_dim = len(tile_shape)
     assert na_dim in [1, 2, 3]
 
-    dilation_: DimensionType = dilation or tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+    dilation = check_dilation_arg(na_dim=na_dim, dilation=dilation)
 
     verify_tokperm_varlen_metadata(
         tensor=tensor,
         metadata=metadata,
-        tile_shape=tile_shape,
-        dilation=dilation_,
     )
 
     tensor = tensor.contiguous()
@@ -207,7 +209,8 @@ def token_unpermute_varlen_operation(
             tensor,
             metadata=metadata,
             tile_shape=tile_shape,
-            dilation=dilation_,
+            dilation=dilation,
+            dilations=dilations,
             flip_tiled_dims=flip_tiled_dims,
             output_seqlen=output_seqlen,
         )
