@@ -123,8 +123,10 @@ void fmha_forward_generic(
     // void* accum_ptr = nullptr;
     if (Kernel::kNeedsOutputAccumulatorBuffer) {
       using AccumType = typename Kernel::output_accum_t;
-      int64_t workspace_size_bytes =
-          batch_size * seqlen_q * heads * dim_value * sizeof(AccumType);
+      int64_t workspace_size_bytes = static_cast<int64_t>(batch_size) *
+          static_cast<int64_t>(seqlen_q) * static_cast<int64_t>(heads) *
+          static_cast<int64_t>(dim_value) *
+          static_cast<int64_t>(sizeof(AccumType));
       void* accum_ptr = nullptr;
       alloc_bytes(&accum_ptr, workspace_size_bytes, /* zero_fill = */ false);
       p.output_accum_ptr = (AccumType*)accum_ptr;

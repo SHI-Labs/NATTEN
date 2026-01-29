@@ -303,16 +303,6 @@ void fmha_backward(
         "you're probably calling the C function directly.");
   }
 
-  auto num_kv_tiles = (seqlen_kv + key_tile_size - 1) / key_tile_size;
-  TORCH_CHECK(
-      num_splits_key <= num_kv_tiles,
-      "CUTLASS FMHA backward: backward_kv_splits must be less than or equal to ",
-      "KV sequence length divided by tile size, got backward_kv_splits=",
-      num_splits_key,
-      ", ceil_div(seqlen_kv, key_tile_size)=",
-      num_kv_tiles,
-      ".");
-
   // varlen
   bool is_varlen =
       cumulative_seqlen_Q.has_value() || cumulative_seqlen_KV.has_value();
@@ -364,6 +354,17 @@ void fmha_backward(
         static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
   }
   //
+
+  auto seqlen_kv_ = is_varlen ? max_seqlen_KV : seqlen_kv;
+  auto num_kv_tiles = (seqlen_kv_ + key_tile_size - 1) / key_tile_size;
+  TORCH_CHECK(
+      num_splits_key <= num_kv_tiles,
+      "CUTLASS FMHA backward: backward_kv_splits must be less than or equal to ",
+      "KV sequence length divided by tile size, got backward_kv_splits=",
+      num_splits_key,
+      ", ceil_div(seqlen_kv, key_tile_size)=",
+      num_kv_tiles,
+      ".");
 
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());
