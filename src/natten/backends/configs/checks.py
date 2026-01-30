@@ -30,7 +30,7 @@ from ..._environment import _IS_TORCH_COMPILE_SUPPORTED, _TORCH_VERSION
 from ..._libnatten import HAS_LIBNATTEN
 from ...context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
 from ...utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_checks
-from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
+from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm, is_xpu
 from ...utils.dtype import is_fp8
 
 
@@ -597,6 +597,14 @@ def can_run_flex_attention(
         target_fn("Can't run NATTEN with Flex Attention with torch < 2.7.")
         return False
 
+    # XPU requires PyTorch 2.9+
+    if is_xpu(query.device) and _TORCH_VERSION < [2, 9]:
+        target_fn(
+            f"Can't run Flex Attention on XPU; requires PyTorch >= 2.9, "
+            f"got {_TORCH_VERSION[0]}.{_TORCH_VERSION[1]}."
+        )
+        return False
+
     if torch_compile and not _FLEX_COMPILE_SUPPORTED:
         target_fn("Can't run NATTEN with Flex Attention (compiled).)")
         return False
@@ -657,9 +665,9 @@ def can_run_flex_attention(
         return False
 
     if not is_cuda(query.device):
-        if not is_cpu(query.device) and not is_rocm(query.device):
+        if not is_cpu(query.device) and not is_rocm(query.device) and not is_xpu(query.device):
             target_fn(
-                "Can't run Flex Attention; tensor is not on a CUDA, ROCm, or CPU device: "
+                "Can't run Flex Attention; tensor is not on a CUDA, ROCm, XPU, or CPU device: "
                 f"{query.device.type}"
             )
 
