@@ -120,17 +120,6 @@ void fmha_forward_generic(
         ? (typename Kernel::lse_scalar_t*)logsumexp_ptr
         : nullptr;
 
-    // void* accum_ptr = nullptr;
-    if (Kernel::kNeedsOutputAccumulatorBuffer) {
-      using AccumType = typename Kernel::output_accum_t;
-      int64_t workspace_size_bytes =
-          batch_size * seqlen_q * heads * dim_value * sizeof(AccumType);
-      void* accum_ptr = nullptr;
-      alloc_bytes(&accum_ptr, workspace_size_bytes, /* zero_fill = */ false);
-      p.output_accum_ptr = (AccumType*)accum_ptr;
-    } else {
-      p.output_accum_ptr = nullptr;
-    }
     p.output_ptr = (typename Kernel::output_t*)out_ptr;
 
     p.num_heads = heads;
@@ -148,6 +137,19 @@ void fmha_forward_generic(
           static_cast<const int32_t*>(ptr_cumulative_seqlen_Q);
       p.ptr_cumulative_seqlen_KV =
           static_cast<const int32_t*>(ptr_cumulative_seqlen_KV);
+    }
+
+    if (Kernel::kNeedsOutputAccumulatorBuffer) {
+      using AccumType = typename Kernel::output_accum_t;
+      int64_t workspace_size_bytes = static_cast<int64_t>(batch_size) *
+          static_cast<int64_t>(p.num_queries) * static_cast<int64_t>(heads) *
+          static_cast<int64_t>(dim_value) *
+          static_cast<int64_t>(sizeof(AccumType));
+      void* accum_ptr = nullptr;
+      alloc_bytes(&accum_ptr, workspace_size_bytes, /* zero_fill = */ false);
+      p.output_accum_ptr = (AccumType*)accum_ptr;
+    } else {
+      p.output_accum_ptr = nullptr;
     }
 
     p.scale = attn_scale;

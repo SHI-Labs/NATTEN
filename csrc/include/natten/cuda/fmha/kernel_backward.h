@@ -788,26 +788,31 @@ struct AttentionBackwardKernel {
       if constexpr (!kNeedsAccumGradK) {
         return 0;
       }
-      return num_splits_key * kBlockSizeJ *
-          align_up(head_dim, (int32_t)kBlockSizeI);
+      return static_cast<int64_t>(num_splits_key) *
+          static_cast<int64_t>(kBlockSizeJ) *
+          static_cast<int64_t>(align_up(head_dim, (int32_t)kBlockSizeI));
     }
 
     CUTLASS_HOST_DEVICE int64_t workspace_elements_gv() const {
       if constexpr (!kNeedsAccumGradV) {
         return 0;
       }
-      return num_splits_key * kBlockSizeJ *
-          align_up(head_dim_value, (int32_t)kBlockSizeI);
+      return static_cast<int64_t>(num_splits_key) *
+          static_cast<int64_t>(kBlockSizeJ) *
+          static_cast<int64_t>(align_up(head_dim_value, (int32_t)kBlockSizeI));
     }
 
     CUTLASS_HOST_DEVICE int64_t workspace_elements_gq() const {
       if constexpr (!kNeedsAccumGradQ) {
         return 0;
       }
-      int num_blocks = ceil_div(num_queries, kBlockSizeI);
-      int num_cols = ceil_div(head_dim, MatmulGradQ::ThreadblockShape::kN);
-      return num_blocks * num_cols * sizeof(GradQTempStorage) /
-          sizeof(output_accum_t);
+      auto num_blocks =
+          static_cast<int64_t>(ceil_div(num_queries, kBlockSizeI));
+      auto num_cols = static_cast<int64_t>(
+          ceil_div(head_dim, MatmulGradQ::ThreadblockShape::kN));
+      return num_blocks * num_cols *
+          static_cast<int64_t>(sizeof(GradQTempStorage)) /
+          static_cast<int64_t>(sizeof(output_accum_t));
     }
     CUTLASS_HOST_DEVICE int64_t workspace_strideBH() const {
       // Aligned on 128bits
@@ -818,7 +823,9 @@ struct AttentionBackwardKernel {
     }
     CUTLASS_HOST_DEVICE int64_t workspace_size() const {
       // Returns size of buffer we need to run this kernel
-      return num_batches * num_heads * workspace_strideBH() * sizeof(float);
+      return static_cast<int64_t>(num_batches) *
+          static_cast<int64_t>(num_heads) * workspace_strideBH() *
+          static_cast<int64_t>(sizeof(float));
     }
     CUTLASS_HOST_DEVICE bool should_zero_workspace() const {
       return num_splits_key > 1;

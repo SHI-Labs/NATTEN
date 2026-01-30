@@ -502,6 +502,13 @@ def fmha_backward_torch_op(
     d_key = init_fn(key)
     d_value = init_fn(value)
 
+    # torch compile sometimes passes down an incorrect num_kv_splits after recompiles.
+    # we always need to silently fall back to maximum possible to avoid hitting the cpp guard.
+    seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else max_seqlen_KV
+    num_kv_tiles = (seqlen_kv + kv_tile_size - 1) // kv_tile_size
+    assert num_kv_tiles > 0
+    num_kv_splits = min(num_kv_tiles, num_kv_splits)
+
     fmha_backward_cxx(
         d_query,
         d_key,
