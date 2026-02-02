@@ -163,6 +163,7 @@ template <
     bool IsUnpermute = false,
     int kElementsPerLoad = 4>
 struct TokenPermuteKernel {
+  using OffsetTypeInternal = uint64_t;
   using TokenLayout =
       cute::conditional_t<IsUnpermute, TokenLayoutOut, TokenLayoutIn>;
 
@@ -260,14 +261,15 @@ struct TokenPermuteKernel {
 
   static dim3 get_grid_shape(Params const& params) {
     dim3 grid(
-        cute::size<0>(params.problem_shape_dst),
+        // never put seq in z, long seqs can easily exceed the 64K limit
+        cute::ceil_div(size<1>(params.problem_shape_dst), kBlockSeq),
         cute::size<2>(params.problem_shape_dst),
-        cute::ceil_div(size<1>(params.problem_shape_dst), kBlockSeq));
+        cute::size<0>(params.problem_shape_dst));
     return grid;
   }
 
   static dim3 get_block_shape() {
-    dim3 block(kNumThreadsD, kNumThreadsSeq, 1);
+    dim3 block(kNumThreadsSeq, kNumThreadsD, 1);
     return block;
   }
 
@@ -276,10 +278,16 @@ struct TokenPermuteKernel {
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
-    auto ptr_src_bh = params.ptr_src + get<0>(params.stride_src) * blockIdx.x +
-        get<2>(params.stride_src) * blockIdx.y;
-    auto ptr_dst_bh = params.ptr_dst + get<0>(params.stride_dst) * blockIdx.x +
-        get<2>(params.stride_dst) * blockIdx.y;
+    auto ptr_src_bh = params.ptr_src +
+        (static_cast<OffsetTypeInternal>(get<0>(params.stride_src)) *
+             static_cast<OffsetTypeInternal>(blockIdx.z) +
+         static_cast<OffsetTypeInternal>(get<2>(params.stride_src)) *
+             static_cast<OffsetTypeInternal>(blockIdx.y));
+    auto ptr_dst_bh = params.ptr_dst +
+        (static_cast<OffsetTypeInternal>(get<0>(params.stride_dst)) *
+             static_cast<OffsetTypeInternal>(blockIdx.z) +
+         static_cast<OffsetTypeInternal>(get<2>(params.stride_dst)) *
+             static_cast<OffsetTypeInternal>(blockIdx.y));
 
     auto token_layout_src = make_layout(
         get<1>(params.problem_shape_src), get<1>(params.stride_src));
@@ -290,9 +298,9 @@ struct TokenPermuteKernel {
 
     auto seqlen = size<1>(params.problem_shape_dst);
 
-    for (int idx_s_t = threadIdx.y; idx_s_t < kBlockSeq;
+    for (int idx_s_t = threadIdx.x; idx_s_t < kBlockSeq;
          idx_s_t += kNumThreadsSeq) {
-      int idx_s = idx_s_t + kBlockSeq * blockIdx.z;
+      int idx_s = idx_s_t + kBlockSeq * blockIdx.x;
       if (idx_s >= seqlen)
         continue;
 
@@ -313,7 +321,7 @@ struct TokenPermuteKernel {
       auto ptr_src_bhs = ptr_src_bh + token_layout_src(crd_src);
       auto ptr_dst_bhs = ptr_dst_bh + token_layout_dst(crd_dst);
 
-      for (int idx_d = threadIdx.x * kElementsPerLoad;
+      for (int idx_d = threadIdx.y * kElementsPerLoad;
            idx_d < get<3>(params.problem_shape_dst);
            idx_d += kElementsPerLoad * kNumThreadsD) {
         ElementIn value_src[kElementsPerLoad];
