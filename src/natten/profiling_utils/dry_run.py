@@ -101,7 +101,7 @@ def dry_run_for_backend(
 
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
     q, k, v = problem.make_qkv_tensors(
-        device=torch_device, requires_grad=backprop, heads_last=False, flatten=is_fmha
+        device=torch_device, requires_grad=backprop, heads_last=True, flatten=is_fmha
     )
 
     fwd_configs, bwd_configs = None, None
@@ -280,7 +280,7 @@ def dry_run(
     fmha_backends = None
     if backend is None:
         q, k, v = problem.make_qkv_tensors(
-            device=torch_device, requires_grad=backprop, heads_last=False, flatten=False
+            device=torch_device, requires_grad=backprop, heads_last=True, flatten=False
         )
 
         backends = get_compatible_backends(q, k, v, torch_compile=torch_compile)
@@ -289,7 +289,7 @@ def dry_run(
 
     if fmha_backend is None:
         q_flat, k_flat, v_flat = problem.make_qkv_tensors(
-            device=torch_device, requires_grad=backprop, heads_last=False, flatten=True
+            device=torch_device, requires_grad=backprop, heads_last=True, flatten=True
         )
 
         fmha_backends = get_compatible_fmha_backends(
@@ -334,10 +334,10 @@ def find_configs(
 ) -> Tuple[str, str, list, list]:
     torch_device = "cuda" if torch.cuda.is_available() else "cpu"
     q, k, v = problem.make_qkv_tensors(
-        device=torch_device, requires_grad=backprop, heads_last=False, flatten=False
+        device=torch_device, requires_grad=backprop, heads_last=True, flatten=False
     )
     q_flat, k_flat, v_flat = problem.make_qkv_tensors(
-        device=torch_device, requires_grad=backprop, heads_last=False, flatten=True
+        device=torch_device, requires_grad=backprop, heads_last=True, flatten=True
     )
 
     backend = backend or choose_backend(q, k, v, torch_compile=torch_compile)

@@ -283,8 +283,13 @@ def get_args():
     parser.add_argument(
         "-b", "--batch-size", type=int, default=1, help="QKV batch size."
     )
+    parser.add_argument("-n", "--heads", type=int, default=1, help="Number of Q heads.")
     parser.add_argument(
-        "-n", "--heads", type=int, default=1, help="QKV number of heads (no GQA/MQA)."
+        "--heads-kv",
+        type=int,
+        default=None,
+        help="Number of KV heads (GQA/MQA). Defaults to the value of "
+        "`-n`/`--heads` (standard MHA).",
     )
     parser.add_argument(
         "-d", "--dim", type=int, default=64, help="QK (and optionally V) head dim."
@@ -524,6 +529,7 @@ def profile(
     max_configs: int,
     optimize: bool,
     optimize_warmup_steps: int,
+    heads_kv: Optional[int] = None,
 ):
     if dry_run and optimize:
         raise ValueError("Dry run and optimize can't be run together.")
@@ -574,6 +580,7 @@ def profile(
         dtype=torch_dtype,
         is_causal=causal,
         additional_kv_length=add_kv,
+        heads_kv=heads_kv,
     )
 
     if dry_run:
