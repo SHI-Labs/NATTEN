@@ -27,8 +27,7 @@ from typing import Optional
 import torch
 from natten._environment import _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS
 from natten.backends import get_compatible_backends, get_compatible_fmha_backends
-from natten.functional import attention
-from natten.modules import NeighborhoodAttentionGeneric
+from natten.functional import attention, neighborhood_attention_generic
 from natten.utils import log
 from natten.utils.testing import skip_if_libnatten_is_not_supported
 from natten.utils.varlen import generate_varlen_parameters
@@ -46,6 +45,72 @@ def _reset_everything():
     reset_torch_compile(1024)
     torch.cuda.empty_cache()
 
+
+class NABlock(nn.Module):
+    def __init__(
+        self,
+        embed_dim: int,
+        num_heads: int,
+        qkv_bias: bool = True,
+        qk_scale: Optional[float] = None,
+        proj_drop: float = 0.0,
+    ):
+        super().__init__()
+        self.embed_dim = embed_dim
+        self.num_heads = num_heads
+        self.head_dim = self.embed_dim // self.num_heads
+        self.scale = qk_scale or self.head_dim**-0.5
+
+        self.q = nn.Linear(self.embed_dim, self.embed_dim, bias=qkv_bias)
+        self.kv = nn.Linear(self.embed_dim, self.embed_dim * 2, bias=qkv_bias)
+        self.proj = nn.Linear(self.embed_dim, self.embed_dim)
+
+    def forward(
+        self, x: torch.Tensor, additional_context: Optional[torch.Tensor] = None, *args, **kwargs
+    ):
+        B, *input_shape, C = x.shape
+        na_dim = len(input_shape)
+
+        permutation_q = (
+            [0] + [x + 1 for x in range(na_dim)] + [na_dim + 1, na_dim + 2]
+        )
+        permutation_kv = (
+            [na_dim + 1, 0] + [x + 1 for x in range(na_dim)] + [na_dim + 2, na_dim + 3]
+        )
+
+        q = (
+            self.q(x)
+            .reshape(B, *input_shape, self.num_heads, self.head_dim)
+            .permute(*permutation_q)
+        )
+        kv = (
+            self.kv(x)
+            .reshape(B, *input_shape, 2, self.num_heads, self.head_dim)
+            .permute(*permutation_kv)
+        )
+        k, v = kv[0], kv[1]
+
+        add_k, add_v = None, None
+        if additional_context is not None:
+            add_kv = (
+                self.kv(additional_context)
+                .reshape(B, -1, 2, self.num_heads, self.head_dim)
+                .permute(2, 0, 1, 3, 4)
+            )
+            add_k, add_v = add_kv[0], add_kv[1]
+
+        x = neighborhood_attention_generic(
+            q,
+            k,
+            v,
+            *args,
+            additional_keys=add_k,
+            additional_values=add_v,
+            **kwargs,
+        )
+        x = x.reshape(B, *input_shape, C)
+
+        return self.proj(x)
 
 class FMHABlock(nn.Module):
     def __init__(
@@ -94,26 +159,16 @@ class FMHABlock(nn.Module):
 class Block(nn.Module):
     def __init__(
         self,
-        na_dim: int,
         embed_dim: int,
         num_heads: int,
         mlp_ratio: int,
-        kernel_size,
-        stride,
-        dilation,
-        is_causal,
         qkv_bias: bool = True,
     ):
         super().__init__()
 
-        self.attn = NeighborhoodAttentionGeneric(
-            na_dim=na_dim,
+        self.attn = NABlock(
             embed_dim=embed_dim,
             num_heads=num_heads,
-            kernel_size=kernel_size,
-            dilation=dilation,
-            stride=stride,
-            is_causal=is_causal,
             qkv_bias=qkv_bias,
         )
 
@@ -180,18 +235,22 @@ class TorchCompileTests(unittest.TestCase):
 
             model = (
                 Block(
-                    na_dim=na_dim,
                     embed_dim=embed_dim,
                     mlp_ratio=2,
                     num_heads=num_heads,
-                    kernel_size=kernel_size,
-                    dilation=dilation,
-                    stride=stride,
-                    is_causal=is_causal,
                 )
                 .to(dtype)
                 .to(device)
             )
+
+            forward_args = {
+                "kernel_size": kernel_size,
+                "dilation": dilation,
+                "stride": stride,
+                "is_causal": is_causal,
+                "backend": backend,
+                "torch_compile": True,
+            }
 
             model_eager = model
 
@@ -220,7 +279,7 @@ class TorchCompileTests(unittest.TestCase):
 
             # eager
             y_ref = model_eager(
-                x_ref, additional_context_ref, backend=backend, torch_compile=True
+                x_ref, additional_context_ref, **forward_args
             )
             y_ref.backward(dy_ref)
             dx_ref = x_ref.grad
@@ -228,7 +287,7 @@ class TorchCompileTests(unittest.TestCase):
             # compile on first attempt
             x = x.requires_grad_(True)
             y = model_compiled(
-                x, additional_context, backend=backend, torch_compile=True
+                x, additional_context, **forward_args
             )
             y.backward(dy)
             dx = x.grad
@@ -247,7 +306,7 @@ class TorchCompileTests(unittest.TestCase):
 
             # Second run, just to make sure it doesn't crash
             y = model_compiled(
-                x, additional_context, backend=backend, torch_compile=True
+                x, additional_context, **forward_args
             )
             y.backward(dy)
             dx = x.grad

@@ -20,7 +20,7 @@
 # SOFTWARE.
 #
 #################################################################################################
-from typing import Dict, Optional, Union
+from typing import Optional
 
 import torch  # noqa: F401
 from torch import nn, Tensor
@@ -34,9 +34,7 @@ from .types import (
     Dimension1DTypeOrDed,
     Dimension2DTypeOrDed,
     Dimension3DTypeOrDed,
-    DimensionType,
     DimensionTypeOrDed,
-    KernelSchedule,
 )
 from .utils.checks import check_all_args
 
@@ -78,29 +76,11 @@ class NeighborhoodAttentionGeneric(nn.Module):
 
         self.expected_input_tensor_rank = self.na_dim + 2  # batch, embedding dim
 
-        self.q = nn.Linear(self.embed_dim, self.embed_dim, bias=qkv_bias)
-        self.kv = nn.Linear(self.embed_dim, self.embed_dim * 2, bias=qkv_bias)
+        self.qkv = nn.Linear(self.embed_dim, self.embed_dim * 3, bias=qkv_bias)
         self.proj = nn.Linear(self.embed_dim, self.embed_dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
-    def forward(
-        self,
-        x: Tensor,
-        additional_context: Optional[Tensor] = None,
-        # SDPA fast path
-        attention_kwargs: Optional[Dict] = None,
-        # Optional perf-related args
-        backend: Optional[str] = None,
-        q_tile_shape: Optional[DimensionType] = None,
-        kv_tile_shape: Optional[DimensionType] = None,
-        backward_q_tile_shape: Optional[DimensionType] = None,
-        backward_kv_tile_shape: Optional[DimensionType] = None,
-        backward_kv_splits: Optional[DimensionType] = None,
-        backward_use_pt_reduction: bool = False,
-        run_persistent_kernel: bool = True,
-        kernel_schedule: Optional[Union[str, KernelSchedule]] = None,
-        torch_compile: bool = False,
-    ) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         if x.dim() != self.expected_input_tensor_rank:
             raise ValueError(
                 f"NeighborhoodAttention{self.na_dim}D expected a tensor with rank "
@@ -115,43 +95,19 @@ class NeighborhoodAttentionGeneric(nn.Module):
                 f"Expected embedding dimension {self.embed_dim}, got {C} ({x.shape=})."
             )
 
-        # batch, *input_shape, heads, head_dim
-        permutation_q = (
-            [0]
-            + [x + 1 for x in range(self.na_dim)]
-            + [self.na_dim + 1, self.na_dim + 2]
-        )
-
         # 3, batch, *input_shape, heads, head_dim
-        permutation_kv = (
+        permutation = (
             [self.na_dim + 1, 0]
             + [x + 1 for x in range(self.na_dim)]
             + [self.na_dim + 2, self.na_dim + 3]
         )
-
-        q = (
-            self.q(x)
-            .reshape(B, *input_shape, self.num_heads, self.head_dim)
-            .permute(*permutation_q)
+        qkv = (
+            self.qkv(x)
+            .reshape(B, *input_shape, 3, self.num_heads, self.head_dim)
+            .permute(*permutation)
         )
-
-        kv = (
-            self.kv(x)
-            .reshape(B, *input_shape, 2, self.num_heads, self.head_dim)
-            .permute(*permutation_kv)
-        )
-        k, v = kv[0], kv[1]
-
-        add_k, add_v = None, None
-        if additional_context is not None:
-            add_kv = (
-                self.kv(additional_context)
-                .reshape(B, -1, 2, self.num_heads, self.head_dim)
-                .permute(2, 0, 1, 3, 4)
-            )
-            add_k, add_v = add_kv[0], add_kv[1]
-
-        x = neighborhood_attention_generic(  #  type: ignore[assignment]
+        q, k, v = qkv[0], qkv[1], qkv[2]
+        x = neighborhood_attention_generic(
             q,
             k,
             v,
@@ -160,21 +116,6 @@ class NeighborhoodAttentionGeneric(nn.Module):
             dilation=self.dilation,
             is_causal=self.is_causal,
             scale=self.scale,
-            #
-            attention_kwargs=attention_kwargs,
-            # perf-related args
-            backend=backend,
-            q_tile_shape=q_tile_shape,
-            kv_tile_shape=kv_tile_shape,
-            backward_q_tile_shape=backward_q_tile_shape,
-            backward_kv_tile_shape=backward_kv_tile_shape,
-            backward_kv_splits=backward_kv_splits,
-            backward_use_pt_reduction=backward_use_pt_reduction,
-            run_persistent_kernel=run_persistent_kernel,
-            kernel_schedule=kernel_schedule,
-            torch_compile=torch_compile,
-            additional_keys=add_k,
-            additional_values=add_v,
         )
         x = x.reshape(B, *input_shape, C)
 
