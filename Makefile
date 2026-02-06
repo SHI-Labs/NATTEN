@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
 .PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test format serve-docs build-docs
 

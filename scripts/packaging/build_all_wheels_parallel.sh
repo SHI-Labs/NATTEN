@@ -1,5 +1,5 @@
 #!/bin/bash -e
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
 LOGDIR="wheel-logs/"
 mkdir -p $LOGDIR

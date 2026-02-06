@@ -1,5 +1,5 @@
 NATTEN
-Copyright (c) 2022 - 2025 Ali Hassani.
+Copyright (c) 2022 - 2026 Ali Hassani.
 Refer to LICENSE for details.
 
 This project's CUDA C++ kernels are largely based on kernels from the NVIDIA CUTLASS Project.
