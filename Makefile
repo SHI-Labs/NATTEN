@@ -1,6 +1,6 @@
 # Copyright (c) 2022 - 2026 Ali Hassani.
 
-.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test format serve-docs build-docs
+.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test test_parallel format serve-docs build-docs
 
 # build flags
 CUDA_ARCH=${NATTEN_CUDA_ARCH}
@@ -13,6 +13,7 @@ RUN_EXTENDED_TESTS=${NATTEN_RUN_EXTENDED_TESTS}
 RUN_ADDITIONAL_KV_TESTS=${NATTEN_RUN_ADDITIONAL_KV_TESTS}
 RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
 NUM_RAND_SWEEP_TESTS=${NATTEN_RAND_SWEEP_TESTS}
+GPUS=1
 
 # env
 PYTHON=python
@@ -119,6 +120,14 @@ test:
 	PYTORCH_NO_CUDA_MEMORY_CACHING=1 \
 	CUBLAS_WORKSPACE_CONFIG=":4096:8" \
 	$(PYTEST) -v -x ./tests
+
+test_parallel:
+	@echo "Running tests in parallel across ${GPUS} GPUs"
+	NATTEN_RUN_EXTENDED_TESTS="${RUN_EXTENDED_TESTS}" \
+	NATTEN_RUN_ADDITIONAL_KV_TESTS="${RUN_ADDITIONAL_KV_TESTS}" \
+	NATTEN_RUN_FLEX_TESTS="${RUN_FLEX_TESTS}" \
+	NATTEN_RAND_SWEEP_TESTS="${NUM_RAND_SWEEP_TESTS}" \
+	./scripts/testing/run_tests_parallel.sh "${GPUS}"
 
 format:
 	$(UFMT) format $(check_dirs)
