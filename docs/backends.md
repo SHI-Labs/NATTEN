@@ -3,6 +3,12 @@
 In this page, we list our available implementations for standard attention (FMHA), and neighborhood
 attention (FNA).
 
+## Note on torch.compile support
+
+Starting in version `0.21.5`, NATTEN offers full support for `torch.compile`.
+However, this has only been verified for `torch >= 2.8`.
+Use `torch.compile` in earlier versions at your own risk.
+
 ## CUTLASS FNA / FMHA
 
 **Supported features**
