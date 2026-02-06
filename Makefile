@@ -58,8 +58,7 @@ release:
 
 deep-clean: 
 	@echo "Cleaning up (deep clean)"
-	rm -rf build/ 
-	rm -rf build_dir/ 
+	rm -rf build/ build_dir/ 
 	rm -rf dist/ 
 	rm -rf csrc/autogen/ 
 	rm -rf natten.egg-info/ 
@@ -70,7 +69,7 @@ deep-clean:
 	rm -rf src/__pycache__
 	rm -rf src/natten/__pycache__
 	rm -rf src/natten.egg*
-	rm -rf install.out
+	rm -rf install.out test-logs wheel-logs
 
 clean:
 	@echo "Cleaning up"
