@@ -490,7 +490,7 @@ class HopperFNABackendTest(unittest.TestCase):
 
             input_shape = tuple(input_shape)
             kernel_size = tuple(random.choice(range(2, x + 1)) for x in input_shape)
-            stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
+            stride = tuple(random.choice(range(1, k)) for k in kernel_size)
             dilation = tuple(
                 random.choice(range(1, x // k + 1))
                 for x, k in zip(input_shape, kernel_size)
