@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+
+## [0.21.5] - 2026-02-09
 * Extended Attention (FMHA) functionality:
   * Causal mask, variable length: for now only supported in CUTLASS FMHA and Blackwell FMHA.
 * Torch.compile support added
@@ -13,6 +15,10 @@
 * Dedicated Token Permute kernels
   * Token Permute/Unpermute and padding operations are now implemented as their own kernels, and can
       be used instead of the PyTorch implementation.
+* More accurate `merge_attentions` backward pass
+    * Limits number of outputs that can be merged to only 2 when `requires_grad=True`.
+* Misc bug fixes
+* Wheels for torch 2.10, python 3.14
 
 ## [0.21.1] - 2025-10-26
 * FP8 inference support for Blackwell DC-class ([#266](https://github.com/SHI-Labs/NATTEN/pull/266))

@@ -61,6 +61,12 @@ check_one() {
     fi
   fi
 
+  # Torch 2.10 started supporting python 3.14
+  # NATTEN started shipping for torch compile starting 0.21.5
+  if [[ $natten_minor -ge 215 ]]; then
+    py_versions+=(3.14 3.14t)
+  fi
+
   for py in "${py_versions[@]}"; do
     pytag_a=${py//./}
     python_tag="cp${pytag_a/t/}-cp${py//./}"
