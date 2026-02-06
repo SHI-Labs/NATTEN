@@ -71,7 +71,7 @@ from natten.utils.tuples import ceil_div_tuple, mul_tuple
 
 
 def maybe_contiguous(x):
-    return x.contiguous() if x is not None and x.stride(-1) != 1 else x
+    return x.contiguous()
 
 
 # https://github.com/Dao-AILab/flash-attention/blob/v2.7.4/flash_attn/flash_attn_interface.py#L65-L78
