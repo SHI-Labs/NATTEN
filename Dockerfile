@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # By default, this dockerfile builds on top of the September 2025
 # NGC PyTorch image (CTK 13.0), and builds NATTEN for SM75-SM120
