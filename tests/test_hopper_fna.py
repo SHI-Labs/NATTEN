@@ -489,8 +489,8 @@ class HopperFNABackendTest(unittest.TestCase):
                 input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
 
             input_shape = tuple(input_shape)
-            kernel_size = tuple(random.choice(range(2, x + 1)) for x in input_shape)
-            stride = tuple(random.choice(range(1, k)) for k in kernel_size)
+            kernel_size = tuple(random.choice(range(2, x)) for x in input_shape)
+            stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
             dilation = tuple(
                 random.choice(range(1, x // k + 1))
                 for x, k in zip(input_shape, kernel_size)
