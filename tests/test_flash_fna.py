@@ -104,7 +104,7 @@ class FlashFNABackendTest(unittest.TestCase):
             dilation=dilation,
             is_causal=is_causal,
             additional_kv_length=additional_kv_length,
-            test_backprop=True, # TODO (aditya): Change this when bwd is implemented
+            test_backprop=True,
             reference_backend="reference",
             reference_fmha_backend="reference",
             dtype=torch.float32,
