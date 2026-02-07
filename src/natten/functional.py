@@ -417,7 +417,7 @@ def neighborhood_attention_generic(
         additional_keys is not None and additional_values is not None
     )
 
-    if backend == "flash-na" and is_causal:
+    if (backend == "flash-fna" or backend == "flash-fmha") and any(is_causal):
         is_flash_sa = False
     else:
         is_flash_sa = True
