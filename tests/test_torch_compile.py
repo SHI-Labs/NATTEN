@@ -66,14 +66,16 @@ class NABlock(nn.Module):
         self.proj = nn.Linear(self.embed_dim, self.embed_dim)
 
     def forward(
-        self, x: torch.Tensor, additional_context: Optional[torch.Tensor] = None, *args, **kwargs
+        self,
+        x: torch.Tensor,
+        additional_context: Optional[torch.Tensor] = None,
+        *args,
+        **kwargs,
     ):
         B, *input_shape, C = x.shape
         na_dim = len(input_shape)
 
-        permutation_q = (
-            [0] + [x + 1 for x in range(na_dim)] + [na_dim + 1, na_dim + 2]
-        )
+        permutation_q = [0] + [x + 1 for x in range(na_dim)] + [na_dim + 1, na_dim + 2]
         permutation_kv = (
             [na_dim + 1, 0] + [x + 1 for x in range(na_dim)] + [na_dim + 2, na_dim + 3]
         )
@@ -99,7 +101,7 @@ class NABlock(nn.Module):
             )
             add_k, add_v = add_kv[0], add_kv[1]
 
-        x = neighborhood_attention_generic(
+        x = neighborhood_attention_generic(  # type: ignore
             q,
             k,
             v,
@@ -111,6 +113,7 @@ class NABlock(nn.Module):
         x = x.reshape(B, *input_shape, C)
 
         return self.proj(x)
+
 
 class FMHABlock(nn.Module):
     def __init__(
@@ -278,17 +281,13 @@ class TorchCompileTests(unittest.TestCase):
                 additional_context = additional_context.requires_grad_(True)
 
             # eager
-            y_ref = model_eager(
-                x_ref, additional_context_ref, **forward_args
-            )
+            y_ref = model_eager(x_ref, additional_context_ref, **forward_args)
             y_ref.backward(dy_ref)
             dx_ref = x_ref.grad
 
             # compile on first attempt
             x = x.requires_grad_(True)
-            y = model_compiled(
-                x, additional_context, **forward_args
-            )
+            y = model_compiled(x, additional_context, **forward_args)
             y.backward(dy)
             dx = x.grad
 
@@ -305,9 +304,7 @@ class TorchCompileTests(unittest.TestCase):
                 torch.testing.assert_close(dc, dc_ref, atol=atol, rtol=0)
 
             # Second run, just to make sure it doesn't crash
-            y = model_compiled(
-                x, additional_context, **forward_args
-            )
+            y = model_compiled(x, additional_context, **forward_args)
             y.backward(dy)
             dx = x.grad
 

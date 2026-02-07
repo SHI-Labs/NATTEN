@@ -107,7 +107,7 @@ class NeighborhoodAttentionGeneric(nn.Module):
             .permute(*permutation)
         )
         q, k, v = qkv[0], qkv[1], qkv[2]
-        x = neighborhood_attention_generic(
+        x = neighborhood_attention_generic(  # type: ignore[assignment]
             q,
             k,
             v,
