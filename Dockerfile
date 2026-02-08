@@ -9,11 +9,11 @@
 #     docker build --build-arg BASE_IMAGE=nvcr.io/nvidia/pytorch:25.04-py3 ...
 #     docker build --build-arg NATTEN_N_WORKERS=128 --build-arg NATTEN_CUDA_ARCH="9.0;10.0" ...
 
-ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.09-py3
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:26.01-py3
 
 FROM $BASE_IMAGE
 
-ARG NATTEN_VERSION=0.21.0
+ARG NATTEN_VERSION=0.21.5
 ARG NATTEN_VERBOSE=1
 ARG NATTEN_CUDA_ARCH="7.5;8.0;8.6;8.9;9.0;10.0;10.3;12.0"
 
@@ -29,7 +29,11 @@ RUN echo "Verbose: $NATTEN_VERBOSE"
 RUN echo "Target architectures: $NATTEN_CUDA_ARCH"
 
 # Build from distribution
-RUN pip3 install --verbose natten==${NATTEN_VERSION}
+RUN pip3 install \
+      --verbose \
+      --no-deps \
+      --no-build-isolation \
+      natten==${NATTEN_VERSION}
 
 # Build from source (not recommended unless you want to try unreleased features or custom branches)
 # RUN mkdir /natten
