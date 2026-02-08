@@ -15,8 +15,8 @@ RUN_EXTENDED_TESTS=${NATTEN_RUN_EXTENDED_TESTS}
 NUM_RAND_SWEEP_TESTS=${NATTEN_RAND_SWEEP_TESTS}
 # Toggles flex attention tests (can be very time consuming)
 RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
-# Number of GPUs / parallel tests used in test_parallel
-GPUS=1
+# Number of GPUs / parallel tests used in test_parallel (-1 = auto-detect)
+GPUS=-1
 
 # common flags
 # number of build workers or parallel tests
