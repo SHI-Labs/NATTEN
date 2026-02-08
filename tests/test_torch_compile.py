@@ -25,7 +25,6 @@ import unittest
 from typing import Optional
 
 import torch
-from natten._environment import _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS
 from natten.backends import get_compatible_backends, get_compatible_fmha_backends
 from natten.functional import attention, neighborhood_attention_generic
 from natten.utils import log
@@ -36,9 +35,6 @@ from torch import nn
 from .utils import reset_torch_compile
 
 logger = log.get_logger(__name__)
-
-
-ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
 
 
 def _reset_everything():
@@ -511,7 +507,7 @@ class TorchCompileTests(unittest.TestCase):
                 is_causal,
             ) = problem
 
-            for additional_tokens in ADDITIONAL_KV_LENGTHS:
+            for additional_tokens in [0, 64]:
                 self._test_na_module(
                     batch=batch,
                     token_layout_shape=token_layout_shape,

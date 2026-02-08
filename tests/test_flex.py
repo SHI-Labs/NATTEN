@@ -31,7 +31,6 @@ from itertools import product
 import torch
 from natten import allow_flex_compile
 from natten._environment import (
-    _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS,
     _RUN_FLEX_TESTS as RUN_FLEX_TESTS,
 )
 from natten.backends.configs.flex import FLEX_FORWARD_TILE_SHAPES
@@ -50,8 +49,6 @@ from .utils import NattenBackendTester, reset_torch_compile
 
 logger = log.get_logger(__name__)
 
-
-ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
 
 # TODO: enable when Flex is stable / check with new PT releases
 ENABLE_FLEX_COMPILE_TESTS = False
@@ -99,7 +96,6 @@ class FlexBackendTest(unittest.TestCase):
         stride,
         dilation,
         is_causal=None,
-        additional_kv_length=0,
         torch_compile=False,
         constrain_torch_compile_cache=True,
         max_runs=None,
@@ -112,10 +108,6 @@ class FlexBackendTest(unittest.TestCase):
 
         test_backprop = ENABLE_FLEX_COMPILE_BACKPROP_TESTS if torch_compile else True
 
-        if additional_kv_length > 0:
-            # cutlass-fna doesn't fuse additional KV, uses merge_attentions
-            reset_torch_compile(1)
-
         tester = NattenBackendTester(
             batch=batch,
             heads=heads,
@@ -126,21 +118,19 @@ class FlexBackendTest(unittest.TestCase):
             stride=stride,
             dilation=dilation,
             is_causal=is_causal,
-            additional_kv_length=additional_kv_length,
             test_backprop=test_backprop,
             reference_backend="cutlass-fna",
             reference_fmha_backend="cutlass-fmha",
             dtype=torch.float32,
         )
 
-        # TODO: write note on why backprop eps is different when additional_kv_length > 0
         run_idx = 0
         no_token_permute_config = (None, None)
         configs = FLEX_FORWARD_TILE_SHAPES[na_dim] + [no_token_permute_config]
         for q_tile_shape, kv_tile_shape in configs:
             if constrain_torch_compile_cache:
-                if torch_compile or additional_kv_length > 0:
-                    reset_torch_compile(4 if additional_kv_length > 0 else 2)
+                if torch_compile:
+                    reset_torch_compile(2)
                 else:
                     reset_torch_compile(0)
 
@@ -149,7 +139,7 @@ class FlexBackendTest(unittest.TestCase):
             ), "Flex only supports SM70 and above, and it should have FP16!"
 
             tester.test(
-                eps=(1e-2, 1e-2 if additional_kv_length == 0 else 3e-1),
+                eps=(1e-2, 1e-2),
                 dtype=torch.float16,
                 target_backend="flex-fna",
                 target_fmha_backend="flex-fmha",
@@ -163,7 +153,7 @@ class FlexBackendTest(unittest.TestCase):
 
             if supports_bfloat16(torch.get_default_device()):
                 tester.test(
-                    eps=(1e-1, 1e-1 if additional_kv_length == 0 else 5e-1),
+                    eps=(1e-1, 1e-1),
                     dtype=torch.bfloat16,
                     target_backend="flex-fna",
                     target_fmha_backend="flex-fmha",
@@ -207,7 +197,6 @@ class FlexBackendTest(unittest.TestCase):
                     stride=stride,
                     dilation=dilation,
                     is_causal=False,
-                    additional_kv_length=0,
                     torch_compile=True,
                     constrain_torch_compile_cache=False,
                     max_runs=max_runs_per_use_case,
@@ -275,22 +264,20 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal in [True, False]:
-                    is_causal = (causal,)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                        torch_compile=False,
-                    )
+            for causal in [True, False]:
+                is_causal = (causal,)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    torch_compile=False,
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_flex_compile_is_not_supported()
@@ -320,22 +307,20 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal in [True, False]:
-                    is_causal = (causal,)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                        torch_compile=True,
-                    )
+            for causal in [True, False]:
+                is_causal = (causal,)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    torch_compile=True,
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_flex_is_not_supported()
@@ -363,22 +348,20 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y in product([True, False], [True, False]):
-                    is_causal = (causal_x, causal_y)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                        torch_compile=False,
-                    )
+            for causal_x, causal_y in product([True, False], [True, False]):
+                is_causal = (causal_x, causal_y)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    torch_compile=False,
+                )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -412,22 +395,20 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y in product([True, False], [True, False]):
-                    is_causal = (causal_x, causal_y)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                        torch_compile=False,
-                    )
+            for causal_x, causal_y in product([True, False], [True, False]):
+                is_causal = (causal_x, causal_y)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    torch_compile=False,
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_flex_compile_is_not_supported()
@@ -472,7 +453,6 @@ class FlexBackendTest(unittest.TestCase):
                     stride=stride,
                     dilation=dilation,
                     is_causal=is_causal,
-                    additional_kv_length=0,
                     torch_compile=True,
                 )
 
@@ -521,7 +501,6 @@ class FlexBackendTest(unittest.TestCase):
                     stride=stride,
                     dilation=dilation,
                     is_causal=is_causal,
-                    additional_kv_length=0,
                     torch_compile=True,
                 )
 
@@ -551,7 +530,6 @@ class FlexBackendTest(unittest.TestCase):
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
-                additional_kv_length=0,
                 torch_compile=True,
             )
 
@@ -577,24 +555,22 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y, causal_z in product(
-                    [True, False], [True, False], [True, False]
-                ):
-                    is_causal = (causal_x, causal_y, causal_z)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                        torch_compile=False,
-                    )
+            for causal_x, causal_y, causal_z in product(
+                [True, False], [True, False], [True, False]
+            ):
+                is_causal = (causal_x, causal_y, causal_z)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    torch_compile=False,
+                )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -626,24 +602,22 @@ class FlexBackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y, causal_z in product(
-                    [True, False], [True, False], [True, False]
-                ):
-                    is_causal = (causal_x, causal_y, causal_z)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                        torch_compile=False,
-                    )
+            for causal_x, causal_y, causal_z in product(
+                [True, False], [True, False], [True, False]
+            ):
+                is_causal = (causal_x, causal_y, causal_z)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    torch_compile=False,
+                )
 
     def _test_rand_sweep_against_cutlass_2x(self, na_dim, torch_compile: bool = False):
         random.seed(42)
@@ -705,7 +679,6 @@ class FlexBackendTest(unittest.TestCase):
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
-                additional_kv_length=0,
                 torch_compile=torch_compile,
             )
 
