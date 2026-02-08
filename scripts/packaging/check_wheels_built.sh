@@ -1,7 +1,7 @@
 #!/bin/bash -e
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
-NATTEN_VERSION="0.21.1"
+NATTEN_VERSION="0.21.5"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 
@@ -23,6 +23,11 @@ check_one() {
   if [[ $torch_major -lt 27 ]]; then
     echo "Only torch 2.7 and later are supported from now on."
     exit 1
+  fi
+
+  # Torch 2.10 started supporting python 3.14
+  if [[ $torch_major -ge 210 ]]; then
+    py_versions+=(3.14 3.14t)
   fi
 
   # Torch 2.9 no longer ships for python 3.9.
@@ -53,15 +58,15 @@ check_one() {
   done
 }
 
+# Torch 2.10.X
+check_one cu130 2.10.0
+check_one cu128 2.10.0
+check_one cu126 2.10.0
+
 # Torch 2.9.X
 check_one cu130 2.9.0
 check_one cu128 2.9.0
 check_one cu126 2.9.0
-
-# Torch 2.8.X
-check_one cu129 2.8.0
-check_one cu128 2.8.0
-check_one cu126 2.8.0
 
 WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING))
 

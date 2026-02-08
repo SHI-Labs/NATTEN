@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # This script is intended to emit fused kernel instantiations into
 # a variable number of source files, generate appropriate headers

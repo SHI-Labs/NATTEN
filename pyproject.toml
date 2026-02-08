@@ -30,7 +30,7 @@ Changelog = "https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md"
 [build-system]
 requires = [
   "setuptools >= 64",
-  "torch >= 2.7",
+  "torch",
   "cmake >= 4.0",
   "build >= 1.3.0"
 ]

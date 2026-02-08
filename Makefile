@@ -1,18 +1,26 @@
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
-.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test format serve-docs build-docs
+.PHONY: fetch-submodules build-wheels build-dist deep-clean clean uninstall install install-dev test test_parallel format serve-docs build-docs
 
 # build flags
 CUDA_ARCH=${NATTEN_CUDA_ARCH}
-WORKERS=${NATTEN_N_WORKERS}
 VERBOSE=${NATTEN_VERBOSE}
+# choices: 'fine', 'coarse', 'default'
 AUTOGEN_POLICY=${NATTEN_AUTOGEN_POLICY}
 
 # test flags
+# Toggles extended tests with more cases
 RUN_EXTENDED_TESTS=${NATTEN_RUN_EXTENDED_TESTS}
-RUN_ADDITIONAL_KV_TESTS=${NATTEN_RUN_ADDITIONAL_KV_TESTS}
-RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
+# Number of randomly generated test cases in extended tests
 NUM_RAND_SWEEP_TESTS=${NATTEN_RAND_SWEEP_TESTS}
+# Toggles flex attention tests (can be very time consuming)
+RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
+# Number of GPUs / parallel tests used in test_parallel (-1 = auto-detect)
+GPUS=-1
+
+# common flags
+# number of build workers or parallel tests
+WORKERS=${NATTEN_N_WORKERS}
 
 # env
 PYTHON=python
@@ -57,8 +65,7 @@ release:
 
 deep-clean: 
 	@echo "Cleaning up (deep clean)"
-	rm -rf build/ 
-	rm -rf build_dir/ 
+	rm -rf build/ build_dir/ 
 	rm -rf dist/ 
 	rm -rf csrc/autogen/ 
 	rm -rf natten.egg-info/ 
@@ -69,7 +76,7 @@ deep-clean:
 	rm -rf src/__pycache__
 	rm -rf src/natten/__pycache__
 	rm -rf src/natten.egg*
-	rm -rf install.out
+	rm -rf install.out test-logs wheel-logs
 
 clean:
 	@echo "Cleaning up"
@@ -113,12 +120,18 @@ install:
 test:
 	NATTEN_LOG_LEVEL="CRITICAL" \
 	NATTEN_RUN_EXTENDED_TESTS="${RUN_EXTENDED_TESTS}" \
-	NATTEN_RUN_ADDITIONAL_KV_TESTS="${RUN_ADDITIONAL_KV_TESTS}" \
 	NATTEN_RUN_FLEX_TESTS="${RUN_FLEX_TESTS}" \
 	NATTEN_RAND_SWEEP_TESTS="${NUM_RAND_SWEEP_TESTS}" \
 	PYTORCH_NO_CUDA_MEMORY_CACHING=1 \
 	CUBLAS_WORKSPACE_CONFIG=":4096:8" \
 	$(PYTEST) -v -x ./tests
+
+test_parallel:
+	PYTEST="${PYTEST}" \
+	NATTEN_RUN_EXTENDED_TESTS="${RUN_EXTENDED_TESTS}" \
+	NATTEN_RUN_FLEX_TESTS="${RUN_FLEX_TESTS}" \
+	NATTEN_RAND_SWEEP_TESTS="${NUM_RAND_SWEEP_TESTS}" \
+	./scripts/testing/run_tests_parallel.sh "${GPUS}" "${WORKERS}"
 
 format:
 	$(UFMT) format $(check_dirs)

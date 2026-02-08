@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -59,13 +59,13 @@ class NattenBackendTester:
         stride: DimensionType,
         dilation: DimensionType,
         is_causal: CausalArgType,
-        additional_kv_length: int,
         test_backprop: bool,
         reference_backend: str,
         reference_fmha_backend: str,
         dtype: torch.dtype,
         head_dim_v: Optional[int] = None,
         heads_kv: Optional[int] = None,
+        additional_kv_length: int = 0,
     ):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)

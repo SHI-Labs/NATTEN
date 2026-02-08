@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -46,10 +46,12 @@ class Problem:
         is_causal: CausalArgType,
         additional_kv_length: Optional[int] = None,
         dim_value: Optional[int] = None,
+        heads_kv: Optional[int] = None,
     ):
         self.na_dim = na_dim
         self.batch_size = batch_size
         self.heads = heads
+        self.heads_kv = heads_kv or heads
         self.dim = dim
         self.dim_value = dim_value or dim
         assert (
@@ -78,48 +80,62 @@ class Problem:
             x == w for x, w in zip(self.input_size, self.window_size)
         )
 
-    def get_q_tensor_shape(self, heads_last: bool, flatten: bool = False) -> List:
+    def get_operand_shape(
+        self, heads: int, dim: int, heads_last: bool, flatten: bool = False
+    ) -> List:
         token_layout_shape = (
             [x for x in self.input_size]
             if not flatten
             else [math.prod(self.input_size)]
         )
         if not heads_last:
-            return [self.batch_size, self.heads] + token_layout_shape + [self.dim]
-        return [self.batch_size] + token_layout_shape + [self.heads, self.dim]
+            return [self.batch_size, heads] + token_layout_shape + [dim]
+        return [self.batch_size] + token_layout_shape + [heads, dim]
+
+    def get_q_tensor_shape(self, heads_last: bool, flatten: bool = False) -> List:
+        return self.get_operand_shape(
+            heads=self.heads, dim=self.dim, heads_last=heads_last, flatten=flatten
+        )
 
     def get_k_tensor_shape(self, heads_last: bool, flatten: bool = False) -> List:
-        return self.get_q_tensor_shape(heads_last=heads_last, flatten=flatten)
+        return self.get_operand_shape(
+            heads=self.heads_kv, dim=self.dim, heads_last=heads_last, flatten=flatten
+        )
 
     def get_v_tensor_shape(self, heads_last: bool, flatten: bool = False) -> List:
-        token_layout_shape = (
-            [x for x in self.input_size]
-            if not flatten
-            else [math.prod(self.input_size)]
+        return self.get_operand_shape(
+            heads=self.heads_kv,
+            dim=self.dim_value,
+            heads_last=heads_last,
+            flatten=flatten,
         )
-        if not heads_last:
-            return [self.batch_size, self.heads] + token_layout_shape + [self.dim_value]
-        return [self.batch_size] + token_layout_shape + [self.heads, self.dim_value]
 
     def get_o_tensor_shape(self, heads_last: bool, flatten: bool = False) -> List:
-        return self.get_v_tensor_shape(heads_last=heads_last, flatten=flatten)
+        return self.get_operand_shape(
+            heads=self.heads, dim=self.dim_value, heads_last=heads_last, flatten=flatten
+        )
 
     def get_add_k_tensor_shape(self, heads_last: bool) -> List:
         assert self.additional_kv_length is not None
         if not heads_last:
-            return [self.batch_size, self.heads, self.additional_kv_length, self.dim]
-        return [self.batch_size, self.additional_kv_length, self.heads, self.dim]
+            return [self.batch_size, self.heads_kv, self.additional_kv_length, self.dim]
+        return [self.batch_size, self.additional_kv_length, self.heads_kv, self.dim]
 
     def get_add_v_tensor_shape(self, heads_last: bool) -> List:
         assert self.additional_kv_length is not None
         if not heads_last:
             return [
                 self.batch_size,
-                self.heads,
+                self.heads_kv,
                 self.additional_kv_length,
                 self.dim_value,
             ]
-        return [self.batch_size, self.additional_kv_length, self.heads, self.dim_value]
+        return [
+            self.batch_size,
+            self.additional_kv_length,
+            self.heads_kv,
+            self.dim_value,
+        ]
 
     def make_qkv_tensors(
         self, device, requires_grad: bool, heads_last: bool, flatten: bool = False
@@ -195,6 +211,7 @@ class Problem:
             "Problem("
             + f"batch_size={self.batch_size}, "
             + f"heads={self.heads}, "
+            + f"heads_kv={self.heads_kv}, "
             + f"input_size={self.input_size}, "
             + f"window_size={self.window_size}, "
             + f"stride={self.stride}, "
@@ -220,6 +237,7 @@ def generate_problem(
     is_causal: CausalArgType,
     additional_kv_length: Optional[int] = None,
     dim_value: Optional[int] = None,
+    heads_kv: Optional[int] = None,
 ) -> Problem:
     na_dim = len(input_size)
     assert len(window_size) == na_dim
@@ -238,4 +256,5 @@ def generate_problem(
         dtype=dtype,
         is_causal=is_causal,
         additional_kv_length=additional_kv_length,
+        heads_kv=heads_kv,
     )

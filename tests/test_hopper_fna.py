@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,10 +27,7 @@ import unittest
 from itertools import product
 
 import torch
-from natten._environment import (
-    _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
-    _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS,
-)
+from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass_hopper import (
     get_all_backward_configs,
     get_all_forward_configs,
@@ -41,9 +38,7 @@ from natten.utils.testing import (
     skip_if_not_running_extended_tests,
 )
 
-from .utils import NattenBackendTester, reset_torch_compile
-
-ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
+from .utils import NattenBackendTester
 
 
 def _reset_everything():
@@ -81,7 +76,6 @@ class HopperFNABackendTest(unittest.TestCase):
         stride,
         dilation,
         is_causal=None,
-        additional_kv_length=0,
         configs_to_test=None,
         heads_kv=None,
     ):
@@ -89,10 +83,6 @@ class HopperFNABackendTest(unittest.TestCase):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)
         assert na_dim in [1, 2, 3], "Only supports NA1D, 2D, 3D."
-
-        if additional_kv_length > 0:
-            # cutlass-fna doesn't fuse additional KV, uses merge_attentions
-            reset_torch_compile(1)
 
         tester = NattenBackendTester(
             batch=batch,
@@ -104,7 +94,6 @@ class HopperFNABackendTest(unittest.TestCase):
             stride=stride,
             dilation=dilation,
             is_causal=is_causal,
-            additional_kv_length=additional_kv_length,
             test_backprop=True,
             reference_backend="cutlass-fna",
             reference_fmha_backend="cutlass-fmha",
@@ -137,9 +126,6 @@ class HopperFNABackendTest(unittest.TestCase):
                 backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
                     i % len(backward_configs)
                 ]
-
-                if additional_kv_length > 0:
-                    reset_torch_compile(1)
 
                 tester.test(
                     eps=atol,
@@ -219,21 +205,19 @@ class HopperFNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal in [True, False]:
-                    is_causal = (causal,)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal in [True, False]:
+                is_causal = (causal,)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
@@ -266,21 +250,19 @@ class HopperFNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y in product([False, True], [False, True]):
-                    is_causal = (causal_x, causal_y)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal_x, causal_y in product([False, True], [False, True]):
+                is_causal = (causal_x, causal_y)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -325,21 +307,19 @@ class HopperFNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y in product([True, False], [True, False]):
-                    is_causal = (causal_x, causal_y)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal_x, causal_y in product([True, False], [True, False]):
+                is_causal = (causal_x, causal_y)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
@@ -374,23 +354,21 @@ class HopperFNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y, causal_z in product(
-                    [True, False], [True, False], [True, False]
-                ):
-                    is_causal = (causal_x, causal_y, causal_z)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal_x, causal_y, causal_z in product(
+                [True, False], [True, False], [True, False]
+            ):
+                is_causal = (causal_x, causal_y, causal_z)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -451,23 +429,21 @@ class HopperFNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y, causal_z in product(
-                    [True, False], [True, False], [True, False]
-                ):
-                    is_causal = (causal_x, causal_y, causal_z)
-                    self._test_all_dtypes_against_cutlass_2x_fna(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal_x, causal_y, causal_z in product(
+                [True, False], [True, False], [True, False]
+            ):
+                is_causal = (causal_x, causal_y, causal_z)
+                self._test_all_dtypes_against_cutlass_2x_fna(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     def _test_rand_sweep_against_cutlass_2x(
         self, na_dim, max_tests=1000, configs_to_test=None
@@ -489,17 +465,13 @@ class HopperFNABackendTest(unittest.TestCase):
                 input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
 
             input_shape = tuple(input_shape)
-            kernel_size = tuple(random.choice(range(2, x + 1)) for x in input_shape)
+            kernel_size = tuple(random.choice(range(2, x)) for x in input_shape)
             stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
             dilation = tuple(
                 random.choice(range(1, x // k + 1))
                 for x, k in zip(input_shape, kernel_size)
             )
             is_causal = tuple(random.choice([False, True]) for _ in range(na_dim))
-
-            additional_kv_length = (
-                random.choice(range(8, 513, 8)) if ENABLE_ADDITIONAL_KV_TESTS else 0
-            )
 
             self._test_all_dtypes_against_cutlass_2x_fna(
                 batch=batch,
@@ -511,7 +483,6 @@ class HopperFNABackendTest(unittest.TestCase):
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
-                additional_kv_length=additional_kv_length,
                 configs_to_test=configs_to_test,
             )
 

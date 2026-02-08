@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
 set -e
 

@@ -20,6 +20,8 @@ wheels/
 
 # Log files (i.e. install.out)
 *.out
+wheel-logs/
+test-logs/
 
 # MSVC
 .vs/

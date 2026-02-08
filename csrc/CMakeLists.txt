@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(natten LANGUAGES CXX CUDA)

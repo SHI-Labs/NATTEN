@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -71,7 +71,7 @@ from natten.utils.tuples import ceil_div_tuple, mul_tuple
 
 
 def maybe_contiguous(x):
-    return x.contiguous() if x is not None and x.stride(-1) != 1 else x
+    return x.contiguous()
 
 
 # https://github.com/Dao-AILab/flash-attention/blob/v2.7.4/flash_attn/flash_attn_interface.py#L65-L78

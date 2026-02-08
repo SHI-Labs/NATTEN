@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -41,7 +41,6 @@ USE_TORCH_IMPL_DEFAULT = (
 
 # Unit tests
 _RUN_EXTENDED_TESTS = parse_env_flag("NATTEN_RUN_EXTENDED_TESTS", False)
-_RUN_ADDITIONAL_KV_TESTS = parse_env_flag("NATTEN_RUN_ADDITIONAL_KV_TESTS", True)
 _RUN_FLEX_TESTS = parse_env_flag("NATTEN_RUN_FLEX_TESTS", True)
 _NUM_RAND_SWEEP_TESTS = parse_env_int("NATTEN_RAND_SWEEP_TESTS", 1000)
 
@@ -55,7 +54,6 @@ __all__ = [
     "_IS_TORCH_COMPILE_SUPPORTED",
     "DISABLE_TQDM",
     "_RUN_FLEX_TESTS",
-    "_RUN_ADDITIONAL_KV_TESTS",
     "_RUN_FLEX_TESTS",
     "_NUM_RAND_SWEEP_TESTS",
     "_TORCH_VERSION",

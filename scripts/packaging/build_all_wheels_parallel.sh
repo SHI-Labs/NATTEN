@@ -1,5 +1,5 @@
 #!/bin/bash -e
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 
 LOGDIR="wheel-logs/"
 mkdir -p $LOGDIR
@@ -37,6 +37,11 @@ build_target () {
   # Torch started supporting python 3.13 since ~2.5
   # We are building wheels for 3.13 starting 0.21.1
   py_versions=(3.10 3.11 3.12 3.13 3.13t)
+
+  # Torch 2.10 started supporting python 3.14
+  if [[ $torch_major -ge 210 ]]; then
+    py_versions+=(3.14 3.14t)
+  fi
 
   # Torch 2.9 no longer ships python 3.9 wheels.
   if [[ $torch_major -lt 29 ]]; then
@@ -96,13 +101,13 @@ build_target () {
 ##################################################
 ##################################################
 
+build_target cuda13.0 2.10.0 & \
+  build_target cuda12.8 2.10.0 & \
+  build_target cuda12.6 2.10.0
+
 build_target cuda13.0 2.9.0 & \
   build_target cuda12.8 2.9.0 & \
   build_target cuda12.6 2.9.0
-
-build_target cuda12.9 2.8.0 & \
-  build_target cuda12.8 2.8.0 & \
-  build_target cuda12.6 2.8.0
 
 wait
 

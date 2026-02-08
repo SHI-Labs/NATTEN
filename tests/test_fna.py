@@ -1,5 +1,5 @@
 #################################################################################################
-# Copyright (c) 2022-2025 Ali Hassani.
+# Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -28,10 +28,7 @@ from itertools import product
 
 import natten  # noqa: F401
 import torch
-from natten._environment import (
-    _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
-    _RUN_ADDITIONAL_KV_TESTS as ENABLE_ADDITIONAL_KV_TESTS,
-)
+from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass import (
     get_all_backward_configs,
     get_all_forward_configs,
@@ -45,9 +42,7 @@ from natten.utils.testing import (
     supports_float16,
 )
 
-from .utils import NattenBackendTester, reset_torch_compile
-
-ADDITIONAL_KV_LENGTHS = [0, 64] if ENABLE_ADDITIONAL_KV_TESTS else [0]
+from .utils import NattenBackendTester
 
 
 def _reset_everything():
@@ -83,7 +78,6 @@ class FNABackendTest(unittest.TestCase):
         stride,
         dilation,
         is_causal=None,
-        additional_kv_length=0,
         configs_to_test=5,
         heads_kv=None,
     ):
@@ -104,7 +98,6 @@ class FNABackendTest(unittest.TestCase):
             stride=stride,
             dilation=dilation,
             is_causal=is_causal,
-            additional_kv_length=additional_kv_length,
             test_backprop=True,
             reference_backend="reference",
             reference_fmha_backend="reference",
@@ -118,35 +111,22 @@ class FNABackendTest(unittest.TestCase):
             heads_kv is not None and heads != heads_kv
         ) or head_dim_v != head_dim
 
-        # Additional KVs are handled with a separate attention op and attention merging,
-        # but we shouldn't need beyond 1e-1 threshold (when correcting autograd, which natten
-        # does in all libnatten backends.)
-        # There is a separate attention merging test that compares backends to themselves, and can
-        # therefore have a higher threshold.
-        has_add_kv = additional_kv_length > 0
-
-        # (dtype, is_gqa_or_mla, has_additional_kv) -> atol_dq, atol_dk, atol_dv
+        # (dtype, is_gqa_or_mla) -> atol_dq, atol_dk, atol_dv
         bwd_atols = {
-            (torch.float32, False, False): (1e-2, 1e-4, 1e-4),
-            (torch.float32, False, True): (1e-1, 1e-1, 1e-1),
-            (torch.float32, True, False): (7e-1, 7e-1, 7e-1),
-            (torch.float32, True, True): (7e-1, 7e-1, 7e-1),
+            (torch.float32, False): (1e-2, 1e-4, 1e-4),
+            (torch.float32, True): (7e-1, 7e-1, 7e-1),
             #
-            (torch.float16, False, False): (1e-1, 1e-2, 1e-2),
-            (torch.float16, False, True): (1e-1, 1e-1, 1e-1),
-            (torch.float16, True, False): (7e-1, 7e-1, 7e-1),
-            (torch.float16, True, True): (7e-1, 7e-1, 7e-1),
+            (torch.float16, False): (1e-1, 1e-2, 1e-2),
+            (torch.float16, True): (7e-1, 7e-1, 7e-1),
             #
-            (torch.bfloat16, False, False): (1e-1, 1e-2, 1e-2),
-            (torch.bfloat16, False, True): (1e-1, 1e-1, 1e-1),
-            (torch.bfloat16, True, False): (7e-1, 7e-1, 7e-1),
-            (torch.bfloat16, True, True): (7e-1, 7e-1, 7e-1),
+            (torch.bfloat16, False): (1e-1, 1e-2, 1e-2),
+            (torch.bfloat16, True): (7e-1, 7e-1, 7e-1),
         }
 
         ALLOWED_DTYPES = [
             (
                 torch.float32,
-                (1e-4, bwd_atols[(torch.float32, is_gqa_or_mla, has_add_kv)]),
+                (1e-4, bwd_atols[(torch.float32, is_gqa_or_mla)]),
             ),
         ]
 
@@ -154,7 +134,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.float16,
-                    (1e-2, bwd_atols[(torch.float16, is_gqa_or_mla, has_add_kv)]),
+                    (1e-2, bwd_atols[(torch.float16, is_gqa_or_mla)]),
                 )
             )
 
@@ -162,12 +142,9 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.bfloat16,
-                    (1e-1, bwd_atols[(torch.bfloat16, is_gqa_or_mla, has_add_kv)]),
+                    (1e-1, bwd_atols[(torch.bfloat16, is_gqa_or_mla)]),
                 )
             )
-
-        if additional_kv_length > 0:
-            reset_torch_compile(configs_to_test * len(ALLOWED_DTYPES))
 
         for dtype, eps in ALLOWED_DTYPES:
 
@@ -256,22 +233,20 @@ class FNABackendTest(unittest.TestCase):
             dilation,
         ) in problem_sizes:
             for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
-                for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                    for causal in [False, True]:
-                        is_causal = (causal,)
-                        self._test_all_dtypes_against_reference(
-                            batch=batch,
-                            heads=heads,
-                            heads_kv=heads_kv,
-                            head_dim=head_dim,
-                            head_dim_v=head_dim_v,
-                            input_shape=input_shape,
-                            kernel_size=kernel_size,
-                            stride=stride,
-                            dilation=dilation,
-                            is_causal=is_causal,
-                            additional_kv_length=additional_kv_length,
-                        )
+                for causal in [False, True]:
+                    is_causal = (causal,)
+                    self._test_all_dtypes_against_reference(
+                        batch=batch,
+                        heads=heads,
+                        heads_kv=heads_kv,
+                        head_dim=head_dim,
+                        head_dim_v=head_dim_v,
+                        input_shape=input_shape,
+                        kernel_size=kernel_size,
+                        stride=stride,
+                        dilation=dilation,
+                        is_causal=is_causal,
+                    )
 
     @skip_if_libnatten_is_not_supported()
     def test_2d_against_reference(self):
@@ -305,22 +280,20 @@ class FNABackendTest(unittest.TestCase):
             dilation,
         ) in problem_sizes:
             for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
-                for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                    for causal_x, causal_y in product([True, False], [True, False]):
-                        is_causal = (causal_x, causal_y)
-                        self._test_all_dtypes_against_reference(
-                            batch=batch,
-                            heads=heads,
-                            heads_kv=heads_kv,
-                            head_dim=head_dim,
-                            head_dim_v=head_dim_v,
-                            input_shape=input_shape,
-                            kernel_size=kernel_size,
-                            stride=stride,
-                            dilation=dilation,
-                            is_causal=is_causal,
-                            additional_kv_length=additional_kv_length,
-                        )
+                for causal_x, causal_y in product([True, False], [True, False]):
+                    is_causal = (causal_x, causal_y)
+                    self._test_all_dtypes_against_reference(
+                        batch=batch,
+                        heads=heads,
+                        heads_kv=heads_kv,
+                        head_dim=head_dim,
+                        head_dim_v=head_dim_v,
+                        input_shape=input_shape,
+                        kernel_size=kernel_size,
+                        stride=stride,
+                        dilation=dilation,
+                        is_causal=is_causal,
+                    )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -366,22 +339,20 @@ class FNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y in product([True, False], [True, False]):
-                    is_causal = (causal_x, causal_y)
-                    self._test_all_dtypes_against_reference(
-                        batch=batch,
-                        heads=heads,
-                        heads_kv=heads_kv,
-                        head_dim=head_dim,
-                        head_dim_v=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal_x, causal_y in product([True, False], [True, False]):
+                is_causal = (causal_x, causal_y)
+                self._test_all_dtypes_against_reference(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    head_dim_v=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     @skip_if_libnatten_is_not_supported()
     def test_3d_against_reference(self):
@@ -406,24 +377,22 @@ class FNABackendTest(unittest.TestCase):
             dilation,
         ) in problem_sizes:
             for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
-                for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                    for causal_x, causal_y, causal_z in product(
-                        [True, False], [True, False], [True, False]
-                    ):
-                        is_causal = (causal_x, causal_y, causal_z)
-                        self._test_all_dtypes_against_reference(
-                            batch=batch,
-                            heads=heads,
-                            heads_kv=heads_kv,
-                            head_dim=head_dim,
-                            head_dim_v=head_dim_v,
-                            input_shape=input_shape,
-                            kernel_size=kernel_size,
-                            stride=stride,
-                            dilation=dilation,
-                            is_causal=is_causal,
-                            additional_kv_length=additional_kv_length,
-                        )
+                for causal_x, causal_y, causal_z in product(
+                    [True, False], [True, False], [True, False]
+                ):
+                    is_causal = (causal_x, causal_y, causal_z)
+                    self._test_all_dtypes_against_reference(
+                        batch=batch,
+                        heads=heads,
+                        heads_kv=heads_kv,
+                        head_dim=head_dim,
+                        head_dim_v=head_dim_v,
+                        input_shape=input_shape,
+                        kernel_size=kernel_size,
+                        stride=stride,
+                        dilation=dilation,
+                        is_causal=is_causal,
+                    )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -491,23 +460,21 @@ class FNABackendTest(unittest.TestCase):
             stride,
             dilation,
         ) in problem_sizes:
-            for additional_kv_length in ADDITIONAL_KV_LENGTHS:
-                for causal_x, causal_y, causal_z in product(
-                    [True, False], [True, False], [True, False]
-                ):
-                    is_causal = (causal_x, causal_y, causal_z)
-                    self._test_all_dtypes_against_reference(
-                        batch=batch,
-                        heads=heads,
-                        head_dim=head_dim,
-                        head_dim_v=head_dim,
-                        input_shape=input_shape,
-                        kernel_size=kernel_size,
-                        stride=stride,
-                        dilation=dilation,
-                        is_causal=is_causal,
-                        additional_kv_length=additional_kv_length,
-                    )
+            for causal_x, causal_y, causal_z in product(
+                [True, False], [True, False], [True, False]
+            ):
+                is_causal = (causal_x, causal_y, causal_z)
+                self._test_all_dtypes_against_reference(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    head_dim_v=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
 
     def _test_rand_sweep_against_reference(
         self,
@@ -544,10 +511,6 @@ class FNABackendTest(unittest.TestCase):
             )
             is_causal = tuple(random.choice([False, True]) for _ in range(na_dim))
 
-            additional_kv_length = (
-                random.choice(range(8, 513, 8)) if ENABLE_ADDITIONAL_KV_TESTS else 0
-            )
-
             self._test_all_dtypes_against_reference(
                 batch=batch,
                 heads=heads,
@@ -559,7 +522,6 @@ class FNABackendTest(unittest.TestCase):
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
-                additional_kv_length=additional_kv_length,
                 configs_to_test=configs_to_test,
             )
 
@@ -627,7 +589,6 @@ class FNABackendTest(unittest.TestCase):
             stride=stride,
             dilation=dilation,
             is_causal=False,
-            additional_kv_length=0,
             test_backprop=True,
             reference_backend="reference",
             reference_fmha_backend="reference",
