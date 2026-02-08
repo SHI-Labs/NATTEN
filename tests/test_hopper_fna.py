@@ -27,9 +27,7 @@ import unittest
 from itertools import product
 
 import torch
-from natten._environment import (
-    _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
-)
+from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass_hopper import (
     get_all_backward_configs,
     get_all_forward_configs,
@@ -40,7 +38,8 @@ from natten.utils.testing import (
     skip_if_not_running_extended_tests,
 )
 
-from .utils import NattenBackendTester, reset_torch_compile
+from .utils import NattenBackendTester
+
 
 def _reset_everything():
     from natten.context import (

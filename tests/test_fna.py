@@ -28,9 +28,7 @@ from itertools import product
 
 import natten  # noqa: F401
 import torch
-from natten._environment import (
-    _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS,
-)
+from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass import (
     get_all_backward_configs,
     get_all_forward_configs,
@@ -44,7 +42,7 @@ from natten.utils.testing import (
     supports_float16,
 )
 
-from .utils import NattenBackendTester, reset_torch_compile
+from .utils import NattenBackendTester
 
 
 def _reset_everything():
