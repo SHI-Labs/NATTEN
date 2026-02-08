@@ -1,9 +1,9 @@
 # Install NATTEN
 
 **Newest release: `0.21.5`** |
-**[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0215---2026-02-09).**
+**[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0215---2026-02-08).**
 
-Starting version `0.20.0`, NATTEN only supports PyTorch 2.7 and newer.
+Starting version `0.21.5`, NATTEN only supports PyTorch 2.8 and newer.
 However, you can still attempt to install NATTEN with PyTorch >= 2.5 at your own risk.
 For earlier NATTEN releases, please refer to [Older NATTEN builds](#older-natten-builds).
 
@@ -29,7 +29,7 @@ Refer to [NATTEN via PyPI](#natten-via-pypi) for more information.
 
 
 ## NATTEN + `libnatten` via PyPI
-We offer pre-built wheels (binaries) for the most recent official PyTorch builds.
+We offer pre-built wheels (binaries) for the **two most recent** official PyTorch builds.
 To install NATTEN using wheels, please first check your PyTorch version, and select it below.
 
 ???+ pip-install "`torch==2.10.0+cu130` | x86-64 and aarch64"

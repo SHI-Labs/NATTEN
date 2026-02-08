@@ -2,7 +2,7 @@
 
 ## [Main branch]
 
-## [0.21.5] - 2026-02-09
+## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:
   * Causal mask, variable length: for now only supported in CUTLASS FMHA and Blackwell FMHA.
 * Torch.compile support added
