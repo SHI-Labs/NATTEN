@@ -63,7 +63,7 @@ check_one() {
 
   # Torch 2.10 started supporting python 3.14
   # NATTEN started shipping for torch compile starting 0.21.5
-  if [[ $natten_minor -ge 215 ]]; then
+  if [[ $natten_minor -ge 215 ]] && [[ $torch_major -ge 210 ]]; then
     py_versions+=(3.14 3.14t)
   fi
 
@@ -106,26 +106,14 @@ check_one() {
 
 URL_PREFIX="https://github.com/SHI-Labs/NATTEN/releases/download/"
 
-# v0.17.5
-check_one 0.17.5 cu126 2.6.0 $URL_PREFIX
-check_one 0.17.5 cu124 2.6.0 $URL_PREFIX
-check_one 0.17.5 cpu   2.6.0 $URL_PREFIX
+# v0.21.5
+check_one 0.21.5 cu130 2.9.0 $URL_PREFIX
+check_one 0.21.5 cu128 2.9.0 $URL_PREFIX
+check_one 0.21.5 cu126 2.9.0 $URL_PREFIX
 
-check_one 0.17.5 cu124 2.5.0 $URL_PREFIX
-check_one 0.17.5 cu121 2.5.0 $URL_PREFIX
-check_one 0.17.5 cpu   2.5.0 $URL_PREFIX
-
-# v0.20.0
-check_one 0.20.0 cu128 2.7.0 $URL_PREFIX
-check_one 0.20.0 cu126 2.7.0 $URL_PREFIX
-
-# v0.20.1
-check_one 0.20.1 cu128 2.7.0 $URL_PREFIX
-check_one 0.20.1 cu126 2.7.0 $URL_PREFIX
-
-# v0.21.0
-check_one 0.21.0 cu128 2.7.0 $URL_PREFIX
-check_one 0.21.0 cu126 2.7.0 $URL_PREFIX
+check_one 0.21.5 cu130 2.10.0 $URL_PREFIX
+check_one 0.21.5 cu128 2.10.0 $URL_PREFIX
+check_one 0.21.5 cu126 2.10.0 $URL_PREFIX
 
 # v0.21.1
 check_one 0.21.1 cu129 2.8.0 $URL_PREFIX
@@ -136,14 +124,26 @@ check_one 0.21.1 cu130 2.9.0 $URL_PREFIX
 check_one 0.21.1 cu128 2.9.0 $URL_PREFIX
 check_one 0.21.1 cu126 2.9.0 $URL_PREFIX
 
-# v0.21.5
-check_one 0.21.5 cu130 2.9.0 $URL_PREFIX
-check_one 0.21.5 cu128 2.9.0 $URL_PREFIX
-check_one 0.21.5 cu126 2.9.0 $URL_PREFIX
+# v0.21.0
+check_one 0.21.0 cu128 2.7.0 $URL_PREFIX
+check_one 0.21.0 cu126 2.7.0 $URL_PREFIX
 
-check_one 0.21.5 cu130 2.10.0 $URL_PREFIX
-check_one 0.21.5 cu128 2.10.0 $URL_PREFIX
-check_one 0.21.5 cu126 2.10.0 $URL_PREFIX
+# v0.20.1
+check_one 0.20.1 cu128 2.7.0 $URL_PREFIX
+check_one 0.20.1 cu126 2.7.0 $URL_PREFIX
+
+# v0.20.0
+check_one 0.20.0 cu128 2.7.0 $URL_PREFIX
+check_one 0.20.0 cu126 2.7.0 $URL_PREFIX
+
+# v0.17.5
+check_one 0.17.5 cu126 2.6.0 $URL_PREFIX
+check_one 0.17.5 cu124 2.6.0 $URL_PREFIX
+check_one 0.17.5 cpu   2.6.0 $URL_PREFIX
+
+check_one 0.17.5 cu124 2.5.0 $URL_PREFIX
+check_one 0.17.5 cu121 2.5.0 $URL_PREFIX
+check_one 0.17.5 cpu   2.5.0 $URL_PREFIX
 
 ##################################
 ##################################
