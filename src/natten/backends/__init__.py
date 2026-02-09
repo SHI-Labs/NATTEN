@@ -61,8 +61,17 @@ from .configs.checks import (
     can_run_cutlass_hopper_fmha,
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
+    can_run_metal_fmha,
+    can_run_metal_fna,
 )
 from .flex import flex_fmha, flex_fna_generic, na1d_flex, na2d_flex, na3d_flex
+from .metal import (
+    metal_fmha,
+    metal_fna_generic,
+    na1d_metal_fna,
+    na2d_metal_fna,
+    na3d_metal_fna,
+)
 from .fmha import can_run_cutlass_fmha, cutlass_fmha
 from .fna import (
     cutlass_fna_generic,
@@ -93,6 +102,10 @@ def choose_backend(
     if can_run_cutlass_fna(query, key, value):
         logger.debug("Backend not set; picked CUTLASS (2.X) FNA kernel.")
         return "cutlass-fna"
+
+    if can_run_metal_fna(query, key, value):
+        logger.debug("Backend not set; picked Metal FNA kernel (MPS).")
+        return "metal-fna"
 
     if can_run_flex_attention(query, key, value, torch_compile=torch_compile):
         logger.debug("Backend not set; picked Flex Attention kernel.")
@@ -130,6 +143,12 @@ def choose_fmha_backend(
         logger.debug("Backend not set; picked CUTLASS (2.X) FMHA kernel.")
         return "cutlass-fmha"
 
+    if can_run_metal_fmha(
+        query, key, value, is_causal=is_causal, is_varlen=is_varlen
+    ):
+        logger.debug("Backend not set; picked Metal FMHA kernel (MPS).")
+        return "metal-fmha"
+
     if can_run_flex_attention(
         query,
         key,
@@ -159,6 +178,9 @@ def get_compatible_backends(
 
     if can_run_cutlass_fna(query, key, value):
         compatible_backends.append("cutlass-fna")
+
+    if can_run_metal_fna(query, key, value):
+        compatible_backends.append("metal-fna")
 
     if can_run_flex_attention(query, key, value, torch_compile=torch_compile):
         compatible_backends.append("flex-fna")
@@ -190,6 +212,11 @@ def get_compatible_fmha_backends(
     ):
         compatible_backends.append("cutlass-fmha")
 
+    if can_run_metal_fmha(
+        query, key, value, is_causal=is_causal, is_varlen=is_varlen
+    ):
+        compatible_backends.append("metal-fmha")
+
     if can_run_flex_attention(
         query,
         key,
@@ -211,6 +238,8 @@ __all__ = [
     "can_run_cutlass_hopper_fmha",
     "can_run_cutlass_hopper_fna",
     "can_run_flex_attention",
+    "can_run_metal_fmha",
+    "can_run_metal_fna",
     "cutlass_fmha",
     "cutlass_fna_generic",
     "na1d_cutlass_fna",
@@ -228,6 +257,11 @@ __all__ = [
     "na1d_flex",
     "na2d_flex",
     "na3d_flex",
+    "metal_fmha",
+    "metal_fna_generic",
+    "na1d_metal_fna",
+    "na2d_metal_fna",
+    "na3d_metal_fna",
     "na1d_cutlass_hopper_fna",
     "na2d_cutlass_hopper_fna",
     "na3d_cutlass_hopper_fna",

@@ -34,6 +34,8 @@ from ..backends import (
     can_run_cutlass_hopper_fmha,
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
+    can_run_metal_fmha,
+    can_run_metal_fna,
     choose_backend,
     choose_fmha_backend,
     get_bwd_configs_for_cutlass_blackwell_fmha,
@@ -63,8 +65,8 @@ from .profiling import measure_natten_runtime
 logger = log.get_logger(__name__)
 
 # TODO: these are duplicated from profiler.py
-NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna"]
-NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha"]
+NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "metal-fna", "flex-fna"]
+NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "metal-fmha", "flex-fmha"]
 
 
 def dry_run_for_backend(
@@ -99,7 +101,7 @@ def dry_run_for_backend(
 
     is_fmha = problem.is_self_attn
 
-    torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch_device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     q, k, v = problem.make_qkv_tensors(
         device=torch_device, requires_grad=backprop, heads_last=True, flatten=is_fmha
     )
@@ -152,6 +154,13 @@ def dry_run_for_backend(
                 "backward_kv_tile_size",
             )
 
+        elif fmha_backend == "metal-fmha":
+            assert can_run_metal_fmha(
+                q, k, v, is_causal=False, is_varlen=False, raise_error=True
+            )
+            fwd_configs = [(None,)]  # type: ignore[assignment]
+            fwd_config_keys = ("config",)
+
         elif fmha_backend == "flex-fmha":
             assert can_run_flex_attention(
                 q, k, v, torch_compile=torch_compile, raise_error=True
@@ -196,6 +205,11 @@ def dry_run_for_backend(
                 "backward_q_tile_shape",
                 "backward_kv_tile_shape",
             )
+
+        elif backend == "metal-fna":
+            assert can_run_metal_fna(q, k, v, raise_error=True)
+            fwd_configs = [(None,)]  # type: ignore[assignment]
+            fwd_config_keys = ("config",)  # type: ignore[assignment]
 
         elif backend == "flex-fna":
             assert can_run_flex_attention(
@@ -273,7 +287,7 @@ def dry_run(
     if backend is not None and backend not in NATTEN_BACKENDS:
         raise ValueError("Dry run is only supported for NATTEN backends.")
 
-    torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch_device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     is_fmha = problem.is_self_attn
 
     backends = None
@@ -332,7 +346,7 @@ def find_configs(
     backprop: bool,
     torch_compile: bool,
 ) -> Tuple[str, str, list, list]:
-    torch_device = "cuda" if torch.cuda.is_available() else "cpu"
+    torch_device = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
     q, k, v = problem.make_qkv_tensors(
         device=torch_device, requires_grad=backprop, heads_last=True, flatten=False
     )

@@ -40,6 +40,7 @@ from torch.utils.cpp_extension import LIB_EXT
 
 IS_WINDOWS = sys.platform == "win32"
 IS_LINUX = sys.platform.startswith("linux")
+IS_MACOS = sys.platform == "darwin"
 IS_LIBTORCH_BUILT_WITH_CXX11_ABI = torch._C._GLIBCXX_USE_CXX11_ABI
 
 this_directory = Path(__file__).parent
@@ -364,7 +365,34 @@ def autogen_kernel_instantitations(
 
 
 class BuildExtension(build_ext):
+    def _build_metal_extension(self, ext):
+        """Build .mm (Objective-C++) Metal extension."""
+        # Add .mm to recognized source extensions
+        self.compiler.src_extensions.append('.mm')
+
+        # Store original _compile
+        original_compile = self.compiler._compile
+
+        def patched_compile(obj, src, ext_name, cc_args, extra_postargs, pp_opts):
+            # For .mm files, use Objective-C++ compilation
+            if src.endswith('.mm'):
+                try:
+                    self.compiler.compiler_so = ['clang++'] + [
+                        arg for arg in self.compiler.compiler_so[1:]
+                        if arg not in ['-Wstrict-prototypes']
+                    ]
+                except Exception:
+                    pass
+            return original_compile(obj, src, ext_name, cc_args, extra_postargs, pp_opts)
+
+        self.compiler._compile = patched_compile
+        build_ext.build_extension(self, ext)
+
     def build_extension(self, ext):
+        if ext.name == "natten._metal_natten":
+            self._build_metal_extension(ext)
+            return
+
         if BUILD_WITH_CUDA:
 
             print("Preparing to build LIBNATTEN")
@@ -497,12 +525,36 @@ class BuildExtension(build_ext):
             pass
 
 
+def get_ext_modules():
+    ext_modules = []
+    if BUILD_WITH_CUDA:
+        ext_modules.append(Extension("natten.libnatten", []))
+    if IS_MACOS:
+        from torch.utils.cpp_extension import CppExtension
+
+        metal_ext = CppExtension(
+            name="natten._metal_natten",
+            sources=[
+                os.path.join("csrc", "src", "metal_forward.mm"),
+            ],
+            extra_compile_args=["-std=c++17", "-O3"],
+            extra_link_args=[
+                "-framework", "Metal",
+                "-framework", "Foundation",
+            ],
+        )
+        ext_modules.append(metal_ext)
+    return ext_modules
+
+
+ext_modules = get_ext_modules()
+
 setup(
     name="natten",
     version=get_version(),
     author="Ali Hassani",
     url="https://natten.org",
     description="Neighborhood Attention Extension.",
-    ext_modules=[Extension("natten.libnatten", [])] if BUILD_WITH_CUDA else [],
-    cmdclass={"build_ext": BuildExtension} if BUILD_WITH_CUDA else {},
+    ext_modules=ext_modules,
+    cmdclass={"build_ext": BuildExtension} if (BUILD_WITH_CUDA or IS_MACOS) else {},
 )

@@ -568,6 +568,138 @@ def can_run_cutlass_fna(
     return True
 
 
+### Metal FNA (Apple Silicon / MPS)
+
+
+def can_run_metal_fna(
+    query: Tensor, key: Tensor, value: Tensor, raise_error: bool = False
+) -> bool:
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if query.device.type != "mps":
+        target_fn("Can't run Metal FNA; not an MPS tensor.")
+        return False
+
+    if not na_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=False,
+        supports_gqa_mqa=True,
+        raise_error=raise_error,
+        backend_name="Metal FNA",
+    ):
+        return False
+
+    if query.dim() not in [4, 5, 6]:
+        target_fn(
+            "Metal FNA expects 4-D, 5-D, or 6-D tensors as inputs (corresponding to NA1D, NA2D, and NA3D), "
+            f"got {query.dim()=}.",
+            exception=ValueError,
+        )
+        return False
+
+    if query.dtype not in [torch.float32, torch.float16, torch.bfloat16]:
+        target_fn(
+            "Can't run Metal FNA; it only supports FP32, FP16, and BF16.",
+            exception=ValueError,
+        )
+        return False
+
+    head_dim = query.shape[-1]
+    if head_dim > 1024:
+        target_fn(
+            f"Can't run Metal FNA; it supports max head dim of 1024, got {head_dim=}.",
+            exception=ValueError,
+        )
+        return False
+
+    head_dim_value = value.shape[-1]
+    if head_dim_value > 1024:
+        target_fn(
+            f"Can't run Metal FNA; it supports max value head dim of 1024, got {head_dim_value=}.",
+            exception=ValueError,
+        )
+        return False
+
+    try:
+        from natten.backends.metal import HAS_METAL_NATTEN
+
+        if not HAS_METAL_NATTEN:
+            target_fn("Can't run Metal FNA; Metal extension not built/installed.")
+            return False
+    except ImportError:
+        target_fn("Can't run Metal FNA; Metal extension not available.")
+        return False
+
+    return True
+
+
+def can_run_metal_fmha(
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    is_causal: bool,
+    is_varlen: bool,
+    raise_error: bool = False,
+) -> bool:
+    target_fn = functools.partial(log_or_raise_error, raise_error=raise_error)
+
+    if is_varlen:
+        target_fn("Metal FMHA doesn't support variable length inputs (varlen).")
+        return False
+
+    if query.device.type != "mps":
+        target_fn("Can't run Metal FMHA; not an MPS tensor.")
+        return False
+
+    if not fmha_tensor_checks(
+        query,
+        key,
+        value,
+        must_match_head_dims=False,
+        supports_gqa_mqa=True,
+        raise_error=raise_error,
+        backend_name="Metal FMHA",
+    ):
+        return False
+
+    if query.dtype not in [torch.float32, torch.float16, torch.bfloat16]:
+        target_fn(
+            "Can't run Metal FMHA; it only supports FP32, FP16, and BF16.",
+            exception=ValueError,
+        )
+        return False
+
+    head_dim = query.shape[-1]
+    if head_dim > 1024:
+        target_fn(
+            f"Can't run Metal FMHA; it supports max head dim of 1024, got {head_dim=}.",
+            exception=ValueError,
+        )
+        return False
+
+    head_dim_value = value.shape[-1]
+    if head_dim_value > 1024:
+        target_fn(
+            f"Can't run Metal FMHA; it supports max value head dim of 1024, got {head_dim_value=}.",
+            exception=ValueError,
+        )
+        return False
+
+    try:
+        from natten.backends.metal import HAS_METAL_NATTEN
+
+        if not HAS_METAL_NATTEN:
+            target_fn("Can't run Metal FMHA; Metal extension not built/installed.")
+            return False
+    except ImportError:
+        target_fn("Can't run Metal FMHA; Metal extension not available.")
+        return False
+
+    return True
+
+
 ### Flex FMHA/FNA
 
 _FLEX_SUPPORTED = _TORCH_VERSION >= [2, 7]
