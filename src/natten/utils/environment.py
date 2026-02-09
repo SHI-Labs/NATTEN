@@ -55,6 +55,7 @@ def parse_env_str(env_var: str, default: str) -> str:
 
 
 _IS_CUDA_AVAILABLE = torch.cuda.is_available()
+_IS_XPU_AVAILABLE = torch.xpu.is_available() if hasattr(torch, "xpu") else False
 
 _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
 

@@ -33,6 +33,8 @@ def is_cuda(device: torch.device) -> bool:
 def is_rocm(device: torch.device) -> bool:
     return torch.cuda.is_available() and torch.version.hip and device.type == "cuda"  # type: ignore
 
+def is_xpu(device: torch.device) -> bool:
+    return torch.xpu.is_available() and torch.version.xpu and device.type == "xpu"
 
 def is_cpu(device: torch.device) -> bool:
     return device.type == "cpu"
