@@ -51,11 +51,23 @@ NATTEN_TAGS = {
         "cutlass::fna::kernel::Sm100FnaFwdKernelTmaWarpspecialized",
         "cutlass::fna::collective::FnaMainloopTmaWarpSpecializedSm90",
         "cutlass::fna::collective::FnaMainloopTmaSm90",
+        "na_forward_fp32",
+        "na_forward_fp16",
+        "na_forward_bf16",
     ],
     LibNattenOp.FnaBackward: [
         "natten::cuda::fna::FusedNeighborhoodAttentionBackwardKernel<",
         "cutlass::fna::collective::FnaBwdMainloopTmaWarpSpecializedSm90",
         "cutlass::fna::kernel::Sm100FnaBwdKernelTmaWarpSpecialized",
+        "na_backward_dQ_fp32",
+        "na_backward_dQ_fp16",
+        "na_backward_dQ_bf16",
+        "na_backward_dK_fp32",
+        "na_backward_dK_fp16",
+        "na_backward_dK_bf16",
+        "na_backward_dV_fp32",
+        "na_backward_dV_fp16",
+        "na_backward_dV_bf16",
     ],
     LibNattenOp.FmhaForward: [
         "cutlass::fmha::kernel::Sm100FmhaFwdKernelTmaWarpspecialized",
@@ -281,6 +293,7 @@ ARCH_LOOKUP = {
     "Sm100": ["sm100", "blackwell"],
     "Sm101": ["sm101"],
     "Sm120": ["sm120"],
+    "Apple": ["na_forward_", "na_backward_"],
 }
 
 
@@ -288,6 +301,7 @@ FRAMEWORK_LOOKUP = {
     "CUTLASS": ["cutlass", "cute"],
     "cuDNN": ["cudnn"],
     "cuBLAS": ["cublas"],
+    "Metal": ["na_forward_", "na_backward_"],
     "PyTorch": ["c10", "aten", "at::native"],
     "Triton": ["triton"],
 }
@@ -330,6 +344,9 @@ def convert_to_natten_profiler_ops(
         time_total = (
             evt.device_time_total if torch.cuda.is_available() else evt.cpu_time_total
         )
+        # On MPS, device_time_total is 0; use cpu_time_total instead
+        if time_total == 0 and evt.cpu_time_total > 0:
+            time_total = evt.cpu_time_total
 
         natten_op = get_natten_op(evt.key)
         arch_tag = get_arch(evt.key)
