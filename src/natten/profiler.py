@@ -275,6 +275,11 @@ def check_causal(
 
 
 def get_args():
+    DTYPE_LIST_STR = ", ".join(DTYPE_MAP.keys())
+    NATTEN_BACKENDS_STR = ", ".join(NATTEN_BACKENDS)
+    NATTEN_FMHA_BACKENDS_STR = ", ".join(NATTEN_FMHA_BACKENDS)
+    SDPA_BACKENDS_STR = ", ".join(SDPA_BACKENDS)
+
     parser = argparse.ArgumentParser(
         description="NATTEN profiling toolkit. Profile different scenarios with NATTEN and "
         "see accurate measurements of operation runtime under different backends and configurations."
@@ -355,7 +360,7 @@ def get_args():
         type=str,
         default=DEFAULT_DTYPE,
         choices=DTYPE_MAP.keys(),
-        help=f"Element (data) type. Choices: {", ".join(DTYPE_MAP.keys())}",
+        help=f"Element (data) type. Choices: {DTYPE_LIST_STR}",
     )
 
     parser.add_argument(
@@ -378,8 +383,8 @@ def get_args():
         choices=NATTEN_BACKENDS + SDPA_BACKENDS,
         help="Backend / kernel to run."
         "Choices: "
-        f"NATTEN backends: {", ".join(NATTEN_BACKENDS)}.\n"
-        f"Torch SDPA backends (can only perform self attention): {", ".join(SDPA_BACKENDS)}.",
+        f"NATTEN backends: {NATTEN_BACKENDS_STR}.\n"
+        f"Torch SDPA backends (can only perform self attention): {SDPA_BACKENDS_STR}.",
     )
 
     parser.add_argument(
@@ -389,7 +394,7 @@ def get_args():
         choices=NATTEN_FMHA_BACKENDS,
         help="Backend / kernel for cross-attention (additional KV) and fast-path self attention in NATTEN. "
         "Choices: "
-        f"{", ".join(NATTEN_FMHA_BACKENDS)}.",
+        f"{NATTEN_FMHA_BACKENDS_STR}.",
     )
 
     parser.add_argument(
