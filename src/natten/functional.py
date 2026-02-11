@@ -37,6 +37,8 @@ from .backends import (
     cutlass_hopper_fna_generic,
     flex_fmha,
     flex_fna_generic,
+    flash_fmha,
+    flash_fna_generic
 )
 from .types import (
     CausalArg1DTypeOrDed,
@@ -107,7 +109,7 @@ def attention(
     tokens).
 
     This operation does not call into PyTorch's SDPA, and only runs one of the NATTEN backends
-    (`cutlass-fmha`, `hopper-fmha`, `blackwell-fmha`, `flex-fmha`). Reasons for that include being
+    (`cutlass-fmha`, `hopper-fmha`, `blackwell-fmha`, `flex-fmha`, `flash-fmha`). Reasons for that include being
     able to control performance-related arguments, return logsumexp, and more.
     For more information refer to [backends](backends.md).
 
@@ -188,7 +190,8 @@ def attention(
 
     Other Parameters:
         backend (str): Backend implementation to run with. Choices are: `None` (pick the best
-            available one), `"cutlass-fmha"`, `"hopper-fmha"`, `"blackwell-fmha"`, `"flex-fmha"`.
+            available one), `"cutlass-fmha"`, `"hopper-fmha"`, `"blackwell-fmha"`, `"flex-fmha"`,
+            `"flash-fmha"`.
             Refer to [backends](backends.md) for more information.
 
         q_tile_size (int): Tile size along query sequence length in the forward pass kernel.
@@ -345,6 +348,19 @@ def attention(
             max_seqlen_KV=max_seqlen_KV,
         )
 
+    elif backend == "flash-fmha":
+        return flash_fmha(
+            query=query,
+            key=key,
+            value=value,
+            scale=scale,
+            q_tile_size=q_tile_size,
+            kv_tile_size=kv_tile_size,
+            backward_q_tile_size=backward_q_tile_size,
+            backward_kv_tile_size=backward_kv_tile_size,
+            return_lse=return_lse,
+        )
+
     raise NotImplementedError(f"Unrecognized NATTEN FMHA backend {backend}.")
 
 
@@ -401,7 +417,12 @@ def neighborhood_attention_generic(
         additional_keys is not None and additional_values is not None
     )
 
-    if is_self_attention(
+    if (backend == "flash-fna" or backend == "flash-fmha") and any(is_causal):
+        is_flash_sa = False
+    else:
+        is_flash_sa = True
+
+    if is_flash_sa and is_self_attention(
         query,
         kernel_size=kernel_size,
         is_causal=is_causal,
@@ -480,6 +501,23 @@ def neighborhood_attention_generic(
             backward_q_tile_shape=backward_q_tile_shape,
             backward_kv_tile_shape=backward_kv_tile_shape,
             kernel_schedule=kernel_schedule,
+            return_lse=True,
+        )
+
+    elif backend == "flash-fna":
+        output, lse = flash_fna_generic(
+            query=query,
+            key=key,
+            value=value,
+            kernel_size=kernel_size,
+            stride=stride,
+            dilation=dilation,
+            is_causal=is_causal,
+            scale=scale,
+            q_tile_shape=q_tile_shape,
+            kv_tile_shape=kv_tile_shape,
+            backward_q_tile_shape=backward_q_tile_shape,
+            backward_kv_tile_shape=backward_kv_tile_shape,
             return_lse=True,
         )
 

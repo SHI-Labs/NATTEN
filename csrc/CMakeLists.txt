@@ -160,6 +160,10 @@ file(GLOB TORCH_APIS  ./src/*.cpp ./src/*.cu)
 file(GLOB AUTOGEN_REFERENCE ./autogen/src/cuda/reference/*.cu)
 file(GLOB AUTOGEN_FNA ./autogen/src/cuda/fna/*.cu)
 file(GLOB AUTOGEN_FMHA ./autogen/src/cuda/fmha/*.cu)
+file(GLOB AUTOGEN_FLASH_FNA ./autogen/src/cuda/flash_fna/*.cu)
+file(GLOB AUTOGEN_FLASH_FNA_BWD ./autogen/src/cuda/flash_fna_bwd/*.cu)
+file(GLOB AUTOGEN_FLASH_FMHA ./autogen/src/cuda/flash_fmha/*.cu)
+file(GLOB AUTOGEN_FLASH_FMHA_BWD ./autogen/src/cuda/flash_fmha_bwd/*.cu)
 if(${NATTEN_WITH_HOPPER_FNA})
   file(GLOB AUTOGEN_HOPPER_FNA ./autogen/src/cuda/hopper_fna/*.cu ./autogen/src/cuda/hopper_fna_bwd/*.cu)
   file(GLOB AUTOGEN_HOPPER_FMHA ./autogen/src/cuda/hopper_fmha/*.cu ./autogen/src/cuda/hopper_fmha_bwd/*.cu)
@@ -173,6 +177,10 @@ file(GLOB ALL_SOURCES
   ${AUTOGEN_REFERENCE} 
   ${AUTOGEN_FNA} 
   ${AUTOGEN_FMHA} 
+  ${AUTOGEN_FLASH_FNA} 
+  ${AUTOGEN_FLASH_FNA_BWD}
+  ${AUTOGEN_FLASH_FMHA} 
+  ${AUTOGEN_FLASH_FMHA_BWD}
   ${AUTOGEN_BLACKWELL_FNA} 
   ${AUTOGEN_BLACKWELL_FMHA} 
   ${AUTOGEN_HOPPER_FNA} 

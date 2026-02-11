@@ -45,6 +45,8 @@ from .configs import (
     get_bwd_configs_for_cutlass_fna,
     get_bwd_configs_for_cutlass_hopper_fmha,
     get_bwd_configs_for_cutlass_hopper_fna,
+    get_bwd_configs_for_flash_fmha,
+    get_bwd_configs_for_flash_fna,
     get_configs_for_cutlass_blackwell_fmha,
     get_configs_for_cutlass_blackwell_fna,
     get_configs_for_cutlass_fmha,
@@ -53,6 +55,8 @@ from .configs import (
     get_configs_for_cutlass_hopper_fna,
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
+    get_configs_for_flash_fmha,
+    get_configs_for_flash_fna,
 )
 from .configs.checks import (
     can_run_cutlass_blackwell_fmha,
@@ -61,6 +65,8 @@ from .configs.checks import (
     can_run_cutlass_hopper_fmha,
     can_run_cutlass_hopper_fna,
     can_run_flex_attention,
+    can_run_flash_fmha,
+    can_run_flash_fna,
 )
 from .flex import flex_fmha, flex_fna_generic, na1d_flex, na2d_flex, na3d_flex
 from .fmha import can_run_cutlass_fmha, cutlass_fmha
@@ -77,7 +83,13 @@ from .hopper_fna import (
     na2d_cutlass_hopper_fna,
     na3d_cutlass_hopper_fna,
 )
-
+from .flash_fmha import flash_fmha
+from .flash_fna import (
+    flash_fna_generic,
+    na1d_flash_fna,
+    na2d_flash_fna,
+    na3d_flash_fna,
+)
 
 def choose_backend(
     query: Tensor, key: Tensor, value: Tensor, torch_compile: bool
@@ -93,6 +105,10 @@ def choose_backend(
     if can_run_cutlass_fna(query, key, value):
         logger.debug("Backend not set; picked CUTLASS (2.X) FNA kernel.")
         return "cutlass-fna"
+
+    if can_run_flash_fna(query, key, value):
+        logger.debug("Backend not set; picked Flash FNA kernel.")
+        return "flash-fna"
 
     if can_run_flex_attention(query, key, value, torch_compile=torch_compile):
         logger.debug("Backend not set; picked Flex Attention kernel.")
@@ -130,6 +146,10 @@ def choose_fmha_backend(
         logger.debug("Backend not set; picked CUTLASS (2.X) FMHA kernel.")
         return "cutlass-fmha"
 
+    if can_run_flash_fmha(query, key, value):
+        logger.debug("Backend not set; picked Flash FMHA kernel.")
+        return "flash-fmha"
+
     if can_run_flex_attention(
         query,
         key,
@@ -156,6 +176,9 @@ def get_compatible_backends(
 
     if can_run_cutlass_hopper_fna(query, key, value):
         compatible_backends.append("hopper-fna")
+
+    if can_run_flash_fna(query, key, value):
+        compatible_backends.append("flash-fna")
 
     if can_run_cutlass_fna(query, key, value):
         compatible_backends.append("cutlass-fna")
@@ -184,6 +207,9 @@ def get_compatible_fmha_backends(
         query, key, value, is_causal=is_causal, is_varlen=is_varlen
     ):
         compatible_backends.append("hopper-fmha")
+
+    if can_run_flash_fmha(query, key, value):
+        compatible_backends.append("flash-fmha")
 
     if can_run_cutlass_fmha(
         query, key, value, is_causal=is_causal, is_varlen=is_varlen
@@ -218,8 +244,10 @@ __all__ = [
     "na3d_cutlass_fna",
     "cutlass_blackwell_fmha",
     "cutlass_blackwell_fna_generic",
+    "flash_fmha",
     "cutlass_hopper_fmha",
     "cutlass_hopper_fna_generic",
+    "flash_fna_generic",
     "na1d_cutlass_blackwell_fna",
     "na2d_cutlass_blackwell_fna",
     "na3d_cutlass_blackwell_fna",
@@ -231,10 +259,15 @@ __all__ = [
     "na1d_cutlass_hopper_fna",
     "na2d_cutlass_hopper_fna",
     "na3d_cutlass_hopper_fna",
+    "na1d_flash_fna",
+    "na2d_flash_fna",
+    "na3d_flash_fna",
     "get_bwd_configs_for_cutlass_fmha",
     "get_bwd_configs_for_cutlass_fna",
     "get_bwd_configs_for_cutlass_blackwell_fmha",
     "get_bwd_configs_for_cutlass_blackwell_fna",
+    "get_bwd_configs_for_flash_fmha"
+    "get_bwd_configs_for_flash_fna"
     "get_configs_for_cutlass_blackwell_fmha",
     "get_configs_for_cutlass_blackwell_fna",
     "get_configs_for_cutlass_fmha",
@@ -245,4 +278,6 @@ __all__ = [
     "get_bwd_configs_for_cutlass_hopper_fna",
     "get_configs_for_flex_fmha",
     "get_configs_for_flex_fna",
+    "get_configs_for_flash_fmha",
+    "get_configs_for_flash_fna"
 ]
