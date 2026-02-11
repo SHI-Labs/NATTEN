@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Main branch]
+* Fix for syntax error in natten.profiler (only affects `python < 3.12`)
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:
