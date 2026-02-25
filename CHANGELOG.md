@@ -2,7 +2,7 @@
 
 ## [Main branch]
 * Fixed syntax error in natten.profiler (only affects `python < 3.12`)
-* Fixed stride overflow issue (occurs in very large seqlen + heads) in Blackwell FMHA/FNA.
+* Fixed stride overflow issue (occurs in very large seqlen + heads) in Blackwell FMHA/FNA, Hopper FMHA/FNA, and TokPerm kernels.
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:
