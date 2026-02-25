@@ -138,23 +138,41 @@ struct KernelBackward {
     auto stride_Q = make_stride(
         H_R * H_K * D,
         _1{},
-        make_stride(make_stride(D, D * H_R), B == 1 ? 0 : D * SQ * H_R * H_K));
+        make_stride(
+            make_stride(D, D * H_R),
+            B == 1 ? 0L
+                   : static_cast<int64_t>(D * H_R * H_K) *
+                    static_cast<int64_t>(SQ)));
     auto stride_K = make_stride(
         H_K * D,
         _1{},
-        make_stride(make_stride(_0{}, D), B == 1 ? 0 : D * SK * H_K));
+        make_stride(
+            make_stride(_0{}, D),
+            B == 1 ? 0L
+                   : static_cast<int64_t>(D * H_K) * static_cast<int64_t>(SK)));
     auto stride_V = make_stride(
         H_K * D_VO,
         _1{},
-        make_stride(make_stride(_0{}, D_VO), B == 1 ? 0 : D_VO * SK * H_K));
+        make_stride(
+            make_stride(_0{}, D_VO),
+            B == 1
+                ? 0L
+                : static_cast<int64_t>(D_VO * H_K) * static_cast<int64_t>(SK)));
     auto stride_O = make_stride(
         H_R * H_K * D_VO,
         _1{},
         make_stride(
-            make_stride(D_VO, D_VO * H_R), B == 1 ? 0 : D_VO * SQ * H_R * H_K));
+            make_stride(D_VO, D_VO * H_R),
+            B == 1 ? 0L
+                   : static_cast<int64_t>(D_VO * H_R * H_K) *
+                    static_cast<int64_t>(SQ)));
     auto stride_LSE = make_stride(
         H_K * H_R,
-        make_stride(make_stride(_1{}, H_R), B == 1 ? 0 : SQ * H_R * H_K));
+        make_stride(
+            make_stride(_1{}, H_R),
+            B == 1
+                ? 0L
+                : static_cast<int64_t>(SQ) * static_cast<int64_t>(H_R * H_K)));
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;

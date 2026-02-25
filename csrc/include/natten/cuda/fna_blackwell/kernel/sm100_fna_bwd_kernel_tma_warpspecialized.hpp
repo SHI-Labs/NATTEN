@@ -136,13 +136,13 @@ struct Sm100FnaBwdKernelTmaWarpSpecialized {
   static constexpr int kStages = 2;
 
   using TensorStrideContiguousK =
-      Stride<int, _1, Stride<Stride<int, int>, int>>;
+      Stride<int, _1, Stride<Stride<int, int>, int64_t>>;
   using TensorStrideContiguousMN =
-      Stride<_1, int, Stride<Stride<int, int>, int>>;
+      Stride<_1, int, Stride<Stride<int, int>, int64_t>>;
   using TensorStrideContiguousK_GQA =
-      Stride<int, _1, Stride<Stride<_0, int>, int>>;
+      Stride<int, _1, Stride<Stride<_0, int>, int64_t>>;
   using TensorStrideContiguousMN_GQA =
-      Stride<_1, int, Stride<Stride<_0, int>, int>>;
+      Stride<_1, int, Stride<Stride<_0, int>, int64_t>>;
 
   // compute S
   using CollectiveMmaKQ = typename cutlass::gemm::collective::CollectiveBuilder<
@@ -368,7 +368,8 @@ struct Sm100FnaBwdKernelTmaWarpSpecialized {
 
   using TensorStride = TensorStrideContiguousK; // S D (H B)
   using TensorStride_GQA = TensorStrideContiguousK_GQA;
-  using RowTensorStride = Stride<_1, Stride<Stride<int, int>, int>>; // S (H B)
+  using RowTensorStride =
+      Stride<_1, Stride<Stride<int, int>, int64_t>>; // S (H B)
 
   struct MainloopArguments {
     const Element* ptr_q;
