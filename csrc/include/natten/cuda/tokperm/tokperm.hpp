@@ -35,6 +35,7 @@
 #include <natten/cuda/tokperm/token_permute_kernel.cuh>
 #include <natten/cuda/tokperm/utils/permute.cuh>
 #include <natten/cuda/tokperm/utils/stride.cuh>
+#include <natten/cuda/tokperm/utils/tuple.cuh>
 
 namespace natten::tokperm {
 
@@ -55,20 +56,12 @@ bool token_permute_op(
     cudaStream_t stream) {
   static constexpr int NumDims = tuple_size_v<CuteTuple>;
 
-  // too lazy to figure out how to generate these via templates
-  using DimIn = cute::conditional_t<
-      NumDims == 3,
-      cute::tuple<int, int, int>,
-      cute::
-          conditional_t<NumDims == 2, cute::tuple<int, int>, cute::tuple<int>>>;
-
-  using DimOut = cute::conditional_t<
-      NumDims == 3,
-      cute::tuple<int, int, int, int, int, int, int, int, int>,
-      cute::conditional_t<
-          NumDims == 2,
-          cute::tuple<int, int, int, int, int, int>,
-          cute::tuple<int, int, int>>>;
+  // NumDims = 1: tuple<int>
+  // NumDims = 2: tuple<int, int>
+  // NumDims = 3: tuple<int, int, int>
+  using DimIn = utils::make_tuple_type<NumDims, int>;
+  // (token mode/dim) -> (tile, dilation, rest)
+  using DimOut = utils::make_tuple_type<NumDims * 3, int>;
 
   auto rest = ceil_div(ceil_div(token_layout, tile_shape), dilation);
 
@@ -175,20 +168,12 @@ bool token_unpermute_op(
     cudaStream_t stream) {
   static constexpr int NumDims = tuple_size_v<CuteTuple>;
 
-  // too lazy to figure out how to generate these via templates
-  using DimOut = cute::conditional_t<
-      NumDims == 3,
-      cute::tuple<int, int, int>,
-      cute::
-          conditional_t<NumDims == 2, cute::tuple<int, int>, cute::tuple<int>>>;
-
-  using DimIn = cute::conditional_t<
-      NumDims == 3,
-      cute::tuple<int, int, int, int, int, int, int, int, int>,
-      cute::conditional_t<
-          NumDims == 2,
-          cute::tuple<int, int, int, int, int, int>,
-          cute::tuple<int, int, int>>>;
+  // NumDims = 1: tuple<int>
+  // NumDims = 2: tuple<int, int>
+  // NumDims = 3: tuple<int, int, int>
+  using DimOut = utils::make_tuple_type<NumDims, int>;
+  // (token mode/dim) -> (tile, dilation, rest)
+  using DimIn = utils::make_tuple_type<NumDims * 3, int>;
 
   auto rest = ceil_div(ceil_div(token_layout, tile_shape), dilation);
 

@@ -23,53 +23,18 @@
 
 #pragma once
 
+#include <cute/int_tuple.hpp>
 #include <cute/layout.hpp>
-#include <cute/tensor.hpp>
-
-#include <natten/cuda/tokperm/utils/tuple.cuh>
+#include <cute/stride.hpp>
 
 namespace natten::tokperm::utils {
 
-using namespace cute;
+template <typename T, size_t... Is>
+auto make_tuple_type_impl(cute::index_sequence<Is...>)
+    -> cute::tuple<decltype((void)Is, T{})...>;
 
-namespace detail {
-
-template <class Shape>
-struct StrideHelper {
-  static_assert(cute::rank(Shape{}) >= 2);
-  static_assert(depth(Shape{}) == 1);
-  static constexpr int Rank = cute::rank(Shape{});
-
-  using StrideType_ = utils::make_tuple_type<Rank - 2, int64_t>;
-  // stride for heads can be int32
-  using StrideType = decltype(append(append(StrideType_{}, int{}), _1{}));
-
-  CUTE_HOST_DEVICE static constexpr StrideType make_stride(Shape const& shape) {
-    StrideType stride;
-
-    get<Rank - 1>(stride) = _1{}; // dim
-    get<Rank - 2>(stride) = get<Rank - 1>(shape); // heads
-    cute::for_each(cute::make_range<0, Rank - 1>{}, [&](auto i) {
-      static_assert(i < Rank - 1);
-      get<Rank - i - 2>(stride) =
-          static_cast<int64_t>(get<Rank - i - 1>(shape)) *
-          get<Rank - i - 1>(stride);
-    });
-
-    return stride;
-  }
-};
-
-} // namespace detail
-
-template <class Shape>
-CUTE_HOST_DEVICE static constexpr auto make_torch_contiguous_stride(
-    Shape const& shape) {
-  auto flattened_shape = cute::flatten(shape);
-  auto flattened_stride =
-      detail::StrideHelper<decltype(flattened_shape)>::make_stride(
-          flattened_shape);
-  return cute::unflatten(flattened_stride, shape);
-}
+template <size_t N, typename T>
+using make_tuple_type =
+    decltype(make_tuple_type_impl<T>(cute::make_index_sequence<N>{}));
 
 } // namespace natten::tokperm::utils
