@@ -45,10 +45,10 @@ struct FmhaBwdEpilogueKV {
 
   struct Arguments {
     Element* ptr_K;
-    cute::tuple<int, int, int, cute::_1> dK;
+    cute::tuple<int64_t, int, int, cute::_1> dK;
 
     Element* ptr_V;
-    cute::tuple<int, int, int, _1> dV;
+    cute::tuple<int64_t, int, int, _1> dV;
   };
 
   // using DefaultOperation =
@@ -69,10 +69,10 @@ struct FmhaBwdEpilogueKV {
           ElementAccumulator,
           ElementAccumulator,
           void,
-          cute::tuple<int, _1, cute::tuple<int, int>>,
+          cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment,
           Element,
-          cute::tuple<int, _1, cute::tuple<int, int>>,
+          cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment,
           cutlass::epilogue::TmaWarpSpecialized,
           DefaultOperation>::CollectiveOp;

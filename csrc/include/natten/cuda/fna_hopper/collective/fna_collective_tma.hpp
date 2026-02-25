@@ -88,7 +88,7 @@ struct FnaMainloopTmaSm90 {
   using TileShapeQK = TileShape;
   using TileShapePV = decltype(select<0, 2, 1>(TileShapeQK{}));
 
-  using LayoutQKV = cute::tuple<int, _1, cute::tuple<int, int>>;
+  using LayoutQKV = cute::tuple<int, _1, cute::tuple<int64_t, int>>;
   using LayoutQ = LayoutQKV;
   using LayoutK = LayoutQKV;
   using LayoutV = LayoutQKV;

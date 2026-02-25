@@ -91,15 +91,23 @@ struct KernelBackward {
     // shape: (batch, heads, seqlen, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
     auto stride_Q = make_stride(
-        dim_aligned * heads * seqlen_Q, dim_aligned, dim_aligned * heads, _1{});
+        static_cast<int64_t>(dim_aligned * heads) *
+            static_cast<int64_t>(seqlen_Q),
+        dim_aligned,
+        dim_aligned * heads,
+        _1{});
     auto stride_O = stride_Q;
     auto stride_K = make_stride(
-        dim_aligned * heads * seqlen_KV,
+        static_cast<int64_t>(dim_aligned * heads) *
+            static_cast<int64_t>(seqlen_KV),
         dim_aligned,
         dim_aligned * heads,
         _1{});
     auto stride_V = stride_K;
-    auto stride_LSE = make_stride(heads * seqlen_LSE, seqlen_LSE, _1{});
+    auto stride_LSE = make_stride(
+        static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_LSE),
+        seqlen_LSE,
+        _1{});
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;
