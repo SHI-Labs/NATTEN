@@ -50,18 +50,18 @@ struct FmhaKernelBwdConvert {
     ProblemShape problem_shape;
 
     const ElementAcc* ptr_src_dQ;
-    tuple<int, _1, tuple<tuple<int, int>, int>> stride_src_dQ;
+    tuple<int, _1, tuple<tuple<int, int>, int64_t>> stride_src_dQ;
     const ElementAcc* ptr_src_dK;
-    tuple<int, _1, tuple<tuple<_0, int>, int>> stride_src_dK;
+    tuple<int, _1, tuple<tuple<_0, int>, int64_t>> stride_src_dK;
     const ElementAcc* ptr_src_dV;
-    tuple<int, _1, tuple<tuple<_0, int>, int>> stride_src_dV;
+    tuple<int, _1, tuple<tuple<_0, int>, int64_t>> stride_src_dV;
 
     Element* ptr_dest_dQ;
-    tuple<int, _1, tuple<tuple<int, int>, int>> stride_dest_dQ;
+    tuple<int, _1, tuple<tuple<int, int>, int64_t>> stride_dest_dQ;
     Element* ptr_dest_dK;
-    tuple<int, _1, tuple<tuple<_0, int>, int>> stride_dest_dK;
+    tuple<int, _1, tuple<tuple<_0, int>, int64_t>> stride_dest_dK;
     Element* ptr_dest_dV;
-    tuple<int, _1, tuple<tuple<_0, int>, int>> stride_dest_dV;
+    tuple<int, _1, tuple<tuple<_0, int>, int64_t>> stride_dest_dV;
 
     ElementAcc scale = 1.0;
   };

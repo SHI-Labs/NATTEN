@@ -77,26 +77,26 @@ class FnaBwdSm90 {
     cute::tuple<int, int, int, int, int> problem_size;
 
     const Element* ptr_Q;
-    cute::tuple<int, int, int, cute::_1> stride_Q;
+    cute::tuple<int64_t, int, int, cute::_1> stride_Q;
     const Element* ptr_K;
-    cute::tuple<int, int, int, cute::_1> stride_K;
+    cute::tuple<int64_t, int, int, cute::_1> stride_K;
     const Element* ptr_V;
-    cute::tuple<int, int, int, cute::_1> stride_V;
+    cute::tuple<int64_t, int, int, cute::_1> stride_V;
 
     const Element* ptr_O;
-    cute::tuple<int, int, int, cute::_1> stride_O;
+    cute::tuple<int64_t, int, int, cute::_1> stride_O;
     const ElementAccumulator* ptr_LSE;
-    cute::tuple<int, int, cute::_1> stride_LSE;
+    cute::tuple<int64_t, int, cute::_1> stride_LSE;
 
     const Element* ptr_dO;
-    cute::tuple<int, int, int, cute::_1> stride_dO;
+    cute::tuple<int64_t, int, int, cute::_1> stride_dO;
 
     Element* ptr_dQ;
-    cute::tuple<int, int, int, cute::_1> stride_dQ;
+    cute::tuple<int64_t, int, int, cute::_1> stride_dQ;
     Element* ptr_dK;
-    cute::tuple<int, int, int, cute::_1> stride_dK;
+    cute::tuple<int64_t, int, int, cute::_1> stride_dK;
     Element* ptr_dV;
-    cute::tuple<int, int, int, cute::_1> stride_dV;
+    cute::tuple<int64_t, int, int, cute::_1> stride_dV;
 
     // (F)NA parameters
     NADim q_shape;
@@ -158,7 +158,8 @@ class FnaBwdSm90 {
     auto [B, H, Q, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
     Q = cutlass::round_up(Q, 8); // Alignment
-    auto stride_sum_OdO = make_stride(H * Q, Q, _1{});
+    auto stride_sum_OdO =
+        make_stride(static_cast<int64_t>(H) * static_cast<int64_t>(Q), Q, _1{});
     return typename OperationSumOdO::Arguments{
         args.problem_size,
         args.ptr_O,
@@ -175,7 +176,11 @@ class FnaBwdSm90 {
     auto [B, H, Q, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
     Q = cutlass::round_up(Q, 8); // Alignment
-    auto stride_src_dQ = make_stride(B == 1 ? 0 : (H * Q * D), Q * D, D, _1{});
+    auto stride_src_dQ = make_stride(
+        B == 1 ? 0L : static_cast<int64_t>(H * D) * static_cast<int64_t>(Q),
+        Q * D,
+        D,
+        _1{});
     return typename OperationConvert::Arguments{
         args.problem_size,
         src,
@@ -195,9 +200,9 @@ class FnaBwdSm90 {
   static typename Operation::Arguments to_bwd_arguments(
       Arguments const& args,
       ElementAccumulator* sum_OdO = nullptr,
-      cute::tuple<int, int, _1> const& stride_sum_OdO = {},
+      cute::tuple<int64_t, int, _1> const& stride_sum_OdO = {},
       ElementAccumulator* dQ_acc = nullptr,
-      cute::tuple<int, int, int, _1> const& stride_dQ = {}) {
+      cute::tuple<int64_t, int, int, _1> const& stride_dQ = {}) {
     return typename Operation::Arguments{
         args.problem_size,
         {

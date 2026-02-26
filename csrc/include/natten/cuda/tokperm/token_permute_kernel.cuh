@@ -30,6 +30,7 @@
 
 #include <natten/cuda/tokperm/utils/permute.cuh>
 #include <natten/cuda/tokperm/utils/stride.cuh>
+#include <natten/cuda/tokperm/utils/tuple.cuh>
 
 namespace natten::tokperm::kernel {
 
@@ -156,23 +157,25 @@ CUTE_HOST_DEVICE constexpr auto unperm2perm(
 }
 
 template <
-    typename TokenLayoutIn,
-    typename TokenLayoutOut,
+    typename TokenShapeIn,
+    typename TokenShapeOut,
     class ElementIn,
     class ElementOut,
     bool IsUnpermute = false,
     int kElementsPerLoad = 4>
 struct TokenPermuteKernel {
   using OffsetTypeInternal = uint64_t;
-  using TokenLayout =
-      cute::conditional_t<IsUnpermute, TokenLayoutOut, TokenLayoutIn>;
+  using TokenShape =
+      cute::conditional_t<IsUnpermute, TokenShapeOut, TokenShapeIn>;
 
   // B, token layout shape, tile shape, dilation, H, D
-  using ProblemShapeIn = cute::tuple<int, TokenLayoutIn, int, int>;
-  using ProblemShapeOut = cute::tuple<int, TokenLayoutOut, int, int>;
+  using ProblemShapeIn = cute::tuple<int, TokenShapeIn, int, int>;
+  using ProblemShapeOut = cute::tuple<int, TokenShapeOut, int, int>;
 
-  using StrideIn = cute::tuple<int, TokenLayoutIn, int, _1>;
-  using StrideOut = cute::tuple<int, TokenLayoutOut, int, _1>;
+  using TokenStrideIn = utils::make_tuple_type<rank(TokenShapeIn{}), int64_t>;
+  using TokenStrideOut = utils::make_tuple_type<rank(TokenShapeOut{}), int64_t>;
+  using StrideIn = cute::tuple<int64_t, TokenStrideIn, int, _1>;
+  using StrideOut = cute::tuple<int64_t, TokenStrideOut, int, _1>;
 
   using ClusterShape = Shape<_1, _1, _1>;
   static constexpr int SharedStorageSize = 0;
@@ -187,9 +190,9 @@ struct TokenPermuteKernel {
     StrideIn stride_src;
     StrideOut stride_dst;
 
-    TokenLayout rest;
-    TokenLayout tile;
-    TokenLayout dilation;
+    TokenShape rest;
+    TokenShape tile;
+    TokenShape dilation;
   };
 
   using Params = Arguments;
@@ -307,7 +310,7 @@ struct TokenPermuteKernel {
       auto crd_dst = idx2crd(idx_s, token_layout_dst.shape());
       bool pred = false;
 
-      TokenLayoutIn crd_src;
+      TokenShapeIn crd_src;
       if constexpr (IsUnpermute) {
         crd_src =
             unperm2perm(crd_dst, params.rest, params.tile, params.dilation);

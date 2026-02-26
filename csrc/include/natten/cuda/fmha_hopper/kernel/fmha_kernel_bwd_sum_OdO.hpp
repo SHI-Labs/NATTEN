@@ -45,12 +45,12 @@ struct FmhaKernelBwdSumOdO {
     cute::tuple<int, int, int, int, int> problem_size;
 
     const Element* ptr_O;
-    cute::tuple<int, int, int, cute::_1> stride_O;
+    cute::tuple<int64_t, int, int, cute::_1> stride_O;
     const Element* ptr_dO;
-    cute::tuple<int, int, int, cute::_1> stride_dO;
+    cute::tuple<int64_t, int, int, cute::_1> stride_dO;
 
     ElementAccumulator* ptr_sum_OdO;
-    cute::tuple<int, int, _1> stride_sum_OdO;
+    cute::tuple<int64_t, int, _1> stride_sum_OdO;
   };
 
   using Params = Arguments;

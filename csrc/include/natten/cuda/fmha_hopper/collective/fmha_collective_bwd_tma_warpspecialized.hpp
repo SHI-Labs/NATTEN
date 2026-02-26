@@ -83,10 +83,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       cutlass::arch::Sm90,
       cutlass::arch::OpClassTensorOp,
       Element,
-      cute::tuple<int, _1, cute::tuple<int, int>>,
+      cute::tuple<int, _1, cute::tuple<int64_t, int>>,
       Alignment,
       Element,
-      cute::tuple<int, _1, cute::tuple<int, int>>,
+      cute::tuple<int, _1, cute::tuple<int64_t, int>>,
       Alignment,
       ElementAccumulator,
       TileShapeNM,
@@ -98,10 +98,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       cutlass::arch::Sm90,
       cutlass::arch::OpClassTensorOp,
       Element,
-      cute::tuple<int, _1, cute::tuple<int, int>>,
+      cute::tuple<int, _1, cute::tuple<int64_t, int>>,
       Alignment, // from register, doesn't matter
       Element,
-      cute::tuple<_1, int, cute::tuple<int, int>>,
+      cute::tuple<_1, int, cute::tuple<int64_t, int>>,
       Alignment,
       ElementAccumulator,
       TileShapeND,
@@ -114,10 +114,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
           cutlass::arch::Sm90,
           cutlass::arch::OpClassTensorOp,
           Element,
-          cute::tuple<int, _1, cute::tuple<int, int>>,
+          cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment, // from register, doesn't matter
           Element,
-          cute::tuple<_1, int, cute::tuple<int, int>>,
+          cute::tuple<_1, int, cute::tuple<int64_t, int>>,
           Alignment,
           ElementAccumulator,
           TileShapeND,
@@ -129,10 +129,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       cutlass::arch::Sm90,
       cutlass::arch::OpClassTensorOp,
       Element,
-      cute::tuple<_1, int, cute::tuple<int, int>>,
+      cute::tuple<_1, int, cute::tuple<int64_t, int>>,
       Alignment, // from smem, might matter (?)
       Element,
-      cute::tuple<_1, int, cute::tuple<int, int>>,
+      cute::tuple<_1, int, cute::tuple<int64_t, int>>,
       Alignment,
       ElementAccumulator,
       TileShapeMD,
@@ -259,22 +259,22 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
 
   struct Arguments {
     const Element* ptr_Q;
-    cute::tuple<int, int, int, _1> dQ;
+    cute::tuple<int64_t, int, int, _1> dQ;
     const Element* ptr_K;
-    cute::tuple<int, int, int, _1> dK;
+    cute::tuple<int64_t, int, int, _1> dK;
     const Element* ptr_V;
-    cute::tuple<int, int, int, _1> dV;
+    cute::tuple<int64_t, int, int, _1> dV;
 
     const Element* ptr_dO;
-    cute::tuple<int, int, int, _1> dDO;
+    cute::tuple<int64_t, int, int, _1> dDO;
 
     const ElementAccumulator* ptr_LSE;
-    cute::tuple<int, int, _1> dLSE;
+    cute::tuple<int64_t, int, _1> dLSE;
     const ElementAccumulator* ptr_sum_OdO;
-    cute::tuple<int, int, _1> dSumOdO;
+    cute::tuple<int64_t, int, _1> dSumOdO;
 
     ElementAccumulator* ptr_dQ;
-    cute::tuple<int, int, int, _1> dDQ;
+    cute::tuple<int64_t, int, int, _1> dDQ;
 
     // if zero, defaults to 1/sqrt(D)
     float scale_softmax = 0.0f;

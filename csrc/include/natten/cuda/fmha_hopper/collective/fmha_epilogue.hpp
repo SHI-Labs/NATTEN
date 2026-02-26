@@ -57,25 +57,25 @@ struct FmhaFwdEpilogueSm90 {
           ElementAccumulator,
           ElementAccumulator,
           void,
-          cute::tuple<int, _1, cute::tuple<int, int>>,
+          cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment,
           Element,
-          cute::tuple<int, _1, cute::tuple<int, int>>,
+          cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment,
           cutlass::epilogue::TmaWarpSpecialized,
           DefaultOperation>::CollectiveOp;
 
   struct Arguments {
     Element* ptr_O;
-    cute::tuple<int, cute::_1, cute::tuple<int, int>> dO;
+    cute::tuple<int, cute::_1, cute::tuple<int64_t, int>> dO;
 
     ElementAccumulator* ptr_LSE;
-    cute::tuple<int, cute::tuple<int, cute::_1>> dLSE;
+    cute::tuple<int, cute::tuple<int64_t, cute::_1>> dLSE;
   };
 
   struct Params {
     ElementAccumulator* ptr_LSE;
-    cute::tuple<int, cute::tuple<int, cute::_1>> dLSE;
+    cute::tuple<int, cute::tuple<int64_t, cute::_1>> dLSE;
 
     typename CollectiveEpilogueTMA::Params epilogue_TMA;
   };

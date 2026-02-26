@@ -98,34 +98,34 @@ class FmhaBwdSm100 {
     ProblemShape problem_shape;
 
     const Element* ptr_Q;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_Q;
     const Element* ptr_K;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int64_t>>
         stride_K;
     const Element* ptr_V;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int64_t>>
         stride_V;
 
     const Element* ptr_O;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_O;
     const ElementAccumulator* ptr_LSE;
     // NATTEN has a different LSE layout
-    cute::tuple<int, cute::tuple<cute::tuple<_1, int>, int>> stride_LSE;
+    cute::tuple<int, cute::tuple<cute::tuple<_1, int>, int64_t>> stride_LSE;
 
     const Element* ptr_dO;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_dO;
 
     Element* ptr_dQ;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_dQ;
     Element* ptr_dK;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int64_t>>
         stride_dK;
     Element* ptr_dV;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<cute::_0, int>, int64_t>>
         stride_dV;
 
     ElementAccumulator softmax_scale;
@@ -171,9 +171,19 @@ class FmhaBwdSm100 {
     D = cutlass::round_up(D, 8); // Alignment
     int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
     auto stride_sum_OdO = make_stride(
-        _1{}, make_stride(make_stride(Q, Q * H_R), B == 1 ? 0 : Q * H_R * H_K));
+        _1{},
+        make_stride(
+            make_stride(Q, Q * H_R),
+            B == 1
+                ? 0
+                : static_cast<int64_t>(Q) * static_cast<int64_t>(H_R * H_K)));
     auto stride_scaled_lse = make_stride(
-        _1{}, make_stride(make_stride(Q, Q * H_R), B == 1 ? 0 : Q * H_R * H_K));
+        _1{},
+        make_stride(
+            make_stride(Q, Q * H_R),
+            B == 1
+                ? 0
+                : static_cast<int64_t>(Q) * static_cast<int64_t>(H_R * H_K)));
     auto log2_e = log2f(expf(1.0f));
     return typename OperationSumOdO::Arguments{
         args.problem_shape,
@@ -204,7 +214,10 @@ class FmhaBwdSm100 {
         D,
         _1{},
         make_stride(
-            make_stride(D * Q, D * Q * H_R), B == 1 ? 0 : D * Q * H_R * H_K));
+            make_stride(D * Q, D * Q * H_R),
+            B == 1 ? 0
+                   : static_cast<int64_t>(D * H_R * H_K) *
+                    static_cast<int64_t>(Q)));
     return typename OperationConvert::Arguments{
         args.problem_shape,
         src,
@@ -225,14 +238,16 @@ class FmhaBwdSm100 {
   static typename Operation::Arguments to_bwd_arguments(
       Arguments const& args,
       ElementAccumulator* sum_OdO = nullptr,
-      cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int>> const&
+      cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>> const&
           stride_sum_OdO = {},
       ElementAccumulator* scaled_lse = nullptr,
-      cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int>> const&
+      cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>> const&
           stride_scaled_lse = {},
       ElementAccumulator* dQ_acc = nullptr,
-      cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>> const&
-          stride_dQ = {}) {
+      cute::tuple<
+          int,
+          cute::_1,
+          cute::tuple<cute::tuple<int, int>, int64_t>> const& stride_dQ = {}) {
     return typename Operation::Arguments{
         to_bwd_shape(args.problem_shape),
         {args.ptr_Q,

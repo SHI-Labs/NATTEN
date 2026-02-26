@@ -81,9 +81,9 @@ struct FnaBuilder<
     ElementAccumulator,
     ElementAccumulator,
     TileShape,
-    cute::tuple<int, _1, cute::tuple<int, int>>,
-    cute::tuple<int, _1, cute::tuple<int, int>>,
-    cute::tuple<int, _1, cute::tuple<int, int>>,
+    cute::tuple<int, _1, cute::tuple<int64_t, int>>,
+    cute::tuple<int, _1, cute::tuple<int64_t, int>>,
+    cute::tuple<int, _1, cute::tuple<int64_t, int>>,
     Fusion,
     cutlass::gemm::KernelTma,
     Options...> {

@@ -73,14 +73,14 @@ struct KernelForward {
   // B H Q K D
   using ProblemShapeType = cute::tuple<int, int, int, int, int>;
 
-  using StrideQ = cute::tuple<int, _1, cute::tuple<int, int>>; // Q D (B H)
-  using StrideK = cute::tuple<int, _1, cute::tuple<int, int>>; // K D (B H)
+  using StrideQ = cute::tuple<int, _1, cute::tuple<int64_t, int>>; // Q D (B H)
+  using StrideK = cute::tuple<int, _1, cute::tuple<int64_t, int>>; // K D (B H)
 
   using StrideV =
       StrideK; // NOTE: StrideV is different for FP8 due to transpose
   using StrideO = StrideQ;
 
-  using StrideLSE = cute::tuple<int, cute::tuple<int, _1>>; // Q (B H)
+  using StrideLSE = cute::tuple<int, cute::tuple<int64_t, _1>>; // Q (B H)
 
   static_assert(
       KernelSchedule ==
@@ -152,14 +152,24 @@ struct KernelForward {
     auto stride_Q = make_stride(
         heads * dim_aligned,
         _1{},
-        make_stride(heads * seqlen_Q * dim_aligned, dim_aligned));
+        make_stride(
+            static_cast<int64_t>(heads * dim_aligned) *
+                static_cast<int64_t>(seqlen_Q),
+            dim_aligned));
     auto stride_O = stride_Q;
     auto stride_K = make_stride(
         heads * dim_aligned,
         _1{},
-        make_stride(heads * seqlen_KV * dim_aligned, dim_aligned));
+        make_stride(
+            static_cast<int64_t>(heads * dim_aligned) *
+                static_cast<int64_t>(seqlen_KV),
+            dim_aligned));
     auto stride_V = stride_K;
-    auto stride_LSE = make_stride(heads, make_stride(heads * seqlen_Q, _1{}));
+    auto stride_LSE = make_stride(
+        heads,
+        make_stride(
+            static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_Q),
+            _1{}));
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;

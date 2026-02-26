@@ -69,17 +69,17 @@ struct KernelForward {
   using ProblemShapeType =
       std::conditional_t<kIsVarlen, ProblemShapeVarlen, ProblemShapeRegular>;
 
-  using StrideQ =
-      cute::tuple<int, _1, cute::tuple<cute::tuple<int, int>, int>>; // Q D (H_G
-                                                                     // H_R B)
-  using StrideK =
-      cute::tuple<int, _1, cute::tuple<cute::tuple<_0, int>, int>>; // K D (H_G
-                                                                    // H_R B)
+  using StrideQ = cute::
+      tuple<int, _1, cute::tuple<cute::tuple<int, int>, int64_t>>; // Q D (H_G
+                                                                   // H_R B)
+  using StrideK = cute::
+      tuple<int, _1, cute::tuple<cute::tuple<_0, int>, int64_t>>; // K D (H_G
+                                                                  // H_R B)
   using StrideV = StrideK;
   using StrideO = StrideQ;
   using StrideLSE =
-      cute::tuple<int, cute::tuple<cute::tuple<_1, int>, int>>; // Q   (H_G H_R
-                                                                // B)
+      cute::tuple<int, cute::tuple<cute::tuple<_1, int>, int64_t>>; // Q   (H_G
+                                                                    // H_R B)
 
   using TileScheduler = std::conditional_t<
       kIsPersistent,
@@ -178,20 +178,31 @@ struct KernelForward {
     // shape: (batch, seqlen, heads, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
     auto stride_Q = make_stride(
-        H * D, _1{}, make_stride(make_stride(D, H_Q * D), H * D * SQ));
+        H * D,
+        _1{},
+        make_stride(
+            make_stride(D, H_Q * D),
+            static_cast<int64_t>(H * D) * static_cast<int64_t>(SQ)));
     auto stride_O = stride_Q;
     auto stride_K = make_stride(
-        H_K * D, _1{}, make_stride(make_stride(_0{}, D), H_K * D * SK));
+        H_K * D,
+        _1{},
+        make_stride(
+            make_stride(_0{}, D),
+            static_cast<int64_t>(H_K * D) * static_cast<int64_t>(SK)));
     auto stride_V = stride_K;
-    auto stride_LSE =
-        make_stride(H, make_stride(make_stride(_1{}, H_Q), SQ * H));
+    auto stride_LSE = make_stride(
+        H,
+        make_stride(
+            make_stride(_1{}, H_Q),
+            static_cast<int64_t>(SQ) * static_cast<int64_t>(H)));
 
     if (kIsVarlen) {
-      get<2, 1>(stride_Q) = 0;
-      get<2, 1>(stride_K) = 0;
-      get<2, 1>(stride_V) = 0;
-      get<2, 1>(stride_O) = 0;
-      get<1, 1>(stride_LSE) = 0;
+      get<2, 1>(stride_Q) = 0L;
+      get<2, 1>(stride_K) = 0L;
+      get<2, 1>(stride_V) = 0L;
+      get<2, 1>(stride_O) = 0L;
+      get<1, 1>(stride_LSE) = 0L;
     }
 
     cutlass::KernelHardwareInfo hw_info;

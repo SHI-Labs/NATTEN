@@ -45,18 +45,18 @@ struct FmhaKernelBwdConvert {
     tuple<int, int, int, int, int> problem_size;
 
     const ElementAccumulator* ptr_src_dQ;
-    tuple<int, int, int, _1> stride_src_dQ;
+    tuple<int64_t, int, int, _1> stride_src_dQ;
     const ElementAccumulator* ptr_src_dK;
-    tuple<int, int, int, _1> stride_src_dK;
+    tuple<int64_t, int, int, _1> stride_src_dK;
     const ElementAccumulator* ptr_src_dV;
-    tuple<int, int, int, _1> stride_src_dV;
+    tuple<int64_t, int, int, _1> stride_src_dV;
 
     Element* ptr_dest_dQ;
-    tuple<int, int, int, _1> stride_dest_dQ;
+    tuple<int64_t, int, int, _1> stride_dest_dQ;
     Element* ptr_dest_dK;
-    tuple<int, int, int, _1> stride_dest_dK;
+    tuple<int64_t, int, int, _1> stride_dest_dK;
     Element* ptr_dest_dV;
-    tuple<int, int, int, _1> stride_dest_dV;
+    tuple<int64_t, int, int, _1> stride_dest_dV;
   };
 
   using Params = Arguments;

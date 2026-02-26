@@ -45,22 +45,23 @@ struct FmhaKernelBwdSumOdO {
     ProblemShape problem_shape;
 
     const Element* ptr_O;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_O;
     const Element* ptr_dO;
-    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<int, cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_dO;
 
     ElementAcc* ptr_sum_OdO;
-    cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_sum_OdO;
 
     const ElementAcc* ptr_lse = nullptr;
     // NATTEN has a different LSE layout
-    cute::tuple<int, cute::tuple<cute::tuple<cute::_1, int>, int>> stride_lse;
+    cute::tuple<int, cute::tuple<cute::tuple<cute::_1, int>, int64_t>>
+        stride_lse;
 
     ElementAcc* ptr_scaled_lse = nullptr;
-    cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int>>
+    cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_scaled_lse;
 
     ElementAcc sum_odo_scale = 1.0;
