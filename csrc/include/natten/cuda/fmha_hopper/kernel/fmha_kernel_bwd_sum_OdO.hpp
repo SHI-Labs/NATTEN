@@ -35,14 +35,17 @@
 #include "cute/layout.hpp"
 #include "cutlass/cutlass.h"
 
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
+
 namespace cutlass::fmha::kernel {
 
 using namespace cute;
+using namespace cutlass::fmha::collective;
 
-template <class Element, class ElementAccumulator>
+template <class ProblemShape, class Element, class ElementAccumulator>
 struct FmhaKernelBwdSumOdO {
   struct Arguments {
-    cute::tuple<int, int, int, int, int> problem_size;
+    ProblemShape problem_size;
 
     const Element* ptr_O;
     cute::tuple<int64_t, int, int, cute::_1> stride_O;
@@ -112,11 +115,20 @@ struct FmhaKernelBwdSumOdO {
         blockIdx.y * get<1>(params.stride_sum_OdO) +
         blockIdx.z * get<0>(params.stride_sum_OdO);
 
+    auto problem_q = get<2>(params.problem_size);
+    int seqlen_q = problem_q;
+    if constexpr (is_variable_length_v<decltype(problem_q)>) {
+      int offset = problem_q.cumulative_length[blockIdx.z];
+      ptr_O_bh += offset * get<2>(params.stride_O);
+      ptr_dO_bh += offset * get<2>(params.stride_dO);
+      seqlen_q = problem_q.cumulative_length[blockIdx.z + 1] - offset;
+    }
+
     CUTLASS_PRAGMA_UNROLL
     for (int idx_q_t = threadIdx.y; idx_q_t < kBlockQ;
          idx_q_t += kNumThreadsQ) {
       int idx_q = idx_q_t + kBlockQ * blockIdx.x;
-      if (idx_q >= get<2>(params.problem_size))
+      if (idx_q >= seqlen_q)
         continue;
       ElementAccumulator acc = 0;
       auto ptr_O_bhq = ptr_O_bh + idx_q * get<2>(params.stride_O);

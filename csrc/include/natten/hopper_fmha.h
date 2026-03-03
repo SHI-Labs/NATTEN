@@ -37,10 +37,17 @@ void hopper_fmha_forward(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::optional<at::Tensor>& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
     int key_tile_size,
-    int kernel_type);
+    int kernel_type,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV);
 
 void hopper_fmha_backward(
     at::Tensor& grad_query,
@@ -52,8 +59,15 @@ void hopper_fmha_backward(
     const at::Tensor& out,
     const at::Tensor& grad_out,
     const at::Tensor& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
-    int key_tile_size);
+    int key_tile_size,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV);
 
 } // namespace natten

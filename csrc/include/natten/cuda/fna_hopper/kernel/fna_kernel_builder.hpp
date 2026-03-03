@@ -52,6 +52,7 @@ template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element_,
     class ElementAccumulatorQK_,
     class ElementAccumulatorPV_,
@@ -68,6 +69,7 @@ template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element,
     class ElementAccumulator,
     class TileShape, // BlockQO, BlockKV, BlockHead
@@ -77,6 +79,7 @@ struct FnaBuilder<
     NADim,
     QTileShape,
     KVTileShape,
+    ProblemShape,
     Element,
     ElementAccumulator,
     ElementAccumulator,
@@ -102,14 +105,18 @@ struct FnaBuilder<
       ElementAccumulator,
       typename CollectiveMainloop::TileShapePV>;
 
-  using Kernel = cutlass::fmha::kernel::
-      FmhaKernelTma<CollectiveMainloop, CollectiveEpilogue, Options...>;
+  using Kernel = cutlass::fmha::kernel::FmhaKernelTma<
+      ProblemShape,
+      CollectiveMainloop,
+      CollectiveEpilogue,
+      Options...>;
 };
 
 template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element,
     class ElementAccumulatorQK,
     class ElementAccumulatorPV,
@@ -123,6 +130,7 @@ struct FnaBuilder<
     NADim,
     QTileShape,
     KVTileShape,
+    ProblemShape,
     Element,
     ElementAccumulatorQK,
     ElementAccumulatorPV,
@@ -161,6 +169,7 @@ struct FnaBuilder<
       cutlass::fmha::kernel::IndividualTileScheduler>;
 
   using Kernel = cutlass::fmha::kernel::FmhaKernelTmaWarpSpecialized<
+      ProblemShape,
       CollectiveMainloop,
       CollectiveEpilogue,
       TileScheduler,
@@ -171,6 +180,7 @@ template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element,
     class ElementAccumulatorQK,
     class ElementAccumulatorPV,
@@ -184,6 +194,7 @@ struct FnaBuilder<
     NADim,
     QTileShape,
     KVTileShape,
+    ProblemShape,
     Element,
     ElementAccumulatorQK,
     ElementAccumulatorPV,
@@ -198,6 +209,7 @@ struct FnaBuilder<
       NADim,
       QTileShape,
       KVTileShape,
+      ProblemShape,
       Element,
       ElementAccumulatorQK,
       ElementAccumulatorPV,

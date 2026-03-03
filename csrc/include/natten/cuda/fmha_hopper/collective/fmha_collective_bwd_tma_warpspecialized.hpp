@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -890,7 +890,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
     pipeline_outer.consumer_wait(smem_pipe_read_outer);
     PipelineStateQ smem_pipe_read_v = smem_pipe_read_outer;
 
-    int inner_tile_count = get_inner_tile_count(wg_coord, problem_size);
+    int inner_tile_count = get_inner_tile_count(blk_coord, problem_size);
 
     TiledMmaNM tiled_mma_nm;
     Tensor sK =
@@ -980,6 +980,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
 
     int k_index = 0;
 
+    bool no_inner_tiles = true;
     while (inner_tile_count > 0) {
       while (inner_tile_count > 0) {
         if (Fusion{}.is_contributing(
@@ -994,6 +995,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       }
       if (inner_tile_count == 0)
         break;
+      no_inner_tiles = false;
 
       pipeline_inner.consumer_wait(smem_pipe_read_inner);
       PipelineState smem_pipe_read_q = smem_pipe_read_inner;
@@ -1192,10 +1194,29 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       k_index += 1;
     }
 
+    if (no_inner_tiles) {
+      // when there's 0 inner tiles, we also need to make sure the order barrier
+      // stays in sync with the rest of the WG.
+
+      // S -> P
+      math_wg_order_barrier.wait();
+      math_wg_order_barrier.arrive();
+
+      math_wg_order_barrier.wait();
+      math_wg_order_barrier.arrive();
+    }
+
     pipeline_outer.consumer_release(smem_pipe_read_k);
     pipeline_outer.consumer_release(smem_pipe_read_outer);
-    pipeline_reducer.producer_tail(smem_pipe_write_reducer);
-    ++smem_pipe_read_outer;
+
+    // When there's 0 inner tiles (i.e. 1 Q tile, > 1 KV tiles, top-left causal
+    // mask has entire KV tiles to which nothing attends), reduce warp exits
+    // early and signals no arrivals on pipeline_reducer. If we don't jump over
+    // producer_tail, acquires will stall indefinitely.
+    if (not no_inner_tiles) {
+      pipeline_reducer.producer_tail(smem_pipe_write_reducer);
+      ++smem_pipe_read_outer;
+    }
 
     warpgroup_wait<0>();
     warpgroup_fence_operand(acc_DK);

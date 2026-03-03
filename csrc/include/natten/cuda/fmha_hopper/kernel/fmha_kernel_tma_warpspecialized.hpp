@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -37,6 +37,7 @@
 #include "cutlass/cutlass.h"
 #include "cutlass/pipeline/pipeline.hpp"
 
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
 
 namespace cutlass::fmha::kernel {
@@ -44,6 +45,7 @@ namespace cutlass::fmha::kernel {
 using namespace cute;
 
 template <
+    class ProblemShape,
     class CollectiveMainloop,
     class CollectiveEpilogue,
     class TileScheduler,
@@ -105,8 +107,6 @@ struct FmhaKernelTmaWarpSpecialized {
   };
 
   static constexpr int SharedStorageSize = sizeof(SharedStorage);
-
-  using ProblemShape = cute::tuple<int, int, int, int, int>;
 
   struct Arguments {
     ProblemShape problem_size;
@@ -182,6 +182,11 @@ struct FmhaKernelTmaWarpSpecialized {
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
+#if !defined(CUTLASS_ARCH_MMA_SM90A_ENABLED)
+    CUTE_INVALID_CONTROL_PATH(
+        "ERROR : Arch conditional MMA instruction used without targeting appropriate compute capability. Aborting.\n");
+#else
+
     enum class WarpGroupRole {
       Producer = 0,
       Consumer0 = 1,
@@ -346,6 +351,10 @@ struct FmhaKernelTmaWarpSpecialized {
         CUTLASS_PRAGMA_NO_UNROLL
         for (; tile_scheduler.is_valid(); ++tile_scheduler) {
           auto blk_coord = tile_scheduler.get_block_coord();
+          //// Apply varlen transformation if needed
+          // auto [problem_size, blk_offset] =
+          //     cutlass::fmha::collective::apply_variable_length_offset(
+          //         params.problem_size, blk_coord);
           collective_mainloop.template load_kv_maybe_q<!kLoadsQSeparately>(
               block_rank_in_cluster,
               blk_coord,
@@ -368,6 +377,10 @@ struct FmhaKernelTmaWarpSpecialized {
         CUTLASS_PRAGMA_NO_UNROLL
         for (; tile_scheduler.is_valid(); ++tile_scheduler) {
           auto blk_coord = tile_scheduler.get_block_coord();
+          //// Apply varlen transformation if needed
+          // auto [problem_size, blk_offset] =
+          //     cutlass::fmha::collective::apply_variable_length_offset(
+          //         params.problem_size, blk_coord);
           collective_mainloop.load_maybe_q(
               blk_coord,
               params.mainloop,
@@ -382,6 +395,10 @@ struct FmhaKernelTmaWarpSpecialized {
       } else if (producer_warp_role == ProducerWarpRole::Reducer) {
         for (; tile_scheduler.is_valid(); ++tile_scheduler) {
           auto blk_coord = tile_scheduler.get_block_coord();
+          //// Apply varlen transformation if needed
+          // auto [problem_size, blk_offset] =
+          //     cutlass::fmha::collective::apply_variable_length_offset(
+          //         params.problem_size, blk_coord);
           collective_mainloop.reduce(
               blk_coord,
               params.mainloop,
@@ -400,6 +417,10 @@ struct FmhaKernelTmaWarpSpecialized {
       CUTLASS_PRAGMA_NO_UNROLL
       for (; tile_scheduler.is_valid(); ++tile_scheduler) {
         auto blk_coord = tile_scheduler.get_block_coord();
+        //// Apply varlen transformation if needed
+        // auto [problem_size, blk_offset] =
+        //     cutlass::fmha::collective::apply_variable_length_offset(
+        //         params.problem_size, blk_coord);
         auto wg_coord = blk_coord;
 
         constexpr int kOuterLoads = CollectiveMainloop::kOuterLoads;
@@ -480,6 +501,7 @@ struct FmhaKernelTmaWarpSpecialized {
         math_wg_order_barrier.arrive();
       }
     }
+#endif
   }
 };
 

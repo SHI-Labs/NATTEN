@@ -57,6 +57,7 @@ class CutlassHopperFmhaAutogradFn(Function):
         query: Tensor,
         key: Tensor,
         value: Tensor,
+        is_causal: bool,
         scale: float,
         forward_config: CutlassHopperFmhaForwardConfigType,
         backward_config: CutlassHopperFmhaBackwardConfigType,
@@ -71,6 +72,7 @@ class CutlassHopperFmhaAutogradFn(Function):
             query,
             key,
             value,
+            is_causal,
             scale,
             q_tile_size,
             kv_tile_size,
@@ -79,6 +81,7 @@ class CutlassHopperFmhaAutogradFn(Function):
 
         ctx.save_for_backward(query, key, value, logsumexp, output)
         ctx.scale = scale
+        ctx.is_causal = is_causal
         ctx.backward_config = backward_config
 
         return output, logsumexp
@@ -135,12 +138,13 @@ class CutlassHopperFmhaAutogradFn(Function):
             output,
             d_output,
             logsumexp,
+            ctx.is_causal,
             ctx.scale,
             q_tile_size,
             k_tile_size,
         )
 
-        return d_query, d_key, d_value, None, None, None
+        return d_query, d_key, d_value, None, None, None, None
 
 
 def cutlass_hopper_fmha(
@@ -218,12 +222,12 @@ def cutlass_hopper_fmha(
         key = torch.repeat_interleave(key, repeats=h_k, dim=-2, output_size=heads)
         value = torch.repeat_interleave(value, repeats=h_k, dim=-2, output_size=heads)
 
-    # NOTE: is_causal is not supported
     # NOTE: varlen is not supported
     output, lse = CutlassHopperFmhaAutogradFn.apply(
         query,
         key,
         value,
+        is_causal,
         scale,
         forward_config,
         backward_config,

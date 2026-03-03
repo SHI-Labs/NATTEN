@@ -274,6 +274,7 @@ def hopper_fmha_forward_torch_op(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
@@ -292,10 +293,12 @@ def hopper_fmha_forward_torch_op(
         key,
         value,
         logsumexp,
+        is_causal,
         scale,
         q_tile_size,
         kv_tile_size,
         kernel_schedule_int,
+        None, None, 0, 0, # varlen
     )
 
     return output, logsumexp
@@ -306,6 +309,7 @@ def hopper_fmha_forward_torch_fake_op(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
@@ -334,6 +338,7 @@ def hopper_fmha_backward_torch_op(
     output: Tensor,
     d_output: Tensor,
     logsumexp: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
@@ -357,9 +362,11 @@ def hopper_fmha_backward_torch_op(
         output,
         d_output,
         logsumexp,
+        is_causal,
         scale,
         q_tile_size,
         kv_tile_size,
+        None, None, 0, 0, # varlen
     )
 
     return d_query, d_key, d_value
@@ -373,6 +380,7 @@ def hopper_fmha_backward_torch_fake_op(
     output: Tensor,
     d_output: Tensor,
     logsumexp: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,

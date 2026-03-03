@@ -62,6 +62,7 @@ namespace cutlass::fna::device {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <
+    class ProblemShape,
     class Element,
     class ElementAccumulator,
     class TileShape,
@@ -74,7 +75,7 @@ class FnaBwdSm90 {
  public:
   /// Argument structure: User API
   struct Arguments {
-    cute::tuple<int, int, int, int, int> problem_size;
+    ProblemShape problem_size;
 
     const Element* ptr_Q;
     cute::tuple<int64_t, int, int, cute::_1> stride_Q;
@@ -113,9 +114,11 @@ class FnaBwdSm90 {
   };
 
   using OperationSumOdO = cutlass::fna::device::FnaSm90<
-      cutlass::fmha::kernel::FmhaKernelBwdSumOdO<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdSumOdO<ProblemShape, Element, ElementAccumulator>>;
   using OperationConvert = cutlass::fna::device::FnaSm90<
-      cutlass::fmha::kernel::FmhaKernelBwdConvert<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdConvert<ProblemShape, Element, ElementAccumulator>>;
 
   using Mainloop =
       cutlass::fna::collective::FnaBwdMainloopTmaWarpSpecializedSm90<
@@ -135,6 +138,7 @@ class FnaBwdSm90 {
 
   using Operation = cutlass::fna::device::FnaSm90<
       cutlass::fmha::kernel::FmhaKernelTmaWarpSpecialized<
+          ProblemShape,
           Mainloop,
           Epilogue,
           cutlass::fmha::kernel::TileSchedulerBwdAdapter<

@@ -59,6 +59,7 @@ namespace cutlass::fmha::device {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <
+    class ProblemShape,
     class Element,
     class ElementAccumulator,
     class TileShape,
@@ -68,7 +69,7 @@ class FmhaBwdSm90 {
  public:
   /// Argument structure: User API
   struct Arguments {
-    cute::tuple<int, int, int, int, int> problem_size;
+    ProblemShape problem_size;
 
     const Element* ptr_Q;
     cute::tuple<int64_t, int, int, cute::_1> stride_Q;
@@ -99,9 +100,11 @@ class FmhaBwdSm90 {
   };
 
   using OperationSumOdO = cutlass::fmha::device::Sm90DeviceKernel<
-      cutlass::fmha::kernel::FmhaKernelBwdSumOdO<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdSumOdO<ProblemShape, Element, ElementAccumulator>>;
   using OperationConvert = cutlass::fmha::device::Sm90DeviceKernel<
-      cutlass::fmha::kernel::FmhaKernelBwdConvert<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdConvert<ProblemShape, Element, ElementAccumulator>>;
 
   using Mainloop =
       cutlass::fmha::collective::FmhaBwdMainloopTmaWarpSpecializedSm90<
@@ -118,6 +121,7 @@ class FmhaBwdSm90 {
 
   using Operation = cutlass::fmha::device::Sm90DeviceKernel<
       cutlass::fmha::kernel::FmhaKernelTmaWarpSpecialized<
+          ProblemShape,
           Mainloop,
           Epilogue,
           cutlass::fmha::kernel::TileSchedulerBwdAdapter<
@@ -138,9 +142,9 @@ class FmhaBwdSm90 {
   static typename OperationSumOdO::Arguments to_sum_OdO_arguments(
       Arguments const& args,
       ElementAccumulator* dest = nullptr) {
-    auto [B, H, Q, K, D] = args.problem_size;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    int Q = cutlass::round_up(Q_, 8); // Alignment
     auto stride_sum_OdO =
         make_stride(static_cast<int64_t>(H) * static_cast<int64_t>(Q), Q, _1{});
     return typename OperationSumOdO::Arguments{
@@ -156,9 +160,9 @@ class FmhaBwdSm90 {
   static typename OperationConvert::Arguments to_convert_arguments(
       Arguments const& args,
       ElementAccumulator* src = nullptr) {
-    auto [B, H, Q, K, D] = args.problem_size;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    int Q = cutlass::round_up(Q_, 8); // Alignment
     auto stride_src_dQ = make_stride(
         B == 1 ? 0L : static_cast<int64_t>(H * D) * static_cast<int64_t>(Q),
         Q * D,
@@ -232,9 +236,9 @@ class FmhaBwdSm90 {
 
   /// Gets the workspace size
   static size_t get_workspace_size(Arguments const& args) {
-    auto [B, H, Q, K, D] = args.problem_size;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    int Q = cutlass::round_up(Q_, 8); // Alignment
     size_t workspace_bytes = 0;
     // OdO vector
     workspace_bytes += B * H * Q * sizeof(ElementAccumulator);
@@ -254,9 +258,9 @@ class FmhaBwdSm90 {
         << workspace_dQ << ", workspace_sum_OdO=" << workspace_sum_OdO
         << "stream: " << (stream ? "non-null" : "null"));
 
-    auto [B, H, Q, K, D] = args.problem_size;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    int Q = cutlass::round_up(Q_, 8); // Alignment
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_sum_OdO);
     ElementAccumulator* dQ_acc =
@@ -287,9 +291,9 @@ class FmhaBwdSm90 {
         "FmhaBwdSm90::initialize() - workspace "
         << workspace << ", stream: " << (stream ? "non-null" : "null"));
 
-    auto [B, H, Q, K, D] = args.problem_size;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    int Q = cutlass::round_up(Q_, 8); // Alignment
     char* workspace_chr = reinterpret_cast<char*>(workspace);
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_chr);

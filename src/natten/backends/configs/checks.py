@@ -249,10 +249,6 @@ def can_run_cutlass_hopper_fmha(
     ):
         return False
 
-    if is_causal:
-        target_fn("Hopper FMHA doesn't support causal mask yet.")
-        return False
-
     if is_varlen:
         target_fn("Hopper FMHA doesn't support variable length inputs (varlen).")
         return False

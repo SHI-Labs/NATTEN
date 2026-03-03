@@ -67,6 +67,7 @@ struct KernelBackward {
   using ProblemShapeType = cute::tuple<int, int, int, int, int>;
 
   using Operation = cutlass::fna::device::FnaBwdSm90<
+      ProblemShapeType,
       Element,
       ElementAccumulator,
       TileShape,

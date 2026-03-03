@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -164,7 +164,7 @@ struct CausalFusion : DefaultFusion {
     CUTLASS_PRAGMA_UNROLL
     for (int i = 0; i < size(acc_qk); i++) {
       auto pos = index_qk(i);
-      if (get<0>(pos) < get<1>(pos)) {
+      if (get<0>(pos) < get<1>(pos) || get<1>(pos) >= get<3>(problem_size)) {
         acc_qk(i) = -INFINITY;
       }
     }
@@ -224,7 +224,7 @@ struct FusionBwdAdapter<CausalFusion> {
       BlkCoord const& blk_coord,
       TileShape const& tile_shape,
       ProblemSize const& problem_size) {
-    return get<2>(problem_size) / get<0>(TileShape{});
+    return ceil_div(get<2>(problem_size), get<0>(TileShape{}));
   }
 
   template <class AccQK, class IndexQK, class ProblemSize>
@@ -237,7 +237,7 @@ struct FusionBwdAdapter<CausalFusion> {
     CUTLASS_PRAGMA_UNROLL
     for (int i = 0; i < size(acc_qk); i++) {
       auto pos = index_qk(i);
-      if (get<1>(pos) < get<0>(pos)) {
+      if (get<1>(pos) < get<0>(pos) || get<1>(pos) >= get<2>(problem_size)) {
         acc_qk(i) = -INFINITY;
       }
     }
