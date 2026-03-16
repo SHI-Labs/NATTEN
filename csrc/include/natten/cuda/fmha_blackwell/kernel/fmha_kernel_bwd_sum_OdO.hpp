@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2025 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2025 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,6 +42,7 @@ using namespace cute;
 template <class ProblemShape, class Element, class ElementAcc>
 struct FmhaKernelBwdSumOdO {
   struct Arguments {
+    // [Q, K, D, D_VO, [H, B]]
     ProblemShape problem_shape;
 
     const Element* ptr_O;
@@ -55,12 +56,12 @@ struct FmhaKernelBwdSumOdO {
     cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_sum_OdO;
 
-    const ElementAcc* ptr_lse = nullptr;
+    const ElementAcc* ptr_lse;
     // NATTEN has a different LSE layout
     cute::tuple<int, cute::tuple<cute::tuple<cute::_1, int>, int64_t>>
         stride_lse;
 
-    ElementAcc* ptr_scaled_lse = nullptr;
+    ElementAcc* ptr_scaled_lse;
     cute::tuple<cute::_1, cute::tuple<cute::tuple<int, int>, int64_t>>
         stride_scaled_lse;
 
@@ -96,6 +97,7 @@ struct FmhaKernelBwdSumOdO {
   static const int kIterationsQ = kBlockQ / kNumThreadsQ;
 
   static bool can_implement(Arguments const& args) {
+    // head_dim and head_dim_v
     return get<2>(args.problem_shape) % kElementsPerLoad == 0 &&
         get<3>(args.problem_shape) % kElementsPerLoad == 0;
   }
@@ -183,9 +185,7 @@ struct FmhaKernelBwdSumOdO {
 
       if (threadIdx.x == 0) {
         *ptr_sum_OdO_bhq = params.sum_odo_scale * acc;
-        if (params.ptr_scaled_lse) {
-          *ptr_scaled_lse_bhq = params.lse_scale * *ptr_lse_bhq;
-        }
+        *ptr_scaled_lse_bhq = params.lse_scale * *ptr_lse_bhq;
       }
     }
   }

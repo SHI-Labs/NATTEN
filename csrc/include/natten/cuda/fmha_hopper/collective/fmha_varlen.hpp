@@ -70,51 +70,28 @@ CUTE_HOST_DEVICE constexpr auto apply_variable_length(
   });
 }
 
-template <class Shape, class Coord, class Idx>
-CUTE_HOST_DEVICE constexpr auto apply_variable_length(
-    Shape const& shape,
-    Coord const& coord,
-    Idx const& idx) {
-  auto new_shape = apply_variable_length(shape, idx);
-  auto new_coord =
-      transform_leaf(shape, coord, [&](auto const& s, auto const& c) {
-        if constexpr (is_variable_length_v<decltype(s)>) {
-          return cute::make_tuple(c, s.cumulative_length[idx]);
-        } else {
-          return c;
-        }
-      });
-  return cute::make_tuple(new_shape, new_coord);
-}
-
-template <class Shape, class Coord>
-CUTE_HOST_DEVICE constexpr auto apply_variable_length_offset(
-    Shape const& shape,
-    Coord const& coord_in) {
-  auto coord = make_tuple(
-      get<2, 0>(coord_in),
-      get<2, 1>(coord_in),
-      get<0>(coord_in),
-      get<1>(coord_in),
-      _0{});
-  auto batch_idx = get<0>(coord);
-  auto result_shape = transform_leaf(shape, [&](auto const& s) {
+template <class Shape>
+CUTE_HOST_DEVICE constexpr auto apply_variable_length_scheduler(
+    Shape const& shape) {
+  return transform_leaf(shape, [&](auto const& s) {
     if constexpr (is_variable_length_v<decltype(s)>) {
-      return s.cumulative_length[batch_idx + 1] -
-          s.cumulative_length[batch_idx];
+      return s.total_length;
     } else {
       return s;
     }
   });
-  auto result_offset =
-      transform_leaf(coord, shape, [&](auto const& c, auto const& s) {
-        if constexpr (is_variable_length_v<decltype(s)>) {
-          return s.cumulative_length[batch_idx];
-        } else {
-          return _0{};
-        }
-      });
-  return cute::make_tuple(result_shape, result_offset);
+}
+
+template <class Shape>
+CUTE_HOST_DEVICE constexpr bool is_problem_shape_variable_length(
+    Shape const& shape) {
+  bool is_varlen = false;
+  cute::for_each(shape, [&](auto const& s) {
+    if constexpr (is_variable_length_v<decltype(s)>) {
+      is_varlen = true;
+    }
+  });
+  return is_varlen;
 }
 
 } // namespace cutlass::fmha::collective

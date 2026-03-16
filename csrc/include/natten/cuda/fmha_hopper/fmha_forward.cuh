@@ -140,10 +140,10 @@ struct KernelForward {
     decltype(problem_shape_regular) problem_shape_memory;
 
     if constexpr (kIsVarlen) {
-      // Varlen mode: batch becomes 1 (packed sequence layout)
-      // and Q/KV dimensions use VariableLength descriptors
       problem_shape_memory = problem_shape_regular;
-      get<0>(problem_shape_memory) = 1; // batch becomes 1 in varlen mode
+      get<0>(problem_shape_memory) = 1;
+
+      get<0>(problem_shape_launch) = get<0>(problem_shape_regular);
       get<1>(problem_shape_launch) = get<1>(problem_shape_regular);
 
       get<2>(problem_shape_launch) = VariableLength{

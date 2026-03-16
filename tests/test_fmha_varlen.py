@@ -32,14 +32,20 @@ from natten.backends.configs.cutlass import (
     get_all_fmha_backward_configs,
     get_all_fmha_forward_configs,
 )
+from natten.backends.configs.cutlass_hopper import (
+    get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
+    get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
+)
 from natten.backends.configs.cutlass_blackwell import (
     get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
 )
 from natten.functional import attention
+from natten.types import KernelSchedule
 from natten.utils import log
 from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
+    skip_if_hopper_kernels_not_supported,
     skip_if_blackwell_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
@@ -86,6 +92,7 @@ def compute_split_reference(
     backward_kv_splits: Optional[int] = None,
     backward_use_pt_reduction: bool = False,
     run_persistent_kernel: bool = True,
+    kernel_schedule: Optional[KernelSchedule] = None,
 ):
     heads_kv = heads_kv or heads
     head_dim_v = head_dim_v or head_dim
@@ -160,6 +167,7 @@ def compute_split_reference(
             backward_kv_splits=backward_kv_splits,
             backward_use_pt_reduction=backward_use_pt_reduction,
             run_persistent_kernel=run_persistent_kernel,
+            kernel_schedule=kernel_schedule,
         )
 
         if test_backprop:
@@ -228,6 +236,7 @@ class FMHAVarlenTest(unittest.TestCase):
         backward_kv_splits: Optional[int] = None,
         backward_use_pt_reduction: bool = False,
         run_persistent_kernel: bool = True,
+        kernel_schedule: Optional[KernelSchedule] = None,
         reference_q_tile_size: Optional[int] = None,
         reference_kv_tile_size: Optional[int] = None,
         reference_backward_q_tile_size: Optional[int] = None,
@@ -244,7 +253,7 @@ class FMHAVarlenTest(unittest.TestCase):
         logger.debug(
             f"Testing FMHA varlen ({backend}) vs {reference_backend}: {batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, "
             f"{seqlens_Q_list=}, {seqlens_KV_list=}, {is_causal=}, {dtype=}, "
-            f"{q_tile_size=}, {kv_tile_size=}, {run_persistent_kernel=}"
+            f"{q_tile_size=}, {kv_tile_size=}, {run_persistent_kernel=}, {kernel_schedule=}"
             + (
                 f", {backward_q_tile_size=}, {backward_kv_tile_size=}, "
                 f"{backward_kv_splits=}, {backward_use_pt_reduction=}."
@@ -271,6 +280,7 @@ class FMHAVarlenTest(unittest.TestCase):
             backward_kv_splits=reference_backward_kv_splits,
             backward_use_pt_reduction=reference_backward_use_pt_reduction,
             run_persistent_kernel=reference_run_persistent_kernel,
+            kernel_schedule=kernel_schedule,
             test_backprop=test_backprop,
         )
 
@@ -304,6 +314,7 @@ class FMHAVarlenTest(unittest.TestCase):
             backward_kv_splits=backward_kv_splits,
             backward_use_pt_reduction=backward_use_pt_reduction,
             run_persistent_kernel=run_persistent_kernel,
+            kernel_schedule=kernel_schedule,
             return_lse=True,
             seqlens_Q=seqlens_Q,
             seqlens_KV=seqlens_KV,
@@ -423,6 +434,69 @@ class FMHAVarlenTest(unittest.TestCase):
                     reference_backward_use_pt_reduction=use_pt_reduction,
                 )
 
+    def _test_cutlass_hopper_fmha_varlen(
+        self,
+        batch,
+        heads,
+        head_dim,
+        seqlens_Q_list,
+        seqlens_KV_list,
+        is_causal,
+        heads_kv: Optional[int] = None,
+    ):
+        torch.set_default_device("cuda")
+
+        # We're testing against the same backend and same dtype,
+        # but with varlen implemented as multiple kernel calls, so
+        # error thresholds should be much smaller here.
+        # This is therefore only a test of the varlen functionality.
+        # Correctness per dtype is expected to be verified in the main
+        # fmha tests.
+        # dQ still needs a more relaxed threshold because of the non-determinism
+        ALLOWED_DTYPES = [
+            # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
+            (torch.float16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
+            (torch.bfloat16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
+        ]
+
+        for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
+            dummy = torch.empty((1, 128, heads, head_dim), device="cuda", dtype=dtype)
+
+            forward_configs = get_all_hopper_fmha_forward_configs(dummy)
+            backward_configs = get_all_hopper_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
+
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            for i in range(max(len(forward_configs), len(backward_configs))):
+                (q_tile_size, kv_tile_size), kernel_schedule = forward_configs[i % len(forward_configs)]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                self._test_against_manual_varlen(
+                    batch=batch,
+                    heads=heads,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    seqlens_Q_list=seqlens_Q_list,
+                    seqlens_KV_list=seqlens_KV_list,
+                    is_causal=is_causal,
+                    dtype=dtype,
+                    atol_fwd=atol_fwd,
+                    atol_bwd=atol_bwd,
+                    backend="hopper-fmha",
+                    reference_backend="hopper-fmha",
+                    test_backprop=True,
+                    q_tile_size=q_tile_size,
+                    kv_tile_size=kv_tile_size,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
+                    kernel_schedule=kernel_schedule,
+                )
+
     def _test_cutlass_blackwell_fmha_varlen(
         self,
         batch,
@@ -462,7 +536,7 @@ class FMHAVarlenTest(unittest.TestCase):
             random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
-                q_tile_size, kv_tile_size = forward_configs[i]
+                q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
                 backward_q_tile_size, backward_kv_tile_size = backward_configs[
                     i % len(backward_configs)
                 ]
@@ -508,6 +582,21 @@ class FMHAVarlenTest(unittest.TestCase):
                 heads=heads,
                 head_dim=head_dim,
                 head_dim_v=head_dim_v,
+                seqlens_Q_list=seqlens_Q_list,
+                seqlens_KV_list=seqlens_KV_list,
+                is_causal=is_causal,
+            )
+        elif backend == "hopper-fmha":
+            assert (
+                head_dim_v is None or head_dim_v == head_dim
+            ), "Hopper FMHA does not allow head_dim_v."
+            assert heads_kv is None or heads_kv == heads
+
+            return self._test_cutlass_hopper_fmha_varlen(
+                batch=batch,
+                heads=heads,
+                heads_kv=heads_kv,
+                head_dim=head_dim,
                 seqlens_Q_list=seqlens_Q_list,
                 seqlens_KV_list=seqlens_KV_list,
                 is_causal=is_causal,
@@ -571,16 +660,12 @@ class FMHAVarlenTest(unittest.TestCase):
             for i in range(batch):
                 max_q = min(2**12, max(max_qk - sum(seqlens_Q_list), 24))
                 max_k = min(2**12, max(max_qk - sum(seqlens_KV_list), 24))
-                new_q = random.choice(range(8, max_q, 1))
+                new_q = random.choice(range(1, max_q, 1))
                 new_k = random.choice(range(8, max_k, 1))
                 seqlens_Q_list.append(new_q)
                 seqlens_KV_list.append(new_k)
 
             for is_causal in [False, True]:
-                # TODO
-                if backend not in ["blackwell-fmha", "cutlass-fmha"] and is_causal:
-                    continue
-
                 self._test_varlen_backend(
                     batch=batch,
                     heads=heads,
@@ -644,6 +729,60 @@ class FMHAVarlenTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_varlen_fmha_extended(self):
         self._test_varlen_randsweep(backend="cutlass-fmha", max_tests=RAND_SWEEP_TESTS)
+
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_hopper_kernels_not_supported()
+    def test_cutlass_hopper_varlen_fmha_fast(self):
+        problem_sizes = [
+            (
+                9,
+                4,
+                128,
+                [2669, 2240, 910, 2421, 3323, 34, 3308, 2867, 1401],
+                [2880, 1726, 1847, 1147, 3568, 3116, 661, 1739, 1146],
+            ),
+            (6, 1, 128, [128, 128, 135, 121, 128, 128], [128, 128, 135, 121, 128, 128]),
+            (5, 1, 128, [128, 128, 135, 128, 128], [128, 128, 135, 128, 128]),
+            (2, 1, 128, [135, 200], [128, 768]),
+            (2, 1, 128, [1024, 200], [128, 768]),
+            (2, 1, 128, [135, 200], [135, 768]),
+            (2, 1, 128, [1024, 200], [135, 768]),
+            (2, 1, 128, [1024, 256], [128, 768]),
+            (4, 1, 128, [1024, 8, 17, 2048], [10, 20, 512, 16]),
+            (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
+            (2, 1, 128, [16, 16], [16, 16]),
+            (2, 1, 128, [47, 17], [37, 32]),
+            (2, 1, 128, [48, 16], [37, 32]),
+            (2, 1, 64, [48, 16], [37, 32]),
+            (2, 1, 64, [64, 64], [64, 64]),
+            (2, 1, 64, [128, 128], [128, 128]),
+            (2, 1, 128, [512, 512], [512, 512]),
+        ]
+        for (
+            batch,
+            heads,
+            head_dim,
+            seqlens_Q_list,
+            seqlens_KV_list,
+        ) in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_varlen_backend(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlens_Q_list=seqlens_Q_list,
+                    seqlens_KV_list=seqlens_KV_list,
+                    is_causal=is_causal,
+                    backend="hopper-fmha",
+                )
+
+    @skip_if_not_running_extended_tests()
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_hopper_kernels_not_supported()
+    def test_cutlass_hopper_varlen_fmha_extended(self):
+        self._test_varlen_randsweep(
+            backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS
+        )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()

@@ -1163,9 +1163,11 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
 
     int k_index = 0;
 
+    bool no_inner_tiles = true;
     while (inner_tile_count > 0) {
       if (inner_tile_count == 0)
         break;
+      no_inner_tiles = false;
 
       pipeline_inner.consumer_wait(smem_pipe_read_inner);
       PipelineState smem_pipe_read_q = smem_pipe_read_inner;
@@ -1203,7 +1205,7 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
 
       Tensor reg_LSE = make_fragment_like<ElementAccumulator>(acc_S);
       for (int i = 0; i < size(reg_LSE); i++) {
-        reg_LSE(i) = ((ElementAccumulator)std::log2(std::exp(1.0))) *
+        reg_LSE(i) = /*((ElementAccumulator)std::log2(std::exp(1.0))) **/
             tSsLSE(_, _, _, smem_pipe_read_q.index())(i);
       }
 
@@ -1385,10 +1387,29 @@ struct FnaBwdMainloopTmaWarpSpecializedSm90 {
       k_index += 1;
     }
 
+    if (no_inner_tiles) {
+      // when there's 0 inner tiles, we also need to make sure the order barrier
+      // stays in sync with the rest of the WG.
+
+      // S -> P
+      math_wg_order_barrier.wait();
+      math_wg_order_barrier.arrive();
+
+      math_wg_order_barrier.wait();
+      math_wg_order_barrier.arrive();
+    }
+
     pipeline_outer.consumer_release(smem_pipe_read_k);
     pipeline_outer.consumer_release(smem_pipe_read_outer);
-    pipeline_reducer.producer_tail(smem_pipe_write_reducer);
-    ++smem_pipe_read_outer;
+
+    // When there's 0 inner tiles (i.e. 1 Q tile, > 1 KV tiles, top-left causal
+    // mask has entire KV tiles to which nothing attends), reduce warp exits
+    // early and signals no arrivals on pipeline_reducer. If we don't jump over
+    // producer_tail, acquires will stall indefinitely.
+    if (not no_inner_tiles) {
+      pipeline_reducer.producer_tail(smem_pipe_write_reducer);
+      ++smem_pipe_read_outer;
+    }
 
     warpgroup_wait<0>();
     warpgroup_fence_operand(acc_DK);

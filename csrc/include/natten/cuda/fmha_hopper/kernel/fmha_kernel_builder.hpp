@@ -35,6 +35,7 @@
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_tma.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_tma_warpspecialized.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_epilogue.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_tma.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_tma_warpspecialized.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
@@ -84,7 +85,9 @@ struct FmhaBuilder<
   using CollectiveEpilogue = cutlass::fmha::collective::FmhaFwdEpilogueSm90<
       Element,
       ElementAccumulator,
-      typename CollectiveMainloop::TileShapePV>;
+      typename CollectiveMainloop::TileShapePV,
+      cutlass::fmha::collective::is_problem_shape_variable_length(
+          ProblemShape{})>;
 
   using Kernel = cutlass::fmha::kernel::FmhaKernelTma<
       ProblemShape,
@@ -131,7 +134,9 @@ struct FmhaBuilder<
   using CollectiveEpilogue = cutlass::fmha::collective::FmhaFwdEpilogueSm90<
       Element,
       ElementAccumulatorPV,
-      typename CollectiveMainloop::TileShapePV>;
+      typename CollectiveMainloop::TileShapePV,
+      cutlass::fmha::collective::is_problem_shape_variable_length(
+          ProblemShape{})>;
 
   static constexpr bool kIsPersistent =
       find_option_t<Tag::kIsPersistent, false_type, Options...>::value;

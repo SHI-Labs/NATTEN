@@ -61,6 +61,10 @@ class CutlassHopperFmhaAutogradFn(Function):
         scale: float,
         forward_config: CutlassHopperFmhaForwardConfigType,
         backward_config: CutlassHopperFmhaBackwardConfigType,
+        cumulative_seqlen_Q: Optional[Tensor],
+        cumulative_seqlen_KV: Optional[Tensor],
+        max_seqlen_Q: int,
+        max_seqlen_KV: int,
     ) -> Tuple[Tensor, Tensor]:
         query = query.contiguous()
         key = key.contiguous()
@@ -77,11 +81,17 @@ class CutlassHopperFmhaAutogradFn(Function):
             q_tile_size,
             kv_tile_size,
             kernel_schedule.value,  # TODO: I don't like this -- write a map with checks?
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            max_seqlen_Q,
+            max_seqlen_KV,
         )
 
-        ctx.save_for_backward(query, key, value, logsumexp, output)
+        ctx.save_for_backward(query, key, value, logsumexp, output, cumulative_seqlen_Q, cumulative_seqlen_KV)
         ctx.scale = scale
         ctx.is_causal = is_causal
+        ctx.max_seqlen_Q = max_seqlen_Q
+        ctx.max_seqlen_KV = max_seqlen_KV
         ctx.backward_config = backward_config
 
         return output, logsumexp
@@ -95,8 +105,13 @@ class CutlassHopperFmhaAutogradFn(Function):
         NoneType,
         NoneType,
         NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
+        NoneType,
     ]:
-        query, key, value, logsumexp, output = ctx.saved_tensors
+        query, key, value, logsumexp, output, cumulative_seqlen_Q, cumulative_seqlen_KV = ctx.saved_tensors
         d_output = grad_out.contiguous()  # noqa: F841
 
         q_tile_size, k_tile_size = ctx.backward_config
@@ -107,28 +122,6 @@ class CutlassHopperFmhaAutogradFn(Function):
                 "but PyTorch's deterministic algorithms were enabled. To proceed, "
                 "you must either disable torch's deterministic mode, or choose a "
                 "different backend."
-            )
-
-        # TODO: change the layout in forward pass so we can skip this!
-        # Same for padding.
-        logsumexp = logsumexp.transpose(-2, -1).contiguous()
-
-        # Padding is required since TMA loads in LSE
-        assert query.dtype in [torch.float16, torch.bfloat16]
-        elem_bytes = 2
-        tma_alignment_bytes = 16 // elem_bytes
-        requires_padding = logsumexp.shape[-1] % tma_alignment_bytes != 0
-        seq_q_padding = tma_alignment_bytes - (
-            logsumexp.shape[-1] % tma_alignment_bytes
-        )
-
-        if requires_padding:
-            old_shape = logsumexp.shape
-            logsumexp = torch.nn.functional.pad(
-                logsumexp, (0, seq_q_padding), "constant", 0
-            )
-            logger.debug(
-                f"Padded logsumexp with shape {old_shape} to {logsumexp.shape}."
             )
 
         d_query, d_key, d_value = hopper_fmha_backward(
@@ -142,9 +135,13 @@ class CutlassHopperFmhaAutogradFn(Function):
             ctx.scale,
             q_tile_size,
             k_tile_size,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+            ctx.max_seqlen_Q,
+            ctx.max_seqlen_KV,
         )
 
-        return d_query, d_key, d_value, None, None, None, None
+        return d_query, d_key, d_value, None, None, None, None, None, None, None, None
 
 
 def cutlass_hopper_fmha(
@@ -222,7 +219,6 @@ def cutlass_hopper_fmha(
         key = torch.repeat_interleave(key, repeats=h_k, dim=-2, output_size=heads)
         value = torch.repeat_interleave(value, repeats=h_k, dim=-2, output_size=heads)
 
-    # NOTE: varlen is not supported
     output, lse = CutlassHopperFmhaAutogradFn.apply(
         query,
         key,
@@ -231,6 +227,10 @@ def cutlass_hopper_fmha(
         scale,
         forward_config,
         backward_config,
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
     )
 
     if return_lse:

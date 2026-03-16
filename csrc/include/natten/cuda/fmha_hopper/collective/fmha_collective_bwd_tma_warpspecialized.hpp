@@ -38,6 +38,7 @@
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_load.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_softmax.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_common.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
 
 namespace cutlass::fmha::collective {
@@ -397,11 +398,11 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       ProblemShape const& problem_size,
       Arguments const& args,
       void* workspace) {
-    auto problem_shape_nm = make_shape(
+    auto problem_shape_nm = apply_variable_length_scheduler(make_shape(
         get<3>(problem_size),
         get<2>(problem_size),
         get<4>(problem_size),
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(get<0>(problem_size), get<1>(problem_size))));
 
     auto dK = make_stride(
         get<2>(args.dK),
@@ -439,6 +440,8 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
         },
         /*workspace=*/nullptr);
 
+    // These are batch-packed, not sequence-packed, so they should use max
+    // seqlen (default) over total.
     TMA_LSE tma_load_lse = make_tma_copy(
         SM90_TMA_LOAD{},
         make_tensor(
@@ -481,13 +484,6 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
     };
   }
 
-  template <class BlkCoord, class ProblemSize>
-  CUTLASS_DEVICE auto get_inner_tile_count(
-      BlkCoord const& blk_coord,
-      ProblemSize const& problem_size) {
-    return Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size);
-  }
-
   CUTLASS_DEVICE
   static void prefetch_tma_descriptors(Params const& params) {
     cute::prefetch_tma_descriptor(params.tma_load_q.get_tma_descriptor());
@@ -522,7 +518,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
     int lane_predicate = cute::elect_one_sync();
 
     int outer_tile_count = NumMmaWarpGroups;
-    int inner_tile_count = get_inner_tile_count(blk_coord, problem_size);
+    auto problem_size_f =
+        apply_variable_length(problem_size, get<2, 0>(blk_coord));
+    int inner_tile_count =
+        Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size_f);
 
     auto outer_tile_iter = cute::make_coord_iterator(outer_tile_count);
     auto inner_tile_iter = cute::make_coord_iterator(inner_tile_count);
@@ -568,7 +567,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
       if (Fusion{}.is_contributing(
               make_coord(*inner_tile_iter, get<1>(blk_coord)),
               TileShape{},
-              problem_size)) {
+              problem_size_f)) {
         break;
       }
       inner_tile_count -= 4;
@@ -669,7 +668,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
         if (Fusion{}.is_contributing(
                 make_coord(*inner_tile_iter, get<1>(blk_coord)),
                 TileShape{},
-                problem_size)) {
+                problem_size_f)) {
           break;
         }
         inner_tile_count -= 4;
@@ -804,7 +803,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
     Tensor tDQsDQ = block_tma.partition_S(sDQ);
     Tensor tDQgDQ = block_tma.partition_D(gDQ);
 
-    int inner_tile_count = get_inner_tile_count(blk_coord, problem_size);
+    auto problem_size_f =
+        apply_variable_length(problem_size, get<2, 0>(blk_coord));
+    int inner_tile_count =
+        Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size_f);
     int g_index = 0;
 
     auto smem_pipe_release_reducer = smem_pipe_read_reducer;
@@ -814,7 +816,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
         if (Fusion{}.is_contributing(
                 make_coord(g_index, get<1>(blk_coord)),
                 TileShape{},
-                problem_size)) {
+                problem_size_f)) {
           break;
         }
         inner_tile_count -= 1;
@@ -890,7 +892,10 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
     pipeline_outer.consumer_wait(smem_pipe_read_outer);
     PipelineStateQ smem_pipe_read_v = smem_pipe_read_outer;
 
-    int inner_tile_count = get_inner_tile_count(blk_coord, problem_size);
+    auto problem_size_f =
+        apply_variable_length(problem_size, get<2, 0>(blk_coord));
+    int inner_tile_count =
+        Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size_f);
 
     TiledMmaNM tiled_mma_nm;
     Tensor sK =
@@ -986,7 +991,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
         if (Fusion{}.is_contributing(
                 make_coord(k_index, get<1>(blk_coord)),
                 TileShape{},
-                problem_size)) {
+                problem_size_f)) {
           break;
         }
         inner_tile_count -= 1;
@@ -1033,7 +1038,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
 
       Tensor reg_LSE = make_fragment_like<ElementAccumulator>(acc_S);
       for (int i = 0; i < size(reg_LSE); i++) {
-        reg_LSE(i) = ((ElementAccumulator)std::log2(std::exp(1.0))) *
+        reg_LSE(i) = /*((ElementAccumulator)std::log2(std::exp(1.0))) **/
             tSsLSE(_, _, _, smem_pipe_read_q.index())(i);
       }
 
@@ -1049,7 +1054,8 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
 
       math_wg_order_barrier.wait();
       // Compute S -> P
-      Fusion{}.before_softmax(acc_S, tScS, problem_size);
+      Fusion{}.before_softmax<is_problem_shape_variable_length(ProblemShape{})>(
+          acc_S, tScS, problem_size_f);
       auto acc_P = make_fragment_like<ElementAccumulator>(acc_S);
       CUTLASS_PRAGMA_UNROLL
       for (int i = 0; i < size(acc_P); i++) {

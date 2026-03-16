@@ -38,6 +38,7 @@
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_load.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_softmax.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_common.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
 
 namespace cutlass::fmha::collective {
@@ -250,11 +251,11 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
       ProblemShape const& problem_size,
       Arguments const& args,
       void* workspace) {
-    auto problem_shape_qk = make_shape(
+    auto problem_shape_qk = apply_variable_length_scheduler(make_shape(
         get<2>(problem_size),
         get<3>(problem_size),
         get<4>(problem_size),
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(get<0>(problem_size), get<1>(problem_size))));
     auto params_qk = CollectiveMmaQK::to_underlying_arguments(
         problem_shape_qk,
         typename CollectiveMmaQK::Arguments{
@@ -315,8 +316,16 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
       SharedStorage& storage,
       LoadWarpBarrier& load_warp_barrier,
       bool do_barrier) {
-    int fusion_tile_count =
-        Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size);
+    int fusion_tile_count = 0;
+    if constexpr (is_problem_shape_variable_length(ProblemShape{})) {
+      auto problem_size_ =
+          apply_variable_length(problem_size, get<2, 0>(blk_coord));
+      fusion_tile_count =
+          Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size_);
+    } else {
+      fusion_tile_count =
+          Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size);
+    }
 
     int lane_predicate = cute::elect_one_sync();
 
@@ -525,8 +534,10 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
     Tensor tOsV = thr_mma_pv.partition_B(sV); // (MMA,MMA_N,MMA_K,PIPE)
     Tensor tOrV = thr_mma_pv.make_fragment_B(tOsV); // (MMA,MMA_M,MMA_N,PIPE)
 
-    int k_tile_count =
-        Fusion{}.get_unmasked_trip_count(blk_coord, TileShape{}, problem_size);
+    auto problem_size_f =
+        apply_variable_length(problem_size, get<2, 0>(blk_coord));
+    int k_tile_count = Fusion{}.get_unmasked_trip_count(
+        blk_coord, TileShape{}, problem_size_f);
 
     pipeline_q.consumer_wait(smem_pipe_read_q);
 
@@ -572,7 +583,7 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
       warpgroup_wait<0>();
       warpgroup_fence_operand(acc_qk);
 
-      softmax.step(acc_qk, tiled_mma_qk, tPcP, softmax_state, problem_size);
+      softmax.step(acc_qk, tiled_mma_qk, tPcP, softmax_state, problem_size_f);
 
       Tensor acc_qk_fixed =
           make_acc_into_op<Element>(acc_qk, typename TiledMmaPV::LayoutA_TV{});
@@ -637,7 +648,7 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
           softmax_state,
           acc_pv,
           tiled_mma_pv,
-          problem_size);
+          problem_size_f);
       if constexpr (kIsMainloopLocked)
         math_wg_order_barrier.arrive();
 
@@ -669,7 +680,7 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
     }
 
     k_tile_count +=
-        Fusion{}.get_masked_trip_count(blk_coord, TileShape{}, problem_size);
+        Fusion{}.get_masked_trip_count(blk_coord, TileShape{}, problem_size_f);
 
     CUTLASS_PRAGMA_NO_UNROLL
     while (k_tile_count > 0) {
@@ -713,7 +724,7 @@ struct FmhaMainloopTmaWarpSpecializedSm90 {
           softmax_state,
           acc_pv,
           tiled_mma_pv,
-          problem_size);
+          problem_size_f);
       if constexpr (kIsMainloopLocked)
         math_wg_order_barrier.arrive();
 

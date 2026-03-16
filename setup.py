@@ -55,7 +55,7 @@ assert torch_ver >= [2, 5], "NATTEN only supports PyTorch >= 2.5"
 CUDA_ARCH = os.getenv("NATTEN_CUDA_ARCH", "")
 HAS_CUDA_ARCH = CUDA_ARCH != ""
 
-NATTEN_IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", "0") == "1")
+IS_BUILDING_DIST = bool(os.getenv("NATTEN_IS_BUILDING_DIST", "0") == "1")
 
 VERBOSE = bool(os.getenv("NATTEN_VERBOSE", "0") == "1")
 
@@ -63,15 +63,19 @@ AUTOGEN_POLICY = os.getenv("NATTEN_AUTOGEN_POLICY", "default")
 AUTOGEN_POLICY = AUTOGEN_POLICY if AUTOGEN_POLICY != "" else "default"
 
 tmp_dir = tempfile.TemporaryDirectory()
-NATTEN_BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", tmp_dir.name)
-if not os.path.isdir(NATTEN_BUILD_DIR):
-    NATTEN_BUILD_DIR = tmp_dir.name
+BUILD_DIR = os.getenv("NATTEN_BUILD_DIR", tmp_dir.name)
+if not os.path.isdir(BUILD_DIR):
+    BUILD_DIR = tmp_dir.name
 
 DEFAULT_N_WORKERS = max(1, (multiprocessing.cpu_count() // 4))
 try:
     N_WORKERS = int(os.getenv("NATTEN_N_WORKERS", DEFAULT_N_WORKERS))
 except:
     N_WORKERS = int(DEFAULT_N_WORKERS)
+
+# Debug options
+WITH_PTX = bool(os.getenv("NATTEN_BUILD_WITH_PTX", "0") == "1")
+WITH_LINEINFO = bool(os.getenv("NATTEN_BUILD_WITH_LINEINFO", "0") == "1")
 
 if not HAS_CUDA_ARCH:
     HAS_CUDA = torch.cuda.is_available()
@@ -120,7 +124,7 @@ def get_version() -> str:
     init_py = open(init_py_path, "r").readlines()
     version_line = [ln.strip() for ln in init_py if ln.startswith("__version__")][0]
     version = version_line.split("=")[-1].strip().strip("'\"")
-    if not NATTEN_IS_BUILDING_DIST:
+    if not IS_BUILDING_DIST:
         return version
     PYTORCH_VERSION = "".join(torch.__version__.split("+")[0].split("."))
 
@@ -164,12 +168,22 @@ def get_cuda_arch_list(cuda_arch_list: str) -> List[int]:
 
 
 def arch_list_to_cmake_tags(arch_list: List[int]) -> str:
-    return (
+    real_tags = (
         "-real;".join(
             [str(x) if x not in [90, 100, 103] else f"{x}a" for x in arch_list]
         )
         + "-real"
     )
+    if WITH_PTX:
+        ptx_tags = (
+            "-virtual;".join(
+                [str(x) if x not in [90, 100, 103] else f"{x}a" for x in arch_list]
+            )
+            + "-virtual"
+        )
+
+        return real_tags + ";" + ptx_tags
+    return real_tags
 
 
 # determines the number of build targets for each category of kernels under different
@@ -376,7 +390,7 @@ class BuildExtension(build_ext):
             # Hack so that we can build somewhere other than /tmp in development mode.
             # Also because we want CMake to build everything elsewhere, otherwise pypi will package
             # build files.
-            build_dir = self.build_lib if NATTEN_BUILD_DIR is None else NATTEN_BUILD_DIR
+            build_dir = self.build_lib if BUILD_DIR is None else BUILD_DIR
 
             try:
                 subprocess.check_output(["cmake", "--version"])
@@ -421,6 +435,7 @@ class BuildExtension(build_ext):
                 f"-DOUTPUT_FILE_NAME={output_so_name}",
                 f"-DNATTEN_CUDA_ARCH_LIST={cuda_arch_list_str}",
                 f"-DNATTEN_IS_WINDOWS={int(IS_WINDOWS)}",
+                f"-DADD_LINEINFO={int(WITH_LINEINFO)}",
                 f"-DIS_LIBTORCH_BUILT_WITH_CXX11_ABI={int(IS_LIBTORCH_BUILT_WITH_CXX11_ABI)}",
             ]
 
@@ -485,7 +500,7 @@ class BuildExtension(build_ext):
 
             # Clean up cmake files when building dist package;
             # otherwise they will get packed into the wheel.
-            if NATTEN_IS_BUILDING_DIST:
+            if IS_BUILDING_DIST:
                 for file in os.listdir(build_dir):
                     fn = os.path.join(build_dir, file)
                     if os.path.isfile(fn):

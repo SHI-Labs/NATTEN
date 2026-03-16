@@ -184,28 +184,43 @@ struct FusionBwdAdapter {
         select<0, 1, 3, 2, 4>(problem_size));
   }
 
-  template <class AccQK, class IndexQK, class ProblemSize>
+  template <bool IsVarlen, class AccQK, class IndexQK, class ProblemSize>
   CUTLASS_DEVICE void before_softmax(
       AccQK& acc_qk,
       IndexQK const& index_qk,
       ProblemSize const& problem_size) {
-    auto index_base = index_qk(_0{});
-    auto index_shape = shape(index_qk);
-    auto index_stride = transform_leaf(stride(index_qk), [](auto elem) {
-      if constexpr (is_scaled_basis<decltype(elem)>::value) {
-        if constexpr (decltype(elem.mode() == _0{})::value) {
-          return ScaledBasis<decltype(elem.value()), 1>(elem.value());
-        } else {
-          return ScaledBasis<decltype(elem.value()), 0>(elem.value());
+    if constexpr (IsVarlen || is_same_v<Base, ResidualFusion>) {
+      CUTLASS_PRAGMA_UNROLL
+      for (int i = 0; i < size(acc_qk); i++) {
+        auto pos = index_qk(i);
+        if (get<0>(pos) < 0 || get<1>(pos) < 0 ||
+            get<0>(pos) >= get<3>(problem_size) ||
+            get<1>(pos) >= get<2>(problem_size)) {
+          acc_qk(i) = -INFINITY;
         }
-      } else {
-        return elem;
       }
-    });
-    auto index_qk_bwd = make_tensor(
-        make_inttuple_iter(select<1, 0>(index_base)),
-        make_layout(index_shape, index_stride));
-    Base{}.before_softmax(acc_qk, index_qk_bwd, problem_size);
+    } else if constexpr (is_same_v<Base, DefaultFusion>) {
+      // no op
+    } else {
+      // Fallthrough in case we add more fmha masks
+      auto index_base = index_qk(_0{});
+      auto index_shape = shape(index_qk);
+      auto index_stride = transform_leaf(stride(index_qk), [](auto elem) {
+        if constexpr (is_scaled_basis<decltype(elem)>::value) {
+          if constexpr (decltype(elem.mode() == _0{})::value) {
+            return ScaledBasis<decltype(elem.value()), 1>(elem.value());
+          } else {
+            return ScaledBasis<decltype(elem.value()), 0>(elem.value());
+          }
+        } else {
+          return elem;
+        }
+      });
+      auto index_qk_bwd = make_tensor(
+          make_inttuple_iter(select<1, 0>(index_base)),
+          make_layout(index_shape, index_stride));
+      Base{}.before_softmax(acc_qk, index_qk_bwd, problem_size);
+    }
   }
 
   template <class BlkCoord, class TileShape, class ProblemSize>
@@ -227,7 +242,7 @@ struct FusionBwdAdapter<CausalFusion> {
     return ceil_div(get<2>(problem_size), get<0>(TileShape{}));
   }
 
-  template <class AccQK, class IndexQK, class ProblemSize>
+  template <bool IsVarlen, class AccQK, class IndexQK, class ProblemSize>
   CUTLASS_DEVICE void before_softmax(
       AccQK& acc_qk,
       IndexQK const& index_qk,
@@ -237,8 +252,17 @@ struct FusionBwdAdapter<CausalFusion> {
     CUTLASS_PRAGMA_UNROLL
     for (int i = 0; i < size(acc_qk); i++) {
       auto pos = index_qk(i);
-      if (get<1>(pos) < get<0>(pos) || get<1>(pos) >= get<2>(problem_size)) {
-        acc_qk(i) = -INFINITY;
+      // Varlen needs additional boundary checks
+      if constexpr (IsVarlen) {
+        if (get<1>(pos) < get<0>(pos) || get<1>(pos) >= get<2>(problem_size) ||
+            0 > get<0>(pos) || get<0>(pos) >= get<3>(problem_size) ||
+            0 > get<1>(pos)) {
+          acc_qk(i) = -INFINITY;
+        }
+      } else {
+        if (get<1>(pos) < get<0>(pos) || get<1>(pos) >= get<2>(problem_size)) {
+          acc_qk(i) = -INFINITY;
+        }
       }
     }
   }

@@ -76,8 +76,6 @@ struct KernelBackward {
       int batch,
       int seqlen_Q,
       int seqlen_KV,
-      int seqlen_LSE, // seqlen_LSE is usually = seqlen_Q, but it may require
-                      // extra padding.
       int heads,
       int dim,
       float attn_scale,
@@ -102,10 +100,10 @@ struct KernelBackward {
     decltype(problem_shape_regular) problem_shape_memory;
 
     if constexpr (kIsVarlen) {
-      // Varlen mode: batch becomes 1 (packed sequence layout)
-      // and Q/KV dimensions use VariableLength descriptors
       problem_shape_memory = problem_shape_regular;
-      get<0>(problem_shape_memory) = 1; // batch becomes 1 in varlen mode
+      get<0>(problem_shape_memory) = 1;
+
+      get<0>(problem_shape_launch) = get<0>(problem_shape_regular);
       get<1>(problem_shape_launch) = get<1>(problem_shape_regular);
 
       get<2>(problem_shape_launch) = VariableLength{
@@ -149,9 +147,9 @@ struct KernelBackward {
     auto stride_V = stride_K;
     auto stride_LSE = make_stride(
         B == 1 ? 0
-               : static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_LSE),
-        seqlen_LSE,
-        _1{});
+               : static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_Q),
+        _1{},
+        heads);
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;

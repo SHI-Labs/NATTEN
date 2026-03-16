@@ -277,16 +277,13 @@ void hopper_fmha_backward(
   CheckIfTensorShapesMatch<1>(grad_value, value);
   CheckIfTensorShapesMatch<1>(grad_out, out);
 
-  CheckLogSumExpHeadsFirst(out, logsumexp);
+  CheckLogSumExp<1>(out, logsumexp);
 
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
   int heads = query.size(2);
   int dim = query.size(3);
-
-  int seqlen_lse =
-      logsumexp.size(2); // LSE is heads first; [batch, heads, seqlen_Q_padded]
 
   TORCH_CHECK(
       dim == 32 || dim == 64 || dim == 128,
@@ -384,7 +381,6 @@ void hopper_fmha_backward(
       batch_size,
       seqlen_q,
       seqlen_kv,
-      seqlen_lse,
       heads,
       dim,
       is_causal,

@@ -3,7 +3,12 @@
 ## [Main branch]
 * Fixed syntax error in natten.profiler (only affects `python < 3.12`)
 * Fixed stride overflow issue (occurs in very large seqlen + heads) in Blackwell FMHA/FNA, Hopper FMHA/FNA, and TokPerm kernels.
-* Added causal mask support to Hopper FMHA.
+* Hopper FMHA improvements:
+    * Causal mask support
+    * Varlen support
+    * Removed extra memory op on LSE in backward pass (both FMHA and FNA)
+* Added build flags for adding lineinfo and building with PTX (`NATTEN_BUILD_WITH_PTX`,
+    `NATTEN_BUILD_WITH_LINEINFO`).
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:
