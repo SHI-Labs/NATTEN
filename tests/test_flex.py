@@ -44,7 +44,6 @@ from natten.utils.testing import (
 
 from .utils import NattenBackendTester, reset_torch_compile
 
-
 logger = log.get_logger(__name__)
 
 
@@ -66,6 +65,8 @@ def _reset_everything():
     torch.backends.cudnn.benchmark = False
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
+
+    random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
@@ -618,8 +619,6 @@ class FlexBackendTest(unittest.TestCase):
                 )
 
     def _test_rand_sweep_against_cutlass_2x(self, na_dim, torch_compile: bool = False):
-        random.seed(42)
-
         max_tests = 1000
         max_seqlen = 2**17 if torch_compile else 2**13
         max_kernel_size = None if torch_compile else 2**10
@@ -700,5 +699,4 @@ class FlexBackendTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    torch.manual_seed(42)
     unittest.main()

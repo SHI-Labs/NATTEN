@@ -21,7 +21,6 @@
 #
 #################################################################################################
 
-import math
 import time
 from typing import Optional, Tuple, Union
 
@@ -308,30 +307,28 @@ class NattenBackendTester:
         torch.cuda.synchronize()
         start_time = time.time()
 
-        out_: torch.Tensor = (
-            neighborhood_attention_generic(  #  type: ignore[assignment]
-                q,
-                k,
-                v,
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
-                is_causal=is_causal,
-                additional_keys=additional_k,
-                additional_values=additional_v,
-                #
-                backend=target_backend,
-                q_tile_shape=q_tile_shape,
-                kv_tile_shape=kv_tile_shape,
-                backward_q_tile_shape=backward_q_tile_shape,
-                backward_kv_tile_shape=backward_kv_tile_shape,
-                backward_kv_splits=backward_kv_splits,
-                backward_use_pt_reduction=backward_use_pt_reduction,
-                run_persistent_kernel=run_persistent_kernel,
-                kernel_schedule=kernel_schedule,
-                torch_compile=torch_compile,
-                attention_kwargs={"backend": target_fmha_backend},
-            )
+        out_: torch.Tensor = neighborhood_attention_generic(  # type: ignore[assignment]
+            q,
+            k,
+            v,
+            kernel_size=kernel_size,
+            stride=stride,
+            dilation=dilation,
+            is_causal=is_causal,
+            additional_keys=additional_k,
+            additional_values=additional_v,
+            #
+            backend=target_backend,
+            q_tile_shape=q_tile_shape,
+            kv_tile_shape=kv_tile_shape,
+            backward_q_tile_shape=backward_q_tile_shape,
+            backward_kv_tile_shape=backward_kv_tile_shape,
+            backward_kv_splits=backward_kv_splits,
+            backward_use_pt_reduction=backward_use_pt_reduction,
+            run_persistent_kernel=run_persistent_kernel,
+            kernel_schedule=kernel_schedule,
+            torch_compile=torch_compile,
+            attention_kwargs={"backend": target_fmha_backend},
         )
         out = out_.data.clone().float()
 
@@ -387,97 +384,3 @@ class NattenBackendTester:
                 torch.testing.assert_close(
                     d_additional_v, self.d_additional_v_ref, atol=eps_dv, rtol=0
                 )
-
-
-# Blocked attention reference
-
-
-def tile_input_shape(input_sizes, kernel_size, dilation):
-
-    tiled_shape = list()
-    for i in range(len(input_sizes)):
-        assert input_sizes[i] % dilation[i] == 0
-        input_size_post_dilation = input_sizes[i] // dilation[i]
-        assert input_size_post_dilation % kernel_size[i] == 0
-        tiled_shape.extend(
-            [input_size_post_dilation // kernel_size[i], kernel_size[i], dilation[i]]
-        )
-
-    return tiled_shape
-
-
-def get_forward_permutation(tiled_shape, offset):
-
-    permuted_indices = list()
-    permuted_shape = list()
-
-    for i in range(len(tiled_shape)):
-        if i % 3 in [0, 2]:
-            permuted_indices.append(offset + i)
-            permuted_shape.append(tiled_shape[i])
-
-    for i in range(len(tiled_shape)):
-        if i % 3 == 1:
-            permuted_indices.append(offset + i)
-            permuted_shape.append(tiled_shape[i])
-
-    return permuted_indices, permuted_shape
-
-
-def get_reverse_permutation(tiled_shape, offset):
-
-    permuted_indices = list()
-    modes = len(tiled_shape) // 3
-
-    for i in range(modes):
-        permuted_indices.append(offset + i * 2)
-        permuted_indices.append(offset + modes * 2 + i)
-        permuted_indices.append(offset + i * 2 + 1)
-
-    return permuted_indices
-
-
-def blocked_attention_transform_qkv(x, kernel_size, dilation):
-
-    B, H, *M, C = x.shape
-    tiled_input_sizes = tile_input_shape(M, kernel_size, dilation)
-    permuted_indices, permuted_shape = get_forward_permutation(
-        tiled_input_sizes, offset=2
-    )  # offset: batch, head
-
-    x = x.view(B, H, *tiled_input_sizes, C).transpose(0, 1)
-    x_transformed = x.permute(
-        0, 1, *permuted_indices, len(permuted_indices) + 2
-    ).contiguous()
-    x_transformed = x_transformed.view(H, -1, math.prod(kernel_size), C).transpose(0, 1)
-
-    return x_transformed
-
-
-def blocked_attention_transform_output(
-    x_transformed, input_sizes, kernel_size, dilation
-):
-
-    B = int(x_transformed.shape[0]) // (
-        math.prod(input_sizes) // math.prod(kernel_size)
-    )
-    H = x_transformed.shape[1]
-    D = x_transformed.shape[-1]
-
-    tiled_input_sizes = tile_input_shape(input_sizes, kernel_size, dilation)
-    permuted_indices, permuted_shape = get_forward_permutation(
-        tiled_input_sizes, offset=2
-    )  # offset: batch, head
-    reverse_perm = get_reverse_permutation(
-        tiled_input_sizes, offset=2
-    )  # offset: batch, head
-
-    x = x_transformed.transpose(0, 1)
-    x = x.view(H, B, *permuted_shape, D)
-    x = (
-        x.permute(0, 1, *reverse_perm, len(tiled_input_sizes) + 2)
-        .transpose(0, 1)
-        .contiguous()
-    )
-    x = x.view(B, H, *input_sizes, D)
-    return x

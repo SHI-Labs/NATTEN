@@ -26,7 +26,6 @@ import torch
 
 from .utils import log
 
-
 logger = log.get_logger(__name__)
 
 

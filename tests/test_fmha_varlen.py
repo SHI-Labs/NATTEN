@@ -65,6 +65,7 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
+    random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
@@ -620,8 +621,6 @@ class FMHAVarlenTest(unittest.TestCase):
             raise NotImplementedError(f"Add {backend=} to tests.")
 
     def _test_varlen_randsweep(self, backend, max_tests=1000):
-        random.seed(42)
-
         max_qk = 2**17
         for i in range(max_tests):
             batch = random.choice(range(1, 12))
@@ -681,7 +680,6 @@ class FMHAVarlenTest(unittest.TestCase):
 
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_varlen_fmha_fast(self):
-        random.seed(42)
         problem_sizes = [
             (
                 7,
@@ -833,6 +831,4 @@ class FMHAVarlenTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    random.seed(42)
-    torch.manual_seed(42)
     unittest.main()

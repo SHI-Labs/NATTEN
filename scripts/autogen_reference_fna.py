@@ -13,7 +13,6 @@ import argparse
 import os
 from typing import List
 
-
 DEFAULT_OUTPUT_DIR = "csrc/"
 
 

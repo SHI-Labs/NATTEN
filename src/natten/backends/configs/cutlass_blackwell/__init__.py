@@ -36,7 +36,6 @@ from ....types import (
 from ....utils.checks import check_tile_shape
 from ....utils.device import get_device_cc
 
-
 # The current CUTLASS FMHA forward kernel can only do Q tile size 256, KV tile size 128.
 # This limits 1D tile shapes to just the one, but for 2-D and 3-D we can have many more shapes,
 # only some of which we compile. Adding new ones requires adding them to autogen, regenerating

@@ -40,11 +40,11 @@ from torch import Tensor
 
 from .utils import reset_torch_compile
 
-
 logger = log.get_logger(__name__)
 
 
 def _reset_everything():
+    random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
@@ -107,7 +107,7 @@ def sdpa_ref(
     k = k.requires_grad_(True)
     v = v.requires_grad_(True)
 
-    out: Tensor = attention(q, k, v, backend=backend)  #  type: ignore[assignment]
+    out: Tensor = attention(q, k, v, backend=backend)  # type: ignore[assignment]
     out.backward(do)
 
     assert q.grad is not None
@@ -264,6 +264,4 @@ class AttentionMergeTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    random.seed(42)
-    torch.manual_seed(42)
     unittest.main()

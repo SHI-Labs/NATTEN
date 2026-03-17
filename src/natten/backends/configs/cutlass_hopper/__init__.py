@@ -37,7 +37,6 @@ from ....types import (
 from ....utils.checks import check_tile_shape
 from ....utils.device import get_device_cc
 
-
 DTYPE_TO_BITS = {
     torch.float16: 16,
     torch.bfloat16: 16,

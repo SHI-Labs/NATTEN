@@ -26,7 +26,6 @@ from typing import Dict, List
 
 from ....types import CutlassFnaForwardConfigType
 
-
 # NOTE: we're excluding tile shapes that include 1 just to
 # reduce the giant number of configs down to a reasonable
 # amount; otherwise autotuning would take more than a few

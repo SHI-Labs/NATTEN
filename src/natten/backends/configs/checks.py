@@ -33,7 +33,6 @@ from ...utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_ch
 from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
 from ...utils.dtype import is_fp8
 
-
 ### Blackwell FMHA/FNA
 
 

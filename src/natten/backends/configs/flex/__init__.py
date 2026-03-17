@@ -30,7 +30,6 @@ from ....types import DimensionType, FlexFmhaForwardConfigType, FlexFnaForwardCo
 from ....utils.checks import check_tile_shape
 from ....utils.device import get_device_cc
 
-
 # TODO: add more tile sizes/shapes
 # TODO: add backprop tile sizes/shapes
 # Only doing 64 x 64 for now, since it's the one that successfully compiles across devices and
