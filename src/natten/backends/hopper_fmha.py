@@ -87,7 +87,15 @@ class CutlassHopperFmhaAutogradFn(Function):
             max_seqlen_KV,
         )
 
-        ctx.save_for_backward(query, key, value, logsumexp, output, cumulative_seqlen_Q, cumulative_seqlen_KV)
+        ctx.save_for_backward(
+            query,
+            key,
+            value,
+            logsumexp,
+            output,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        )
         ctx.scale = scale
         ctx.is_causal = is_causal
         ctx.max_seqlen_Q = max_seqlen_Q
@@ -111,7 +119,15 @@ class CutlassHopperFmhaAutogradFn(Function):
         NoneType,
         NoneType,
     ]:
-        query, key, value, logsumexp, output, cumulative_seqlen_Q, cumulative_seqlen_KV = ctx.saved_tensors
+        (
+            query,
+            key,
+            value,
+            logsumexp,
+            output,
+            cumulative_seqlen_Q,
+            cumulative_seqlen_KV,
+        ) = ctx.saved_tensors
         d_output = grad_out.contiguous()  # noqa: F841
 
         q_tile_size, k_tile_size = ctx.backward_config

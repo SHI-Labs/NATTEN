@@ -32,25 +32,24 @@ from natten.backends.configs.cutlass import (
     get_all_fmha_backward_configs,
     get_all_fmha_forward_configs,
 )
-from natten.backends.configs.cutlass_hopper import (
-    get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
-    get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
-)
 from natten.backends.configs.cutlass_blackwell import (
     get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
     get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
+)
+from natten.backends.configs.cutlass_hopper import (
+    get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
+    get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
 )
 from natten.functional import attention
 from natten.types import KernelSchedule
 from natten.utils import log
 from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
-    skip_if_hopper_kernels_not_supported,
     skip_if_blackwell_kernels_not_supported,
+    skip_if_hopper_kernels_not_supported,
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
 )
-
 
 logger = log.get_logger(__name__)
 
@@ -471,7 +470,9 @@ class FMHAVarlenTest(unittest.TestCase):
             random.shuffle(backward_configs)
 
             for i in range(max(len(forward_configs), len(backward_configs))):
-                (q_tile_size, kv_tile_size), kernel_schedule = forward_configs[i % len(forward_configs)]
+                (q_tile_size, kv_tile_size), kernel_schedule = forward_configs[
+                    i % len(forward_configs)
+                ]
                 backward_q_tile_size, backward_kv_tile_size = backward_configs[
                     i % len(backward_configs)
                 ]
@@ -780,9 +781,7 @@ class FMHAVarlenTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
     def test_cutlass_hopper_varlen_fmha_extended(self):
-        self._test_varlen_randsweep(
-            backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS
-        )
+        self._test_varlen_randsweep(backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS)
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
