@@ -58,8 +58,8 @@ DTYPE_MAP = {
     "e4m3": torch.float8_e4m3fn,
     "e5m2": torch.float8_e5m2,
 }
-NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna"]
-NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha"]
+NATTEN_BACKENDS = ["cutlass-fna", "blackwell-fna", "hopper-fna", "flex-fna", "flash-fna"]
+NATTEN_FMHA_BACKENDS = ["cutlass-fmha", "blackwell-fmha", "hopper-fmha", "flex-fmha", "flash-fmha"]
 SDPA_BACKENDS = ["xformers", "cudnn", "fav2"]
 
 SCHEDULE_MAP = {
