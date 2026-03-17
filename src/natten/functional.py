@@ -37,6 +37,8 @@ from .backends import (
     cutlass_hopper_fna_generic,
     flex_fmha,
     flex_fna_generic,
+    metal_fmha,
+    metal_fna_generic,
 )
 from .types import (
     CausalArg1DTypeOrDed,
@@ -328,6 +330,16 @@ def attention(
             max_seqlen_KV=max_seqlen_KV,
         )
 
+    elif backend == "metal-fmha":
+        return metal_fmha(
+            query=query,
+            key=key,
+            value=value,
+            is_causal=is_causal,
+            scale=scale,
+            return_lse=return_lse,
+        )
+
     elif backend == "flex-fmha":
         return flex_fmha(
             query=query,
@@ -499,6 +511,19 @@ def neighborhood_attention_generic(
             backward_kv_tile_shape=backward_kv_tile_shape,
             backward_kv_splits=backward_kv_splits,
             backward_use_pt_reduction=backward_use_pt_reduction,
+            return_lse=True,
+        )
+
+    elif backend == "metal-fna":
+        output, lse = metal_fna_generic(
+            query=query,
+            key=key,
+            value=value,
+            kernel_size=kernel_size,
+            stride=stride,
+            dilation=dilation,
+            is_causal=is_causal,
+            scale=scale,
             return_lse=True,
         )
 

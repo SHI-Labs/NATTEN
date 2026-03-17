@@ -39,8 +39,17 @@ from .problem import Problem
 logger = log.get_logger(__name__)
 
 IS_CUDA = torch.cuda.is_available()
-torch_device = "cuda" if IS_CUDA else "cpu"
-profiler_activity_tag = ProfilerActivity.CUDA if IS_CUDA else ProfilerActivity.CPU
+IS_MPS = not IS_CUDA and torch.backends.mps.is_available()
+
+if IS_CUDA:
+    torch_device = "cuda"
+    profiler_activity_tag = ProfilerActivity.CUDA
+elif IS_MPS:
+    torch_device = "mps"
+    profiler_activity_tag = ProfilerActivity.CPU
+else:
+    torch_device = "cpu"
+    profiler_activity_tag = ProfilerActivity.CPU
 
 
 def init_tensors(
@@ -201,6 +210,8 @@ def measure_natten_runtime(
         end_event = torch.cuda.Event(enable_timing=True)
         start_event.record()
     else:
+        if IS_MPS:
+            torch.mps.synchronize()
         start_time = time.time()
 
     run_ops(
@@ -221,6 +232,8 @@ def measure_natten_runtime(
         torch.cuda.synchronize()
         elapsed_time_ms = start_event.elapsed_time(end_event)
     else:
+        if IS_MPS:
+            torch.mps.synchronize()
         elapsed_time_ms = (time.time() - start_time) * 1e3
 
     return elapsed_time_ms
@@ -277,6 +290,8 @@ def _profile_na_with_torch(
     ):
         if IS_CUDA:
             torch.cuda.synchronize()
+        elif IS_MPS:
+            torch.mps.synchronize()
         query.requires_grad = not disable_backward
         key.requires_grad = not disable_backward
         value.requires_grad = not disable_backward
@@ -320,10 +335,14 @@ def _profile_na_with_torch(
 
         if IS_CUDA:
             torch.cuda.synchronize()
+        elif IS_MPS:
+            torch.mps.synchronize()
         if not disable_backward:
             out.backward(d_out)
             if IS_CUDA:
                 torch.cuda.synchronize()
+            elif IS_MPS:
+                torch.mps.synchronize()
 
     for _ in range(warmup_steps):
         with torch.no_grad():
