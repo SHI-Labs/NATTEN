@@ -26,7 +26,7 @@ from typing import Optional, Tuple
 
 import torch
 
-from ..backends import (
+from natten.backends import (
     can_run_cutlass_blackwell_fmha,
     can_run_cutlass_blackwell_fna,
     can_run_cutlass_fmha,
@@ -53,12 +53,12 @@ from ..backends import (
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
 )
-from ..types import DimensionType, KernelSchedule
-from ..utils import log
-from . import print_table
-from .pretty_printer import opt_progress_bar
-from .problem import Problem
-from .profiling import measure_natten_runtime
+from natten.profiling_utils import print_table
+from natten.profiling_utils.pretty_printer import opt_progress_bar
+from natten.profiling_utils.problem import Problem
+from natten.profiling_utils.profiling import measure_natten_runtime
+from natten.types import DimensionType, KernelSchedule
+from natten.utils import log
 
 logger = log.get_logger(__name__)
 

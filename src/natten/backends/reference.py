@@ -31,7 +31,7 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import (
+from natten._libnatten import (
     reference_na1d_backward,
     reference_na1d_forward,
     reference_na2d_backward,
@@ -39,7 +39,7 @@ from .._libnatten import (
     reference_na3d_backward,
     reference_na3d_forward,
 )
-from ..types import (
+from natten.types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
     CausalArg3DTypeOrDed,
@@ -52,8 +52,8 @@ from ..types import (
     DimensionTypeOrDed,
     NoneType,
 )
-from ..utils import log
-from ..utils.checks import (
+from natten.utils import log
+from natten.utils.checks import (
     additional_kv_tensor_checks,
     check_all_args,
     check_args_against_input,

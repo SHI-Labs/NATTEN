@@ -24,7 +24,7 @@
 
 from typing import Dict, List
 
-from ....types import QKTileShapeType
+from natten.types import QKTileShapeType
 
 # TODO: More combinations are possible for
 # 2D and 3D (query tile does not have to be smaller

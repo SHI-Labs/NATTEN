@@ -30,22 +30,25 @@ from typing import List, Optional, Union
 
 import torch
 
-from . import (
+from natten import (
     allow_flex_compile,
     set_memory_usage_preference,
     use_kv_parallelism_in_fused_na,
 )
-from .profiling_utils import (
+from natten.profiling_utils import (
     generate_problem,
     print_table,
     profile_fmha_with_torch,
     profile_na_with_torch,
 )
-from .profiling_utils.dry_run import dry_run as dry_run_fn, optimize as optimize_fn
-from .profiling_utils.formatting import Result
-from .profiling_utils.problem import Problem
-from .types import CausalArgType, DimensionType, KernelSchedule
-from .utils import log
+from natten.profiling_utils.dry_run import (
+    dry_run as dry_run_fn,
+    optimize as optimize_fn,
+)
+from natten.profiling_utils.formatting import Result
+from natten.profiling_utils.problem import Problem
+from natten.types import CausalArgType, DimensionType, KernelSchedule
+from natten.utils import log
 
 logger = log.get_logger(__name__)
 

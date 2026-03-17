@@ -24,7 +24,7 @@
 
 from typing import Dict, List
 
-from ....types import CutlassFnaForwardConfigType
+from natten.types import CutlassFnaForwardConfigType
 
 # NOTE: we're excluding tile shapes that include 1 just to
 # reduce the giant number of configs down to a reasonable

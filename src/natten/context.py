@@ -24,7 +24,7 @@ from enum import Enum
 
 import torch
 
-from .utils import log
+from natten.utils import log
 
 logger = log.get_logger(__name__)
 

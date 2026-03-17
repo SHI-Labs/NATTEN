@@ -24,7 +24,7 @@
 
 from typing import Dict, List
 
-from ....types import QKTileShapeType
+from natten.types import QKTileShapeType
 
 # NOTE: we're excluding tile shapes that include 1 just to
 # reduce the giant number of configs down to a reasonable

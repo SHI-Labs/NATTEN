@@ -21,9 +21,9 @@
 #
 #################################################################################################
 
-from .pretty_printer import print_table
-from .problem import generate_problem
-from .profiling import (
+from natten.profiling_utils.pretty_printer import print_table
+from natten.profiling_utils.problem import generate_problem
+from natten.profiling_utils.profiling import (
     measure_natten_runtime,
     profile_fmha_with_torch,
     profile_na_with_torch,
