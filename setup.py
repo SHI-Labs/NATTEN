@@ -215,7 +215,7 @@ NUM_SPLITS = {
         "blackwell-fna": 56,
         "blackwell-fna-bwd": 28,
         "blackwell-fmha": 8,
-        "blackwell-fmha-bwd": 8,
+        "blackwell-fmha-bwd": 6,
     },
     "coarse": {
         "reference": 1,
