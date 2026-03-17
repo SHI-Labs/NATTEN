@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_load.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_softmax.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_common.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
 
 namespace cutlass::fmha::collective {
@@ -219,7 +220,7 @@ struct FmhaMainloopTmaSm90 {
     //
     // If we pad those, we would have to modify the residual mask as well.
     //
-    return true && (get<4>(problem_size) <= get<2>(TileShape{})) &&
+    return (get<4>(problem_size) <= get<2>(TileShape{})) &&
         ((get<4>(problem_size) % Alignment) == 0) /* &&
          ((get<2>(problem_size) % Alignment) == 0)*/
         ;
@@ -230,11 +231,11 @@ struct FmhaMainloopTmaSm90 {
       ProblemShape const& problem_size,
       Arguments const& args,
       void* workspace) {
-    auto problem_shape_qk = make_shape(
+    auto problem_shape_qk = apply_variable_length_scheduler(make_shape(
         get<2>(problem_size),
         get<3>(problem_size),
         get<4>(problem_size),
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(get<0>(problem_size), get<1>(problem_size))));
     auto params_qk = CollectiveMmaQK::to_underlying_arguments(
         problem_shape_qk,
         typename CollectiveMmaQK::Arguments{
@@ -297,8 +298,16 @@ struct FmhaMainloopTmaSm90 {
     PipelineState smem_pipe_release = smem_pipe_read;
     [[maybe_unused]] PipelineStateQ smem_pipe_release_q = smem_pipe_read_q;
 
-    int fusion_tile_count =
-        Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size);
+    int fusion_tile_count = 0;
+    if constexpr (is_problem_shape_variable_length(ProblemShape{})) {
+      auto problem_size_ =
+          apply_variable_length(problem_size, get<2, 0>(blk_coord));
+      fusion_tile_count =
+          Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size_);
+    } else {
+      fusion_tile_count =
+          Fusion{}.get_trip_count(blk_coord, TileShape{}, problem_size);
+    }
 
     LoadQ load_q{params.tma_load_q, pipeline_q, storage.smem_q};
     auto load_state_q =
@@ -399,8 +408,10 @@ struct FmhaMainloopTmaSm90 {
     Tensor tOsV = thr_mma_pv.partition_B(sV); // (MMA,MMA_N,MMA_K,PIPE)
     Tensor tOrV = thr_mma_pv.make_fragment_B(tOsV); // (MMA,MMA_M,MMA_N,PIPE)
 
-    int k_tile_count =
-        Fusion{}.get_unmasked_trip_count(blk_coord, TileShape{}, problem_size);
+    auto problem_size_f =
+        apply_variable_length(problem_size, get<2, 0>(blk_coord));
+    int k_tile_count = Fusion{}.get_unmasked_trip_count(
+        blk_coord, TileShape{}, problem_size_f);
 
     pipeline_q.consumer_wait(smem_pipe_read_q);
 
@@ -444,7 +455,7 @@ struct FmhaMainloopTmaSm90 {
       warpgroup_wait<0>();
       warpgroup_fence_operand(acc_qk);
 
-      softmax.step(acc_qk, tiled_mma_qk, tPcP, softmax_state, problem_size);
+      softmax.step(acc_qk, tiled_mma_qk, tPcP, softmax_state, problem_size_f);
 
       Tensor acc_qk_fixed =
           make_fragment_like<Element>(convert_c_layout_to_a_layout(
@@ -527,7 +538,7 @@ struct FmhaMainloopTmaSm90 {
           softmax_state,
           acc_pv,
           tiled_mma_pv,
-          problem_size);
+          problem_size_f);
 
       pipeline.consumer_release(smem_pipe_release);
 
@@ -587,7 +598,7 @@ struct FmhaMainloopTmaSm90 {
     }
 
     k_tile_count +=
-        Fusion{}.get_masked_trip_count(blk_coord, TileShape{}, problem_size);
+        Fusion{}.get_masked_trip_count(blk_coord, TileShape{}, problem_size_f);
 
     CUTLASS_PRAGMA_NO_UNROLL
     for (; k_tile_count > 0; --k_tile_count) {
@@ -632,7 +643,7 @@ struct FmhaMainloopTmaSm90 {
           softmax_state,
           acc_pv,
           tiled_mma_pv,
-          problem_size);
+          problem_size_f);
 
       pipeline.consumer_release(smem_pipe_release);
 

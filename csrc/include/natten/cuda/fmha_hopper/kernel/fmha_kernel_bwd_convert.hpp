@@ -35,14 +35,17 @@
 #include "cute/layout.hpp"
 #include "cutlass/cutlass.h"
 
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
+
 namespace cutlass::fmha::kernel {
 
 using namespace cute;
+using namespace cutlass::fmha::collective;
 
-template <class Element, class ElementAccumulator>
+template <class ProblemShape, class Element, class ElementAccumulator>
 struct FmhaKernelBwdConvert {
   struct Arguments {
-    tuple<int, int, int, int, int> problem_size;
+    ProblemShape problem_size;
 
     const ElementAccumulator* ptr_src_dQ;
     tuple<int64_t, int, int, _1> stride_src_dQ;
@@ -92,12 +95,13 @@ struct FmhaKernelBwdConvert {
 
   static dim3 get_grid_shape(Params const& params) {
     dim3 grid(
-        size<0>(params.problem_size),
-        size<1>(params.problem_size),
+        // never put seq in z, long seqs can easily exceed the 64K limit
         ceil_div(
             std::max(
                 size<2>(params.problem_size), size<3>(params.problem_size)),
-            kBlockSeq));
+            kBlockSeq),
+        size<1>(params.problem_size),
+        size<0>(params.problem_size));
     return grid;
   }
 
@@ -112,26 +116,43 @@ struct FmhaKernelBwdConvert {
     return args;
   }
 
-  template <class StrideSrc, class StrideDest>
+  template <class StrideSrc, class StrideDest, class Count>
   CUTLASS_DEVICE void copy(
       Params const& params,
       const ElementAccumulator* ptr_src,
       StrideSrc const& stride_src,
       Element* ptr_dest,
       StrideDest const& stride_dest,
-      int count) {
-    auto ptr_src_bh = ptr_src + get<0>(stride_src) * blockIdx.x +
-        get<1>(stride_src) * blockIdx.y;
-    auto ptr_dest_bh = ptr_dest + get<0>(stride_dest) * blockIdx.x +
-        get<1>(stride_dest) * blockIdx.y;
+      Count const& count) {
+    auto ptr_src_bh = ptr_src +
+        static_cast<int64_t>(get<0>(stride_src)) *
+            static_cast<int64_t>(blockIdx.z) +
+        static_cast<int64_t>(get<1>(stride_src)) *
+            static_cast<int64_t>(blockIdx.y);
+    auto ptr_dest_bh = ptr_dest +
+        static_cast<int64_t>(get<0>(stride_dest)) *
+            static_cast<int64_t>(blockIdx.z) +
+        static_cast<int64_t>(get<1>(stride_dest)) *
+            static_cast<int64_t>(blockIdx.y);
+    int seqlen = count;
+    if constexpr (is_variable_length_v<decltype(count)>) {
+      int offset = count.cumulative_length[blockIdx.z];
+      ptr_dest_bh += static_cast<int64_t>(offset) *
+          static_cast<int64_t>(get<2>(stride_dest));
+      seqlen = count.cumulative_length[blockIdx.z + 1] - offset;
+    }
 
     for (int idx_s_t = threadIdx.y; idx_s_t < kBlockSeq;
          idx_s_t += kNumThreadsSeq) {
-      int idx_s = idx_s_t + kBlockSeq * blockIdx.z;
-      if (idx_s >= count)
+      int idx_s = idx_s_t + kBlockSeq * blockIdx.x;
+      if (idx_s >= seqlen)
         continue;
-      auto ptr_src_bhs = ptr_src_bh + idx_s * get<2>(stride_src);
-      auto ptr_dest_bhs = ptr_dest_bh + idx_s * get<2>(stride_dest);
+      auto ptr_src_bhs = ptr_src_bh +
+          static_cast<int64_t>(idx_s) *
+              static_cast<int64_t>(get<2>(stride_src));
+      auto ptr_dest_bhs = ptr_dest_bh +
+          static_cast<int64_t>(idx_s) *
+              static_cast<int64_t>(get<2>(stride_dest));
 
       for (int idx_d = threadIdx.x * kElementsPerLoad;
            idx_d < get<4>(params.problem_size);

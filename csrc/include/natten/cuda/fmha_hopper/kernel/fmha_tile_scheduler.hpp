@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -78,7 +78,11 @@ struct IndividualTileScheduler {
   CUTLASS_DEVICE
   auto get_block_coord() {
     using namespace cute;
-    return make_coord(blockIdx.x, _0{}, make_coord(blockIdx.y, blockIdx.z));
+    // NOTE (ahassani): we need to typecast block idx to a signed integer here,
+    // otherwise the non-TMA epilogue predication can fail (negatives will be
+    // interpreted as 0s by the compiler)
+    return make_coord(
+        static_cast<int>(blockIdx.x), _0{}, make_coord(blockIdx.y, blockIdx.z));
   }
 
   CUTLASS_DEVICE

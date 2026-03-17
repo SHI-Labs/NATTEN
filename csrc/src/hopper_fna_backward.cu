@@ -128,7 +128,7 @@ void hopper_fna_generic_backward(
 
   CheckArgsAgainstDim(qkv_shape_, kernel_size, dilation_);
 
-  CheckLogSumExpHeadsFirst(out, logsumexp);
+  CheckLogSumExp<1>(out, logsumexp);
 
   auto qkv_shape = std_tuple_to_cute_tuple(qkv_shape_);
   auto q_shape = std_tuple_to_cute_tuple(q_shape_);

@@ -274,17 +274,30 @@ def hopper_fmha_forward_torch_op(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
     kernel_schedule_int: int,
+    cumulative_seqlen_Q: Optional[Tensor],
+    cumulative_seqlen_KV: Optional[Tensor],
+    max_seqlen_Q: int,
+    max_seqlen_KV: int,
 ) -> Tuple[Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
     output_shape = [s for s in query.shape[:-1]] + [value.shape[-1]]
-    output = torch.empty(output_shape, device=query.device, dtype=query.dtype)
 
-    logsumexp = torch.empty(query.shape[:-1], dtype=torch.float32, device=query.device)
+    # NOTE: always zero-init outputs when doing varlen for safety
+    is_varlen = cumulative_seqlen_Q is not None
+    init_fn = torch.zeros if is_varlen else torch.empty
+
+    output = init_fn(
+        output_shape, device=query.device, dtype=query.dtype
+    )  # type: ignore[operator]
+    logsumexp = init_fn(
+        query.shape[:-1], dtype=torch.float32, device=query.device
+    )  # type: ignore[operator]
 
     hopper_fmha_forward_cxx(
         output,
@@ -292,10 +305,15 @@ def hopper_fmha_forward_torch_op(
         key,
         value,
         logsumexp,
+        is_causal,
         scale,
         q_tile_size,
         kv_tile_size,
         kernel_schedule_int,
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
     )
 
     return output, logsumexp
@@ -306,10 +324,15 @@ def hopper_fmha_forward_torch_fake_op(
     query: Tensor,
     key: Tensor,
     value: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
     kernel_schedule_int: int,
+    cumulative_seqlen_Q: Optional[Tensor],
+    cumulative_seqlen_KV: Optional[Tensor],
+    max_seqlen_Q: int,
+    max_seqlen_KV: int,
 ):
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
 
@@ -334,18 +357,27 @@ def hopper_fmha_backward_torch_op(
     output: Tensor,
     d_output: Tensor,
     logsumexp: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
+    cumulative_seqlen_Q: Optional[Tensor],
+    cumulative_seqlen_KV: Optional[Tensor],
+    max_seqlen_Q: int,
+    max_seqlen_KV: int,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
         maybe_contiguous(x) for x in (output, d_output, logsumexp)
     ]
 
-    d_query = torch.empty_like(query)
-    d_key = torch.empty_like(key)
-    d_value = torch.empty_like(value)
+    # NOTE: always zero-init outputs when doing varlen for safety
+    is_varlen = cumulative_seqlen_Q is not None
+    init_fn = torch.zeros_like if is_varlen else torch.empty_like
+
+    d_query = init_fn(query)
+    d_key = init_fn(key)
+    d_value = init_fn(value)
 
     hopper_fmha_backward_cxx(
         d_query,
@@ -357,9 +389,14 @@ def hopper_fmha_backward_torch_op(
         output,
         d_output,
         logsumexp,
+        is_causal,
         scale,
         q_tile_size,
         kv_tile_size,
+        cumulative_seqlen_Q,
+        cumulative_seqlen_KV,
+        max_seqlen_Q,
+        max_seqlen_KV,
     )
 
     return d_query, d_key, d_value
@@ -373,9 +410,14 @@ def hopper_fmha_backward_torch_fake_op(
     output: Tensor,
     d_output: Tensor,
     logsumexp: Tensor,
+    is_causal: bool,
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
+    cumulative_seqlen_Q: Optional[Tensor],
+    cumulative_seqlen_KV: Optional[Tensor],
+    max_seqlen_Q: int,
+    max_seqlen_KV: int,
 ):
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [

@@ -104,6 +104,7 @@ struct KernelForward {
           NADim,
           QTileShape,
           KVTileShape,
+          ProblemShapeType,
           Element,
           ElementAccumulatorQK,
           ElementAccumulatorPV,

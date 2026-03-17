@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,6 +44,7 @@ namespace cutlass::fmha::kernel {
 using namespace cute;
 
 template <
+    class ProblemShape,
     class CollectiveMainloop,
     class CollectiveEpilogue,
     class TileScheduler,
@@ -105,8 +106,6 @@ struct FmhaKernelTmaWarpSpecialized {
   };
 
   static constexpr int SharedStorageSize = sizeof(SharedStorage);
-
-  using ProblemShape = cute::tuple<int, int, int, int, int>;
 
   struct Arguments {
     ProblemShape problem_size;
@@ -182,6 +181,11 @@ struct FmhaKernelTmaWarpSpecialized {
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
+#if !defined(CUTLASS_ARCH_MMA_SM90A_ENABLED)
+    CUTE_INVALID_CONTROL_PATH(
+        "ERROR : Arch conditional MMA instruction used without targeting appropriate compute capability. Aborting.\n");
+#else
+
     enum class WarpGroupRole {
       Producer = 0,
       Consumer0 = 1,
@@ -480,6 +484,7 @@ struct FmhaKernelTmaWarpSpecialized {
         math_wg_order_barrier.arrive();
       }
     }
+#endif
   }
 };
 

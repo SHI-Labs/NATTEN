@@ -80,8 +80,8 @@ following functions in your code.
 
 **FMHA-specific features**
 
-- [ ] Causal masking
-- [ ] Variable length with sequence-packed format
+- [x] Causal masking
+- [x] Variable length with sequence-packed format
 
 ![Hopper FNA performance sample](assets/hopper-fna-perf.png){ width="80%" }
 /// caption
@@ -126,7 +126,7 @@ following functions in your code.
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
-- [x] GQA/MQA support (with tensor repeats)
+- [x] GQA/MQA support
 - [ ] MLA support (head_dim != head_dim_v)
 - [x] torch.compile support without graph breaks
 
@@ -182,7 +182,7 @@ following functions in your code.
 
 - [x] Inference (forward pass)
 - [x] Training (backward pass)
-- [x] GQA/MQA support (with tensor repeats)
+- [x] GQA/MQA support
 - [ ] MLA support (head_dim != head_dim_v)
 - [ ] torch.compile support without graph breaks
 

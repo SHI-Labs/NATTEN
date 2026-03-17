@@ -67,6 +67,7 @@ struct KernelBackward {
   using ProblemShapeType = cute::tuple<int, int, int, int, int>;
 
   using Operation = cutlass::fna::device::FnaBwdSm90<
+      ProblemShapeType,
       Element,
       ElementAccumulator,
       TileShape,
@@ -130,8 +131,8 @@ struct KernelBackward {
     auto stride_V = stride_K;
     auto stride_LSE = make_stride(
         static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_Q),
-        seqlen_Q,
-        _1{});
+        _1{},
+        heads);
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;

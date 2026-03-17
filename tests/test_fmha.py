@@ -218,7 +218,6 @@ class FMHABackendTest(unittest.TestCase):
         backward_use_pt_reduction: bool = False,
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
-        torch_compile: bool = False,
         test_lse: bool = False,
         reference_str: str = "unspecified reference",
         heads_kv: Optional[int] = None,
@@ -227,11 +226,12 @@ class FMHABackendTest(unittest.TestCase):
         heads_kv = heads_kv or heads
         head_dim_v = head_dim_v or head_dim
         logger.debug(
-            f"Testing FMHA ({backend}) vs {reference_str}: {batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, "
-            f"{seqlen_q=}, {seqlen_kv=}, {is_causal=}, {dtype=}, "
-            f"{q_tile_size=}, {kv_tile_size=}, {kernel_schedule=}, {run_persistent_kernel=}, {torch_compile=}"
+            f"Testing FMHA ({backend}) vs {reference_str}:\n"
+            f"{batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=},\n"
+            f"{seqlen_q=}, {seqlen_kv=}, {is_causal=}, {dtype=},\n"
+            f"{q_tile_size=}, {kv_tile_size=}, {kernel_schedule=}, {run_persistent_kernel=}"
             + (
-                f", {backward_q_tile_size=}, {backward_kv_tile_size=}, "
+                f",\n{backward_q_tile_size=}, {backward_kv_tile_size=}, "
                 f"{backward_kv_splits=}, {backward_use_pt_reduction=}."
                 if test_backprop
                 else "."
@@ -265,7 +265,6 @@ class FMHABackendTest(unittest.TestCase):
             backward_use_pt_reduction=backward_use_pt_reduction,
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
-            torch_compile=torch_compile,
             return_lse=test_lse,
         )
 
@@ -347,7 +346,6 @@ class FMHABackendTest(unittest.TestCase):
         backward_use_pt_reduction: bool = False,
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
-        torch_compile: bool = False,
         heads_kv: Optional[int] = None,
         head_dim_v: Optional[int] = None,
     ):
@@ -389,7 +387,6 @@ class FMHABackendTest(unittest.TestCase):
             backward_use_pt_reduction=backward_use_pt_reduction,
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
-            torch_compile=torch_compile,
             reference_str="torch sdpa",
         )
 
@@ -415,7 +412,6 @@ class FMHABackendTest(unittest.TestCase):
         backward_use_pt_reduction: bool = False,
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
-        torch_compile: bool = False,
         head_dim_v: Optional[int] = None,
     ):
         head_dim_v = head_dim_v or head_dim
@@ -452,7 +448,6 @@ class FMHABackendTest(unittest.TestCase):
             backward_use_pt_reduction=backward_use_pt_reduction,
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
-            torch_compile=torch_compile,
             test_lse=test_lse,
             reference_str="cutlass-fmha",
         )
@@ -534,7 +529,6 @@ class FMHABackendTest(unittest.TestCase):
                     backward_kv_tile_size=backward_kv_tile_size,
                     backward_kv_splits=kv_splits,
                     backward_use_pt_reduction=use_pt_reduction,
-                    torch_compile=False,
                 )
 
     def _test_cutlass_blackwell_fmha_against_torch_sdpa(
@@ -593,7 +587,6 @@ class FMHABackendTest(unittest.TestCase):
                     kv_tile_size=kv_tile_size,
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
-                    torch_compile=False,
                 )
 
     def _test_cutlass_hopper_fmha_against_torch_sdpa(
@@ -651,7 +644,6 @@ class FMHABackendTest(unittest.TestCase):
                     kernel_schedule=schedule,
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
-                    torch_compile=False,
                 )
 
     def _test_cutlass_hopper_fmha_against_cutlass_2x_fmha(
@@ -710,7 +702,6 @@ class FMHABackendTest(unittest.TestCase):
                     kernel_schedule=schedule,
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
-                    torch_compile=False,
                 )
 
     def _test_cutlass_blackwell_fmha_against_cutlass_2x_fmha(
@@ -766,7 +757,6 @@ class FMHABackendTest(unittest.TestCase):
                     kv_tile_size=kv_tile_size,
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
-                    torch_compile=False,
                 )
 
     def _test_backend_against_torch_sdpa(
@@ -903,9 +893,6 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q = int(seqlen_q * 0.1)
 
             for is_causal in [False, True]:
-                # TODO
-                if backend not in ["blackwell-fmha", "cutlass-fmha"] and is_causal:
-                    continue
                 self._test_backend_against_torch_sdpa(
                     batch=batch,
                     heads=heads,
@@ -972,6 +959,11 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_hopper_kernels_not_supported()
     def test_cutlass_hopper_fmha_fast(self):
         problem_sizes = [
+            (3, 2, 64, 256, 7000),
+            (3, 2, 64, 256, 8192),
+            (3, 2, 64, 163, 11012),
+            (1, 1, 32, 32, 128),
+            (1, 1, 32, 128, 128),
             (1, 1, 128, 128, 128),
             (2, 1, 128, 128, 128),
             (1, 2, 128, 128, 128),
@@ -1001,11 +993,7 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_q,
             seqlen_kv,
         ) in problem_sizes:
-            # TODO:
-            # for is_causal in [False, True]:
-            for is_causal in [
-                False,
-            ]:
+            for is_causal in [True, False]:
                 self._test_backend_against_torch_sdpa(
                     batch=batch,
                     heads=heads,
@@ -1015,15 +1003,15 @@ class FMHABackendTest(unittest.TestCase):
                     is_causal=is_causal,
                     backend="hopper-fmha",
                 )
-            self._test_backend_against_natten_cutlass_fmha(
-                batch=batch,
-                heads=heads,
-                head_dim=head_dim,
-                seqlen_q=seqlen_q,
-                seqlen_kv=seqlen_kv,
-                is_causal=False,  # TODO
-                backend="hopper-fmha",
-            )
+                self._test_backend_against_natten_cutlass_fmha(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="hopper-fmha",
+                )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()

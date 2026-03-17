@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,15 +38,27 @@
 #include "cutlass/epilogue/thread/linear_combination.h"
 
 #include "natten/cuda/fmha_hopper/collective/fmha_common.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 
 namespace cutlass::fmha::collective {
 
-template <class Element, class ElementAccumulator, class TileShape_WG>
+template <
+    class Element,
+    class ElementAccumulator,
+    class TileShape_WG,
+    bool IsVarlen>
 struct FmhaFwdEpilogueSm90 {
   static constexpr int Alignment = 16 / sizeof(Element);
 
   using DefaultOperation = cutlass::epilogue::fusion::
       LinearCombination<Element, ElementAccumulator, void>;
+
+  // Varlen can't use TMA store in SM90. Needs to fall back to STG.
+  using EpilogueType = std::conditional_t<
+      IsVarlen,
+      cutlass::epilogue::NoSmemWarpSpecialized,
+      cutlass::epilogue::TmaWarpSpecialized>;
+
   using CollectiveEpilogueTMA =
       typename cutlass::epilogue::collective::CollectiveBuilder<
           cutlass::arch::Sm90,
@@ -62,7 +74,7 @@ struct FmhaFwdEpilogueSm90 {
           Element,
           cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment,
-          cutlass::epilogue::TmaWarpSpecialized,
+          EpilogueType,
           DefaultOperation>::CollectiveOp;
 
   struct Arguments {
@@ -91,11 +103,11 @@ struct FmhaFwdEpilogueSm90 {
       ProblemShape const& problem_size,
       Arguments const& args,
       void* workspace = nullptr) {
-    auto problem_size_o = make_shape(
+    auto problem_size_o = apply_variable_length_scheduler(make_shape(
         get<2>(problem_size),
         get<4>(problem_size),
         1,
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(get<0>(problem_size), get<1>(problem_size))));
     typename CollectiveEpilogueTMA::Arguments args_tma{
         {}, args.ptr_O, args.dO, args.ptr_O, args.dO};
     return Params{
@@ -113,7 +125,7 @@ struct FmhaFwdEpilogueSm90 {
       class ProblemShape>
   CUTLASS_DEVICE void operator()(
       TileShape const& tile_shape,
-      BlkCoord const& blk_coord,
+      BlkCoord const& blk_coord_,
       ResultTuple const& result,
       TiledMma const& tiled_mma,
       ProblemShape const& problem_size,
@@ -127,11 +139,24 @@ struct FmhaFwdEpilogueSm90 {
 
     auto thr_mma = tiled_mma.get_thread_slice(threadIdx.x);
 
+    int seq_off = 0;
     int seqlen_q = get<2>(problem_size);
     int num_batch = get<0>(problem_size);
+
+    BlkCoord blk_coord = blk_coord_;
+    if constexpr (is_problem_shape_variable_length(ProblemShape{})) {
+      auto cumulative_length = get<2>(problem_size).cumulative_length;
+      if (cumulative_length != nullptr) {
+        seq_off = cumulative_length[get<2, 0>(blk_coord)];
+        seqlen_q = cumulative_length[get<2, 0>(blk_coord) + 1] - seq_off;
+        num_batch = 1;
+        get<2, 0>(blk_coord) = 0;
+      }
+    }
+
     int num_heads = get<1>(problem_size);
     // Epilogue for lse
-    Tensor mLSE = make_tensor(
+    Tensor mLSE_ = make_tensor(
         make_gmem_ptr(params.ptr_LSE),
         make_shape(
             seqlen_q, get<1>(tile_shape), make_shape(num_batch, num_heads)),
@@ -139,6 +164,8 @@ struct FmhaFwdEpilogueSm90 {
             get<0>(params.dLSE),
             _0{},
             make_stride(get<1, 0>(params.dLSE), _1{})));
+    Tensor mLSE =
+        domain_offset(make_coord(seq_off, _0{}, make_coord(_0{}, _0{})), mLSE_);
     Tensor gLSE_full =
         local_tile(mLSE, tile_shape, make_coord(_, _, _), Step<_1, _1, X>{});
     Tensor gLSE = gLSE_full(
@@ -154,18 +181,26 @@ struct FmhaFwdEpilogueSm90 {
       CUTLASS_PRAGMA_UNROLL
       for (int i = 0; i < size<0>(tOgLSE_mn); i++) {
         if (get<0>(tOcO_mn(i)) + get<0>(blk_coord) * get<0>(tile_shape) <
-            get<2>(problem_size)) {
+            seqlen_q) {
           tOgLSE_mn(i, _0{}) = lse(i);
         }
       }
     }
     auto problem_size_o = make_shape(
-        get<2>(problem_size),
+        seqlen_q,
         get<4>(problem_size),
         _,
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(num_batch, get<1>(problem_size)));
 
-    CollectiveEpilogueTMA epilogue_tma(params.epilogue_TMA, epi_tensor_storage);
+    auto epilogue = [&]() {
+      if constexpr (IsVarlen) {
+        auto epilogue_params = params.epilogue_TMA;
+        epilogue_params.ptr_D += get<0>(epilogue_params.dD) * seq_off;
+        return CollectiveEpilogueTMA(epilogue_params, epi_tensor_storage);
+      } else {
+        return CollectiveEpilogueTMA(params.epilogue_TMA, epi_tensor_storage);
+      }
+    }();
 
     using EpiStorePipeline = typename CollectiveEpilogueTMA::StorePipeline;
     typename EpiStorePipeline::Params epi_store_pipeline_params;
@@ -180,7 +215,7 @@ struct FmhaFwdEpilogueSm90 {
     auto
         [epi_load_pipe_consumer_state_next,
          epi_store_pipe_producer_state_next] =
-            epilogue_tma.store(
+            epilogue.store(
                 epi_load_pipeline,
                 epi_load_pipe_consumer_state,
                 epi_store_pipeline,
@@ -193,7 +228,7 @@ struct FmhaFwdEpilogueSm90 {
                 threadIdx.x % cutlass::NumThreadsPerWarpGroup,
                 epi_tensor_storage);
 
-    epilogue_tma.store_tail(
+    epilogue.store_tail(
         epi_load_pipeline,
         epi_load_pipe_consumer_state_next,
         epi_store_pipeline,

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,29 +36,51 @@
 #include "cutlass/epilogue/collective/default_epilogue.hpp"
 
 #include "natten/cuda/fmha_hopper/collective/fmha_epilogue.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 
 namespace cutlass::fmha::collective {
 
-template <class Element, class ElementAccumulator, class TileShape_WG>
+template <
+    class Element,
+    class ElementAccumulator,
+    class TileShape_WG,
+    bool IsVarlen>
 struct FmhaBwdEpilogueKV {
   static constexpr int Alignment = 16 / sizeof(Element);
 
   struct Arguments {
     Element* ptr_K;
-    cute::tuple<int64_t, int, int, cute::_1> dK;
+    cute::tuple<int64_t, int, int, _1> dK;
 
     Element* ptr_V;
     cute::tuple<int64_t, int, int, _1> dV;
   };
 
-  // using DefaultOperation =
-  // cutlass::epilogue::fusion::LinearCombination<Element, ElementAccumulator,
-  // void>;
-  static constexpr auto RoundStyle = cutlass::FloatRoundStyle::round_to_nearest;
-  using DefaultOperation = cutlass::epilogue::fusion::Sm90EVT<
-      cutlass::epilogue::fusion::
-          Sm90Compute<cutlass::first, Element, ElementAccumulator, RoundStyle>,
+  // Varlen can't use TMA store in SM90. Needs to fall back to STG.
+  using EpilogueType = std::conditional_t<
+      IsVarlen,
+      cutlass::epilogue::NoSmemWarpSpecialized,
+      cutlass::epilogue::TmaWarpSpecialized>;
+
+  // NOTE (ahassani): standard LinearCombination (axpby) was commented out in
+  // favor of the EVT fusion, but as far as I can tell they're doing the same
+  // thing, except the latter will fail dispatching to nosmem epilogue
+  // (non-TMA). In case there is a reason why this was done, I'm making the
+  // fusion also conditional on varlen.
+  using DefaultOperationNonTMA = cutlass::epilogue::fusion::
+      LinearCombination<Element, ElementAccumulator, void>;
+
+  using DefaultOperationTMA = cutlass::epilogue::fusion::Sm90EVT<
+      cutlass::epilogue::fusion::Sm90Compute<
+          cutlass::first,
+          Element,
+          ElementAccumulator,
+          cutlass::FloatRoundStyle::round_to_nearest>,
       cutlass::epilogue::fusion::Sm90AccFetch>;
+
+  using DefaultOperation =
+      std::conditional_t<IsVarlen, DefaultOperationNonTMA, DefaultOperationTMA>;
+
   using CollectiveEpilogueTMA =
       typename cutlass::epilogue::collective::CollectiveBuilder<
           cutlass::arch::Sm90,
@@ -74,7 +96,7 @@ struct FmhaBwdEpilogueKV {
           Element,
           cute::tuple<int, _1, cute::tuple<int64_t, int>>,
           Alignment,
-          cutlass::epilogue::TmaWarpSpecialized,
+          EpilogueType,
           DefaultOperation>::CollectiveOp;
 
   struct Params {
@@ -102,11 +124,11 @@ struct FmhaBwdEpilogueKV {
         get<3>(args.dV),
         make_stride(get<0>(args.dV), get<1>(args.dV)));
 
-    auto problem_size_kv = make_shape(
+    auto problem_size_kv = apply_variable_length_scheduler(make_shape(
         get<3>(problem_size),
         get<4>(problem_size),
         1,
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(get<0>(problem_size), get<1>(problem_size))));
     typename CollectiveEpilogueTMA::Arguments args_k{
         {}, args.ptr_K, dK, args.ptr_K, dK};
     typename CollectiveEpilogueTMA::Arguments args_v{
@@ -126,7 +148,7 @@ struct FmhaBwdEpilogueKV {
       class ProblemShape>
   CUTLASS_DEVICE void operator()(
       TileShape const& tile_shape,
-      BlkCoord const& blk_coord,
+      BlkCoord const& blk_coord_,
       ResultTuple const& result,
       TiledMma const& tiled_mma,
       ProblemShape const& problem_size,
@@ -136,11 +158,26 @@ struct FmhaBwdEpilogueKV {
     auto acc_k = get<0>(result);
     auto acc_v = get<1>(result);
 
+    int seq_off = 0;
+    int seqlen = get<3>(problem_size);
+    int num_batch = get<0>(problem_size);
+
+    BlkCoord blk_coord = blk_coord_;
+    if constexpr (is_problem_shape_variable_length(ProblemShape{})) {
+      auto cumulative_length = get<3>(problem_size).cumulative_length;
+      if (cumulative_length != nullptr) {
+        seq_off = cumulative_length[get<2, 0>(blk_coord)];
+        seqlen = cumulative_length[get<2, 0>(blk_coord) + 1] - seq_off;
+        num_batch = 1;
+        get<2, 0>(blk_coord) = 0;
+      }
+    }
+
     auto problem_size_kv = make_shape(
-        get<3>(problem_size),
+        seqlen,
         get<4>(problem_size),
         _,
-        make_shape(get<0>(problem_size), get<1>(problem_size)));
+        make_shape(num_batch, get<1>(problem_size)));
 
     using EpiStorePipeline = typename CollectiveEpilogueTMA::StorePipeline;
     typename EpiStorePipeline::Params epi_store_pipeline_params;
@@ -152,8 +189,22 @@ struct FmhaBwdEpilogueKV {
     PipelineState epi_store_pipe_producer_state =
         cutlass::make_producer_start_state<EpiStorePipeline>();
 
-    CollectiveEpilogueTMA epilogue_k{params.epilogue_K, epi_tensor_storage[0]};
-    CollectiveEpilogueTMA epilogue_v{params.epilogue_V, epi_tensor_storage[1]};
+    auto [epilogue_k, epilogue_v] = [&]() {
+      if constexpr (IsVarlen) {
+        auto params_K = params.epilogue_K;
+        auto params_V = params.epilogue_V;
+
+        params_K.ptr_D += get<0>(params_K.dD) * seq_off;
+        params_V.ptr_D += get<0>(params_V.dD) * seq_off;
+        return make_tuple(
+            CollectiveEpilogueTMA(params_K, epi_tensor_storage[0]),
+            CollectiveEpilogueTMA(params_V, epi_tensor_storage[1]));
+      } else {
+        return make_tuple(
+            CollectiveEpilogueTMA(params.epilogue_K, epi_tensor_storage[0]),
+            CollectiveEpilogueTMA(params.epilogue_V, epi_tensor_storage[1]));
+      }
+    }();
 
     {
       auto

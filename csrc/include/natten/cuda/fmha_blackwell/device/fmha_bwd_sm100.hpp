@@ -160,9 +160,11 @@ class FmhaBwdSm100 {
  private:
   Params params_;
 
+  // Scaled LSE and sum OdO are batch packed, not sequence packed, to avoid
+  // alignment issues with LSE.
   static typename OperationSumOdO::Arguments to_sum_OdO_arguments(
       Arguments const& args,
-      ElementAccumulator* sum_odo = nullptr,
+      ElementAccumulator* sum_OdO = nullptr,
       ElementAccumulator* scaled_lse = nullptr) {
     using namespace cute;
     auto [Q_, K, D, D_VO, HB] = args.problem_shape;
@@ -170,20 +172,11 @@ class FmhaBwdSm100 {
     auto [H_R, H_K] = H;
     D = cutlass::round_up(D, 8); // Alignment
     int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
-    auto stride_sum_OdO = make_stride(
+    auto stride_scalar = make_stride(
         _1{},
         make_stride(
             make_stride(Q, Q * H_R),
-            B == 1
-                ? 0
-                : static_cast<int64_t>(Q) * static_cast<int64_t>(H_R * H_K)));
-    auto stride_scaled_lse = make_stride(
-        _1{},
-        make_stride(
-            make_stride(Q, Q * H_R),
-            B == 1
-                ? 0
-                : static_cast<int64_t>(Q) * static_cast<int64_t>(H_R * H_K)));
+            static_cast<int64_t>(Q) * static_cast<int64_t>(H_R * H_K)));
     auto log2_e = log2f(expf(1.0f));
     return typename OperationSumOdO::Arguments{
         args.problem_shape,
@@ -191,16 +184,17 @@ class FmhaBwdSm100 {
         args.stride_O,
         args.ptr_dO,
         args.stride_dO,
-        sum_odo,
-        stride_sum_OdO,
+        sum_OdO,
+        stride_scalar,
         args.ptr_LSE,
         args.stride_LSE,
         scaled_lse,
-        stride_scaled_lse,
+        stride_scalar,
         -1.0f,
         -log2_e};
   }
 
+  // F32 dQ is batch-packed, not sequence-packed
   static typename OperationConvert::Arguments to_convert_arguments(
       Arguments const& args,
       ElementAccumulator* src = nullptr) {
@@ -304,6 +298,7 @@ class FmhaBwdSm100 {
     size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
     size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     size_t workspace_bytes = 0;
+    // All three intermediary tensors are batch-packed, not sequence packed
     // OdO vector
     workspace_bytes += B * H * Q * sizeof(ElementAccumulator);
     // scaled LSE vector

@@ -1,5 +1,5 @@
 /***************************************************************************************************
- * Copyright (c) 2024 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2024 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,6 +35,8 @@
 #include "cute/tensor.hpp"
 #include "cutlass/cutlass.h"
 
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
+
 namespace cutlass::fmha::collective {
 
 enum class LoadKind { kQ, kK, kV, kBwdN, kBwdM, kBwdScalar };
@@ -66,23 +68,46 @@ struct CollectiveLoadTma {
   CUTLASS_DEVICE auto init_g(
       ProblemSize const& problem_size,
       TileShape const& tile_shape,
-      BlockCoord const& blk_coord,
+      BlockCoord const& blk_coord_,
       int loop_count) {
     using X = Underscore;
+    int seq_off = 0;
+    BlockCoord blk_coord = blk_coord_;
+    if constexpr (is_problem_shape_variable_length(ProblemSize{})) {
+      int32_t* cumulative_length = nullptr;
+
+      if constexpr (
+          kKind == LoadKind::kK || kKind == LoadKind::kV ||
+          kKind == LoadKind::kBwdN) {
+        cumulative_length = get<3>(problem_size).cumulative_length;
+      } else if constexpr (kKind == LoadKind::kQ || kKind == LoadKind::kBwdM) {
+        cumulative_length = get<2>(problem_size).cumulative_length;
+      }
+
+      if (cumulative_length != nullptr) {
+        seq_off = cumulative_length[get<2, 0>(blk_coord)];
+        get<2, 0>(blk_coord) = 0;
+      }
+    }
+
     if constexpr (kKind == LoadKind::kK) {
-      Tensor mK_full = params.get_tma_tensor(make_shape(
+      Tensor mK_tma = params.get_tma_tensor(make_shape(
           get<3>(problem_size),
           get<4>(problem_size),
           select<0, 1>(problem_size)));
+      Tensor mK_full = domain_offset(
+          make_coord(seq_off, _0{}, make_coord(_0{}, _0{})), mK_tma);
       Tensor gK_full = local_tile(
           mK_full, tile_shape, make_coord(_, _, _), Step<X, _1, _1>{});
       Tensor gK = gK_full(_, _, _, _0{}, get<2>(blk_coord));
       return gK;
     } else if constexpr (kKind == LoadKind::kQ) {
-      Tensor mQ_full = params.get_tma_tensor(make_shape(
+      Tensor mQ_tma = params.get_tma_tensor(make_shape(
           get<2>(problem_size),
           get<4>(problem_size),
           select<0, 1>(problem_size)));
+      Tensor mQ_full = domain_offset(
+          make_coord(seq_off, _0{}, make_coord(_0{}, _0{})), mQ_tma);
       Tensor gQ_full = local_tile(
           mQ_full, tile_shape, make_coord(_, _, _), Step<_1, X, _1>{});
       Tensor gQ = gQ_full(_, _, _, _0{}, get<2>(blk_coord));
@@ -90,38 +115,46 @@ struct CollectiveLoadTma {
           gQ.data() + loop_count * get<0>(blk_coord) * stride<2>(gQ),
           gQ.layout());
     } else if constexpr (kKind == LoadKind::kV) {
-      Tensor mV_full = params.get_tma_tensor(make_shape(
+      Tensor mV_tma = params.get_tma_tensor(make_shape(
           get<4>(problem_size),
           get<3>(problem_size),
           select<0, 1>(problem_size)));
+      Tensor mV_full = domain_offset(
+          make_coord(_0{}, seq_off, make_coord(_0{}, _0{})), mV_tma);
       Tensor gV_full = local_tile(
           mV_full, tile_shape, make_coord(_, _, _), Step<X, _1, _1>{});
       Tensor gV = gV_full(_, _, _0{}, _, get<2>(blk_coord));
       return gV;
     } else if constexpr (kKind == LoadKind::kBwdN) {
-      Tensor m_full = params.get_tma_tensor(make_shape(
+      Tensor m_tma = params.get_tma_tensor(make_shape(
           get<3>(problem_size),
           get<4>(problem_size),
           select<0, 1>(problem_size)));
+      Tensor m_full = domain_offset(
+          make_coord(seq_off, _0{}, make_coord(_0{}, _0{})), m_tma);
       Tensor g_full = local_tile(
           m_full, tile_shape, make_coord(_, _, _), Step<_1, X, _1>{});
       Tensor g = g_full(_, _, _, _0{}, get<2>(blk_coord));
       return make_tensor(
           g.data() + loop_count * get<1>(blk_coord) * stride<2>(g), g.layout());
     } else if constexpr (kKind == LoadKind::kBwdM) {
-      Tensor m_full = params.get_tma_tensor(make_shape(
+      Tensor m_tma = params.get_tma_tensor(make_shape(
           get<2>(problem_size),
           get<4>(problem_size),
           select<0, 1>(problem_size)));
+      Tensor m_full = domain_offset(
+          make_coord(seq_off, _0{}, make_coord(_0{}, _0{})), m_tma);
       Tensor g_full = local_tile(
           m_full, tile_shape, make_coord(_, _, _), Step<X, _1, _1>{});
       Tensor g = g_full(_, _, _, _0{}, get<2>(blk_coord));
       return g;
     } else if constexpr (kKind == LoadKind::kBwdScalar) {
+      // OdO and LSE are mapped to batch-packed intermediary tensors, which
+      // means they should offset along batch, not seq.
       Tensor m_full = params.get_tma_tensor(select<2, 0, 1>(problem_size));
       Tensor g_full =
           local_tile(m_full, tile_shape, make_coord(_, _, _), Step<X, _1, X>{});
-      Tensor g = g_full(_, _, get<2, 0>(blk_coord), get<2, 1>(blk_coord));
+      Tensor g = g_full(_, _, get<2, 0>(blk_coord_), get<2, 1>(blk_coord_));
       return g;
     }
   }

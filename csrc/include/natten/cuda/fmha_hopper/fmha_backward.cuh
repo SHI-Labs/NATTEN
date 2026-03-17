@@ -40,20 +40,24 @@ namespace fmha_hopper {
 using namespace cute;
 using namespace cutlass::fmha;
 
-template <typename Element, class TileShape, bool kIsResidual>
+template <typename Element, class TileShape, class Mask, bool kIsVarlen>
 struct KernelBackward {
   using ElementAccumulator = float;
+  using VariableLength = cutlass::fmha::collective::VariableLength;
 
   // B H Q K D
-  using ProblemShapeType = cute::tuple<int, int, int, int, int>;
+  using ProblemShapeRegular = cute::tuple<int, int, int, int, int>;
+  using ProblemShapeVarlen =
+      cute::tuple<int, int, VariableLength, VariableLength, int>;
+  using ProblemShapeType =
+      std::conditional_t<kIsVarlen, ProblemShapeVarlen, ProblemShapeRegular>;
 
-  using ActiveFusion = std::conditional_t<
-      kIsResidual,
-      cutlass::fmha::collective::ResidualFusion,
-      cutlass::fmha::collective::DefaultFusion>;
-
-  using Operation = cutlass::fmha::device::
-      FmhaBwdSm90<Element, ElementAccumulator, TileShape, ActiveFusion>;
+  using Operation = cutlass::fmha::device::FmhaBwdSm90<
+      ProblemShapeType,
+      Element,
+      ElementAccumulator,
+      TileShape,
+      Mask>;
 
   using Arguments = typename Operation::Arguments;
 
@@ -72,14 +76,19 @@ struct KernelBackward {
       int batch,
       int seqlen_Q,
       int seqlen_KV,
-      int seqlen_LSE, // seqlen_LSE is usually = seqlen_Q, but it may require
-                      // extra padding.
       int heads,
       int dim,
-      int device_id,
-      float attn_scale) {
+      float attn_scale,
+      // varlen parameters
+      int max_seqlen_Q,
+      int max_seqlen_KV,
+      void* ptr_cumulative_seqlen_Q,
+      void* ptr_cumulative_seqlen_KV,
+      // init/launch params
+      int device_id) {
     auto dim_aligned = cutlass::round_up(dim, 8); // alignment
-    ProblemShapeType problem_shape = ProblemShapeType{
+
+    auto problem_shape_regular = ProblemShapeRegular{
         batch,
         heads,
         seqlen_Q,
@@ -87,27 +96,60 @@ struct KernelBackward {
         dim_aligned,
     };
 
+    ProblemShapeType problem_shape_launch;
+    decltype(problem_shape_regular) problem_shape_memory;
+
+    if constexpr (kIsVarlen) {
+      problem_shape_memory = problem_shape_regular;
+      get<0>(problem_shape_memory) = 1;
+
+      get<0>(problem_shape_launch) = get<0>(problem_shape_regular);
+      get<1>(problem_shape_launch) = get<1>(problem_shape_regular);
+
+      get<2>(problem_shape_launch) = VariableLength{
+          max_seqlen_Q,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_Q),
+          seqlen_Q};
+      get<3>(problem_shape_launch) = VariableLength{
+          max_seqlen_KV,
+          reinterpret_cast<int*>(ptr_cumulative_seqlen_KV),
+          seqlen_KV};
+      get<4>(problem_shape_launch) = get<4>(problem_shape_regular);
+    } else {
+      problem_shape_memory = problem_shape_regular;
+      problem_shape_launch = problem_shape_regular;
+    }
+
+    int B = size<0>(problem_shape_memory);
+    int H = size<1>(problem_shape_memory);
+    int SQ = size<2>(problem_shape_memory);
+    int SK = size<3>(problem_shape_memory);
+    int D = size<4>(problem_shape_memory);
+
     // heads last profile, with torch's "contiguous layout"
     // shape: (batch, heads, seqlen, dim)
     // stride: (dim*heads*seqlen, dim*heads, dim, 1)
     auto stride_Q = make_stride(
-        static_cast<int64_t>(dim_aligned * heads) *
-            static_cast<int64_t>(seqlen_Q),
+        B == 1 ? 0
+               : static_cast<int64_t>(dim_aligned * heads) *
+                static_cast<int64_t>(seqlen_Q),
         dim_aligned,
         dim_aligned * heads,
         _1{});
     auto stride_O = stride_Q;
     auto stride_K = make_stride(
-        static_cast<int64_t>(dim_aligned * heads) *
-            static_cast<int64_t>(seqlen_KV),
+        B == 1 ? 0
+               : static_cast<int64_t>(dim_aligned * heads) *
+                static_cast<int64_t>(seqlen_KV),
         dim_aligned,
         dim_aligned * heads,
         _1{});
     auto stride_V = stride_K;
     auto stride_LSE = make_stride(
-        static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_LSE),
-        seqlen_LSE,
-        _1{});
+        B == 1 ? 0
+               : static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_Q),
+        _1{},
+        heads);
 
     cutlass::KernelHardwareInfo hw_info;
     hw_info.device_id = device_id;
@@ -116,16 +158,26 @@ struct KernelBackward {
             hw_info.device_id);
 
     Arguments arguments{
-        problem_shape, reinterpret_cast<Element*>(ptr_Q),
-        stride_Q,      reinterpret_cast<Element*>(ptr_K),
-        stride_K,      reinterpret_cast<Element*>(ptr_V),
-        stride_V,      reinterpret_cast<Element*>(ptr_O),
-        stride_O,      reinterpret_cast<ElementAccumulator*>(ptr_LSE),
-        stride_LSE,    reinterpret_cast<Element*>(ptr_dO),
-        stride_O,      reinterpret_cast<Element*>(ptr_dQ),
-        stride_Q,      reinterpret_cast<Element*>(ptr_dK),
-        stride_K,      reinterpret_cast<Element*>(ptr_dV),
-        stride_V,      attn_scale,
+        problem_shape_launch,
+        reinterpret_cast<Element*>(ptr_Q),
+        stride_Q,
+        reinterpret_cast<Element*>(ptr_K),
+        stride_K,
+        reinterpret_cast<Element*>(ptr_V),
+        stride_V,
+        reinterpret_cast<Element*>(ptr_O),
+        stride_O,
+        reinterpret_cast<ElementAccumulator*>(ptr_LSE),
+        stride_LSE,
+        reinterpret_cast<Element*>(ptr_dO),
+        stride_O,
+        reinterpret_cast<Element*>(ptr_dQ),
+        stride_Q,
+        reinterpret_cast<Element*>(ptr_dK),
+        stride_K,
+        reinterpret_cast<Element*>(ptr_dV),
+        stride_V,
+        attn_scale,
         hw_info};
 
     return arguments;

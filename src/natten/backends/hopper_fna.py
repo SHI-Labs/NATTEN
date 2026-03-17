@@ -238,9 +238,6 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
             d_output_perm = d_output_perm.contiguous()
             logsumexp_perm = logsumexp_perm.squeeze(-1)
 
-            # TODO: this can definitely be done with token permute.
-            logsumexp_perm = logsumexp_perm.transpose(-2, -1).contiguous()
-
             d_query_perm, d_key_perm, d_value_perm = BACKWARD_OPS[na_dim](
                 query_perm,
                 key_perm,

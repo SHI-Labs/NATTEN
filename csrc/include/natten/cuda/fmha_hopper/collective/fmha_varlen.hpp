@@ -32,52 +32,78 @@
 
 #pragma once
 
+#include "cute/tensor.hpp"
 #include "cutlass/cutlass.h"
 
-namespace cutlass::fmha::kernel {
+namespace cutlass::fmha::collective {
 
-template <auto kTag, typename Default, typename... Options>
-struct find_option;
+using namespace cute;
 
-template <auto kTag, typename Default>
-struct find_option<kTag, Default> {
-  using option_value = Default;
+struct VariableLength {
+  int max_length;
+  int* cumulative_length = nullptr;
+  int total_length = -1;
+
+  CUTE_HOST_DEVICE operator int() const {
+    return max_length;
+  }
 };
 
-template <auto kTag, typename Default, typename Option, typename... Options>
-struct find_option<kTag, Default, Option, Options...>
-    : std::conditional_t<
-          Option::tag == kTag,
-          Option,
-          find_option<kTag, Default, Options...>> {};
+template <class T>
+struct is_variable_length_impl : std::false_type {};
+template <>
+struct is_variable_length_impl<VariableLength> : std::true_type {};
+template <class T>
+constexpr bool is_variable_length_v =
+    is_variable_length_impl<remove_cvref_t<T>>::value;
 
-template <auto kTag, typename Default, typename... Options>
-using find_option_t =
-    typename find_option<kTag, Default, Options...>::option_value;
+template <class Shape, class Idx>
+CUTE_HOST_DEVICE constexpr auto apply_variable_length(
+    Shape const& shape,
+    Idx const& idx) {
+  return transform_leaf(shape, [&](auto const& s) {
+    if constexpr (is_variable_length_v<decltype(s)>) {
+      return s.cumulative_length[idx + 1] - s.cumulative_length[idx];
+    } else {
+      return s;
+    }
+  });
+}
 
-enum class Tag {
-  kIsPersistent,
-  kNumMmaWarpGroups,
-  kLoadsQSeparately,
+template <class Shape>
+CUTE_HOST_DEVICE constexpr auto apply_variable_length_scheduler(
+    Shape const& shape) {
+  return transform_leaf(shape, [&](auto const& s) {
+    if constexpr (is_variable_length_v<decltype(s)>) {
+      return s.total_length;
+    } else {
+      return s;
+    }
+  });
+}
 
-  kIsMainloopLocked,
-  kIsEpilogueLocked,
+template <class Shape>
+CUTE_HOST_DEVICE constexpr bool is_problem_shape_variable_length(
+    Shape const& shape) {
+  bool is_varlen = false;
+  cute::for_each(shape, [&](auto const& s) {
+    if constexpr (is_variable_length_v<decltype(s)>) {
+      is_varlen = true;
+    }
+  });
+  return is_varlen;
+}
 
-  kStagesQ,
-  kStagesKV,
+} // namespace cutlass::fmha::collective
 
-  kEpilogueKind,
+namespace cute {
 
-  kBlocksPerSM,
-  kClusterM,
+template <>
+struct is_integral<cutlass::fmha::collective::VariableLength> : true_type {};
 
-  kAccQK
-};
+CUTE_HOST_DEVICE
+void print(cutlass::fmha::collective::VariableLength a) {
+  printf("Varlen<%d, %p>", a.max_length, a.cumulative_length);
+}
 
-template <auto kTag, class Value>
-struct Option {
-  static constexpr auto tag = kTag;
-  using option_value = Value;
-};
-
-} // namespace cutlass::fmha::kernel
+} // namespace cute

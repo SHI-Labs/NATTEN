@@ -37,6 +37,7 @@
 
 // These are identical to FMHA; reuse
 #include "natten/cuda/fmha_hopper/collective/fmha_epilogue.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_tma.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_tma_warpspecialized.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_options.hpp"
@@ -52,6 +53,7 @@ template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element_,
     class ElementAccumulatorQK_,
     class ElementAccumulatorPV_,
@@ -68,6 +70,7 @@ template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element,
     class ElementAccumulator,
     class TileShape, // BlockQO, BlockKV, BlockHead
@@ -77,6 +80,7 @@ struct FnaBuilder<
     NADim,
     QTileShape,
     KVTileShape,
+    ProblemShape,
     Element,
     ElementAccumulator,
     ElementAccumulator,
@@ -100,16 +104,22 @@ struct FnaBuilder<
   using CollectiveEpilogue = cutlass::fmha::collective::FmhaFwdEpilogueSm90<
       Element,
       ElementAccumulator,
-      typename CollectiveMainloop::TileShapePV>;
+      typename CollectiveMainloop::TileShapePV,
+      cutlass::fmha::collective::is_problem_shape_variable_length(
+          ProblemShape{})>;
 
-  using Kernel = cutlass::fmha::kernel::
-      FmhaKernelTma<CollectiveMainloop, CollectiveEpilogue, Options...>;
+  using Kernel = cutlass::fmha::kernel::FmhaKernelTma<
+      ProblemShape,
+      CollectiveMainloop,
+      CollectiveEpilogue,
+      Options...>;
 };
 
 template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element,
     class ElementAccumulatorQK,
     class ElementAccumulatorPV,
@@ -123,6 +133,7 @@ struct FnaBuilder<
     NADim,
     QTileShape,
     KVTileShape,
+    ProblemShape,
     Element,
     ElementAccumulatorQK,
     ElementAccumulatorPV,
@@ -151,7 +162,9 @@ struct FnaBuilder<
   using CollectiveEpilogue = cutlass::fmha::collective::FmhaFwdEpilogueSm90<
       Element,
       ElementAccumulatorPV,
-      typename CollectiveMainloop::TileShapePV>;
+      typename CollectiveMainloop::TileShapePV,
+      cutlass::fmha::collective::is_problem_shape_variable_length(
+          ProblemShape{})>;
 
   static constexpr bool kIsPersistent =
       find_option_t<Tag::kIsPersistent, false_type, Options...>::value;
@@ -161,6 +174,7 @@ struct FnaBuilder<
       cutlass::fmha::kernel::IndividualTileScheduler>;
 
   using Kernel = cutlass::fmha::kernel::FmhaKernelTmaWarpSpecialized<
+      ProblemShape,
       CollectiveMainloop,
       CollectiveEpilogue,
       TileScheduler,
@@ -171,6 +185,7 @@ template <
     class NADim,
     class QTileShape,
     class KVTileShape,
+    class ProblemShape,
     class Element,
     class ElementAccumulatorQK,
     class ElementAccumulatorPV,
@@ -184,6 +199,7 @@ struct FnaBuilder<
     NADim,
     QTileShape,
     KVTileShape,
+    ProblemShape,
     Element,
     ElementAccumulatorQK,
     ElementAccumulatorPV,
@@ -198,6 +214,7 @@ struct FnaBuilder<
       NADim,
       QTileShape,
       KVTileShape,
+      ProblemShape,
       Element,
       ElementAccumulatorQK,
       ElementAccumulatorPV,

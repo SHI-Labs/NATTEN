@@ -47,10 +47,17 @@ void hopper_fmha_forward(
     const at::Tensor& key,
     const at::Tensor& value,
     const at::optional<at::Tensor>& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
     int key_tile_size,
-    int kernel_type) {
+    int kernel_type,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
   AssertDimsAre128BitAligned(query, value);
 
@@ -108,6 +115,58 @@ void hopper_fmha_forward(
           query.scalar_type() == torch::kBFloat16,
       "Only FP16/BF16 is supported for now.");
 
+  // varlen
+  bool is_varlen =
+      cumulative_seqlen_Q.has_value() || cumulative_seqlen_KV.has_value();
+
+  void* ptr_cumulative_seqlen_Q = nullptr;
+  void* ptr_cumulative_seqlen_KV = nullptr;
+  if (is_varlen) {
+    TORCH_CHECK(
+        cumulative_seqlen_Q.has_value() && cumulative_seqlen_KV.has_value(),
+        "Hopper FMHA: Both cumulative_seqlen_Q and cumulative_seqlen_KV must be specified when using varlen.");
+
+    TORCH_CHECK(
+        batch_size == 1,
+        "Hopper FMHA: Tensor batch size must be 1 (packed sequence layout), got ",
+        batch_size);
+
+    auto& cumulative_seqlen_Q_tensor = cumulative_seqlen_Q.value();
+    auto& cumulative_seqlen_KV_tensor = cumulative_seqlen_KV.value();
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.dim() == 1,
+        "Hopper FMHA: cumulative_seqlen_Q is expected to be a 1-D tensor.");
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.dim() == 1,
+        "Hopper FMHA: cumulative_seqlen_KV is expected to be a 1-D tensor.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) ==
+            cumulative_seqlen_KV_tensor.size(0),
+        "Hopper FMHA: cumulative_seqlen_Q and cumulative_seqlen_KV must be the same size.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) > 1,
+        "Hopper FMHA: cumulative_seqlen_Q and cumulative_seqlen_KV size must be greater than 1.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.scalar_type() == torch::kInt,
+        "Hopper FMHA: cumulative_seqlen_Q is expected to be an int32 tensor, got ",
+        cumulative_seqlen_Q_tensor.scalar_type());
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.scalar_type() == torch::kInt,
+        "Hopper FMHA: cumulative_seqlen_KV is expected to be an int32 tensor, got ",
+        cumulative_seqlen_KV_tensor.scalar_type());
+
+    batch_size = cumulative_seqlen_Q_tensor.size(0) - 1;
+    ptr_cumulative_seqlen_Q =
+        static_cast<void*>(cumulative_seqlen_Q_tensor.data_ptr());
+    ptr_cumulative_seqlen_KV =
+        static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
+  }
+  //
+
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
 
@@ -136,8 +195,16 @@ void hopper_fmha_forward(
       seqlen_kv,
       heads,
       dim,
-      device_id,
+      is_causal,
       attn_scale,
+      // varlen parameters
+      is_varlen,
+      max_seqlen_Q,
+      max_seqlen_KV,
+      ptr_cumulative_seqlen_Q,
+      ptr_cumulative_seqlen_KV,
+      // init/launch params
+      device_id,
       cuda_stream,
       query.options());
 
@@ -161,9 +228,16 @@ void hopper_fmha_backward(
     const at::Tensor& out,
     const at::Tensor& grad_out,
     const at::Tensor& logsumexp,
+    bool is_causal,
     float attn_scale,
     int query_tile_size,
-    int key_tile_size) {
+    int key_tile_size,
+    // varlen
+    const at::optional<at::Tensor>& cumulative_seqlen_Q,
+    const at::optional<at::Tensor>& cumulative_seqlen_KV,
+    // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
+    int max_seqlen_Q,
+    int max_seqlen_KV) {
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_HOPPER_FNA)
   AssertDimsAre128BitAligned(query, value);
 
@@ -203,16 +277,13 @@ void hopper_fmha_backward(
   CheckIfTensorShapesMatch<1>(grad_value, value);
   CheckIfTensorShapesMatch<1>(grad_out, out);
 
-  CheckLogSumExpHeadsFirst(out, logsumexp);
+  CheckLogSumExp<1>(out, logsumexp);
 
   int batch_size = query.size(0);
   int seqlen_q = query.size(1);
   int seqlen_kv = key.size(1);
   int heads = query.size(2);
   int dim = query.size(3);
-
-  int seqlen_lse =
-      logsumexp.size(2); // LSE is heads first; [batch, heads, seqlen_Q_padded]
 
   TORCH_CHECK(
       dim == 32 || dim == 64 || dim == 128,
@@ -229,6 +300,58 @@ void hopper_fmha_backward(
       "but PyTorch's deterministic mode is enabled. "
       "NATTEN Python API should have avoided this; which means "
       "you're probably calling the C function directly.");
+
+  // varlen
+  bool is_varlen =
+      cumulative_seqlen_Q.has_value() || cumulative_seqlen_KV.has_value();
+
+  void* ptr_cumulative_seqlen_Q = nullptr;
+  void* ptr_cumulative_seqlen_KV = nullptr;
+  if (is_varlen) {
+    TORCH_CHECK(
+        cumulative_seqlen_Q.has_value() && cumulative_seqlen_KV.has_value(),
+        "Hopper FMHA backward: Both cumulative_seqlen_Q and cumulative_seqlen_KV must be specified when using varlen.");
+
+    TORCH_CHECK(
+        batch_size == 1,
+        "Hopper FMHA backward: Tensor batch size must be 1 (packed sequence layout), got ",
+        batch_size);
+
+    auto& cumulative_seqlen_Q_tensor = cumulative_seqlen_Q.value();
+    auto& cumulative_seqlen_KV_tensor = cumulative_seqlen_KV.value();
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.dim() == 1,
+        "Hopper FMHA backward: cumulative_seqlen_Q is expected to be a 1-D tensor.");
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.dim() == 1,
+        "Hopper FMHA backward: cumulative_seqlen_KV is expected to be a 1-D tensor.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) ==
+            cumulative_seqlen_KV_tensor.size(0),
+        "Hopper FMHA backward: cumulative_seqlen_Q and cumulative_seqlen_KV must be the same size.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.size(0) > 1,
+        "Hopper FMHA backward: cumulative_seqlen_Q and cumulative_seqlen_KV size must be greater than 1.");
+
+    TORCH_CHECK(
+        cumulative_seqlen_Q_tensor.scalar_type() == torch::kInt,
+        "Hopper FMHA backward: cumulative_seqlen_Q is expected to be an int32 tensor, got ",
+        cumulative_seqlen_Q_tensor.scalar_type());
+    TORCH_CHECK(
+        cumulative_seqlen_KV_tensor.scalar_type() == torch::kInt,
+        "Hopper FMHA backward: cumulative_seqlen_KV is expected to be an int32 tensor, got ",
+        cumulative_seqlen_KV_tensor.scalar_type());
+
+    batch_size = cumulative_seqlen_Q_tensor.size(0) - 1;
+    ptr_cumulative_seqlen_Q =
+        static_cast<void*>(cumulative_seqlen_Q_tensor.data_ptr());
+    ptr_cumulative_seqlen_KV =
+        static_cast<void*>(cumulative_seqlen_KV_tensor.data_ptr());
+  }
+  //
 
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
@@ -258,11 +381,18 @@ void hopper_fmha_backward(
       batch_size,
       seqlen_q,
       seqlen_kv,
-      seqlen_lse,
       heads,
       dim,
-      device_id,
+      is_causal,
       attn_scale,
+      // varlen parameters
+      is_varlen,
+      max_seqlen_Q,
+      max_seqlen_KV,
+      ptr_cumulative_seqlen_Q,
+      ptr_cumulative_seqlen_KV,
+      // init/launch params
+      device_id,
       cuda_stream,
       query.options());
 

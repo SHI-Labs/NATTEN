@@ -44,6 +44,7 @@
 #include "natten/cuda/fmha_hopper/collective/fmha_collective_bwd_tma_warpspecialized.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_epilogue_bwd.hpp"
 #include "natten/cuda/fmha_hopper/collective/fmha_fusion.hpp"
+#include "natten/cuda/fmha_hopper/collective/fmha_varlen.hpp"
 #include "natten/cuda/fmha_hopper/device/fmha_sm90.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_bwd_convert.hpp"
 #include "natten/cuda/fmha_hopper/kernel/fmha_kernel_bwd_sum_OdO.hpp"
@@ -59,6 +60,7 @@ namespace cutlass::fmha::device {
 ////////////////////////////////////////////////////////////////////////////////
 
 template <
+    class ProblemShape,
     class Element,
     class ElementAccumulator,
     class TileShape,
@@ -68,7 +70,7 @@ class FmhaBwdSm90 {
  public:
   /// Argument structure: User API
   struct Arguments {
-    cute::tuple<int, int, int, int, int> problem_size;
+    ProblemShape problem_size;
 
     const Element* ptr_Q;
     cute::tuple<int64_t, int, int, cute::_1> stride_Q;
@@ -80,7 +82,8 @@ class FmhaBwdSm90 {
     const Element* ptr_O;
     cute::tuple<int64_t, int, int, cute::_1> stride_O;
     const ElementAccumulator* ptr_LSE;
-    cute::tuple<int64_t, int, cute::_1> stride_LSE;
+    // NATTEN has a different LSE layout
+    cute::tuple<int64_t, cute::_1, int> stride_LSE;
 
     const Element* ptr_dO;
     cute::tuple<int64_t, int, int, cute::_1> stride_dO;
@@ -99,9 +102,11 @@ class FmhaBwdSm90 {
   };
 
   using OperationSumOdO = cutlass::fmha::device::Sm90DeviceKernel<
-      cutlass::fmha::kernel::FmhaKernelBwdSumOdO<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdSumOdO<ProblemShape, Element, ElementAccumulator>>;
   using OperationConvert = cutlass::fmha::device::Sm90DeviceKernel<
-      cutlass::fmha::kernel::FmhaKernelBwdConvert<Element, ElementAccumulator>>;
+      cutlass::fmha::kernel::
+          FmhaKernelBwdConvert<ProblemShape, Element, ElementAccumulator>>;
 
   using Mainloop =
       cutlass::fmha::collective::FmhaBwdMainloopTmaWarpSpecializedSm90<
@@ -111,13 +116,18 @@ class FmhaBwdSm90 {
           cutlass::fmha::collective::FusionBwdAdapter<Fusion>,
           Options...>;
 
+  static constexpr bool IsVarlen =
+      cutlass::fmha::collective::is_problem_shape_variable_length(
+          ProblemShape{});
   using Epilogue = cutlass::fmha::collective::FmhaBwdEpilogueKV<
       Element,
       ElementAccumulator,
-      typename Mainloop::TileShapePV>;
+      typename Mainloop::TileShapePV,
+      IsVarlen>;
 
   using Operation = cutlass::fmha::device::Sm90DeviceKernel<
       cutlass::fmha::kernel::FmhaKernelTmaWarpSpecialized<
+          ProblemShape,
           Mainloop,
           Epilogue,
           cutlass::fmha::kernel::TileSchedulerBwdAdapter<
@@ -135,35 +145,44 @@ class FmhaBwdSm90 {
  private:
   Params params_;
 
+  // Scaled LSE and sum OdO are batch packed, not sequence packed, to avoid
+  // alignment issues with LSE.
   static typename OperationSumOdO::Arguments to_sum_OdO_arguments(
       Arguments const& args,
-      ElementAccumulator* dest = nullptr) {
-    auto [B, H, Q, K, D] = args.problem_size;
+      ElementAccumulator* sum_OdO = nullptr,
+      ElementAccumulator* scaled_lse = nullptr) {
+    using namespace cute;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
-    auto stride_sum_OdO =
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
+    auto stride_scalar =
         make_stride(static_cast<int64_t>(H) * static_cast<int64_t>(Q), Q, _1{});
+    // auto log2_e = log2f(expf(1.0f));
     return typename OperationSumOdO::Arguments{
         args.problem_size,
         args.ptr_O,
         args.stride_O,
         args.ptr_dO,
         args.stride_dO,
-        dest,
-        stride_sum_OdO};
+        sum_OdO,
+        stride_scalar,
+        args.ptr_LSE,
+        args.stride_LSE,
+        scaled_lse,
+        stride_scalar/*,
+        1.0f,
+        log2_e*/};
   }
 
+  // F32 dQ is batch-packed, not sequence-packed
   static typename OperationConvert::Arguments to_convert_arguments(
       Arguments const& args,
       ElementAccumulator* src = nullptr) {
-    auto [B, H, Q, K, D] = args.problem_size;
+    auto [B, H, Q_, K, D] = args.problem_size;
     D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
     auto stride_src_dQ = make_stride(
-        B == 1 ? 0L : static_cast<int64_t>(H * D) * static_cast<int64_t>(Q),
-        Q * D,
-        D,
-        _1{});
+        static_cast<int64_t>(H * D) * static_cast<int64_t>(Q), Q * D, D, _1{});
     return typename OperationConvert::Arguments{
         args.problem_size,
         src,
@@ -184,6 +203,8 @@ class FmhaBwdSm90 {
       Arguments const& args,
       ElementAccumulator* sum_OdO = nullptr,
       cute::tuple<int64_t, int, _1> const& stride_sum_OdO = {},
+      ElementAccumulator* scaled_lse = nullptr,
+      cute::tuple<int64_t, int, _1> const& stride_scaled_lse = {},
       ElementAccumulator* dQ_acc = nullptr,
       cute::tuple<int64_t, int, int, _1> const& stride_dQ = {}) {
     return typename Operation::Arguments{
@@ -196,8 +217,8 @@ class FmhaBwdSm90 {
          args.stride_V,
          args.ptr_dO,
          args.stride_dO,
-         args.ptr_LSE,
-         args.stride_LSE,
+         scaled_lse,
+         stride_scaled_lse,
          sum_OdO,
          stride_sum_OdO,
          dQ_acc,
@@ -232,11 +253,16 @@ class FmhaBwdSm90 {
 
   /// Gets the workspace size
   static size_t get_workspace_size(Arguments const& args) {
-    auto [B, H, Q, K, D] = args.problem_size;
-    D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    auto [B_, H_, Q_, K, D_] = args.problem_size;
+    size_t B = static_cast<size_t>(B_);
+    size_t H = static_cast<size_t>(H_);
+    size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
+    size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     size_t workspace_bytes = 0;
+    // All three intermediary tensors are batch-packed, not sequence packed
     // OdO vector
+    workspace_bytes += B * H * Q * sizeof(ElementAccumulator);
+    // scaled LSE vector
     workspace_bytes += B * H * Q * sizeof(ElementAccumulator);
     // FP32 versions of outputs that are churned (start off with Q only)
     workspace_bytes += B * H * Q * D * sizeof(ElementAccumulator);
@@ -248,22 +274,27 @@ class FmhaBwdSm90 {
       Arguments const& args,
       void* workspace_dQ,
       void* workspace_sum_OdO,
+      void* workspace_scaled_lse,
       cudaStream_t stream = nullptr) {
     CUTLASS_TRACE_HOST(
         "FmhaBwdSm90::initialize_split() - workspace_dQ="
         << workspace_dQ << ", workspace_sum_OdO=" << workspace_sum_OdO
         << "stream: " << (stream ? "non-null" : "null"));
 
-    auto [B, H, Q, K, D] = args.problem_size;
-    D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    auto [B_, H_, Q_, K, D_] = args.problem_size;
+    size_t B = static_cast<size_t>(B_);
+    size_t H = static_cast<size_t>(H_);
+    size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
+    size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_sum_OdO);
+    ElementAccumulator* scaled_lse =
+        reinterpret_cast<ElementAccumulator*>(workspace_scaled_lse);
     ElementAccumulator* dQ_acc =
         reinterpret_cast<ElementAccumulator*>(workspace_dQ);
     params_.dQ_acc = dQ_acc;
     params_.dQ_acc_size = B * H * Q * D * sizeof(ElementAccumulator);
-    auto args_sum_OdO = to_sum_OdO_arguments(args, sum_OdO);
+    auto args_sum_OdO = to_sum_OdO_arguments(args, sum_OdO, scaled_lse);
     auto args_convert = to_convert_arguments(args, dQ_acc);
     params_.op_sum_OdO.initialize(args_sum_OdO, nullptr, stream);
     params_.op_convert.initialize(args_convert, nullptr, stream);
@@ -271,6 +302,8 @@ class FmhaBwdSm90 {
         args,
         sum_OdO,
         args_sum_OdO.stride_sum_OdO,
+        scaled_lse,
+        args_sum_OdO.stride_scaled_lse,
         dQ_acc,
         args_convert.stride_src_dQ);
     params_.op.initialize(args_bwd, nullptr, stream);
@@ -287,16 +320,21 @@ class FmhaBwdSm90 {
         "FmhaBwdSm90::initialize() - workspace "
         << workspace << ", stream: " << (stream ? "non-null" : "null"));
 
-    auto [B, H, Q, K, D] = args.problem_size;
-    D = cutlass::round_up(D, 8); // Alignment
-    Q = cutlass::round_up(Q, 8); // Alignment
+    auto [B_, H_, Q_, K, D_] = args.problem_size;
+    size_t B = static_cast<size_t>(B_);
+    size_t H = static_cast<size_t>(H_);
+    size_t D = cutlass::round_up(static_cast<size_t>(D_), 8); // Alignment
+    size_t Q = cutlass::round_up(static_cast<size_t>(Q_), 8); // Alignment
     char* workspace_chr = reinterpret_cast<char*>(workspace);
     ElementAccumulator* sum_OdO =
         reinterpret_cast<ElementAccumulator*>(workspace_chr);
     workspace_chr += B * H * Q * sizeof(ElementAccumulator);
+    ElementAccumulator* scaled_lse =
+        reinterpret_cast<ElementAccumulator*>(workspace_chr);
+    workspace_chr += B * H * Q * sizeof(ElementAccumulator);
     ElementAccumulator* dQ_acc =
         reinterpret_cast<ElementAccumulator*>(workspace_chr);
-    return initialize_split(args, dQ_acc, sum_OdO, stream);
+    return initialize_split(args, dQ_acc, sum_OdO, scaled_lse, stream);
   }
 
   /// Primary run() entry point API that is static allowing users to create and
