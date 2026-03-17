@@ -1038,7 +1038,7 @@ struct FmhaBwdMainloopTmaWarpSpecializedSm90 {
 
       Tensor reg_LSE = make_fragment_like<ElementAccumulator>(acc_S);
       for (int i = 0; i < size(reg_LSE); i++) {
-        reg_LSE(i) = /*((ElementAccumulator)std::log2(std::exp(1.0))) **/
+        reg_LSE(i) = ((ElementAccumulator)std::log2(std::exp(1.0))) *
             tSsLSE(_, _, _, smem_pipe_read_q.index())(i);
       }
 

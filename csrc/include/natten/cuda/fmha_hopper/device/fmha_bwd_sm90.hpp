@@ -157,7 +157,7 @@ class FmhaBwdSm90 {
     int Q = cutlass::round_up(static_cast<int>(Q_), 8); // Alignment
     auto stride_scalar =
         make_stride(static_cast<int64_t>(H) * static_cast<int64_t>(Q), Q, _1{});
-    auto log2_e = log2f(expf(1.0f));
+    // auto log2_e = log2f(expf(1.0f));
     return typename OperationSumOdO::Arguments{
         args.problem_size,
         args.ptr_O,
@@ -169,9 +169,9 @@ class FmhaBwdSm90 {
         args.ptr_LSE,
         args.stride_LSE,
         scaled_lse,
-        stride_scalar,
+        stride_scalar/*,
         1.0f,
-        log2_e};
+        log2_e*/};
   }
 
   // F32 dQ is batch-packed, not sequence-packed

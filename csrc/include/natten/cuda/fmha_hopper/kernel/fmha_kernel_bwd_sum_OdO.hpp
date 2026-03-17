@@ -62,8 +62,13 @@ struct FmhaKernelBwdSumOdO {
     ElementAcc* ptr_scaled_lse;
     cute::tuple<int64_t, int, _1> stride_scaled_lse;
 
-    ElementAcc sum_odo_scale = 1.0;
-    ElementAcc lse_scale = 1.0;
+    // NOTE (ahassani): I tried doing the lse scale here the same way it's done
+    // in blackwell fmha, but for some reason that I don't have time to
+    // investigate, this causes some minor instability on dQ allcloses.... I
+    // don't want to assume it's nothing to worry about and sweep it under the
+    // rug, so rolling it back.
+    // ElementAcc sum_odo_scale = 1.0;
+    // ElementAcc lse_scale = 1.0;
   };
 
   using Params = Arguments;
@@ -177,8 +182,8 @@ struct FmhaKernelBwdSumOdO {
       }
 
       if (threadIdx.x == 0) {
-        *ptr_sum_OdO_bhq = params.sum_odo_scale * acc;
-        *ptr_scaled_lse_bhq = params.lse_scale * *ptr_lse_bhq;
+        *ptr_sum_OdO_bhq = /*params.sum_odo_scale * */ acc;
+        *ptr_scaled_lse_bhq = /*params.lse_scale * */ *ptr_lse_bhq;
       }
     }
   }
