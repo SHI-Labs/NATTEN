@@ -21,6 +21,7 @@
 #
 #################################################################################################
 
+import random
 import unittest
 
 import torch
@@ -33,6 +34,8 @@ from natten.utils.testing import (
 
 
 def _reset_everything():
+    random.seed(42)
+    torch.manual_seed(42)
     torch.use_deterministic_algorithms(False)
 
 
@@ -106,5 +109,4 @@ class ComputeDeltaTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    torch.manual_seed(42)
     unittest.main()

@@ -31,19 +31,19 @@ from torch.autograd import Function
 amp_fwd = functools.partial(custom_fwd, device_type="cuda")
 amp_bwd = functools.partial(custom_bwd, device_type="cuda")
 
-from .._libnatten import fmha_backward, fmha_forward
-from ..types import (
+from natten._libnatten import fmha_backward, fmha_forward
+from natten.backends.configs.checks import can_run_cutlass_fmha
+from natten.backends.configs.cutlass import (
+    check_cutlass_fmha_backward_config,
+    check_cutlass_fmha_forward_config,
+)
+from natten.types import (
     CutlassFmhaBackwardConfigType,
     CutlassFmhaForwardConfigType,
     NoneType,
 )
-from ..utils import log
-from ..utils.checks import fmha_tensor_checks, varlen_tensor_checks
-from .configs.checks import can_run_cutlass_fmha
-from .configs.cutlass import (
-    check_cutlass_fmha_backward_config,
-    check_cutlass_fmha_forward_config,
-)
+from natten.utils import log
+from natten.utils.checks import fmha_tensor_checks, varlen_tensor_checks
 
 logger = log.get_logger(__name__)
 
@@ -146,10 +146,11 @@ class CutlassFmhaAutogradFn(Function):
 
         if not compute_delta_with_pt and torch.are_deterministic_algorithms_enabled():
             compute_delta_with_pt = True
-            logger.warning(
-                "You enabled PyTorch's deterministic mode, but tried to use backward_use_pt_reduction "
-                ", which is non-deterministic. Overriding."
-            )
+            # Silent override
+            # logger.warning(
+            #     "You enabled PyTorch's deterministic mode, but tried to use backward_use_pt_reduction "
+            #     ", which is non-deterministic. Overriding."
+            # )
 
         seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else ctx.max_seqlen_KV
         num_kv_tiles = (seqlen_kv + k_tile_size - 1) // k_tile_size

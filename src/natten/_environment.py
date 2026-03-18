@@ -31,7 +31,6 @@ from natten.utils.environment import (
     parse_env_str,
 )
 
-
 # Default tokperm implementation; choices:
 # NATTEN_TOKPERM_DEFAULT_IMPL="cutlass"
 # NATTEN_TOKPERM_DEFAULT_IMPL="torch"

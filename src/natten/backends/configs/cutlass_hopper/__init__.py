@@ -26,7 +26,7 @@ from typing import List, Optional
 import torch  # noqa: F401
 from torch import Tensor
 
-from ....types import (
+from natten.types import (
     CutlassHopperFmhaBackwardConfigType,
     CutlassHopperFmhaForwardConfigType,
     CutlassHopperFnaBackwardConfigType,
@@ -34,9 +34,8 @@ from ....types import (
     DimensionType,
     KernelSchedule,
 )
-from ....utils.checks import check_tile_shape
-from ....utils.device import get_device_cc
-
+from natten.utils.checks import check_tile_shape
+from natten.utils.device import get_device_cc
 
 DTYPE_TO_BITS = {
     torch.float16: 16,

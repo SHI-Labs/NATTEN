@@ -28,10 +28,10 @@ from typing import Any, Optional, Tuple, Union
 import torch  # noqa: F401
 from torch import Tensor
 
-from ..types import CausalArgType, DimensionType, KernelSchedule, NoneType
-from ..utils.tuples import create_causal_arg_from_bool, create_dim_from_int
-from ..utils.varlen import generate_varlen_parameters
-from . import log
+from natten.types import CausalArgType, DimensionType, KernelSchedule, NoneType
+from natten.utils import log
+from natten.utils.tuples import create_causal_arg_from_bool, create_dim_from_int
+from natten.utils.varlen import generate_varlen_parameters
 
 logger = log.get_logger(__name__)
 

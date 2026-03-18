@@ -14,7 +14,6 @@ import os
 from enum import Enum
 from typing import List, Tuple
 
-
 DEFAULT_OUTPUT_DIR = "csrc/"
 
 

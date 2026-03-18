@@ -29,12 +29,12 @@ from torch import Tensor
 from torch.profiler import profile as torch_profile, ProfilerActivity
 
 from natten.functional import neighborhood_attention_generic
+from natten.profiling_utils.formatting import convert_to_natten_profiler_ops, Result
+from natten.profiling_utils.ops import sdpa
+from natten.profiling_utils.problem import Problem
 from natten.types import DimensionType, KernelSchedule
 from natten.utils import log
 from natten.utils.checks import check_all_args
-from .formatting import convert_to_natten_profiler_ops, Result
-from .ops import sdpa
-from .problem import Problem
 
 logger = log.get_logger(__name__)
 

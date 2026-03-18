@@ -2,7 +2,7 @@
  * Copied from CUTLASS (https://github.com/NVIDIA/cutlass/) and edited.
  */
 /***************************************************************************************************
- * Copyright (c) 2017 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights
+ * Copyright (c) 2017 - 2026 NVIDIA CORPORATION & AFFILIATES. All rights
  *reserved. SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without

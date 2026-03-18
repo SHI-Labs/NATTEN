@@ -26,13 +26,12 @@ import math
 import torch
 from torch import Tensor
 
-from ..._environment import _IS_TORCH_COMPILE_SUPPORTED, _TORCH_VERSION
-from ..._libnatten import HAS_LIBNATTEN
-from ...context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
-from ...utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_checks
-from ...utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
-from ...utils.dtype import is_fp8
-
+from natten._environment import _IS_TORCH_COMPILE_SUPPORTED, _TORCH_VERSION
+from natten._libnatten import HAS_LIBNATTEN
+from natten.context import is_flex_compile_allowed, is_flex_compile_backprop_allowed
+from natten.utils.checks import fmha_tensor_checks, log_or_raise_error, na_tensor_checks
+from natten.utils.device import get_device_cc, is_cpu, is_cuda, is_rocm
+from natten.utils.dtype import is_fp8
 
 ### Blackwell FMHA/FNA
 

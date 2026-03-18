@@ -56,6 +56,7 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
+    random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
@@ -483,7 +484,6 @@ class FNABackendTest(unittest.TestCase):
         configs_to_test=10,
         quick=False,
     ):
-        random.seed(42)
         max_seqlen = 2**17 if not quick else 2**16
         for i in range(max_tests):
             batch = random.choice(range(1, 4))
@@ -669,6 +669,4 @@ class FNABackendTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    random.seed(42)
-    torch.manual_seed(42)
     unittest.main()

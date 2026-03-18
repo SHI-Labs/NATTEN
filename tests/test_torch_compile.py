@@ -21,6 +21,7 @@
 #
 #################################################################################################
 
+import random
 import unittest
 from typing import Optional
 
@@ -40,6 +41,9 @@ logger = log.get_logger(__name__)
 def _reset_everything():
     reset_torch_compile(1024)
     torch.cuda.empty_cache()
+
+    random.seed(42)
+    torch.manual_seed(42)
 
 
 class NABlock(nn.Module):
@@ -567,5 +571,4 @@ class TorchCompileTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    torch.manual_seed(42)
     unittest.main()

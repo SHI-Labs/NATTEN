@@ -25,8 +25,8 @@ from typing import Dict, Optional, Tuple, Union
 import torch
 from torch import Tensor
 
-from .attn_merge import merge_attentions
-from .backends import (
+from natten.attn_merge import merge_attentions
+from natten.backends import (
     choose_backend,
     choose_fmha_backend,
     cutlass_blackwell_fmha,
@@ -38,7 +38,7 @@ from .backends import (
     flex_fmha,
     flex_fna_generic,
 )
-from .types import (
+from natten.types import (
     CausalArg1DTypeOrDed,
     CausalArg2DTypeOrDed,
     CausalArg3DTypeOrDed,
@@ -53,8 +53,8 @@ from .types import (
     DimensionTypeOrDed,
     KernelSchedule,
 )
-from .utils import log
-from .utils.checks import (
+from natten.utils import log
+from natten.utils.checks import (
     additional_kv_tensor_checks,
     check_all_args,
     check_args_against_input,

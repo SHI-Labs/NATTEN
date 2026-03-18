@@ -26,10 +26,13 @@ from typing import List, Optional
 import torch  # noqa: F401
 from torch import Tensor
 
-from ....types import DimensionType, FlexFmhaForwardConfigType, FlexFnaForwardConfigType
-from ....utils.checks import check_tile_shape
-from ....utils.device import get_device_cc
-
+from natten.types import (
+    DimensionType,
+    FlexFmhaForwardConfigType,
+    FlexFnaForwardConfigType,
+)
+from natten.utils.checks import check_tile_shape
+from natten.utils.device import get_device_cc
 
 # TODO: add more tile sizes/shapes
 # TODO: add backprop tile sizes/shapes

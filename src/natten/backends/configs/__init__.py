@@ -24,14 +24,45 @@
 
 from typing import List
 
-from ...utils import log
+from natten.utils import log
 
 logger = log.get_logger(__name__)
 
 import torch  # noqa: F401
 from torch import Tensor
 
-from ...types import (
+from natten.backends.configs.checks import (
+    can_run_cutlass_blackwell_fmha,
+    can_run_cutlass_blackwell_fna,
+    can_run_cutlass_fmha,
+    can_run_cutlass_fna,
+    can_run_cutlass_hopper_fmha,
+    can_run_cutlass_hopper_fna,
+    can_run_flex_attention,
+)
+from natten.backends.configs.cutlass import (
+    get_all_tile_shapes_backward as get_all_cutlass_fna_backward_configs,
+    get_all_tile_shapes_forward as get_all_cutlass_fna_forward_configs,
+    get_all_tile_sizes_backward as get_all_cutlass_fmha_backward_configs,
+    get_all_tile_sizes_forward as get_all_cutlass_fmha_forward_configs,
+)
+from natten.backends.configs.cutlass_blackwell import (
+    get_all_backward_configs as get_all_blackwell_fna_backward_configs,
+    get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
+    get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
+    get_all_forward_configs as get_all_blackwell_fna_forward_configs,
+)
+from natten.backends.configs.cutlass_hopper import (
+    get_all_backward_configs as get_all_hopper_fna_backward_configs,
+    get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
+    get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
+    get_all_forward_configs as get_all_hopper_fna_forward_configs,
+)
+from natten.backends.configs.flex import (
+    get_all_tile_shapes_forward as get_all_flex_fna_forward_configs,
+    get_all_tile_sizes_forward as get_all_flex_fmha_forward_configs,
+)
+from natten.types import (
     CutlassBlackwellFmhaBackwardConfigType,
     CutlassBlackwellFmhaForwardConfigType,
     CutlassBlackwellFnaBackwardConfigType,
@@ -45,38 +76,6 @@ from ...types import (
     FlexFmhaForwardConfigType,
     FlexFnaForwardConfigType,
 )
-from .checks import (
-    can_run_cutlass_blackwell_fmha,
-    can_run_cutlass_blackwell_fna,
-    can_run_cutlass_fmha,
-    can_run_cutlass_fna,
-    can_run_cutlass_hopper_fmha,
-    can_run_cutlass_hopper_fna,
-    can_run_flex_attention,
-)
-from .cutlass import (
-    get_all_tile_shapes_backward as get_all_cutlass_fna_backward_configs,
-    get_all_tile_shapes_forward as get_all_cutlass_fna_forward_configs,
-    get_all_tile_sizes_backward as get_all_cutlass_fmha_backward_configs,
-    get_all_tile_sizes_forward as get_all_cutlass_fmha_forward_configs,
-)
-from .cutlass_blackwell import (
-    get_all_backward_configs as get_all_blackwell_fna_backward_configs,
-    get_all_fmha_backward_configs as get_all_blackwell_fmha_backward_configs,
-    get_all_fmha_forward_configs as get_all_blackwell_fmha_forward_configs,
-    get_all_forward_configs as get_all_blackwell_fna_forward_configs,
-)
-from .cutlass_hopper import (
-    get_all_backward_configs as get_all_hopper_fna_backward_configs,
-    get_all_fmha_backward_configs as get_all_hopper_fmha_backward_configs,
-    get_all_fmha_forward_configs as get_all_hopper_fmha_forward_configs,
-    get_all_forward_configs as get_all_hopper_fna_forward_configs,
-)
-from .flex import (
-    get_all_tile_shapes_forward as get_all_flex_fna_forward_configs,
-    get_all_tile_sizes_forward as get_all_flex_fmha_forward_configs,
-)
-
 
 ### CUTLASS Blackwell kernels
 

@@ -21,6 +21,7 @@
 #
 #################################################################################################
 
+import random
 import unittest
 
 import torch
@@ -28,11 +29,21 @@ from natten.token_permute import token_permute_operation, token_unpermute_operat
 from natten.utils import log
 from natten.utils.testing import skip_if_cuda_is_not_supported, supports_float16
 
-
 logger = log.get_logger(__name__)
 
 
+def _reset_everything():
+    random.seed(42)
+    torch.manual_seed(42)
+
+
 class TokenPermuteTest(unittest.TestCase):
+    def setUp(self):
+        _reset_everything()
+
+    def tearDown(self):
+        _reset_everything()
+
     def _test_permute_unpermute_torch(
         self, B, H, S, D, tile_shape, dilation, flip_dims, eps, dtype, device="cuda"
     ):
@@ -314,5 +325,4 @@ class TokenPermuteTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    torch.manual_seed(42)
     unittest.main()

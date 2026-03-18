@@ -21,8 +21,8 @@
 #
 #################################################################################################
 
-from ._environment import HAS_LIBNATTEN
-from .backends import (
+from natten._environment import HAS_LIBNATTEN
+from natten.backends import (
     get_bwd_configs_for_cutlass_blackwell_fmha,
     get_bwd_configs_for_cutlass_blackwell_fna,
     get_bwd_configs_for_cutlass_fmha,
@@ -38,7 +38,7 @@ from .backends import (
     get_configs_for_flex_fmha,
     get_configs_for_flex_fna,
 )
-from .context import (
+from natten.context import (
     allow_flex_compile,
     allow_flex_compile_backprop,
     are_deterministic_algorithms_enabled,
@@ -55,13 +55,13 @@ from .context import (
     use_deterministic_algorithms,
     use_kv_parallelism_in_fused_na,
 )
-from .functional import attention, merge_attentions, na1d, na2d, na3d
-from .modules import (
+from natten.functional import attention, merge_attentions, na1d, na2d, na3d
+from natten.modules import (
     NeighborhoodAttention1D,
     NeighborhoodAttention2D,
     NeighborhoodAttention3D,
 )
-from .version import __version__
+from natten.version import __version__
 
 __all__ = [
     "__version__",

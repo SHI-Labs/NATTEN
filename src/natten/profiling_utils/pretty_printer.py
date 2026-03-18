@@ -21,7 +21,7 @@
 #
 #################################################################################################
 
-from .._environment import DISABLE_TQDM
+from natten._environment import DISABLE_TQDM
 
 
 def opt_progress_bar(fn, total):

@@ -13,7 +13,6 @@ import argparse
 import os
 from typing import List, Tuple
 
-
 DEFAULT_OUTPUT_DIR = "csrc/"
 
 _SM_TO_UPPER_BOUND = {

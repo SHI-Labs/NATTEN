@@ -54,7 +54,6 @@ from natten.utils.testing import (
 )
 from torch import Tensor
 
-
 logger = log.get_logger(__name__)
 
 
@@ -69,6 +68,7 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
+    random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
@@ -846,8 +846,6 @@ class FMHABackendTest(unittest.TestCase):
             raise NotImplementedError(f"Add {backend=} to tests.")
 
     def _test_randsweep_against_torch_sdpa(self, backend, max_tests=1000):
-        random.seed(42)
-
         max_qk = 2**21
         for i in range(max_tests):
             batch = random.choice(range(1, 4))
@@ -1112,6 +1110,4 @@ class FMHABackendTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    random.seed(42)
-    torch.manual_seed(42)
     unittest.main()
