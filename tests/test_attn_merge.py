@@ -58,6 +58,7 @@ def sdpa_split(
     v_list: list,
     do: Tensor,
     backend: str,
+    torch_compile: bool,
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     q = q.requires_grad_(True)
     k_list = [k.requires_grad_(True) for k in k_list]
@@ -69,7 +70,7 @@ def sdpa_split(
         outputs.append(out)
         lses.append(lse)
 
-    out, _ = merge_attentions(outputs, lses, torch_compile=False)
+    out, _ = merge_attentions(outputs, lses, torch_compile=torch_compile)
 
     out.backward(do)
 
@@ -132,6 +133,7 @@ class AttentionMergeTest(unittest.TestCase):
         seqlen_Q: int,
         seqlen_KV_list: list,
         backend: str,
+        torch_compile: bool,
     ):
 
         ALLOWED_DTYPES = [
@@ -150,12 +152,13 @@ class AttentionMergeTest(unittest.TestCase):
             if dtype not in SUPPORTED_DTYPES:
                 continue
 
-            reset_torch_compile(1)
+            if torch_compile:
+                reset_torch_compile(1)
 
             logger.debug(
                 f"Testing Attention Merging: {batch=}, {heads=}, {head_dim=}, "
                 f"{seqlen_Q=}, seqlen_KV_list={seqlen_KV_list}, "
-                f"{dtype=}, {backend=}."
+                f"{dtype=}, {backend=}, {torch_compile=}."
             )
 
             q = torch.randn(
@@ -187,7 +190,9 @@ class AttentionMergeTest(unittest.TestCase):
                 backend=backend,
             )
 
-            output, dq, dk, dv = sdpa_split(q, k_list, v_list, do, backend=backend)
+            output, dq, dk, dv = sdpa_split(
+                q, k_list, v_list, do, backend=backend, torch_compile=torch_compile
+            )
 
             torch.testing.assert_close(
                 output.float(), output_ref.float(), atol=atol_out, rtol=0
@@ -199,11 +204,15 @@ class AttentionMergeTest(unittest.TestCase):
     def _test_randsweep(self, backend, num_tests=1000):
         random.seed(42)
 
-        max_Q = 16384
-        max_KV_total = 2**16
+        max_Q_ = 16384
+        max_KV_total_ = 2**15
         for i in range(num_tests):
-            batch = random.choice(range(1, 12))
-            heads = random.choice(range(1, 8))
+            batch = random.choice(range(1, 4))
+            heads = random.choice(range(1, 4))
+
+            # Adjust max seqlens accordingly so we get somewhat more consistent runtimes
+            max_Q = max_Q_ // batch
+            max_KV_total = max_KV_total_ // heads
 
             if backend == "blackwell-fmha":
                 head_dim_choices = [32, 64, 128]
@@ -232,6 +241,9 @@ class AttentionMergeTest(unittest.TestCase):
             # Last split gets what's left (at least 8)
             seqlen_KV_list.append(max(8, remaining))
 
+            # torch compile only affects the merge op, and it's slow, so we skew the likelihood
+            torch_compile = random.choice([True, False, False, False])
+
             self._test(
                 batch=batch,
                 heads=heads,
@@ -239,6 +251,7 @@ class AttentionMergeTest(unittest.TestCase):
                 seqlen_Q=seqlen_Q,
                 seqlen_KV_list=seqlen_KV_list,
                 backend=backend,
+                torch_compile=torch_compile,
             )
 
     @skip_if_libnatten_is_not_supported()
