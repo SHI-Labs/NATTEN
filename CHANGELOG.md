@@ -9,6 +9,7 @@
     * Removed extra memory op on LSE in backward pass (both FMHA and FNA)
 * Added build flags for adding lineinfo and building with PTX (`NATTEN_BUILD_WITH_PTX`,
     `NATTEN_BUILD_WITH_LINEINFO`).
+* Attention Merge backward pass now allows arbitrary number of splits.
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:

@@ -54,54 +54,54 @@ def _reset_everything():
 
 def sdpa_split(
     q: Tensor,
-    k_0: Tensor,
-    v_0: Tensor,
-    k_1: Tensor,
-    v_1: Tensor,
+    k_list: list,
+    v_list: list,
     do: Tensor,
     backend: str,
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     q = q.requires_grad_(True)
-    k_0 = k_0.requires_grad_(True)
-    v_0 = v_0.requires_grad_(True)
-    k_1 = k_1.requires_grad_(True)
-    v_1 = v_1.requires_grad_(True)
+    k_list = [k.requires_grad_(True) for k in k_list]
+    v_list = [v.requires_grad_(True) for v in v_list]
 
-    out1, lse1 = attention(q, k_0, v_0, return_lse=True, backend=backend)
-    out2, lse2 = attention(q, k_1, v_1, return_lse=True, backend=backend)
+    outputs, lses = [], []
+    for k, v in zip(k_list, v_list):
+        out, lse = attention(q, k, v, return_lse=True, backend=backend)
+        outputs.append(out)
+        lses.append(lse)
 
-    out, _ = merge_attentions([out1, out2], [lse1, lse2], torch_compile=False)
+    out, _ = merge_attentions(outputs, lses, torch_compile=False)
 
     out.backward(do)
 
     with torch.no_grad():
         output = out.data
         assert q.grad is not None
-        assert k_0.grad is not None
-        assert k_1.grad is not None
-        assert v_0.grad is not None
-        assert v_1.grad is not None
-        dq, dk1, dv1 = q.grad.data, k_0.grad.data, v_0.grad.data
-        dk2, dv2 = k_1.grad.data, v_1.grad.data
+        dq = q.grad.data
 
-        dk = torch.cat([dk1, dk2], dim=1)
-        dv = torch.cat([dv1, dv2], dim=1)
+        dk_list = []
+        dv_list = []
+        for k, v in zip(k_list, v_list):
+            assert k.grad is not None
+            assert v.grad is not None
+            dk_list.append(k.grad.data)
+            dv_list.append(v.grad.data)
+
+        dk = torch.cat(dk_list, dim=1)
+        dv = torch.cat(dv_list, dim=1)
 
         return output, dq, dk, dv
 
 
 def sdpa_ref(
     q: Tensor,
-    k_0: Tensor,
-    v_0: Tensor,
-    k_1: Tensor,
-    v_1: Tensor,
+    k_list: list,
+    v_list: list,
     do: Tensor,
     backend: str,
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     with torch.no_grad():
-        k = torch.cat([k_0, k_1], dim=1)
-        v = torch.cat([v_0, v_1], dim=1)
+        k = torch.cat(k_list, dim=1)
+        v = torch.cat(v_list, dim=1)
 
     q = q.requires_grad_(True)
     k = k.requires_grad_(True)
@@ -130,8 +130,7 @@ class AttentionMergeTest(unittest.TestCase):
         heads: int,
         head_dim: int,
         seqlen_Q: int,
-        seqlen_KV_0: int,
-        seqlen_KV_1: int,
+        seqlen_KV_list: list,
         backend: str,
     ):
 
@@ -155,41 +154,40 @@ class AttentionMergeTest(unittest.TestCase):
 
             logger.debug(
                 f"Testing Attention Merging: {batch=}, {heads=}, {head_dim=}, "
-                f"{seqlen_Q=}, {seqlen_KV_0=}, {seqlen_KV_1=}, "
+                f"{seqlen_Q=}, seqlen_KV_list={seqlen_KV_list}, "
                 f"{dtype=}, {backend=}."
             )
 
             q = torch.randn(
                 batch, seqlen_Q, heads, head_dim, device="cuda", dtype=dtype
             )
-            k_0 = torch.randn(
-                batch, seqlen_KV_0, heads, head_dim, device="cuda", dtype=dtype
-            )
-            v_0 = torch.randn_like(k_0)
-            k_1 = torch.randn(
-                batch, seqlen_KV_1, heads, head_dim, device="cuda", dtype=dtype
-            )
-            v_1 = torch.randn_like(k_1)
+
+            k_list = []
+            v_list = []
+            for seqlen_KV in seqlen_KV_list:
+                k = torch.randn(
+                    batch, seqlen_KV, heads, head_dim, device="cuda", dtype=dtype
+                )
+                v = torch.randn_like(k)
+                k_list.append(k)
+                v_list.append(v)
+
             do = torch.randn_like(q)
 
             q_ref = q.clone()
-            k_0_ref = k_0.clone()
-            v_0_ref = v_0.clone()
-            k_1_ref = k_1.clone()
-            v_1_ref = v_1.clone()
+            k_list_ref = [k.clone() for k in k_list]
+            v_list_ref = [v.clone() for v in v_list]
             do_ref = do.clone()
 
             output_ref, dq_ref, dk_ref, dv_ref = sdpa_ref(
                 q_ref,
-                k_0_ref,
-                v_0_ref,
-                k_1_ref,
-                v_1_ref,
+                k_list_ref,
+                v_list_ref,
                 do_ref,
                 backend=backend,
             )
 
-            output, dq, dk, dv = sdpa_split(q, k_0, v_0, k_1, v_1, do, backend=backend)
+            output, dq, dk, dv = sdpa_split(q, k_list, v_list, do, backend=backend)
 
             torch.testing.assert_close(
                 output.float(), output_ref.float(), atol=atol_out, rtol=0
@@ -202,7 +200,7 @@ class AttentionMergeTest(unittest.TestCase):
         random.seed(42)
 
         max_Q = 16384
-        max_KV = 16384
+        max_KV_total = 2**16
         for i in range(num_tests):
             batch = random.choice(range(1, 12))
             heads = random.choice(range(1, 8))
@@ -218,16 +216,28 @@ class AttentionMergeTest(unittest.TestCase):
             head_dim = random.choice(head_dim_choices)
 
             seqlen_Q = random.choice(range(8, max_Q + 1))
-            seqlen_KV_0 = random.choice(range(8, max_KV + 1))
-            seqlen_KV_1 = random.choice(range(8, max_KV + 1))
+
+            num_splits = random.choice(range(2, 9))
+
+            # Generate split lengths that don't exceed max_KV_total when summed
+            seqlen_KV_list = []
+            remaining = max_KV_total
+            for j in range(num_splits - 1):
+                # Each split gets at least 8, up to remaining
+                max_for_split = max(8, remaining - 8 * (num_splits - j - 1))
+                seqlen_KV = random.choice(range(8, min(max_for_split, remaining) + 1))
+                seqlen_KV_list.append(seqlen_KV)
+                remaining -= seqlen_KV
+
+            # Last split gets what's left (at least 8)
+            seqlen_KV_list.append(max(8, remaining))
 
             self._test(
                 batch=batch,
                 heads=heads,
                 head_dim=head_dim,
                 seqlen_Q=seqlen_Q,
-                seqlen_KV_0=seqlen_KV_0,
-                seqlen_KV_1=seqlen_KV_1,
+                seqlen_KV_list=seqlen_KV_list,
                 backend=backend,
             )
 

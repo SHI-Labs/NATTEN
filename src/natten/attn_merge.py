@@ -133,43 +133,54 @@ class MergeAttentionsAutogradFn(Function):
     @amp_fwd
     def forward(
         ctx,
-        output_0: Tensor,
-        output_1: Tensor,
-        lse_0: Tensor,
-        lse_1: Tensor,
-        torch_compile: bool,
+        *args,
     ) -> Tuple[Tensor, Tensor]:
 
+        assert (
+            len(args) >= 5
+        ), f"Expected at least 5 args (two outputs, two lse tensors, 1 torch compile flag) in attention merge, got {len(args)}."
+        assert (
+            len(args) - 1
+        ) % 2 == 0, f"Expected pairs of outputs and lse tensors, got {len(args)-1} args (excluding torch compile flag)"
+        num_pairs = (len(args) - 1) // 2
+        assert num_pairs >= 2
+
+        torch_compile = args[-1]
+        outputs = args[:num_pairs]
+        lses = args[num_pairs:-1]
+
         merged_output, merged_lse = _merge_attentions_op(
-            [output_0.contiguous(), output_1.contiguous()],
-            [lse_0.contiguous(), lse_1.contiguous()],
+            outputs,  # type: ignore[arg-type]
+            lses,  # type: ignore[arg-type]
             torch_compile=torch_compile,
         )
 
-        ctx.save_for_backward(
-            output_0, output_1, lse_0, lse_1, merged_output, merged_lse
-        )
+        ctx.num_pairs = num_pairs
+        ctx.save_for_backward(merged_output, merged_lse, *outputs, *lses)
 
         return merged_output, merged_lse
 
     @staticmethod
     @amp_bwd
-    def backward(
-        ctx, grad_out: Tensor, grad_lse: Tensor
-    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, None]:
+    def backward(ctx, grad_out: Tensor, grad_lse: Tensor) -> Tuple:
 
-        output_0, output_1, lse_0, lse_1, merged_output, merged_lse = ctx.saved_tensors
+        num_pairs = ctx.num_pairs
+        merged_output, merged_lse = ctx.saved_tensors[:2]
+        outputs = ctx.saved_tensors[2 : num_pairs + 2]
+        lses = ctx.saved_tensors[num_pairs + 2 :]
 
         # Outputs and LSEs from the originating attention ops must be replaced with
         # the merged ones inplace so that we get correct behavior, and not break torch.compile
         # graphs in the process.
-        output_0.data.copy_(merged_output.data.reshape(output_0.shape))
-        output_1.data.copy_(merged_output.data.reshape(output_1.shape))
+        for output, lse in zip(outputs, lses):
+            output.data.copy_(merged_output.data.reshape(output.shape))
+            lse.data.copy_(merged_lse.data.reshape(lse.shape))
 
-        lse_0.data.copy_(merged_lse.data.reshape(lse_0.shape))
-        lse_1.data.copy_(merged_lse.data.reshape(lse_1.shape))
-
-        return grad_out, grad_out, grad_lse, grad_lse, None
+        return (
+            *(grad_out for _ in range(num_pairs)),
+            *(grad_lse for _ in range(num_pairs)),
+            None,
+        )
 
 
 def merge_attentions(
@@ -199,10 +210,13 @@ def merge_attentions(
             operations. Default: True.
 
         use_autograd_fix (bool): fix backpropagation by using a custom autograd function. Only
-            compatible with fused attention operations (Flash/FMHA/FNA), and must be disabled when
-            using unfused Attention, which includes Flex without torch.compile.
-            This operation only supports backpropagation with pairs (when `len(outputs) == 2`).
-            Default: True.
+            compatible with fused attention operations (Flash/FMHA/FNA), only as long as the inputs
+            of this function are (views) of outputs from said attention operation.
+            NATTEN's tests (tests/test_attn_merge.py) only verify correctness for when using
+            attention operations from NATTEN. Integration for non-NATTEN ops must be verified by the
+            end user.
+            This must be disabled when using unfused Attention, which includes Flex without
+            torch.compile. Default: True.
 
     Returns:
         output (Tensor): merged attention output.
@@ -255,20 +269,13 @@ def merge_attentions(
     # This path is the correct way to do backward pass, but since we can't have lists as inputs to
     # autograd functions, we're forced to specialize it for 2-way for now.
     if use_autograd_fix:
-        if requires_grad and len(outputs) == 2:
-            assert len(outputs) == len(lse_tensors)
+        assert len(outputs) == len(lse_tensors)
 
-            merged_output, merged_lse = MergeAttentionsAutogradFn.apply(
-                outputs[0], outputs[1], lse_tensors[0], lse_tensors[1], torch_compile
-            )
+        merged_output, merged_lse = MergeAttentionsAutogradFn.apply(
+            *outputs, *lse_tensors, torch_compile
+        )
 
-            return merged_output, merged_lse
-
-        if requires_grad:
-            raise NotImplementedError(
-                "'merge_attentions' only supports backwards pass with two inputs, "
-                f"got {len(outputs)=}."
-            )
+        return merged_output, merged_lse
 
     return _merge_attentions_op(
         [output.contiguous() for output in outputs],
