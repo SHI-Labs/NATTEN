@@ -58,15 +58,13 @@ _IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
 _TORCH_VERSION = [int(x) for x in torch.__version__.split(".")[:2]]
 
-# NOTE: Triton does not recognize SM103 yet.
-# TODO: remove the extra condition once Triton adds SM103 support.
-_IS_TORCH_COMPILE_SUPPORTED = (
-    _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70 and get_device_cc() not in [103]
-)
+_IS_TORCH_COMPILE_SUPPORTED = _TORCH_VERSION >= [2, 6] and get_device_cc() >= 70
 
-# Guard registering libnatten APIs as torch ops
+# Guard registering libnatten APIs as torch ops with environment variables
 # In case any unusual bugs from torch compile come up again
-DISABLE_TORCH_OPS = not _IS_TORCH_COMPILE_SUPPORTED or parse_env_flag(
+# Also restrict to torch 2.8 and later
+# https://github.com/pytorch/pytorch/issues/137979#issuecomment-3614956989
+DISABLE_TORCH_OPS = _TORCH_VERSION < [2, 8] or parse_env_flag(
     "NATTEN_DISABLE_TORCH_OPS", False
 )
 
