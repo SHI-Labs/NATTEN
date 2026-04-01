@@ -138,6 +138,10 @@ def blackwell_fmha_forward_torch_op(
         query.shape[:-1], dtype=torch.float32, device=query.device
     )  # type: ignore[operator]
 
+    # Skip kernel launch when all sequences are empty
+    if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
+        return output, logsumexp
+
     blackwell_fmha_forward_cxx(
         output,
         query,
@@ -216,6 +220,10 @@ def blackwell_fmha_backward_torch_op(
     d_query = init_fn(query)
     d_key = init_fn(key)
     d_value = init_fn(value)
+
+    # Skip kernel launch when all sequences are empty
+    if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
+        return d_query, d_key, d_value
 
     blackwell_fmha_backward_cxx(
         d_query,
@@ -299,6 +307,10 @@ def hopper_fmha_forward_torch_op(
         query.shape[:-1], dtype=torch.float32, device=query.device
     )  # type: ignore[operator]
 
+    # Skip kernel launch when all sequences are empty
+    if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
+        return output, logsumexp
+
     hopper_fmha_forward_cxx(
         output,
         query,
@@ -378,6 +390,10 @@ def hopper_fmha_backward_torch_op(
     d_query = init_fn(query)
     d_key = init_fn(key)
     d_value = init_fn(value)
+
+    # Skip kernel launch when all sequences are empty
+    if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
+        return d_query, d_key, d_value
 
     hopper_fmha_backward_cxx(
         d_query,
@@ -465,6 +481,10 @@ def fmha_forward_torch_op(
         query.shape[:-1], dtype=torch.float32, device=query.device
     )  # type: ignore[operator]
 
+    # Skip kernel launch when all sequences are empty
+    if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
+        return output, logsumexp
+
     fmha_forward_cxx(
         output,
         query,
@@ -543,6 +563,10 @@ def fmha_backward_torch_op(
     d_query = init_fn(query)
     d_key = init_fn(key)
     d_value = init_fn(value)
+
+    # Skip kernel launch when all sequences are empty
+    if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
+        return d_query, d_key, d_value
 
     # torch compile sometimes passes down an incorrect num_kv_splits after recompiles.
     # we always need to silently fall back to maximum possible to avoid hitting the cpp guard.
