@@ -623,16 +623,10 @@ def varlen_tensor_checks(
             max_seqlen_Q,
             max_seqlen_KV,
         ]
-    ) or any(
-        x == 0
-        for x in [
-            max_seqlen_Q,
-            max_seqlen_KV,
-        ]
     ):
         raise ValueError(
-            "Variable length Attention requires all 6 of "
-            "cumulative_seqlen_{Q,KV}, max_seqlen_{Q,KV}, total_seqlen_{Q,KV} to be set."
+            "Variable length Attention requires all of "
+            "cumulative_seqlen_{Q,KV} and max_seqlen_{Q,KV} to be set."
         )
 
     if query.shape[0] != 1:
@@ -666,9 +660,15 @@ def varlen_tensor_checks(
             f"{max_seqlen_KV=}, {total_seqlen_KV=}."
         )
 
-    if max_seqlen_Q < 1 or max_seqlen_KV < 1:
+    if (max_seqlen_Q == 0) != (max_seqlen_KV == 0):
         raise ValueError(
-            "Maximum sequence length cannot be less than 1, got "
+            "max_seqlen_Q and max_seqlen_KV must both be zero or both be non-zero, got "
+            f"{max_seqlen_Q=}, {max_seqlen_KV=}."
+        )
+
+    if max_seqlen_Q < 0 or max_seqlen_KV < 0:
+        raise ValueError(
+            "Maximum sequence length cannot be negative, got "
             f"{max_seqlen_Q=}, {max_seqlen_KV=}."
         )
 
