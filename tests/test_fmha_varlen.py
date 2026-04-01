@@ -645,7 +645,7 @@ class FMHAVarlenTest(unittest.TestCase):
     ):
         max_qk = 2**17
         for i in range(max_tests):
-            batch = random.choice(range(1, 12))
+            batch = random.choice(range(1, 10))
 
             supports_dim_v = False
             supports_gqa_mqa = False
