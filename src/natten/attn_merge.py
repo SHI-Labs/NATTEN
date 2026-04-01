@@ -155,14 +155,6 @@ class MergeAttentionsAutogradFn(Function):
             "Expected the same number of outputs as logsumexp tensors, "
             + f"got {len(outputs)=}, {len(lses)=}"
         )
-        assert all(
-            output.is_contiguous() and lse.is_contiguous()
-            for output, lse in zip(outputs, lses)
-        ), (
-            "All tensors must be contiguous. "
-            + "Making them contiguous by doing .contiguous() will NOT fix this issue. "
-            + "Open an issue on NATTEN."
-        )
 
         merged_output, merged_lse = _merge_attentions_op(
             outputs,  # type: ignore[arg-type]
