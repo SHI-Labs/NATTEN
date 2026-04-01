@@ -168,10 +168,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
             )
 
             num_kv_splits = kv_splits
-            if (
-                any([kv_split > 1 for kv_split in kv_splits])
-                and ctx.deterministic
-            ):
+            if any([kv_split > 1 for kv_split in kv_splits]) and ctx.deterministic:
                 num_kv_splits = tuple(1 for _ in range(len(kv_splits)))
                 logger.warning(
                     "You enabled PyTorch's deterministic mode, but tried to train with FNA's KV "
@@ -179,10 +176,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
                     f"Overriding {kv_splits} to {num_kv_splits}."
                 )
 
-            if (
-                not compute_delta_with_pt
-                and ctx.deterministic
-            ):
+            if not compute_delta_with_pt and ctx.deterministic:
                 compute_delta_with_pt = True
                 # Silent override
                 # logger.warning(
