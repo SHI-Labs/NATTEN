@@ -154,8 +154,8 @@ class CutlassFmhaAutogradFn(Function):
 
         seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else ctx.max_seqlen_KV
         num_kv_tiles = (seqlen_kv + k_tile_size - 1) // k_tile_size
-        assert num_kv_tiles > 0
-        if num_kv_splits > num_kv_tiles:
+        assert num_kv_tiles > 0 or ctx.max_seqlen_KV == 0
+        if num_kv_splits > num_kv_tiles and ctx.max_seqlen_KV > 0:
             logger.warning(
                 "Number of KV splits cannot exceed number of KV tiles, got "
                 f"{num_kv_splits=}, {num_kv_tiles=}."
@@ -245,7 +245,10 @@ def cutlass_fmha(
         kv_tile_size=backward_kv_tile_size,
         kv_splits=backward_kv_splits,
         use_pt_reduction=backward_use_pt_reduction,
-        max_seqlen=max_seqlen_KV if is_varlen else None,
+        # max_seqlen must be at least 2 to satisfy static checks that are just too complicated to
+        # relax at this point. Kernel launch will be skipped if max_seqlen is 0 anyway. Prior checks
+        # should prevent negative max seqlens.
+        max_seqlen=max(2, max_seqlen_KV) if is_varlen else None,
     )
 
     scale = scale or query.shape[-1] ** -0.5

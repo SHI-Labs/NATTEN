@@ -383,7 +383,7 @@ def check_input_size_arg(na_dim: int, input_size: Any) -> DimensionType:
 
     raise ValueError(
         "Invalid value for `input_size`; expected an integer or iterable of integers, all >= 2, "
-        f"got {type(input_size)}"
+        f"got {type(input_size)}, {input_size=}"
     )
 
 
