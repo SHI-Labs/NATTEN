@@ -103,6 +103,12 @@ class CutlassFmhaAutogradFn(Function):
         ctx.max_seqlen_Q = max_seqlen_Q
         ctx.max_seqlen_KV = max_seqlen_KV
         ctx.backward_config = backward_config
+        # Always record determinism behavior during forward pass (forward pass itself is
+        # deterministic anyway).
+        # Determinism could be limited to part of the program, which means during forward pass
+        # it'll be true, but on .backward() call, if it's been turned off, it will stay off when we
+        # get to this operation's backward call.
+        ctx.deterministic = torch.are_deterministic_algorithms_enabled()
 
         return output, logsumexp
 
@@ -136,7 +142,7 @@ class CutlassFmhaAutogradFn(Function):
         q_tile_size, k_tile_size, kv_splits, compute_delta_with_pt = ctx.backward_config
 
         num_kv_splits = kv_splits
-        if kv_splits > 1 and torch.are_deterministic_algorithms_enabled():
+        if kv_splits > 1 and ctx.deterministic:
             num_kv_splits = 1
             logger.warning(
                 "You enabled PyTorch's deterministic mode, but tried to train with FNA's KV "
@@ -144,7 +150,7 @@ class CutlassFmhaAutogradFn(Function):
                 f"Overriding {kv_splits=} to {num_kv_splits}."
             )
 
-        if not compute_delta_with_pt and torch.are_deterministic_algorithms_enabled():
+        if not compute_delta_with_pt and ctx.deterministic:
             compute_delta_with_pt = True
             # Silent override
             # logger.warning(

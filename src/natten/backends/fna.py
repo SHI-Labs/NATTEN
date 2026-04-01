@@ -137,6 +137,12 @@ def make_cutlass_fna_autograd_fn(na_dim):
             ctx.is_causal = is_causal
             ctx.scale = scale
             ctx.backward_config = backward_config
+            # Always record determinism behavior during forward pass (forward pass itself is
+            # deterministic anyway).
+            # Determinism could be limited to part of the program, which means during forward pass
+            # it'll be true, but on .backward() call, if it's been turned off, it will stay off when we
+            # get to this operation's backward call.
+            ctx.deterministic = torch.are_deterministic_algorithms_enabled()
 
             return output, logsumexp
 
@@ -164,7 +170,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
             num_kv_splits = kv_splits
             if (
                 any([kv_split > 1 for kv_split in kv_splits])
-                and torch.are_deterministic_algorithms_enabled()
+                and ctx.deterministic
             ):
                 num_kv_splits = tuple(1 for _ in range(len(kv_splits)))
                 logger.warning(
@@ -175,7 +181,7 @@ def make_cutlass_fna_autograd_fn(na_dim):
 
             if (
                 not compute_delta_with_pt
-                and torch.are_deterministic_algorithms_enabled()
+                and ctx.deterministic
             ):
                 compute_delta_with_pt = True
                 # Silent override

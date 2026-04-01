@@ -171,6 +171,12 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
             ctx.is_causal = is_causal
             ctx.scale = scale
             ctx.backward_config = backward_config
+            # Always record determinism behavior during forward pass (forward pass itself is
+            # deterministic anyway).
+            # Determinism could be limited to part of the program, which means during forward pass
+            # it'll be true, but on .backward() call, if it's been turned off, it will stay off when we
+            # get to this operation's backward call.
+            ctx.deterministic = torch.are_deterministic_algorithms_enabled()
 
             return output, logsumexp
 
@@ -198,6 +204,14 @@ def make_cutlass_hopper_fna_autograd_fn(na_dim):
             )
 
             q_tile_shape, kv_tile_shape = ctx.backward_config
+
+            if ctx.deterministic:
+                raise RuntimeError(
+                    "Hopper FNA backward pass does not have a deterministic mode, "
+                    "but PyTorch's deterministic algorithms were enabled. To proceed, "
+                    "you must either disable torch's deterministic mode, or choose a "
+                    "different backend."
+                )
 
             # Token permute begin
 
