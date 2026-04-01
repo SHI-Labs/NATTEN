@@ -10,6 +10,7 @@
 * Added build flags for adding lineinfo and building with PTX (`NATTEN_BUILD_WITH_PTX`,
     `NATTEN_BUILD_WITH_LINEINFO`).
 * Attention Merge backward pass now allows arbitrary number of splits.
+* Added deterministic backward pass to Blackwell FMHA kernel (ported from [FBGEMM](https://github.com/pytorch/FBGEMM)).
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:

@@ -207,6 +207,7 @@ def blackwell_fmha_backward_torch_op(
     cumulative_seqlen_KV: Optional[Tensor],
     max_seqlen_Q: int,
     max_seqlen_KV: int,
+    deterministic: bool,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
@@ -243,6 +244,7 @@ def blackwell_fmha_backward_torch_op(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
+        deterministic,
     )
 
     return d_query, d_key, d_value
@@ -264,6 +266,7 @@ def blackwell_fmha_backward_torch_fake_op(
     cumulative_seqlen_KV: Optional[Tensor],
     max_seqlen_Q: int,
     max_seqlen_KV: int,
+    deterministic: bool,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [

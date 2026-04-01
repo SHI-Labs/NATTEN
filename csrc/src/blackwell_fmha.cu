@@ -271,7 +271,8 @@ void blackwell_fmha_backward(
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
     int max_seqlen_Q,
-    int max_seqlen_KV) {
+    int max_seqlen_KV,
+    bool deterministic) {
 #if defined(NATTEN_WITH_CUTLASS) && defined(NATTEN_WITH_BLACKWELL_FNA)
   AssertDimsAre128BitAligned(query, value);
 
@@ -414,13 +415,6 @@ void blackwell_fmha_backward(
   }
   //
 
-  TORCH_CHECK(
-      not at::globalContext().deterministicAlgorithms(),
-      "Blackwell FMHA backward is non-deterministic, "
-      "but PyTorch's deterministic mode is enabled. "
-      "NATTEN Python API should have avoided this; which means "
-      "you're probably calling the C function directly.");
-
   int device_id = query.device().index();
   auto cuda_stream = at::cuda::getCurrentCUDAStream(device_id);
   cudaDeviceProp* device_props = at::cuda::getDeviceProperties(device_id);
@@ -460,6 +454,7 @@ void blackwell_fmha_backward(
       max_seqlen_KV,
       ptr_cumulative_seqlen_Q,
       ptr_cumulative_seqlen_KV,
+      deterministic,
       // init/launch params
       device_id,
       cuda_stream,

@@ -68,6 +68,7 @@ void blackwell_fmha_backward(
     const at::optional<at::Tensor>& cumulative_seqlen_KV,
     // only used if cumulative_seqlen_Q and cumulative_seqlen_KV are specified
     int max_seqlen_Q,
-    int max_seqlen_KV);
+    int max_seqlen_KV,
+    bool deterministic);
 
 } // namespace natten

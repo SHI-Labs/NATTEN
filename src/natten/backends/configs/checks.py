@@ -81,14 +81,6 @@ def can_run_cutlass_blackwell_fmha(
         )
         return False
 
-    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
-        target_fn(
-            "Can't run Blackwell FMHA; its backprop does not have a deterministic mode, but "
-            "PyTorch's deterministic mode was enabled.",
-            exception=NotImplementedError,
-        )
-        return False
-
     head_dim = query.shape[-1]
     head_dim_v = value.shape[-1]
 
@@ -173,7 +165,7 @@ def can_run_cutlass_blackwell_fna(
 
     if query.requires_grad and torch.are_deterministic_algorithms_enabled():
         target_fn(
-            "Can't run Blackwell FMHA; its backprop does not have a deterministic mode, but "
+            "Can't run Blackwell FNA; its backprop does not have a deterministic mode, but "
             "PyTorch's deterministic mode was enabled.",
             exception=NotImplementedError,
         )

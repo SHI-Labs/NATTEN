@@ -26,6 +26,7 @@ import unittest
 from typing import Optional, Tuple, Union
 
 import natten  # noqa: F401
+import pytest
 import torch
 from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass import (
@@ -72,7 +73,7 @@ def _reset_everything():
     torch.manual_seed(42)
     torch.cuda.empty_cache()
 
-    # Hopper and Blackwell FMHA bwd don't have deterministic option.
+    # Hopper FMHA bwd doesn't have deterministic option.
     torch.use_deterministic_algorithms(False)
 
 
@@ -147,14 +148,32 @@ def compute_sdpa_reference(
 
 
 def compute_natten_fmha_reference(
-    batch, heads, dim, dim_v, seqlen_q, seqlen_kv, is_causal, dtype=torch.float32
+    batch,
+    heads,
+    dim,
+    dim_v,
+    seqlen_q,
+    seqlen_kv,
+    is_causal,
+    dtype=torch.float32,
+    backend="cutlass-fmha",
+    heads_kv=None,
+    q_tile_size=None,
+    kv_tile_size=None,
+    backward_q_tile_size=None,
+    backward_kv_tile_size=None,
+    backward_kv_splits=None,
+    backward_use_pt_reduction=False,
 ):
     dim_v = dim_v or dim
+    heads_kv = heads_kv or heads
     with torch.no_grad():
         q, k, v, d_out = (
             torch.randn((batch, seqlen_q, heads, dim), device="cuda", dtype=dtype),
-            torch.randn((batch, seqlen_kv, heads, dim), device="cuda", dtype=dtype),
-            torch.randn((batch, seqlen_kv, heads, dim_v), device="cuda", dtype=dtype),
+            torch.randn((batch, seqlen_kv, heads_kv, dim), device="cuda", dtype=dtype),
+            torch.randn(
+                (batch, seqlen_kv, heads_kv, dim_v), device="cuda", dtype=dtype
+            ),
             torch.randn((batch, seqlen_q, heads, dim_v), device="cuda", dtype=dtype),
         )
         q_, k_, v_, d_out_ = (
@@ -170,7 +189,18 @@ def compute_natten_fmha_reference(
     d_out = d_out.requires_grad_(True)
 
     out, lse = attention(
-        q, k, v, is_causal=is_causal, backend="cutlass-fmha", return_lse=True
+        q,
+        k,
+        v,
+        is_causal=is_causal,
+        backend=backend,
+        q_tile_size=q_tile_size,
+        kv_tile_size=kv_tile_size,
+        backward_q_tile_size=backward_q_tile_size,
+        backward_kv_tile_size=backward_kv_tile_size,
+        backward_kv_splits=backward_kv_splits,
+        backward_use_pt_reduction=backward_use_pt_reduction,
+        return_lse=True,
     )
 
     with torch.no_grad():
@@ -225,13 +255,14 @@ class FMHABackendTest(unittest.TestCase):
     ):
         heads_kv = heads_kv or heads
         head_dim_v = head_dim_v or head_dim
+        determinism = torch.are_deterministic_algorithms_enabled()
         logger.debug(
             f"Testing FMHA ({backend}) vs {reference_str}:\n"
             f"{batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=},\n"
             f"{seqlen_q=}, {seqlen_kv=}, {is_causal=}, {dtype=},\n"
             f"{q_tile_size=}, {kv_tile_size=}, {kernel_schedule=}, {run_persistent_kernel=}"
             + (
-                f",\n{backward_q_tile_size=}, {backward_kv_tile_size=}, "
+                f",\n({determinism=}) {backward_q_tile_size=}, {backward_kv_tile_size=}, "
                 f"{backward_kv_splits=}, {backward_use_pt_reduction=}."
                 if test_backprop
                 else "."
@@ -390,7 +421,7 @@ class FMHABackendTest(unittest.TestCase):
             reference_str="torch sdpa",
         )
 
-    def _test_against_natten_cutlass_fmha(
+    def _test_against_natten_fmha(
         self,
         batch: int,
         heads: int,
@@ -413,8 +444,17 @@ class FMHABackendTest(unittest.TestCase):
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         head_dim_v: Optional[int] = None,
+        heads_kv: Optional[int] = None,
+        reference_backend: str = "cutlass-fmha",
+        reference_q_tile_size: Optional[int] = None,
+        reference_kv_tile_size: Optional[int] = None,
+        reference_backward_q_tile_size: Optional[int] = None,
+        reference_backward_kv_tile_size: Optional[int] = None,
+        reference_backward_kv_splits: Optional[int] = None,
+        reference_backward_use_pt_reduction: bool = False,
     ):
         head_dim_v = head_dim_v or head_dim
+        heads_kv = heads_kv or heads
         inputs, reference = compute_natten_fmha_reference(
             batch,
             heads,
@@ -424,12 +464,21 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_kv,
             is_causal=is_causal,
             dtype=dtype,
+            backend=reference_backend,
+            heads_kv=heads_kv,
+            q_tile_size=reference_q_tile_size,
+            kv_tile_size=reference_kv_tile_size,
+            backward_q_tile_size=reference_backward_q_tile_size,
+            backward_kv_tile_size=reference_backward_kv_tile_size,
+            backward_kv_splits=reference_backward_kv_splits,
+            backward_use_pt_reduction=reference_backward_use_pt_reduction,
         )
         self._test_against_reference_inputs(
             inputs=inputs,
             reference=reference,
             batch=batch,
             heads=heads,
+            heads_kv=heads_kv,
             head_dim=head_dim,
             head_dim_v=head_dim_v,
             seqlen_q=seqlen_q,
@@ -449,7 +498,7 @@ class FMHABackendTest(unittest.TestCase):
             run_persistent_kernel=run_persistent_kernel,
             kernel_schedule=kernel_schedule,
             test_lse=test_lse,
-            reference_str="cutlass-fmha",
+            reference_str=reference_backend,
         )
 
     def _test_cutlass_fmha_against_torch_sdpa(
@@ -646,7 +695,7 @@ class FMHABackendTest(unittest.TestCase):
                     backward_kv_tile_size=backward_kv_tile_size,
                 )
 
-    def _test_cutlass_hopper_fmha_against_cutlass_2x_fmha(
+    def _test_cutlass_hopper_fmha_against_natten(
         self,
         batch,
         heads,
@@ -684,7 +733,7 @@ class FMHABackendTest(unittest.TestCase):
                     i % len(backward_configs)
                 ]
 
-                self._test_against_natten_cutlass_fmha(
+                self._test_against_natten_fmha(
                     batch=batch,
                     heads=heads,
                     head_dim=head_dim,
@@ -704,7 +753,7 @@ class FMHABackendTest(unittest.TestCase):
                     backward_kv_tile_size=backward_kv_tile_size,
                 )
 
-    def _test_cutlass_blackwell_fmha_against_cutlass_2x_fmha(
+    def _test_cutlass_blackwell_fmha_against_natten(
         self,
         batch,
         heads,
@@ -712,6 +761,9 @@ class FMHABackendTest(unittest.TestCase):
         seqlen_q,
         seqlen_kv,
         is_causal,
+        heads_kv=None,
+        determinism=False,
+        fail_case=False,
     ):
         torch.set_default_device("cuda")
 
@@ -719,6 +771,13 @@ class FMHABackendTest(unittest.TestCase):
             (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
             (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
         ]
+
+        if determinism:
+            ALLOWED_DTYPES = [
+                (torch.float16, (0, 0), (0, 0)),
+                (torch.bfloat16, (0, 0), (0, 0)),
+            ]
+            torch.use_deterministic_algorithms(not fail_case)
 
         for dtype, atol, rtol in ALLOWED_DTYPES:
 
@@ -740,9 +799,22 @@ class FMHABackendTest(unittest.TestCase):
                     i % len(backward_configs)
                 ]
 
-                self._test_against_natten_cutlass_fmha(
+                reference_kwargs = {}
+                if determinism:
+                    reference_kwargs["reference_backend"] = "blackwell-fmha"
+                    reference_kwargs["reference_q_tile_size"] = q_tile_size
+                    reference_kwargs["reference_kv_tile_size"] = kv_tile_size
+                    reference_kwargs["reference_backward_q_tile_size"] = (
+                        backward_q_tile_size
+                    )
+                    reference_kwargs["reference_backward_kv_tile_size"] = (
+                        backward_kv_tile_size
+                    )
+
+                self._test_against_natten_fmha(
                     batch=batch,
                     heads=heads,
+                    heads_kv=heads_kv,
                     head_dim=head_dim,
                     seqlen_q=seqlen_q,
                     seqlen_kv=seqlen_kv,
@@ -757,7 +829,10 @@ class FMHABackendTest(unittest.TestCase):
                     kv_tile_size=kv_tile_size,
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
+                    **reference_kwargs,
                 )
+
+        torch.use_deterministic_algorithms(False)
 
     def _test_backend_against_torch_sdpa(
         self,
@@ -813,8 +888,8 @@ class FMHABackendTest(unittest.TestCase):
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
 
-    # Intended to test LSE specifically
-    def _test_backend_against_natten_cutlass_fmha(
+    # Intended to test LSE and determinism
+    def _test_backend_against_natten(
         self,
         batch,
         heads,
@@ -823,9 +898,19 @@ class FMHABackendTest(unittest.TestCase):
         seqlen_kv,
         is_causal,
         backend,
+        heads_kv=None,
+        head_dim_v=None,
+        determinism: bool = False,
+        fail_case: bool = False,
     ):
         if backend == "hopper-fmha":
-            return self._test_cutlass_hopper_fmha_against_cutlass_2x_fmha(
+            assert heads_kv is None or heads_kv == heads
+            assert (
+                head_dim_v is None or head_dim_v == head_dim
+            ), "Hopper FMHA does not allow head_dim_v."
+            assert not determinism
+            assert not fail_case
+            return self._test_cutlass_hopper_fmha_against_natten(
                 batch=batch,
                 heads=heads,
                 head_dim=head_dim,
@@ -834,18 +919,32 @@ class FMHABackendTest(unittest.TestCase):
                 is_causal=is_causal,
             )
         elif backend == "blackwell-fmha":
-            return self._test_cutlass_blackwell_fmha_against_cutlass_2x_fmha(
+            assert (
+                head_dim_v is None or head_dim_v == head_dim
+            ), "Blackwell FMHA does not allow head_dim_v."
+
+            return self._test_cutlass_blackwell_fmha_against_natten(
                 batch=batch,
                 heads=heads,
+                heads_kv=heads_kv,
                 head_dim=head_dim,
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
                 is_causal=is_causal,
+                determinism=determinism,
+                fail_case=fail_case,
             )
         else:
             raise NotImplementedError(f"Add {backend=} to tests.")
 
-    def _test_randsweep_against_torch_sdpa(self, backend, max_tests=1000):
+    def _test_randsweep(
+        self,
+        backend,
+        max_tests=1000,
+        reference: str = "sdpa",
+        determinism: bool = False,
+    ):
+        assert reference in ("sdpa", "natten")
         max_qk = 2**21
         for i in range(max_tests):
             batch = random.choice(range(1, 4))
@@ -855,13 +954,13 @@ class FMHABackendTest(unittest.TestCase):
             if backend == "blackwell-fmha":
                 head_dim_choices = [32, 64, 128]
                 heads_choices = range(1, 8 + 1)
-                supports_gqa_mqa = True
+                supports_gqa_mqa = reference != "cutlass_fmha"
             elif backend == "hopper-fmha":
                 head_dim_choices = [32, 64, 128]
                 heads_choices = range(1, 4)
             else:
                 assert backend == "cutlass-fmha"
-                head_dim_choices = range(8, 1024 + 1, 8)
+                head_dim_choices = range(8, 1024 + 1, 8)  # type: ignore[assignment]
                 heads_choices = range(1, 4)
                 supports_dim_v = True
 
@@ -891,17 +990,30 @@ class FMHABackendTest(unittest.TestCase):
                     seqlen_q = int(seqlen_q * 0.1)
 
             for is_causal in [False, True]:
-                self._test_backend_against_torch_sdpa(
-                    batch=batch,
-                    heads=heads,
-                    heads_kv=heads_kv,
-                    head_dim=head_dim,
-                    head_dim_v=head_dim_v,
-                    seqlen_q=seqlen_q,
-                    seqlen_kv=seqlen_kv,
-                    is_causal=is_causal,
-                    backend=backend,
-                )
+                if reference == "sdpa":
+                    assert not determinism
+                    self._test_backend_against_torch_sdpa(
+                        batch=batch,
+                        heads=heads,
+                        heads_kv=heads_kv,
+                        head_dim=head_dim,
+                        head_dim_v=head_dim_v,
+                        seqlen_q=seqlen_q,
+                        seqlen_kv=seqlen_kv,
+                        is_causal=is_causal,
+                        backend=backend,
+                    )
+                elif reference == "natten":
+                    self._test_backend_against_natten(
+                        batch=batch,
+                        heads=heads,
+                        head_dim=head_dim,
+                        seqlen_q=seqlen_q,
+                        seqlen_kv=seqlen_kv,
+                        is_causal=is_causal,
+                        backend=backend,
+                        determinism=determinism,
+                    )
 
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_fmha_fast_against_torch_sdpa(self):
@@ -1001,7 +1113,7 @@ class FMHABackendTest(unittest.TestCase):
                     is_causal=is_causal,
                     backend="hopper-fmha",
                 )
-                self._test_backend_against_natten_cutlass_fmha(
+                self._test_backend_against_natten(
                     batch=batch,
                     heads=heads,
                     head_dim=head_dim,
@@ -1075,7 +1187,7 @@ class FMHABackendTest(unittest.TestCase):
                     backend="blackwell-fmha",
                 )
                 if heads_q == heads_kv:
-                    self._test_backend_against_natten_cutlass_fmha(
+                    self._test_backend_against_natten(
                         batch=batch,
                         heads=heads_q,
                         head_dim=head_dim,
@@ -1085,28 +1197,125 @@ class FMHABackendTest(unittest.TestCase):
                         backend="blackwell-fmha",
                     )
 
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_blackwell_kernels_not_supported()
+    def test_cutlass_blackwell_fmha_determinism(self):
+        problem_sizes = [
+            (3, 7, 1, 128, 3584, 2077),
+            (2, 4, 2, 32, 1639, 4000),
+            (2, 4, 4, 32, 4096, 4096),
+        ]
+
+        for (
+            batch,
+            heads_q,
+            heads_kv,
+            head_dim,
+            seqlen_q,
+            seqlen_kv,
+        ) in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_backend_against_natten(
+                    batch=batch,
+                    heads=heads_q,
+                    heads_kv=heads_kv,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="blackwell-fmha",
+                    determinism=True,
+                )
+
+    @pytest.mark.xfail(
+        reason="exact match must fail when determinism is disabled.", strict=True
+    )
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_blackwell_kernels_not_supported()
+    def test_cutlass_blackwell_fmha_determinism_xfail0(self):
+        problem_sizes = [
+            (3, 7, 1, 128, 3584, 2077),
+        ]
+
+        for (
+            batch,
+            heads_q,
+            heads_kv,
+            head_dim,
+            seqlen_q,
+            seqlen_kv,
+        ) in problem_sizes:
+            self._test_backend_against_natten(
+                batch=batch,
+                heads=heads_q,
+                heads_kv=heads_kv,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
+                is_causal=False,
+                backend="blackwell-fmha",
+                determinism=True,
+                fail_case=True,
+            )
+
+    @pytest.mark.xfail(
+        reason="exact match must fail when determinism is disabled.", strict=True
+    )
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_blackwell_kernels_not_supported()
+    def test_cutlass_blackwell_fmha_determinism_xfail1(self):
+        problem_sizes = [
+            (2, 4, 2, 32, 11283, 9873),
+        ]
+
+        for (
+            batch,
+            heads_q,
+            heads_kv,
+            head_dim,
+            seqlen_q,
+            seqlen_kv,
+        ) in problem_sizes:
+            self._test_backend_against_natten(
+                batch=batch,
+                heads=heads_q,
+                heads_kv=heads_kv,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
+                is_causal=True,
+                backend="blackwell-fmha",
+                determinism=True,
+                fail_case=True,
+            )
+
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(
-            backend="cutlass-fmha", max_tests=RAND_SWEEP_TESTS
-        )
+        self._test_randsweep(backend="cutlass-fmha", max_tests=RAND_SWEEP_TESTS)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(
-            backend="blackwell-fmha", max_tests=RAND_SWEEP_TESTS
+        self._test_randsweep(backend="blackwell-fmha", max_tests=RAND_SWEEP_TESTS)
+
+    @skip_if_not_running_extended_tests()
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_blackwell_kernels_not_supported()
+    def test_cutlass_blackwell_fmha_determinism_randsweep(self):
+        self._test_randsweep(
+            backend="blackwell-fmha",
+            max_tests=max(2, RAND_SWEEP_TESTS // 20),
+            reference="natten",
+            determinism=True,
         )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
     def test_cutlass_hopper_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep_against_torch_sdpa(
-            backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS
-        )
+        self._test_randsweep(backend="hopper-fmha", max_tests=RAND_SWEEP_TESTS)
 
 
 if __name__ == "__main__":

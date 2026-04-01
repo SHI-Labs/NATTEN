@@ -134,14 +134,6 @@ class CutlassBlackwellFmhaAutogradFn(Function):
 
         q_tile_size, k_tile_size = ctx.backward_config
 
-        if torch.are_deterministic_algorithms_enabled():
-            raise RuntimeError(
-                "Blackwell FMHA backward pass does not have a deterministic mode, "
-                "but PyTorch's deterministic algorithms were enabled. To proceed, "
-                "you must either disable torch's deterministic mode, or choose a "
-                "different backend."
-            )
-
         d_query, d_key, d_value = blackwell_fmha_backward(
             query,
             key,
@@ -157,6 +149,7 @@ class CutlassBlackwellFmhaAutogradFn(Function):
             cumulative_seqlen_KV,
             ctx.max_seqlen_Q,
             ctx.max_seqlen_KV,
+            torch.are_deterministic_algorithms_enabled(),
         )
 
         return (
