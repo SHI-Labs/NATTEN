@@ -30,9 +30,9 @@ from torch import Tensor
 
 from natten.types import CausalArgType, DimensionType, KernelSchedule, NoneType
 from natten.utils import log
+from natten.utils.environment import is_torch_compiling
 from natten.utils.tuples import create_causal_arg_from_bool, create_dim_from_int
 from natten.utils.varlen import generate_varlen_parameters
-from natten.utils.environment import is_torch_compiling
 
 logger = log.get_logger(__name__)
 

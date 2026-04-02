@@ -1292,7 +1292,9 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_fmha_randsweep_against_torch_sdpa(self):
-        self._test_randsweep(backend="cutlass-fmha", max_tests=max(1, RAND_SWEEP_TESTS // 2))
+        self._test_randsweep(
+            backend="cutlass-fmha", max_tests=max(1, RAND_SWEEP_TESTS // 2)
+        )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
