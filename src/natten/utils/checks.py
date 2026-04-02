@@ -32,6 +32,7 @@ from natten.types import CausalArgType, DimensionType, KernelSchedule, NoneType
 from natten.utils import log
 from natten.utils.tuples import create_causal_arg_from_bool, create_dim_from_int
 from natten.utils.varlen import generate_varlen_parameters
+from natten.utils.environment import is_torch_compiling
 
 logger = log.get_logger(__name__)
 
@@ -660,11 +661,13 @@ def varlen_tensor_checks(
             f"{max_seqlen_KV=}, {total_seqlen_KV=}."
         )
 
-    if (max_seqlen_Q == 0) != (max_seqlen_KV == 0):
-        raise ValueError(
-            "max_seqlen_Q and max_seqlen_KV must both be zero or both be non-zero, got "
-            f"{max_seqlen_Q=}, {max_seqlen_KV=}."
-        )
+    # NOTE: this check introduces recompiles
+    if not is_torch_compiling():
+        if (max_seqlen_Q == 0) != (max_seqlen_KV == 0):
+            raise ValueError(
+                "max_seqlen_Q and max_seqlen_KV must both be zero or both be non-zero, got "
+                f"{max_seqlen_Q=}, {max_seqlen_KV=}."
+            )
 
     if max_seqlen_Q < 0 or max_seqlen_KV < 0:
         raise ValueError(
