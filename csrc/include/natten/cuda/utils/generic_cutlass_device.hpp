@@ -37,10 +37,10 @@
 
 #pragma once
 
-#include <natten/cuda/utils/cutlass.cuh>
 // common
 #include "cute/tensor.hpp"
 #include "cutlass/cutlass.h"
+#include "cutlass/device_kernel.h"
 
 #if !defined(__CUDACC_RTC__)
 #include "cutlass/cluster_launch.hpp"
@@ -116,7 +116,7 @@ class DeviceKernel {
     if (smem_size >= (48 << 10)) {
       CUTLASS_TRACE_HOST("  Setting smem size to " << smem_size);
       result = cudaFuncSetAttribute(
-          device_kernel_sm90<Kernel>,
+          device_kernel<Kernel>,
           cudaFuncAttributeMaxDynamicSharedMemorySize,
           smem_size);
       if (cudaSuccess != result) {
@@ -131,7 +131,7 @@ class DeviceKernel {
     // query occupancy after setting smem size
     result = cudaOccupancyMaxActiveBlocksPerMultiprocessor(
         &max_active_blocks,
-        device_kernel_sm90<Kernel>,
+        device_kernel<Kernel>,
         Kernel::MaxThreadsPerBlock,
         smem_size);
 
@@ -173,7 +173,7 @@ class DeviceKernel {
     if (smem_size >= (48 << 10)) {
       CUTLASS_TRACE_HOST("  Setting smem size to " << smem_size);
       cudaError_t result = cudaFuncSetAttribute(
-          device_kernel_sm90<Kernel>,
+          device_kernel<Kernel>,
           cudaFuncAttributeMaxDynamicSharedMemorySize,
           smem_size);
       if (cudaSuccess != result) {
@@ -222,14 +222,14 @@ class DeviceKernel {
           cute::size<0>(typename Kernel::ClusterShape{}),
           cute::size<1>(typename Kernel::ClusterShape{}),
           cute::size<2>(typename Kernel::ClusterShape{}));
-      void const* kernel = (void const*)device_kernel_sm90<Kernel>;
+      void const* kernel = (void const*)device_kernel<Kernel>;
       void* kernel_params[] = {&params};
       launch_result = ClusterLauncher::launch(
           grid, cluster, block, smem_size, stream, kernel, kernel_params);
     } else {
       launch_result = Status::kSuccess;
       cutlass::arch::synclog_setup();
-      device_kernel_sm90<Kernel><<<grid, block, smem_size, stream>>>(params);
+      device_kernel<Kernel><<<grid, block, smem_size, stream>>>(params);
     }
 
     cudaError_t result = cudaGetLastError();
