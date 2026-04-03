@@ -146,12 +146,18 @@ void fna_generic_backward(
   } else {
     delta = torch::empty(
         {batch_size, seqlen, heads}, query.options().dtype(at::kFloat));
-    compute_delta_(out, grad_out, delta, (int32_t)delta.numel(), dim_value);
+    auto out_ = torch::flatten(out, /*start_dim=*/1, /*end_dim=*/kNADim);
+    auto grad_out_ =
+        torch::flatten(grad_out, /*start_dim=*/1, /*end_dim=*/kNADim);
+    compute_delta(out_, grad_out_, delta);
   }
   TORCH_CHECK(delta.size(0) == batch_size);
   TORCH_CHECK(delta.size(1) == seqlen);
   TORCH_CHECK(delta.size(2) == heads);
   if (at::globalContext().deterministicAlgorithms()) {
+    TORCH_CHECK(
+        not compute_delta_with_torch,
+        "Computing delta with PyTorch is not guaranteed to be deterministic!");
     TORCH_CHECK(
         natten::flatten(num_splits_key) <= 1,
         "FNA-backward was called with KV parallelism, "

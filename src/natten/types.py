@@ -71,18 +71,16 @@ CutlassHopperFnaForwardConfigType = Tuple[QKTileShapeType, KernelSchedule]
 CutlassHopperFnaBackwardConfigType = QKTileShapeType
 FlexFnaForwardConfigType = QKTileShapeType
 
-# (query_tile_shape, kv_tile_shape, num_kv_splits, use_torch_to_compute_delta)
-CutlassFnaBackwardConfigType = Union[
-    Tuple[Dimension1DType, Dimension1DType, Dimension1DType, bool],
-    Tuple[Dimension2DType, Dimension2DType, Dimension2DType, bool],
-    Tuple[Dimension3DType, Dimension3DType, Dimension3DType, bool],
-]
+# (query_tile_shape, kv_tile_shape)
+# NOTE: kv_splits and use_pt_reduction are independent arguments, not part of the config type.
+# They are validated/defaulted in the torch ops (torch_wrappers.py).
+CutlassFnaBackwardConfigType = QKTileShapeType
 
 # FMHA configs
 FmhaForwardConfigType = Tuple[int, int]
 
 CutlassFmhaForwardConfigType = FmhaForwardConfigType
-CutlassFmhaBackwardConfigType = Tuple[int, int, int, bool]
+CutlassFmhaBackwardConfigType = FmhaForwardConfigType
 
 FlexFmhaForwardConfigType = FmhaForwardConfigType
 CutlassBlackwellFmhaForwardConfigType = FmhaForwardConfigType

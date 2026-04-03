@@ -25,79 +25,66 @@
 
 #include <natten/natten.h>
 #ifdef NATTEN_WITH_CUTLASS
-#include <natten/cuda/reduction/device/compute_delta.h>
+#include <natten/cuda/reduction/fmha_kernel_bwd_sum_OdO.hpp>
+#include <natten/cuda/utils/generic_cutlass_device.hpp>
 #include <natten/cuda/utils/cutlass.cuh>
 #endif
 
 namespace natten {
 namespace cuda {
 
-using Coord = cutlass::Coord<2>;
-
-template <typename InputType, typename OutputType, int VectorLength>
-void compute_delta_get_workspace_size(
-    int64_t& workspace_size,
-    int32_t num_rows,
-    int32_t dim) {
-  auto cta_count = std::min(num_rows, 65535);
-
-#ifdef NATTEN_WITH_CUTLASS
-  auto extent = Coord({(int)num_rows, (int)dim});
-
-  using Kernel = natten::cuda::reduction::device::ComputeDelta<
-      OutputType,
-      InputType,
-      VectorLength,
-      /* ElementCompute = */ float,
-      /* Threads = */ 32,
-      /* BatchSize = */ 1>;
-
-  auto kernel = Kernel(extent, cta_count);
-  workspace_size = kernel.workspace_size();
-#else
-  NATTEN_FAILURE(
-      "`compute_delta` is only available when NATTEN is built with CUTLASS.");
-#endif
-}
-
-template <typename InputType, typename OutputType, int VectorLength>
+template <typename ElementIn, typename ElementOut>
 void compute_delta(
     cudaStream_t stream,
-    void* out_ptr,
-    void* d_out_ptr,
-    void* delta_ptr,
-    void* workspace_ptr,
-    int64_t workspace_size,
-    int32_t num_rows,
-    int32_t dim) {
+    const ElementIn* ptr_O,
+    const ElementIn* ptr_dO,
+    ElementOut* ptr_sum_OdO,
+    int batch,
+    int heads,
+    int seqlen_Q,
+    int dim) {
 #ifdef NATTEN_WITH_CUTLASS
-  auto cta_count = std::min(num_rows, 65535);
+  using namespace cute;
+  // B H Q D
+  using ProblemShape = cute::tuple<int, int, int, int>;
+  using OperationSumOdO = cutlass::device::DeviceKernel<
+      cutlass::fmha::kernel::
+          FmhaKernelBwdSumOdO<ProblemShape, ElementIn, ElementOut>>;
 
-  auto extent = Coord({(int)num_rows, (int)dim});
+  OperationSumOdO op_sum_OdO;
 
-  using Kernel = natten::cuda::reduction::device::ComputeDelta<
-      OutputType,
-      InputType,
-      VectorLength,
-      /* ElementCompute = */ float,
-      /* Threads = */ 32,
-      /* BatchSize = */ 1>;
+  ProblemShape problem_shape = cute::make_tuple(batch, heads, seqlen_Q, dim);
+  auto stride_O = make_stride(
+      static_cast<int64_t>(dim * heads) * static_cast<int64_t>(seqlen_Q),
+      dim,
+      dim * heads,
+      _1{});
+  auto stride_dO = stride_O;
+  auto stride_sum_OdO = make_stride(
+      static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_Q),
+      _1{},
+      heads);
 
-  auto kernel = Kernel(extent, cta_count);
-  NATTEN_CHECK(
-      workspace_size == kernel.workspace_size(),
-      "NATTEN failure: workspace allocated for `compute_delta` was wrong.");
-  int64_t stride[] = {(int64_t)dim};
-  int64_t stride_out[] = {(int64_t)(1)};
-  NATTEN_CUTLASS_CHECK(kernel(
-      /* out */ reinterpret_cast<OutputType*>(delta_ptr),
-      /* stride_out */ stride_out,
-      reinterpret_cast<InputType*>(out_ptr),
-      /* stride_a */ stride,
-      reinterpret_cast<InputType*>(d_out_ptr),
-      /* stride_b */ stride,
-      workspace_ptr,
-      stream));
+  auto args = typename OperationSumOdO::Arguments{
+      problem_shape,
+      ptr_O,
+      stride_O,
+      ptr_dO,
+      stride_dO,
+      ptr_sum_OdO,
+      stride_sum_OdO};
+
+  op_sum_OdO.initialize(args, nullptr, stream);
+  auto status = OperationSumOdO::can_implement(args);
+  if (status != cutlass::Status::kSuccess) {
+    NATTEN_FAILURE(
+        "`compute_delta` kernel is not supported for this use case.");
+  }
+
+  auto result = op_sum_OdO.run(stream);
+  if (result != cutlass::Status::kSuccess) {
+    NATTEN_FAILURE("`compute_delta` kernel launch failed.");
+  }
 #else
   NATTEN_FAILURE(
       "`compute_delta` is only available when NATTEN is built with CUTLASS.");

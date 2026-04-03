@@ -552,12 +552,9 @@ class FMHABackendTest(unittest.TestCase):
 
             for i in range(n_configs_to_test):
                 q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
-                (
-                    backward_q_tile_size,
-                    backward_kv_tile_size,
-                    kv_splits,
-                    use_pt_reduction,
-                ) = backward_configs[i % len(backward_configs)]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
 
                 self._test_against_torch_sdpa(
                     batch=batch,
@@ -576,8 +573,6 @@ class FMHABackendTest(unittest.TestCase):
                     kv_tile_size=kv_tile_size,
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
-                    backward_kv_splits=kv_splits,
-                    backward_use_pt_reduction=use_pt_reduction,
                 )
 
     def _test_cutlass_blackwell_fmha_against_torch_sdpa(
@@ -753,6 +748,79 @@ class FMHABackendTest(unittest.TestCase):
                     backward_kv_tile_size=backward_kv_tile_size,
                 )
 
+    def _test_cutlass_fmha_determinism(
+        self,
+        batch,
+        heads,
+        head_dim,
+        seqlen_q,
+        seqlen_kv,
+        is_causal,
+        max_configs=5,
+        fail_case=False,
+    ):
+        torch.set_default_device("cuda")
+
+        torch.use_deterministic_algorithms(not fail_case)
+        ALLOWED_DTYPES = [
+            (torch.float32, (0, 0), (0, 0)),
+            (torch.float16, (0, 0), (0, 0)),
+            (torch.bfloat16, (0, 0), (0, 0)),
+        ]
+
+        for dtype, atol, rtol in ALLOWED_DTYPES:
+            dummy = torch.empty(
+                (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
+            )
+
+            forward_configs = get_all_fmha_forward_configs(dummy)
+            backward_configs = get_all_fmha_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
+
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            n_configs_to_test = min(
+                max_configs, max(len(forward_configs), len(backward_configs))
+            )
+
+            for i in range(n_configs_to_test):
+                q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                self._test_against_natten_fmha(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    dtype=dtype,
+                    test_backprop=True,
+                    test_lse=True,
+                    atol=atol,
+                    rtol=rtol,
+                    backend="cutlass-fmha",
+                    q_tile_size=q_tile_size,
+                    kv_tile_size=kv_tile_size,
+                    backward_q_tile_size=backward_q_tile_size,
+                    backward_kv_tile_size=backward_kv_tile_size,
+                    backward_kv_splits=1,
+                    backward_use_pt_reduction=False,
+                    reference_backend="cutlass-fmha",
+                    reference_q_tile_size=q_tile_size,
+                    reference_kv_tile_size=kv_tile_size,
+                    reference_backward_q_tile_size=backward_q_tile_size,
+                    reference_backward_kv_tile_size=backward_kv_tile_size,
+                    reference_backward_kv_splits=1,
+                    reference_backward_use_pt_reduction=False,
+                )
+
+        torch.use_deterministic_algorithms(False)
+
     def _test_cutlass_blackwell_fmha_against_natten(
         self,
         batch,
@@ -917,6 +985,18 @@ class FMHABackendTest(unittest.TestCase):
                 seqlen_q=seqlen_q,
                 seqlen_kv=seqlen_kv,
                 is_causal=is_causal,
+            )
+        elif backend == "cutlass-fmha":
+            assert heads_kv is None or heads_kv == heads
+            assert determinism
+            return self._test_cutlass_fmha_determinism(
+                batch=batch,
+                heads=heads,
+                head_dim=head_dim,
+                seqlen_q=seqlen_q,
+                seqlen_kv=seqlen_kv,
+                is_causal=is_causal,
+                fail_case=fail_case,
             )
         elif backend == "blackwell-fmha":
             assert (
@@ -1288,6 +1368,44 @@ class FMHABackendTest(unittest.TestCase):
                 determinism=True,
                 fail_case=True,
             )
+
+    @skip_if_libnatten_is_not_supported()
+    def test_cutlass_fmha_determinism(self):
+        problem_sizes = [
+            (3, 7, 1, 128, 3584, 2077),
+            (2, 4, 2, 32, 1639, 4000),
+            (2, 4, 4, 32, 4096, 4096),
+        ]
+
+        for (
+            batch,
+            heads_q,
+            heads_kv,
+            head_dim,
+            seqlen_q,
+            seqlen_kv,
+        ) in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_backend_against_natten(
+                    batch=batch,
+                    heads=heads_q,
+                    head_dim=head_dim,
+                    seqlen_q=seqlen_q,
+                    seqlen_kv=seqlen_kv,
+                    is_causal=is_causal,
+                    backend="cutlass-fmha",
+                    determinism=True,
+                )
+
+    @skip_if_not_running_extended_tests()
+    @skip_if_libnatten_is_not_supported()
+    def test_cutlass_fmha_determinism_randsweep(self):
+        self._test_randsweep(
+            backend="cutlass-fmha",
+            max_tests=max(2, RAND_SWEEP_TESTS // 20),
+            reference="natten",
+            determinism=True,
+        )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()

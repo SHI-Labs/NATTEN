@@ -102,6 +102,8 @@ def make_cutlass_fna_autograd_fn(na_dim):
             scale: float,
             forward_config: CutlassFnaForwardConfigType,
             backward_config: CutlassFnaBackwardConfigType,
+            backward_kv_splits: Optional[DimensionType],
+            backward_use_pt_reduction: bool,
         ) -> Tuple[Tensor, Tensor]:
             kernel_size, stride, dilation, is_causal = check_all_args(
                 na_dim, kernel_size, stride, dilation, is_causal
@@ -137,6 +139,8 @@ def make_cutlass_fna_autograd_fn(na_dim):
             ctx.is_causal = is_causal
             ctx.scale = scale
             ctx.backward_config = backward_config
+            ctx.backward_kv_splits = backward_kv_splits
+            ctx.backward_use_pt_reduction = backward_use_pt_reduction
             # Always record determinism behavior during forward pass (forward pass itself is
             # deterministic anyway).
             # Determinism could be limited to part of the program, which means during forward pass
@@ -159,30 +163,13 @@ def make_cutlass_fna_autograd_fn(na_dim):
             NoneType,
             NoneType,
             NoneType,
+            NoneType,
+            NoneType,
         ]:
             query, key, value, logsumexp, output = ctx.saved_tensors
             d_output = grad_out.contiguous()
 
-            q_tile_shape, k_tile_shape, kv_splits, compute_delta_with_pt = (
-                ctx.backward_config
-            )
-
-            num_kv_splits = kv_splits
-            if any([kv_split > 1 for kv_split in kv_splits]) and ctx.deterministic:
-                num_kv_splits = tuple(1 for _ in range(len(kv_splits)))
-                logger.warning(
-                    "You enabled PyTorch's deterministic mode, but tried to train with FNA's KV "
-                    "parallelism, which is non-deterministic. "
-                    f"Overriding {kv_splits} to {num_kv_splits}."
-                )
-
-            if not compute_delta_with_pt and ctx.deterministic:
-                compute_delta_with_pt = True
-                # Silent override
-                # logger.warning(
-                #     "You enabled PyTorch's deterministic mode, but tried to use backward_use_pt_reduction "
-                #     ", which is non-deterministic. Overriding."
-                # )
+            q_tile_shape, k_tile_shape = ctx.backward_config
 
             d_query, d_key, d_value = BACKWARD_OPS[na_dim](
                 query,
@@ -198,11 +185,25 @@ def make_cutlass_fna_autograd_fn(na_dim):
                 ctx.scale,
                 q_tile_shape,
                 k_tile_shape,
-                num_kv_splits,
-                compute_delta_with_pt,
+                ctx.backward_kv_splits,
+                ctx.backward_use_pt_reduction,
+                ctx.deterministic,
             )
 
-            return d_query, d_key, d_value, None, None, None, None, None, None, None
+            return (
+                d_query,
+                d_key,
+                d_value,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            )
 
     return CutlassFnaGenericAutogradFn
 
@@ -268,11 +269,8 @@ def cutlass_fna_generic(
 
     backward_config = check_cutlass_fna_backward_config(
         input_tensor=key if value.shape[-1] <= key.shape[-1] else value,
-        dilation=dilation,
         q_tile_shape=backward_q_tile_shape,
         kv_tile_shape=backward_kv_tile_shape,
-        kv_splits=backward_kv_splits,
-        use_pt_reduction=backward_use_pt_reduction,
     )
 
     scale = scale or query.shape[-1] ** -0.5
@@ -301,6 +299,8 @@ def cutlass_fna_generic(
         scale,
         forward_config,
         backward_config,
+        backward_kv_splits,
+        backward_use_pt_reduction,
     )
 
     if return_lse:

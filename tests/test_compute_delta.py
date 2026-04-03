@@ -36,13 +36,12 @@ from natten.utils.testing import (
 def _reset_everything():
     random.seed(42)
     torch.manual_seed(42)
-    torch.use_deterministic_algorithms(False)
+    torch.use_deterministic_algorithms(True)
 
 
 def compute_delta_pt(out: torch.Tensor, d_out: torch.Tensor, dtype) -> torch.Tensor:
-    assert out.dim() == d_out.dim() and out.dim() >= 2
-    for i in range(out.dim()):
-        assert out.shape[i] == d_out.shape[i]
+    assert out.dim() == d_out.dim() == 4
+    assert out.shape == d_out.shape
     with torch.no_grad():
         return (out.clone().to(dtype) * d_out.clone().to(dtype)).sum(-1)
 
@@ -54,8 +53,10 @@ class ComputeDeltaTests(unittest.TestCase):
     def tearDown(self):
         _reset_everything()
 
-    def _test_against_reference(self, input_shape, eps, dtype, dtype_out):
-        assert len(input_shape) >= 2
+    def _test_against_reference(
+        self, batch, seqlen, heads, head_dim, eps, dtype, dtype_out
+    ):
+        input_shape = (batch, seqlen, heads, head_dim)
         out = torch.randn(input_shape, device="cuda", dtype=dtype)
         d_out = torch.randn_like(out)
 
@@ -67,17 +68,23 @@ class ComputeDeltaTests(unittest.TestCase):
 
             torch.testing.assert_close(delta, delta_ref, atol=eps, rtol=0)
 
-    def _test_all_dtypes_against_reference(self, input_shape):
+    def _test_all_dtypes_against_reference(self, batch, seqlen, heads, head_dim):
         torch.set_default_device("cuda")
         self._test_against_reference(
-            input_shape=input_shape,
-            eps=1e-2,
+            batch=batch,
+            seqlen=seqlen,
+            heads=heads,
+            head_dim=head_dim,
+            eps=1e-3,
             dtype=torch.float32,
             dtype_out=torch.float32,
         )
         if supports_float16(torch.get_default_device()):
             self._test_against_reference(
-                input_shape=input_shape,
+                batch=batch,
+                seqlen=seqlen,
+                heads=heads,
+                head_dim=head_dim,
                 eps=1e-1,
                 dtype=torch.float16,
                 dtype_out=torch.float32,
@@ -85,27 +92,29 @@ class ComputeDeltaTests(unittest.TestCase):
 
         if supports_bfloat16(torch.get_default_device()):
             self._test_against_reference(
-                input_shape=input_shape,
-                eps=1e-1,
+                batch=batch,
+                seqlen=seqlen,
+                heads=heads,
+                head_dim=head_dim,
+                eps=2e-1,
                 dtype=torch.bfloat16,
                 dtype_out=torch.float32,
             )
 
     @skip_if_libnatten_is_not_supported()
     def test_against_pt_reference(self):
+        # (batch, seqlen, heads, head_dim)
         input_sizes = [
-            (2, 4),
-            (5, 4),
-            (1, 4, 64, 32),
-            (128, 49),
-            (50, 60),
-            (127, 61),
-            (128, 4, 56, 56, 32),
-            (128, 8, 56, 56, 128),
-            (1, 1, 56, 56, 1024),
+            (1, 64, 2, 128),
+            (128, 56, 4, 2),
+            (128, 56, 8, 16),
+            (1, 1235, 56, 512),
+            (2, 128, 4, 48),
+            (5, 50, 1, 60),
+            (1, 127, 1, 256),
         ]
-        for input_size in input_sizes:
-            self._test_all_dtypes_against_reference(input_size)
+        for batch, seqlen, heads, head_dim in input_sizes:
+            self._test_all_dtypes_against_reference(batch, seqlen, heads, head_dim)
 
 
 if __name__ == "__main__":

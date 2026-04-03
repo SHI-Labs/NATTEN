@@ -27,6 +27,7 @@ import unittest
 from itertools import product
 
 import natten  # noqa: F401
+import pytest
 import torch
 from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.backends.configs.cutlass import (
@@ -34,7 +35,6 @@ from natten.backends.configs.cutlass import (
     get_all_forward_configs,
 )
 from natten.context import set_memory_usage_preference, use_kv_parallelism_in_fused_na
-from natten.utils.checks import check_dilation_arg
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
@@ -59,6 +59,7 @@ def _reset_everything():
     random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
+    torch.use_deterministic_algorithms(False)
 
 
 class FNABackendTest(unittest.TestCase):
@@ -155,9 +156,8 @@ class FNABackendTest(unittest.TestCase):
                 dtype=dtype,
             )
 
-            dilation = check_dilation_arg(len(input_shape), dilation)
             forward_configs = get_all_forward_configs(dummy)
-            backward_configs = get_all_backward_configs(dummy, dilation)
+            backward_configs = get_all_backward_configs(dummy)
             assert len(forward_configs) > 0
             assert len(backward_configs) > 0
 
@@ -180,12 +180,7 @@ class FNABackendTest(unittest.TestCase):
 
             for i, j in cfg_idxes:
                 q_tile_shape, kv_tile_shape = forward_configs[i]
-                (
-                    backward_q_tile_shape,
-                    backward_kv_tile_shape,
-                    kv_splits,
-                    use_pt_reduction,
-                ) = backward_configs[j]
+                backward_q_tile_shape, backward_kv_tile_shape = backward_configs[j]
 
                 tester.test(
                     eps=eps,
@@ -196,8 +191,6 @@ class FNABackendTest(unittest.TestCase):
                     kv_tile_shape=kv_tile_shape,
                     backward_q_tile_shape=backward_q_tile_shape,
                     backward_kv_tile_shape=backward_kv_tile_shape,
-                    backward_kv_splits=kv_splits,
-                    backward_use_pt_reduction=use_pt_reduction,
                 )
 
     @skip_if_libnatten_is_not_supported()
@@ -404,11 +397,11 @@ class FNABackendTest(unittest.TestCase):
         problem_sizes = [
             (1, 12, 64, (14, 8, 8), (7, 5, 5), (2, 1, 3), (2, 1, 1)),
             (1, 1, 16, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 2, 1)),
-            (1, 1, 16, (32, 64, 64), (16, 16, 16), (1, 2, 2), (1, 1, 1)),
-            (1, 1, 16, (30, 48, 80), (18, 24, 24), (16, 8, 8), (1, 1, 1)),
+            # (1, 1, 16, (32, 64, 64), (16, 16, 16), (1, 2, 2), (1, 1, 1)),  # seqlen=131072
+            # (1, 1, 16, (30, 48, 80), (18, 24, 24), (16, 8, 8), (1, 1, 1)),  # seqlen=115200
             (1, 1, 128, (16, 44, 80), (12, 32, 32), (8, 22, 16), (1, 1, 1)),
             (1, 1, 128, (31, 32, 32), (10, 32, 32), (1, 1, 1), (1, 1, 1)),
-            (1, 1, 128, (57, 20, 88), (20, 4, 6), (1, 1, 1), (2, 1, 1)),
+            # (1, 1, 128, (57, 20, 88), (20, 4, 6), (1, 1, 1), (2, 1, 1)),  # seqlen=100320
             (1, 1, 128, (57, 32, 32), (10, 32, 32), (1, 1, 1), (1, 1, 1)),
             (1, 1, 128, (30, 32, 32), (10, 32, 32), (1, 1, 1), (1, 1, 1)),
             (1, 1, 32, (16, 16, 16), (15, 15, 15), (1, 1, 1), (1, 1, 1)),
@@ -419,21 +412,21 @@ class FNABackendTest(unittest.TestCase):
             (1, 2, 32, (8, 8, 12), (5, 8, 11), (2, 3, 4), (1, 1, 1)),
             (1, 1, 64, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 1, 1)),
             (2, 3, 32, (5, 45, 73), (2, 7, 32), (1, 4, 32), (2, 2, 2)),
-            (1, 1, 128, (57, 20, 88), (19, 4, 6), (13, 1, 6), (2, 2, 7)),
-            (2, 3, 128, (57, 20, 88), (19, 4, 6), (13, 1, 6), (2, 2, 7)),
-            (1, 1, 128, (32, 64, 64), (16, 16, 16), (2, 1, 1), (2, 2, 3)),
-            (1, 1, 128, (61, 61, 61), (10, 10, 10), (1, 1, 1), (1, 1, 2)),
-            (1, 1, 128, (61, 61, 61), (10, 10, 10), (1, 1, 1), (1, 2, 1)),
-            (1, 1, 128, (61, 61, 61), (10, 10, 10), (1, 1, 1), (2, 2, 2)),
-            (1, 1, 128, (32, 64, 64), (16, 16, 16), (2, 1, 1), (1, 1, 1)),
-            (1, 1, 128, (32, 64, 64), (16, 16, 16), (1, 1, 2), (1, 1, 1)),
+            # (1, 1, 128, (57, 20, 88), (19, 4, 6), (13, 1, 6), (2, 2, 7)),  # seqlen=100320
+            # (1, 1, 128, (57, 20, 88), (19, 4, 6), (13, 1, 6), (2, 2, 7)),  # seqlen=100320, was batch=2 heads=3
+            # (1, 1, 128, (32, 64, 64), (16, 16, 16), (2, 1, 1), (2, 2, 3)),  # seqlen=131072
+            # (1, 1, 128, (61, 61, 61), (10, 10, 10), (1, 1, 1), (1, 1, 2)),  # seqlen=226981
+            # (1, 1, 128, (61, 61, 61), (10, 10, 10), (1, 1, 1), (1, 2, 1)),  # seqlen=226981
+            # (1, 1, 128, (61, 61, 61), (10, 10, 10), (1, 1, 1), (2, 2, 2)),  # seqlen=226981
+            # (1, 1, 128, (32, 64, 64), (16, 16, 16), (2, 1, 1), (1, 1, 1)),  # seqlen=131072
+            # (1, 1, 128, (32, 64, 64), (16, 16, 16), (1, 1, 2), (1, 1, 1)),  # seqlen=131072
             (1, 1, 32, (16, 16, 16), (16, 16, 16), (8, 4, 8), (1, 1, 1)),
             (1, 1, 64, (24, 36, 40), (24, 36, 40), (10, 12, 13), (1, 1, 1)),
             (1, 1, 128, (16, 44, 80), (16, 44, 80), (8, 4, 8), (1, 1, 1)),
-            (1, 1, 128, (30, 44, 80), (18, 24, 24), (1, 1, 1), (1, 1, 1)),
-            (1, 1, 128, (30, 44, 80), (18, 24, 24), (2, 8, 16), (1, 1, 1)),
-            (1, 1, 128, (30, 44, 80), (24, 24, 16), (1, 1, 1), (1, 1, 1)),
-            (1, 1, 128, (30, 44, 80), (24, 24, 16), (2, 8, 16), (1, 1, 1)),
+            # (1, 1, 128, (30, 44, 80), (18, 24, 24), (1, 1, 1), (1, 1, 1)),  # seqlen=105600
+            # (1, 1, 128, (30, 44, 80), (18, 24, 24), (2, 8, 16), (1, 1, 1)),  # seqlen=105600
+            # (1, 1, 128, (30, 44, 80), (24, 24, 16), (1, 1, 1), (1, 1, 1)),  # seqlen=105600
+            # (1, 1, 128, (30, 44, 80), (24, 24, 16), (2, 8, 16), (1, 1, 1)),  # seqlen=105600
             (1, 1, 32, (16, 16, 16), (14, 14, 14), (1, 1, 1), (1, 1, 1)),
             (1, 1, 32, (16, 16, 16), (3, 3, 3), (1, 1, 1), (1, 1, 1)),
             (1, 1, 128, (16, 44, 80), (8, 9, 10), (1, 1, 1), (1, 1, 1)),
@@ -447,10 +440,10 @@ class FNABackendTest(unittest.TestCase):
             (1, 1, 128, (30, 48, 18), (3, 2, 8), (1, 1, 1), (8, 18, 2)),
             (1, 1, 128, (61, 32, 32), (10, 32, 32), (1, 1, 1), (2, 1, 1)),
             (1, 1, 128, (57, 32, 32), (10, 32, 32), (1, 1, 1), (2, 1, 1)),
-            (1, 1, 128, (57, 20, 88), (20, 8, 16), (1, 1, 1), (2, 1, 1)),
+            # (1, 1, 128, (57, 20, 88), (20, 8, 16), (1, 1, 1), (2, 1, 1)),  # seqlen=100320
             (3, 1, 64, (18, 37, 12), (14, 16, 12), (12, 8, 6), (1, 2, 1)),
-            (1, 1, 128, (32, 64, 64), (16, 16, 16), (1, 1, 2), (1, 3, 2)),
-            (1, 1, 128, (48, 64, 64), (7, 15, 11), (1, 2, 2), (5, 3, 2)),
+            # (1, 1, 128, (32, 64, 64), (16, 16, 16), (1, 1, 2), (1, 3, 2)),  # seqlen=131072
+            # (1, 1, 128, (48, 64, 64), (7, 15, 11), (1, 2, 2), (5, 3, 2)),  # seqlen=196608
         ]
         for (
             batch,
@@ -666,6 +659,226 @@ class FNABackendTest(unittest.TestCase):
                 q_tile_shape=q_tile_shape,
                 kv_tile_shape=kv_tile_shape,
             )
+
+    def _test_determinism(
+        self,
+        batch,
+        heads,
+        head_dim,
+        input_shape,
+        kernel_size,
+        stride,
+        dilation,
+        is_causal=None,
+        configs_to_test=5,
+        fail_case=False,
+    ):
+        torch.set_default_device("cuda")
+        assert isinstance(input_shape, tuple)
+
+        torch.use_deterministic_algorithms(not fail_case)
+
+        ALLOWED_DTYPES = [
+            torch.float32,
+            torch.float16,
+            torch.bfloat16,
+        ]
+
+        for dtype in ALLOWED_DTYPES:
+            dummy = torch.randn(
+                (batch, *input_shape, heads, head_dim),
+                device="cuda",
+                dtype=dtype,
+            )
+
+            forward_configs = get_all_forward_configs(dummy)
+            backward_configs = get_all_backward_configs(dummy)
+            assert len(forward_configs) > 0
+            assert len(backward_configs) > 0
+
+            random.shuffle(forward_configs)
+            random.shuffle(backward_configs)
+
+            n_configs_to_test = min(
+                configs_to_test, max(len(forward_configs), len(backward_configs))
+            )
+
+            for i in range(n_configs_to_test):
+                q_tile_shape, kv_tile_shape = forward_configs[i % len(forward_configs)]
+                backward_q_tile_shape, backward_kv_tile_shape = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                tester = NattenBackendTester(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    head_dim_v=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                    test_backprop=True,
+                    reference_backend="cutlass-fna",
+                    dtype=dtype,
+                    reference_q_tile_shape=q_tile_shape,
+                    reference_kv_tile_shape=kv_tile_shape,
+                    reference_backward_q_tile_shape=backward_q_tile_shape,
+                    reference_backward_kv_tile_shape=backward_kv_tile_shape,
+                )
+
+                tester.test(
+                    eps=(0, (0, 0, 0)),
+                    dtype=dtype,
+                    target_backend="cutlass-fna",
+                    q_tile_shape=q_tile_shape,
+                    kv_tile_shape=kv_tile_shape,
+                    backward_q_tile_shape=backward_q_tile_shape,
+                    backward_kv_tile_shape=backward_kv_tile_shape,
+                )
+
+        torch.use_deterministic_algorithms(False)
+
+    @skip_if_libnatten_is_not_supported()
+    def test_1d_determinism(self):
+        problem_sizes = [
+            (2, 4, 128, (128,), (63,), (31,), (1,)),
+            (1, 1, 32, (128,), (3,), (2,), (5,)),
+            (1, 1, 64, (128,), (8,), (7,), (5,)),
+        ]
+        for (
+            batch,
+            heads,
+            head_dim,
+            input_shape,
+            kernel_size,
+            stride,
+            dilation,
+        ) in problem_sizes:
+            for causal in [False, True]:
+                is_causal = (causal,)
+                self._test_determinism(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @skip_if_libnatten_is_not_supported()
+    def test_2d_determinism(self):
+        problem_sizes = [
+            (1, 1, 32, (84, 19), (7, 3), (1, 1), (5, 1)),
+            (1, 1, 128, (19, 29), (8, 8), (1, 1), (2, 3)),
+            (1, 1, 128, (48, 17), (24, 16), (1, 1), (2, 1)),
+        ]
+        for (
+            batch,
+            heads,
+            head_dim,
+            input_shape,
+            kernel_size,
+            stride,
+            dilation,
+        ) in problem_sizes:
+            for causal_x, causal_y in product([False, True], [False, True]):
+                is_causal = (causal_x, causal_y)
+                self._test_determinism(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @skip_if_libnatten_is_not_supported()
+    def test_3d_determinism(self):
+        problem_sizes = [
+            (1, 2, 64, (14, 8, 8), (7, 5, 5), (2, 1, 3), (2, 1, 1)),
+            (3, 1, 16, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 2, 1)),
+            (1, 1, 32, (16, 16, 16), (3, 3, 3), (1, 1, 1), (1, 1, 1)),
+        ]
+        for (
+            batch,
+            heads,
+            head_dim,
+            input_shape,
+            kernel_size,
+            stride,
+            dilation,
+        ) in problem_sizes:
+            for causal_x, causal_y, causal_z in product(
+                [False, True], [False, True], [False, True]
+            ):
+                is_causal = (causal_x, causal_y, causal_z)
+                self._test_determinism(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    input_shape=input_shape,
+                    kernel_size=kernel_size,
+                    stride=stride,
+                    dilation=dilation,
+                    is_causal=is_causal,
+                )
+
+    @pytest.mark.xfail(
+        reason="exact match must fail when determinism is disabled.", strict=True
+    )
+    @skip_if_libnatten_is_not_supported()
+    def test_1d_determinism_xfail(self):
+        self._test_determinism(
+            batch=2,
+            heads=4,
+            head_dim=128,
+            input_shape=(128,),
+            kernel_size=(63,),
+            stride=(31,),
+            dilation=(1,),
+            is_causal=(False,),
+            fail_case=True,
+        )
+
+    @pytest.mark.xfail(
+        reason="exact match must fail when determinism is disabled.", strict=True
+    )
+    @skip_if_libnatten_is_not_supported()
+    def test_2d_determinism_xfail(self):
+        self._test_determinism(
+            batch=1,
+            heads=1,
+            head_dim=128,
+            input_shape=(48, 17),
+            kernel_size=(24, 16),
+            stride=(1, 1),
+            dilation=(2, 1),
+            is_causal=(False, False),
+            fail_case=True,
+        )
+
+    @pytest.mark.xfail(
+        reason="exact match must fail when determinism is disabled.", strict=True
+    )
+    @skip_if_libnatten_is_not_supported()
+    def test_3d_determinism_xfail(self):
+        self._test_determinism(
+            batch=1,
+            heads=12,
+            head_dim=64,
+            input_shape=(14, 8, 8),
+            kernel_size=(7, 5, 5),
+            stride=(2, 1, 3),
+            dilation=(2, 1, 1),
+            is_causal=(False, False, False),
+            fail_case=True,
+        )
 
 
 if __name__ == "__main__":

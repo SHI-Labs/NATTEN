@@ -104,10 +104,11 @@ def can_run_cutlass_blackwell_fmha(
         )
         return False
 
-    if query.requires_grad and is_fp8(query.dtype):
+    requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
+    if requires_grad and is_fp8(query.dtype):
         target_fn(
             "Blackwell FMHA does not support FP8 backward pass, but "
-            f"got {query.requires_grad=}, {query.dtype=}.",
+            f"got {requires_grad=}, {query.dtype=}.",
             exception=ValueError,
         )
         return False
@@ -163,7 +164,8 @@ def can_run_cutlass_blackwell_fna(
         )
         return False
 
-    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
+    requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
+    if requires_grad and torch.are_deterministic_algorithms_enabled():
         target_fn(
             "Can't run Blackwell FNA; its backprop does not have a deterministic mode, but "
             "PyTorch's deterministic mode was enabled.",
@@ -194,10 +196,10 @@ def can_run_cutlass_blackwell_fna(
         )
         return False
 
-    if query.requires_grad and is_fp8(query.dtype):
+    if requires_grad and is_fp8(query.dtype):
         target_fn(
             "Blackwell FNA does not support FP8 backward pass, but "
-            f"got {query.requires_grad=}, {query.dtype=}.",
+            f"got {requires_grad=}, {query.dtype=}.",
             exception=ValueError,
         )
         return False
@@ -271,7 +273,8 @@ def can_run_cutlass_hopper_fmha(
         )
         return False
 
-    if query.requires_grad and head_dim not in [32, 64, 128]:
+    requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
+    if requires_grad and head_dim not in [32, 64, 128]:
         target_fn(
             f"Can't run Hopper FMHA; it does not support backpropagation for {head_dim=} yet; "
             "only head dims 32, 64, and 128 are allowed.",
@@ -279,7 +282,7 @@ def can_run_cutlass_hopper_fmha(
         )
         return False
 
-    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
+    if requires_grad and torch.are_deterministic_algorithms_enabled():
         target_fn(
             "Can't run Hopper FMHA; its backprop does not have a deterministic mode, but "
             "PyTorch's deterministic mode was enabled.",
@@ -356,7 +359,8 @@ def can_run_cutlass_hopper_fna(
         )
         return False
 
-    if query.requires_grad and head_dim not in [32, 64, 128]:
+    requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
+    if requires_grad and head_dim not in [32, 64, 128]:
         target_fn(
             f"Can't run Hopper FNA; it does not support backpropagation for {head_dim=} yet; "
             "only head dims 32, 64, and 128 are allowed.",
@@ -364,7 +368,7 @@ def can_run_cutlass_hopper_fna(
         )
         return False
 
-    if query.requires_grad and torch.are_deterministic_algorithms_enabled():
+    if requires_grad and torch.are_deterministic_algorithms_enabled():
         target_fn(
             "Can't run Hopper FNA; its backprop does not have a deterministic mode, but "
             "PyTorch's deterministic mode was enabled.",
@@ -595,7 +599,8 @@ def can_run_flex_attention(
         )
         return False
 
-    if torch_compile and query.requires_grad and not is_flex_compile_backprop_allowed():
+    requires_grad = query.requires_grad or key.requires_grad or value.requires_grad
+    if torch_compile and requires_grad and not is_flex_compile_backprop_allowed():
         target_fn(
             "NATTEN does not allow compiling Flex Attention for backpropagation "
             "({q,k,v}.requires_grad=True). This is because we cannot verify Flex's correctness "

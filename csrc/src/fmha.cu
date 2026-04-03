@@ -288,12 +288,16 @@ void fmha_backward(
   } else {
     delta = torch::empty(
         {batch_size, seqlen_q, heads}, query.options().dtype(at::kFloat));
-    compute_delta_(out, grad_out, delta, (int32_t)delta.numel(), dim_value);
+    compute_delta(out, grad_out, delta);
   }
   TORCH_CHECK(delta.size(0) == batch_size);
   TORCH_CHECK(delta.size(1) == seqlen_q);
   TORCH_CHECK(delta.size(2) == heads);
+
   if (at::globalContext().deterministicAlgorithms()) {
+    TORCH_CHECK(
+        not compute_delta_with_torch,
+        "Computing delta with PyTorch is not guaranteed to be deterministic!");
     TORCH_CHECK(
         num_splits_key <= 1,
         "CUTLASS FMHA backward was called with KV parallelism, "

@@ -356,23 +356,32 @@ class FMHAVarlenTest(unittest.TestCase):
         seqlens_KV_list,
         is_causal,
         max_configs=5,
+        determinism=False,
+        fail_case=False,
     ):
         head_dim_v = head_dim_v or head_dim
         torch.set_default_device("cuda")
 
-        # We're testing against the same backend and same dtype,
-        # but with varlen implemented as multiple kernel calls, so
-        # error thresholds should be much smaller here.
+        # We're testing against the same backend and same dtype, but implemented with for loops over
+        # different sequences. Given how the typical varlen scheduler operates, we expect exact
+        # matches over everything except dQ, which is reduced.
         # This is therefore only a test of the varlen functionality.
-        # Correctness per dtype is expected to be verified in the main
-        # fmha tests.
-        # dQ still needs a more relaxed threshold because of the non-determinism
-        ALLOWED_DTYPES = [
-            # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
-            (torch.float32, (1e-6, 1e-6), (1e-2, 1e-6, 1e-6)),
-            (torch.float16, (1e-6, 1e-6), (5e-2, 5e-6, 5e-6)),
-            (torch.bfloat16, (1e-6, 1e-6), (5e-2, 5e-6, 5e-6)),
-        ]
+        # Correctness per dtype is expected to be verified in the main fmha tests.
+        if determinism:
+            torch.use_deterministic_algorithms(not fail_case)
+            ALLOWED_DTYPES = [
+                # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
+                (torch.float32, (0, 0), (0, 0, 0)),
+                (torch.float16, (0, 0), (0, 0, 0)),
+                (torch.bfloat16, (0, 0), (0, 0, 0)),
+            ]
+        else:
+            ALLOWED_DTYPES = [
+                # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
+                (torch.float32, (0, 0), (1e-2, 0, 0)),
+                (torch.float16, (0, 0), (1e-2, 0, 0)),
+                (torch.bfloat16, (0, 0), (1e-2, 0, 0)),
+            ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
             dummy_fwd = torch.empty(
@@ -400,12 +409,14 @@ class FMHAVarlenTest(unittest.TestCase):
 
             for i in range(n_configs_to_test):
                 q_tile_size, kv_tile_size = forward_configs[i % len(forward_configs)]
-                (
-                    backward_q_tile_size,
-                    backward_kv_tile_size,
-                    kv_splits,
-                    use_pt_reduction,
-                ) = backward_configs[i % len(backward_configs)]
+                backward_q_tile_size, backward_kv_tile_size = backward_configs[
+                    i % len(backward_configs)
+                ]
+
+                seqlen_kv = dummy_bwd.shape[1]
+                kv_splits = (
+                    seqlen_kv + backward_kv_tile_size - 1
+                ) // backward_kv_tile_size
 
                 self._test_against_manual_varlen(
                     batch=batch,
@@ -426,14 +437,16 @@ class FMHAVarlenTest(unittest.TestCase):
                     backward_q_tile_size=backward_q_tile_size,
                     backward_kv_tile_size=backward_kv_tile_size,
                     backward_kv_splits=kv_splits,
-                    backward_use_pt_reduction=use_pt_reduction,
+                    backward_use_pt_reduction=False,
                     reference_q_tile_size=q_tile_size,
                     reference_kv_tile_size=kv_tile_size,
                     reference_backward_q_tile_size=backward_q_tile_size,
                     reference_backward_kv_tile_size=backward_kv_tile_size,
                     reference_backward_kv_splits=kv_splits,
-                    reference_backward_use_pt_reduction=use_pt_reduction,
+                    reference_backward_use_pt_reduction=False,
                 )
+
+        torch.use_deterministic_algorithms(False)
 
     def _test_cutlass_hopper_fmha_varlen(
         self,
@@ -447,17 +460,16 @@ class FMHAVarlenTest(unittest.TestCase):
     ):
         torch.set_default_device("cuda")
 
-        # We're testing against the same backend and same dtype,
-        # but with varlen implemented as multiple kernel calls, so
-        # error thresholds should be much smaller here.
+        # We're testing against the same backend and same dtype, but implemented with for loops over
+        # different sequences. Given how the typical varlen scheduler operates, we expect exact
+        # matches over everything except dQ, which is reduced.
         # This is therefore only a test of the varlen functionality.
         # Correctness per dtype is expected to be verified in the main
         # fmha tests.
-        # dQ still needs a more relaxed threshold because of the non-determinism
         ALLOWED_DTYPES = [
             # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
-            (torch.float16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
-            (torch.bfloat16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
+            (torch.float16, (0, 0), (1e-2, 0, 0)),
+            (torch.bfloat16, (0, 0), (1e-2, 0, 0)),
         ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
@@ -514,27 +526,29 @@ class FMHAVarlenTest(unittest.TestCase):
     ):
         torch.set_default_device("cuda")
 
-        # We're testing against the same backend and same dtype,
-        # but with varlen implemented as multiple kernel calls, so
-        # error thresholds should be much smaller here.
+        # We're testing against the same backend and same dtype, but implemented with for loops over
+        # different sequences. Given how the typical varlen scheduler operates, we expect exact
+        # matches over everything except dQ, which is reduced.
         # This is therefore only a test of the varlen functionality.
-        # Correctness per dtype is expected to be verified in the main
-        # fmha tests.
-        # dQ still needs a more relaxed threshold because of the non-determinism
+        # Correctness per dtype is expected to be verified in the main fmha tests.
         ALLOWED_DTYPES = [
             # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
-            (torch.float16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
-            (torch.bfloat16, (1e-6, 1e-6), (1e-2, 5e-6, 5e-6)),
-            (torch.float8_e4m3fn, (1e-6, 1e-6), None),
-            (torch.float8_e5m2, (1e-6, 1e-6), None),
+            (torch.float16, (0, 0), (1e-2, 0, 0)),
+            (torch.bfloat16, (0, 0), (1e-2, 0, 0)),
         ]
 
         if determinism:
+            torch.use_deterministic_algorithms(not fail_case)
             ALLOWED_DTYPES = [
+                # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
                 (torch.float16, (0, 0), (0, 0, 0)),
                 (torch.bfloat16, (0, 0), (0, 0, 0)),
             ]
-            torch.use_deterministic_algorithms(not fail_case)
+        else:
+            ALLOWED_DTYPES += [
+                (torch.float8_e4m3fn, (0, 0), None),  # type: ignore[list-item]
+                (torch.float8_e5m2, (0, 0), None),  # type: ignore[list-item]
+            ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
             dummy = torch.empty((1, 128, heads, head_dim), device="cuda", dtype=dtype)
@@ -592,8 +606,6 @@ class FMHAVarlenTest(unittest.TestCase):
         fail_case: bool = False,
     ):
         if backend == "cutlass-fmha":
-            assert not determinism
-            assert not fail_case
             assert heads_kv is None or heads_kv == heads
             return self._test_cutlass_fmha_varlen(
                 batch=batch,
@@ -603,6 +615,8 @@ class FMHAVarlenTest(unittest.TestCase):
                 seqlens_Q_list=seqlens_Q_list,
                 seqlens_KV_list=seqlens_KV_list,
                 is_causal=is_causal,
+                determinism=determinism,
+                fail_case=fail_case,
             )
         elif backend == "hopper-fmha":
             assert not determinism
@@ -704,6 +718,7 @@ class FMHAVarlenTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_varlen_fmha_fast(self):
         problem_sizes = [
+            (4, 1, 88, [11, 1846, 2433, 1193], [1681, 2831, 1932, 141]),
             (
                 7,
                 7,
@@ -751,6 +766,55 @@ class FMHAVarlenTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     def test_cutlass_varlen_fmha_extended(self):
         self._test_varlen_randsweep(backend="cutlass-fmha", max_tests=RAND_SWEEP_TESTS)
+
+    @skip_if_libnatten_is_not_supported()
+    def test_cutlass_varlen_determinism_fmha_fast(self):
+        problem_sizes = [
+            (
+                9,
+                4,
+                128,
+                [2669, 2240, 910, 2421, 3323, 34, 3308, 2867, 1401],
+                [2880, 1726, 1847, 1147, 3568, 3116, 661, 1739, 1146],
+            ),
+            (6, 1, 128, [128, 128, 135, 121, 128, 128], [128, 128, 135, 121, 128, 128]),
+            (5, 1, 128, [128, 128, 135, 128, 128], [128, 128, 135, 128, 128]),
+            (2, 1, 128, [135, 200], [128, 768]),
+            (2, 1, 128, [1024, 200], [128, 768]),
+            (2, 1, 128, [135, 200], [135, 768]),
+            (2, 1, 128, [1024, 200], [135, 768]),
+            (2, 1, 128, [1024, 256], [128, 768]),
+            (4, 1, 128, [1024, 8, 17, 2048], [10, 20, 512, 16]),
+            (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
+            (2, 1, 128, [1024, 256], [512, 768]),
+        ]
+        for (
+            batch,
+            heads,
+            head_dim,
+            seqlens_Q_list,
+            seqlens_KV_list,
+        ) in problem_sizes:
+            for is_causal in [False, True]:
+                self._test_varlen_backend(
+                    batch=batch,
+                    heads=heads,
+                    head_dim=head_dim,
+                    seqlens_Q_list=seqlens_Q_list,
+                    seqlens_KV_list=seqlens_KV_list,
+                    is_causal=is_causal,
+                    backend="cutlass-fmha",
+                    determinism=True,
+                )
+
+    @skip_if_not_running_extended_tests()
+    @skip_if_libnatten_is_not_supported()
+    def test_cutlass_varlen_fmha_determinism_extended(self):
+        self._test_varlen_randsweep(
+            backend="cutlass-fmha",
+            max_tests=max(2, RAND_SWEEP_TESTS // 100),
+            determinism=True,
+        )
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
