@@ -30,8 +30,19 @@
  *
  **************************************************************************************************/
 
+/*
+ * Fmha Bwd deterministic mode was ported from pytorch/FBGEMM
+ *
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ * All rights reserved.
+ *
+ * This source code is licensed under the BSD-style license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 #pragma once
 
+#include "cutlass/barrier.h"
 #include "cutlass/cutlass.h"
 
 #include "cute/arch/simd_sm100.hpp"
@@ -56,7 +67,8 @@ template <
     class Element,
     class ElementAcc,
     class TileShape,
-    class Mask>
+    class Mask,
+    bool IsDeterministic>
 struct Sm100FmhaBwdKernelTmaWarpSpecialized {
   using TileShapeQ = decltype(get<0>(TileShape{}));
   static_assert(std::is_same_v<TileShapeQ, _128>, "tile shape K must be 128");
@@ -379,6 +391,8 @@ struct Sm100FmhaBwdKernelTmaWarpSpecialized {
     TensorStride stride_dq_acc;
 
     ElementAcc softmax_scale = 1.0f / sqrtf(TileShapeDQK{});
+
+    int* ptr_dq_semaphore = nullptr;
   };
 
   using TMA_K = typename CollectiveMmaKQ::Params::TMA_A;
@@ -423,6 +437,31 @@ struct Sm100FmhaBwdKernelTmaWarpSpecialized {
     EpilogueArguments epilogue;
     KernelHardwareInfo hw_info;
   };
+
+  template <class ProblemShape_>
+  CUTLASS_DEVICE int compute_expected_turn(
+      int iter_index,
+      int block_k,
+      ProblemShape_ const& problem_shape) {
+    if constexpr (
+        std::is_base_of_v<cutlass::fmha::collective::CausalMask<true>, Mask> ||
+        std::is_base_of_v<cutlass::fmha::collective::CausalMask<false>, Mask>) {
+      int offset = 0;
+      if constexpr (std::is_base_of_v<
+                        cutlass::fmha::collective::CausalMask<false>,
+                        Mask>) {
+        offset = (get<1>(problem_shape) - get<0>(problem_shape));
+      }
+      int k_global_max = cute::ceil_div(get<1>(problem_shape), TileShapeK{});
+      int k_max_for_q_block = std::min(
+          k_global_max,
+          cute::ceil_div(
+              (iter_index + 1) * TileShapeQ{} + offset - 1, TileShapeK{}));
+      int last_k_block = k_max_for_q_block - 1;
+      return last_k_block - block_k;
+    }
+    return block_k;
+  }
 
   static bool can_implement(Arguments const& args) {
     auto [Q, K, D, D_VO, HB] = args.problem_shape;
@@ -1701,11 +1740,15 @@ struct Sm100FmhaBwdKernelTmaWarpSpecialized {
     using X = Underscore;
 
     auto [Q, K, D, D_VO, HB] = problem_shape;
+    auto [H, B] = HB;
+    auto [H_R, H_K] = H;
     int iter_index = iter_start;
 
     auto
         [blk_coord_q, blk_coord_k, blk_coord_d, blk_coord_dv, blk_coord_batch] =
             blk_coord;
+    auto [blx_h, blx_b] = blk_coord_batch;
+    auto [blx_h_r, blx_h_k] = blx_h;
 
     // must match TileShapeDQ
     auto load_op = SM100_TMEM_LOAD_32dp32b32x{};
@@ -1737,70 +1780,100 @@ struct Sm100FmhaBwdKernelTmaWarpSpecialized {
     auto block_tma = mainloop_params.tma_red_dq.get_slice(_0{});
 
     Tensor tDQsDQ = block_tma.partition_S(sDQ);
-    Tensor tDQcDQ = block_tma.partition_S(cDQ);
     Tensor tDQgDQ = block_tma.partition_D(gDQ);
 
     int lane_predicate =
         (threadIdx.x % (kNumReduceWarps * NumThreadsPerWarp)) == 0;
+    using Barrier = cutlass::GenericBarrier<cutlass::detail::SyncwarpSync>;
+    int* lock_ptr = !IsDeterministic
+        ? nullptr
+        : (mainloop_args.ptr_dq_semaphore + blx_b * H_R * H_K + blx_h_k * H_R);
 
+    int expected_turn = 0;
     while (iter_count > 0) {
-      pipeline_mma_reduce_dq.consumer_wait(
-          pipeline_mma_reduce_dq_consumer_state);
+      if constexpr (IsDeterministic) {
+        expected_turn =
+            compute_expected_turn(iter_index, blk_coord_k, problem_shape);
+        Barrier::wait_eq(
+            lock_ptr,
+            thread_idx,
+            iter_index * H_R * H_K * B + get<0, 0>(blk_coord_batch),
+            expected_turn);
+      }
+      {
+        pipeline_mma_reduce_dq.consumer_wait(
+            pipeline_mma_reduce_dq_consumer_state);
 
-      Tensor tTR_rDQ = make_tensor<ElementAcc>(shape(tTR_cDQ));
+        Tensor tTR_rDQ = make_tensor<ElementAcc>(shape(tTR_cDQ));
 
-      // load dQ from tmem to rmem
-      cute::copy(tiled_t2r, tTR_tDQ, tTR_rDQ);
+        // load dQ from tmem to rmem
+        cute::copy(tiled_t2r, tTR_tDQ, tTR_rDQ);
 
-      cutlass::arch::fence_view_async_tmem_load();
-      pipeline_mma_reduce_dq.consumer_release(
-          pipeline_mma_reduce_dq_consumer_state);
-      ++pipeline_mma_reduce_dq_consumer_state;
+        cutlass::arch::fence_view_async_tmem_load();
+        pipeline_mma_reduce_dq.consumer_release(
+            pipeline_mma_reduce_dq_consumer_state);
+        ++pipeline_mma_reduce_dq_consumer_state;
 
-      // we don't have enough smem to dump it all to smem, so we do it in stages
-      CUTLASS_PRAGMA_UNROLL
-      for (int i = 0; i < size<2>(tTR_cDQ); i++) {
-        if (lane_predicate) {
-          pipeline_reduce_tma_store.producer_acquire(
-              pipeline_reduce_tma_store_producer_state);
+        // we don't have enough smem to dump it all to smem, so we do it in
+        // stages
+        CUTLASS_PRAGMA_UNROLL
+        for (int i = 0; i < size<2>(tTR_cDQ); i++) {
+          if (lane_predicate) {
+            pipeline_reduce_tma_store.producer_acquire(
+                pipeline_reduce_tma_store_producer_state);
+          }
+          // wait in all threads for the acquire to complete
+          cutlass::arch::NamedBarrier(
+              kNumReduceWarps * NumThreadsPerWarp,
+              cutlass::arch::ReservedNamedBarriers::TransposeBarrier)
+              .arrive_and_wait();
+
+          cute::copy(
+              tTR_rDQ(_, _, i),
+              tTR_sDQ(
+                  _,
+                  _,
+                  _0{},
+                  pipeline_reduce_tma_store_producer_state.index()));
+
+          // wait for the stores to all be visible to the TMA
+          cutlass::arch::fence_view_async_shared();
+          cutlass::arch::NamedBarrier(
+              kNumReduceWarps * NumThreadsPerWarp,
+              cutlass::arch::ReservedNamedBarriers::TransposeBarrier)
+              .arrive_and_wait();
+          if (lane_predicate) {
+            // launch tma store
+            copy(
+                mainloop_params.tma_red_dq,
+                tDQsDQ(
+                    _,
+                    _,
+                    _0{},
+                    pipeline_reduce_tma_store_producer_state.index()),
+                tDQgDQ(_, _, i, iter_index, blk_coord_batch));
+            pipeline_reduce_tma_store.producer_commit(
+                pipeline_reduce_tma_store_producer_state);
+          }
+
+          ++pipeline_reduce_tma_store_producer_state;
         }
-        // wait in all threads for the acquire to complete
-        cutlass::arch::NamedBarrier(
-            kNumReduceWarps * NumThreadsPerWarp,
-            cutlass::arch::ReservedNamedBarriers::TransposeBarrier)
-            .arrive_and_wait();
-
-        cute::copy(
-            tTR_rDQ(_, _, i),
-            tTR_sDQ(
-                _, _, _0{}, pipeline_reduce_tma_store_producer_state.index()));
-
-        // wait for the stores to all be visible to the TMA
-        cutlass::arch::fence_view_async_shared();
-        cutlass::arch::NamedBarrier(
-            kNumReduceWarps * NumThreadsPerWarp,
-            cutlass::arch::ReservedNamedBarriers::TransposeBarrier)
-            .arrive_and_wait();
-        if (lane_predicate) {
-          // launch tma store
-          copy(
-              mainloop_params.tma_red_dq,
-              tDQsDQ(
-                  _, _, _0{}, pipeline_reduce_tma_store_producer_state.index()),
-              tDQgDQ(_, _, i, iter_index, blk_coord_batch));
-          pipeline_reduce_tma_store.producer_commit(
-              pipeline_reduce_tma_store_producer_state);
-        }
-
-        ++pipeline_reduce_tma_store_producer_state;
       }
 
-      iter_count -= 1;
+      if constexpr (IsDeterministic) {
+        // Increment the semaphore flag
+        Barrier::arrive_inc(
+            lock_ptr,
+            thread_idx,
+            iter_index * H_R * H_K * B + get<0, 0>(blk_coord_batch));
+      }
       iter_index += 1;
       if (iter_index == iter_end) {
         iter_index = iter_start;
         get<0, 0>(blk_coord_batch) += 1;
       }
+
+      iter_count -= 1;
     }
   }
 

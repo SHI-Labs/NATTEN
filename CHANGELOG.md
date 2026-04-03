@@ -10,6 +10,22 @@
 * Added build flags for adding lineinfo and building with PTX (`NATTEN_BUILD_WITH_PTX`,
     `NATTEN_BUILD_WITH_LINEINFO`).
 * Attention Merge backward pass now allows arbitrary number of splits.
+* Improved deterministic backward pass:
+    * Added deterministic backward pass to Blackwell FMHA kernel (ported from [FBGEMM](https://github.com/pytorch/FBGEMM)).
+    * Improved deterministic mode and torch compile support for cutlass-fmha/cutlass-fna backends:
+      * `backward_kv_splits` and `backward_use_pt_reduction` are now independent of backward config, and
+          backward config is strictly tile shapes, while these two knobs are verified entirely inside
+          the registered torch op, which hides some of the complexity from torch.compile, therefore
+          doesn't trigger recompilations in varlen.
+      * `backward_use_pt_reduction` controls whether we use native pytorch ops for computing sum of dO *
+          O (delta), instead of the cutlass kernel. The cutlass kernel was non-deterministic, but was
+          slightly faster. However, the torch implementation itself can sometimes behave
+          non-deterministically for certain use cases. We therefore replaced the cutlass kernel with the
+          kernel from hopper and blackwell fmha/fna, which is deterministic.
+          The deterministic behavior now is to use the cutlass kernel, and not the pytorch
+          implementation.
+      * All knobs affecting determinism are checked against PyTorch's deterministic mode. Just set
+          pytorch to deterministic and NATTEN will respect that setting.
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:

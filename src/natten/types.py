@@ -65,24 +65,18 @@ class KernelSchedule(Enum):
 
 
 CutlassFnaForwardConfigType = QKTileShapeType
+CutlassFnaBackwardConfigType = QKTileShapeType
 CutlassBlackwellFnaForwardConfigType = QKTileShapeType
 CutlassBlackwellFnaBackwardConfigType = QKTileShapeType
 CutlassHopperFnaForwardConfigType = Tuple[QKTileShapeType, KernelSchedule]
 CutlassHopperFnaBackwardConfigType = QKTileShapeType
 FlexFnaForwardConfigType = QKTileShapeType
 
-# (query_tile_shape, kv_tile_shape, num_kv_splits, use_torch_to_compute_delta)
-CutlassFnaBackwardConfigType = Union[
-    Tuple[Dimension1DType, Dimension1DType, Dimension1DType, bool],
-    Tuple[Dimension2DType, Dimension2DType, Dimension2DType, bool],
-    Tuple[Dimension3DType, Dimension3DType, Dimension3DType, bool],
-]
-
 # FMHA configs
 FmhaForwardConfigType = Tuple[int, int]
 
 CutlassFmhaForwardConfigType = FmhaForwardConfigType
-CutlassFmhaBackwardConfigType = Tuple[int, int, int, bool]
+CutlassFmhaBackwardConfigType = FmhaForwardConfigType
 
 FlexFmhaForwardConfigType = FmhaForwardConfigType
 CutlassBlackwellFmhaForwardConfigType = FmhaForwardConfigType

@@ -60,6 +60,8 @@ class CutlassFmhaAutogradFn(Function):
         scale: float,
         forward_config: CutlassFmhaForwardConfigType,
         backward_config: CutlassFmhaBackwardConfigType,
+        backward_kv_splits: Optional[int],
+        backward_use_pt_reduction: bool,
         cumulative_seqlen_Q: Optional[Tensor],
         cumulative_seqlen_KV: Optional[Tensor],
         max_seqlen_Q: int,
@@ -103,6 +105,14 @@ class CutlassFmhaAutogradFn(Function):
         ctx.max_seqlen_Q = max_seqlen_Q
         ctx.max_seqlen_KV = max_seqlen_KV
         ctx.backward_config = backward_config
+        ctx.backward_kv_splits = backward_kv_splits
+        ctx.backward_use_pt_reduction = backward_use_pt_reduction
+        # Always record determinism behavior during forward pass (forward pass itself is
+        # deterministic anyway).
+        # Determinism could be limited to part of the program, which means during forward pass
+        # it'll be true, but on .backward() call, if it's been turned off, it will stay off when we
+        # get to this operation's backward call.
+        ctx.deterministic = torch.are_deterministic_algorithms_enabled()
 
         return output, logsumexp
 
@@ -114,6 +124,9 @@ class CutlassFmhaAutogradFn(Function):
         Tensor,
         NoneType,
         NoneType,
+        NoneType,
+        NoneType,
+        # kv_splits, use_pt_reduction
         NoneType,
         NoneType,
         # varlen
@@ -133,34 +146,7 @@ class CutlassFmhaAutogradFn(Function):
         ) = ctx.saved_tensors
         d_output = grad_out.contiguous()
 
-        q_tile_size, k_tile_size, kv_splits, compute_delta_with_pt = ctx.backward_config
-
-        num_kv_splits = kv_splits
-        if kv_splits > 1 and torch.are_deterministic_algorithms_enabled():
-            num_kv_splits = 1
-            logger.warning(
-                "You enabled PyTorch's deterministic mode, but tried to train with FNA's KV "
-                "parallelism, which is non-deterministic. "
-                f"Overriding {kv_splits=} to {num_kv_splits}."
-            )
-
-        if not compute_delta_with_pt and torch.are_deterministic_algorithms_enabled():
-            compute_delta_with_pt = True
-            # Silent override
-            # logger.warning(
-            #     "You enabled PyTorch's deterministic mode, but tried to use backward_use_pt_reduction "
-            #     ", which is non-deterministic. Overriding."
-            # )
-
-        seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else ctx.max_seqlen_KV
-        num_kv_tiles = (seqlen_kv + k_tile_size - 1) // k_tile_size
-        assert num_kv_tiles > 0
-        if num_kv_splits > num_kv_tiles:
-            logger.warning(
-                "Number of KV splits cannot exceed number of KV tiles, got "
-                f"{num_kv_splits=}, {num_kv_tiles=}."
-            )
-            num_kv_splits = num_kv_tiles
+        q_tile_size, k_tile_size = ctx.backward_config
 
         d_query, d_key, d_value = fmha_backward(
             query,
@@ -173,15 +159,30 @@ class CutlassFmhaAutogradFn(Function):
             ctx.scale,
             q_tile_size,
             k_tile_size,
-            num_kv_splits,
-            compute_delta_with_pt,
+            ctx.backward_kv_splits,
+            ctx.backward_use_pt_reduction,
             cumulative_seqlen_Q,
             cumulative_seqlen_KV,
             ctx.max_seqlen_Q,
             ctx.max_seqlen_KV,
+            ctx.deterministic,
         )
 
-        return d_query, d_key, d_value, None, None, None, None, None, None, None, None
+        return (
+            d_query,
+            d_key,
+            d_value,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
 
 
 def cutlass_fmha(
@@ -243,9 +244,6 @@ def cutlass_fmha(
         input_tensor=key if value.shape[-1] <= key.shape[-1] else value,
         q_tile_size=backward_q_tile_size,
         kv_tile_size=backward_kv_tile_size,
-        kv_splits=backward_kv_splits,
-        use_pt_reduction=backward_use_pt_reduction,
-        max_seqlen=max_seqlen_KV if is_varlen else None,
     )
 
     scale = scale or query.shape[-1] ** -0.5
@@ -271,6 +269,8 @@ def cutlass_fmha(
         scale,
         forward_config,
         backward_config,
+        backward_kv_splits,
+        backward_use_pt_reduction,
         cumulative_seqlen_Q,
         cumulative_seqlen_KV,
         max_seqlen_Q,

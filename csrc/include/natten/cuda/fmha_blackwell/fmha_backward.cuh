@@ -40,7 +40,12 @@ namespace fmha_blackwell {
 using namespace cute;
 using namespace cutlass::fmha;
 
-template <typename Element, class TileShape, class Mask, bool kIsVarlen>
+template <
+    typename Element,
+    class TileShape,
+    class Mask,
+    bool kIsVarlen,
+    bool kIsDeterministic = false>
 struct KernelBackward {
   using ElementAccumulator = float;
   using VariableLength = cutlass::fmha::collective::VariableLength;
@@ -62,7 +67,8 @@ struct KernelBackward {
       Element,
       ElementAccumulator,
       TileShape,
-      Mask>;
+      Mask,
+      kIsDeterministic>;
 
   using Arguments = typename Operation::Arguments;
 
@@ -90,6 +96,7 @@ struct KernelBackward {
       int max_seqlen_KV,
       void* ptr_cumulative_seqlen_Q,
       void* ptr_cumulative_seqlen_KV,
+      int* ptr_dq_semaphore,
       // init/launch params
       int device_id) {
     auto problem_shape_regular = cute::make_tuple(
@@ -201,6 +208,7 @@ struct KernelBackward {
         reinterpret_cast<Element*>(ptr_dV),
         stride_V,
         attn_scale,
+        ptr_dq_semaphore,
         hw_info};
 
     return arguments;

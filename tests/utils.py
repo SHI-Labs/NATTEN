@@ -64,7 +64,12 @@ class NattenBackendTester:
         dtype: torch.dtype,
         head_dim_v: Optional[int] = None,
         heads_kv: Optional[int] = None,
-        additional_kv_length: int = 0,
+        reference_q_tile_shape: Optional[DimensionType] = None,
+        reference_kv_tile_shape: Optional[DimensionType] = None,
+        reference_backward_q_tile_shape: Optional[DimensionType] = None,
+        reference_backward_kv_tile_shape: Optional[DimensionType] = None,
+        reference_backward_kv_splits: Optional[DimensionType] = None,
+        reference_backward_use_pt_reduction: bool = False,
     ):
         assert isinstance(input_shape, tuple)
         na_dim = len(input_shape)
@@ -80,7 +85,6 @@ class NattenBackendTester:
             na_dim, kernel_size, stride, dilation, is_causal
         )
 
-        self.additional_kv_length = additional_kv_length
         self.test_backprop = test_backprop
         self.reference_backend = reference_backend
         self.reference_fmha_backend = reference_fmha_backend
@@ -127,39 +131,6 @@ class NattenBackendTester:
                 d_out_ref.clone(),
             )
 
-            self.additional_k, self.additional_v = None, None
-            additional_k_ref, additional_v_ref = None, None
-            if self.additional_kv_length > 0:
-                additional_k_ref = torch.randn(
-                    (
-                        self.batch,
-                        self.additional_kv_length,
-                        self.heads_kv,
-                        self.head_dim,
-                    ),
-                    device="cuda",
-                    dtype=dtype,
-                )
-                additional_v_ref = torch.randn(
-                    (
-                        self.batch,
-                        self.additional_kv_length,
-                        self.heads_kv,
-                        self.head_dim_v,
-                    ),
-                    device="cuda",
-                    dtype=dtype,
-                )
-
-                if dtype != orig_dtype:
-                    q_ref = q_ref.to(orig_dtype)
-                    k_ref = k_ref.to(orig_dtype)
-                    v_ref = v_ref.to(orig_dtype)
-                    d_out_ref = d_out_ref.to(orig_dtype)
-
-                self.additional_k = additional_k_ref.clone()
-                self.additional_v = additional_v_ref.clone()
-
         # Reference
         torch.cuda.synchronize()
         start_time = time.time()
@@ -168,12 +139,6 @@ class NattenBackendTester:
         k_ref.requires_grad_(True)
         v_ref.requires_grad_(True)
         d_out_ref.requires_grad_(True)
-        if self.additional_kv_length > 0:
-            assert additional_k_ref is not None
-            assert additional_v_ref is not None
-            additional_k_ref = additional_k_ref.requires_grad_(True)
-            additional_v_ref = additional_v_ref.requires_grad_(True)
-
         if reference_backend is None or reference_backend == "reference":
             out_ref_ = reference_fna_generic(
                 q_ref,
@@ -183,8 +148,6 @@ class NattenBackendTester:
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
-                additional_keys=additional_k_ref,
-                additional_values=additional_v_ref,
                 return_lse=False,
             )
 
@@ -199,20 +162,21 @@ class NattenBackendTester:
                 stride=stride,
                 dilation=dilation,
                 is_causal=is_causal,
-                additional_keys=additional_k_ref,
-                additional_values=additional_v_ref,
                 backend=reference_backend,
+                q_tile_shape=reference_q_tile_shape,
+                kv_tile_shape=reference_kv_tile_shape,
+                backward_q_tile_shape=reference_backward_q_tile_shape,
+                backward_kv_tile_shape=reference_backward_kv_tile_shape,
+                backward_kv_splits=reference_backward_kv_splits,
+                backward_use_pt_reduction=reference_backward_use_pt_reduction,
                 attention_kwargs={
                     "backend": reference_fmha_backend,
-                    "backward_use_pt_reduction": True,
                 },
-                backward_use_pt_reduction=True,
             )
 
         self.out_ref = out_ref_.data.clone().float()  # type: ignore[union-attr]
 
         self.dq_ref, self.dk_ref, self.dv_ref = None, None, None
-        self.d_additional_k_ref, self.d_additional_v_ref = None, None
         if test_backprop:
             out_ref_.backward(d_out_ref)  # type: ignore[union-attr]
             with torch.no_grad():
@@ -224,13 +188,6 @@ class NattenBackendTester:
                     k_ref.grad.clone().float(),
                     v_ref.grad.clone().float(),
                 )
-                if self.additional_kv_length > 0:
-                    assert additional_k_ref is not None
-                    assert additional_v_ref is not None
-                    assert additional_k_ref.grad is not None
-                    assert additional_v_ref.grad is not None
-                    self.d_additional_k_ref = additional_k_ref.grad.clone().float()
-                    self.d_additional_v_ref = additional_v_ref.grad.clone().float()
 
         torch.cuda.synchronize()
         reference_time = time.time() - start_time
@@ -245,13 +202,13 @@ class NattenBackendTester:
         ],
         dtype: torch.dtype,
         target_backend: str,
-        target_fmha_backend: str,
+        target_fmha_backend: str = "cutlass-fmha",
         q_tile_shape: Optional[DimensionType] = None,
         kv_tile_shape: Optional[DimensionType] = None,
         backward_q_tile_shape: Optional[DimensionType] = None,
         backward_kv_tile_shape: Optional[DimensionType] = None,
         backward_kv_splits: Optional[DimensionType] = None,
-        backward_use_pt_reduction: bool = True,
+        backward_use_pt_reduction: bool = False,
         run_persistent_kernel: bool = True,
         kernel_schedule: Optional[KernelSchedule] = None,
         torch_compile: bool = False,
@@ -267,7 +224,6 @@ class NattenBackendTester:
         stride = self.stride
         dilation = self.dilation
         is_causal = self.is_causal
-        additional_kv_length = self.additional_kv_length
         reference_backend = self.reference_backend
         test_backprop_safe: bool = (
             self.test_backprop if test_backprop is None else test_backprop
@@ -276,7 +232,7 @@ class NattenBackendTester:
         logger.debug(
             f"Testing {target_backend} against {reference_backend}:\n"
             f"{batch=}, {heads=}, {heads_kv=}, {head_dim=}, {head_dim_v=}, {input_shape=}, {dtype=}\n"
-            f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=}, {additional_kv_length=},\n"
+            f"{kernel_size=}, {stride=}, {dilation=}, {is_causal=},\n"
             f"{q_tile_shape=}, {kv_tile_shape=}, {run_persistent_kernel=}, {kernel_schedule=}, "
             f"{torch_compile=}"
             + (
@@ -298,16 +254,6 @@ class NattenBackendTester:
         v.requires_grad_(test_backprop_safe)
         d_out.requires_grad_(test_backprop_safe)
 
-        additional_k, additional_v = None, None
-        if additional_kv_length > 0:
-            assert self.additional_k is not None
-            assert self.additional_v is not None
-            additional_k = self.additional_k.clone().to(dtype)
-            additional_v = self.additional_v.clone().to(dtype)
-
-            additional_k = additional_k.requires_grad_(test_backprop_safe)
-            additional_v = additional_v.requires_grad_(test_backprop_safe)
-
         torch.cuda.synchronize()
         start_time = time.time()
 
@@ -319,9 +265,6 @@ class NattenBackendTester:
             stride=stride,
             dilation=dilation,
             is_causal=is_causal,
-            additional_keys=additional_k,
-            additional_values=additional_v,
-            #
             backend=target_backend,
             q_tile_shape=q_tile_shape,
             kv_tile_shape=kv_tile_shape,
@@ -338,7 +281,6 @@ class NattenBackendTester:
 
         if test_backprop_safe:
             dq, dk, dv = None, None, None
-            d_additional_k, d_additional_v = None, None
             out_.backward(d_out)
             with torch.no_grad():
                 assert q.grad is not None
@@ -349,13 +291,6 @@ class NattenBackendTester:
                     k.grad.clone().float(),
                     v.grad.clone().float(),
                 )
-                if additional_kv_length > 0:
-                    assert additional_k is not None
-                    assert additional_v is not None
-                    assert additional_k.grad is not None
-                    assert additional_v.grad is not None
-                    d_additional_k = additional_k.grad.clone().float()
-                    d_additional_v = additional_v.grad.clone().float()
 
         if isinstance(eps, tuple):
             eps_forward, eps_backward = eps
@@ -381,10 +316,3 @@ class NattenBackendTester:
             torch.testing.assert_close(dq, self.dq_ref, atol=eps_dq, rtol=0)
             torch.testing.assert_close(dk, self.dk_ref, atol=eps_dk, rtol=0)
             torch.testing.assert_close(dv, self.dv_ref, atol=eps_dv, rtol=0)
-            if additional_kv_length > 0:
-                torch.testing.assert_close(
-                    d_additional_k, self.d_additional_k_ref, atol=eps_dk, rtol=0
-                )
-                torch.testing.assert_close(
-                    d_additional_v, self.d_additional_v_ref, atol=eps_dv, rtol=0
-                )

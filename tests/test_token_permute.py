@@ -35,6 +35,7 @@ logger = log.get_logger(__name__)
 def _reset_everything():
     random.seed(42)
     torch.manual_seed(42)
+    torch.use_deterministic_algorithms(False)
 
 
 class TokenPermuteTest(unittest.TestCase):

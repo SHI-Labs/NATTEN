@@ -207,6 +207,7 @@ def blackwell_fmha_backward_torch_op(
     cumulative_seqlen_KV: Optional[Tensor],
     max_seqlen_Q: int,
     max_seqlen_KV: int,
+    deterministic: bool,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
@@ -243,6 +244,7 @@ def blackwell_fmha_backward_torch_op(
         cumulative_seqlen_KV,
         max_seqlen_Q,
         max_seqlen_KV,
+        deterministic,
     )
 
     return d_query, d_key, d_value
@@ -264,6 +266,7 @@ def blackwell_fmha_backward_torch_fake_op(
     cumulative_seqlen_KV: Optional[Tensor],
     max_seqlen_Q: int,
     max_seqlen_KV: int,
+    deterministic: bool,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
@@ -544,13 +547,16 @@ def fmha_backward_torch_op(
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
-    num_kv_splits: int,
+    num_kv_splits: Optional[int],
     compute_delta_with_pt: bool,
     cumulative_seqlen_Q: Optional[Tensor],
     cumulative_seqlen_KV: Optional[Tensor],
     max_seqlen_Q: int,
     max_seqlen_KV: int,
+    deterministic: bool,
 ) -> Tuple[Tensor, Tensor, Tensor]:
+    from natten.backends.configs.cutlass.backward_knobs import check_fmha_kv_splits
+
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
         maybe_contiguous(x) for x in (output, d_output, logsumexp)
@@ -568,12 +574,24 @@ def fmha_backward_torch_op(
     if is_varlen and max_seqlen_Q == 0 and max_seqlen_KV == 0:
         return d_query, d_key, d_value
 
-    # torch compile sometimes passes down an incorrect num_kv_splits after recompiles.
-    # we always need to silently fall back to maximum possible to avoid hitting the cpp guard.
-    seqlen_kv = key.shape[1] if cumulative_seqlen_KV is None else max_seqlen_KV
-    num_kv_tiles = (seqlen_kv + kv_tile_size - 1) // kv_tile_size
-    assert num_kv_tiles > 0
-    num_kv_splits = min(num_kv_tiles, num_kv_splits)
+    if deterministic:
+        # Torch reduction seems to have slight reproducibility issues, even with determinism on
+        compute_delta_with_pt = False
+        # TODO: this is the only way to get determinism in this kernel, but it's very slow
+        num_kv_splits = 1
+    else:
+        # Compute default kv_splits if not specified
+        # max_seqlen must be at least 2 to satisfy static checks that are just too complicated to
+        # relax at this point. Kernel launch will be skipped if max_seqlen is 0 anyway. Prior checks
+        # should prevent negative max seqlens.
+        max_seqlen = max(2, max_seqlen_KV) if is_varlen else None
+        num_kv_splits = check_fmha_kv_splits(
+            kv_splits=num_kv_splits,
+            input_tensor=key,
+            kv_tile_size=kv_tile_size,
+            deterministic=deterministic,
+            max_seqlen=max_seqlen,
+        )
 
     fmha_backward_cxx(
         d_query,
@@ -612,12 +630,13 @@ def fmha_backward_torch_fake_op(
     scale: float,
     q_tile_size: int,
     kv_tile_size: int,
-    num_kv_splits: int,
+    num_kv_splits: Optional[int],
     compute_delta_with_pt: bool,
     cumulative_seqlen_Q: Optional[Tensor],
     cumulative_seqlen_KV: Optional[Tensor],
     max_seqlen_Q: int,
     max_seqlen_KV: int,
+    deterministic: bool,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
     output, d_output, logsumexp = [
@@ -1094,9 +1113,12 @@ def make_fna_ops(na_dim):
         scale: float,
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
-        num_kv_splits: list[int],
+        num_kv_splits: Optional[list[int]],
         compute_delta_with_pt: bool,
+        deterministic: bool,
     ) -> Tuple[Tensor, Tensor, Tensor]:
+        from natten.backends.configs.cutlass.backward_knobs import check_fna_kv_splits
+
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
         output, d_output, logsumexp = [
             maybe_contiguous(x) for x in (output, d_output, logsumexp)
@@ -1105,6 +1127,21 @@ def make_fna_ops(na_dim):
         d_query = torch.empty_like(query)
         d_key = torch.empty_like(key)
         d_value = torch.empty_like(value)
+
+        if deterministic:
+            # Torch reduction seems to have slight reproducibility issues, even with determinism on
+            compute_delta_with_pt = False
+            # TODO: this is the only way to get determinism in this kernel, but it's very slow
+            num_kv_splits = tuple(1 for _ in range(na_dim))  # type: ignore[assignment]
+        else:
+            # Compute default kv_splits if not specified
+            num_kv_splits = check_fna_kv_splits(  # type: ignore[assignment]
+                kv_splits=tuple(num_kv_splits) if num_kv_splits is not None else None,  # type: ignore[arg-type]
+                input_tensor=key,
+                kv_tile_shape=tuple(kv_tile_shape),  # type: ignore[arg-type]
+                deterministic=deterministic,
+                dilation=tuple(dilation),  # type: ignore[arg-type]
+            )
 
         bwd_handle(
             d_query,
@@ -1144,8 +1181,9 @@ def make_fna_ops(na_dim):
         scale: float,
         q_tile_shape: list[int],
         kv_tile_shape: list[int],
-        num_kv_splits: list[int],
+        num_kv_splits: Optional[list[int]],
         compute_delta_with_pt: bool,
+        deterministic: bool,
     ) -> Tuple[Tensor, Tensor, Tensor]:
         query, key, value = [maybe_contiguous(x) for x in (query, key, value)]
         output, d_output, logsumexp = [

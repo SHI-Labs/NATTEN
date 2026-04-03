@@ -30,6 +30,7 @@ from torch import Tensor
 
 from natten.types import CausalArgType, DimensionType, KernelSchedule, NoneType
 from natten.utils import log
+from natten.utils.environment import is_torch_compiling
 from natten.utils.tuples import create_causal_arg_from_bool, create_dim_from_int
 from natten.utils.varlen import generate_varlen_parameters
 
@@ -383,7 +384,7 @@ def check_input_size_arg(na_dim: int, input_size: Any) -> DimensionType:
 
     raise ValueError(
         "Invalid value for `input_size`; expected an integer or iterable of integers, all >= 2, "
-        f"got {type(input_size)}"
+        f"got {type(input_size)=}, {input_size=}."
     )
 
 
@@ -401,7 +402,7 @@ def check_kernel_size_arg(na_dim: int, kernel_size: Any) -> DimensionType:
 
     raise ValueError(
         "Invalid value for `kernel_size`; expected an integer or iterable of integers, all >= 2, "
-        f"got {type(kernel_size)}"
+        f"got {type(kernel_size)=}, {kernel_size=}."
     )
 
 
@@ -422,7 +423,7 @@ def check_stride_arg(na_dim: int, stride: Any) -> DimensionType:
 
     raise ValueError(
         "Invalid value for `stride`; expected an integer or tuple of positive integers, "
-        f"got {type(stride)}"
+        f"got {type(stride)=}, {stride=}."
     )
 
 
@@ -443,7 +444,7 @@ def check_dilation_arg(na_dim: int, dilation: Any) -> DimensionType:
 
     raise ValueError(
         "Invalid value for `dilation`; expected an integer or tuple of positive integers, "
-        f"got {type(dilation)}"
+        f"got {type(dilation)=}, {dilation=}."
     )
 
 
@@ -465,7 +466,7 @@ def check_causal_arg(na_dim: int, is_causal: Any) -> CausalArgType:
 
     raise ValueError(
         "Invalid value for `is_causal`; expected a boolean or tuple of booleans, "
-        f"got {type(is_causal)}"
+        f"got {type(is_causal)=}, {is_causal=}."
     )
 
 
@@ -537,7 +538,7 @@ def check_tile_shape(
 
     raise ValueError(
         f"Unsupported value for tile shape; expected an iterable of at most 3 integers, "
-        f"got {type(tile_shape)}: {tile_shape}"
+        f"got {type(tile_shape)=}, {tile_shape}."
     )
 
 
@@ -643,7 +644,7 @@ def varlen_tensor_checks(
     if not isinstance(max_seqlen_Q, int) or not isinstance(max_seqlen_KV, int):
         raise ValueError(
             "max_seqlen_Q and max_seqlen_KV must be ints, got "
-            f"{type(max_seqlen_Q)=}, {type(max_seqlen_KV)=}."
+            f"{type(max_seqlen_Q)=}, {type(max_seqlen_KV)=}, {max_seqlen_Q=}, {max_seqlen_KV=}."
         )
 
     total_seqlen_Q = query.shape[1]
@@ -660,11 +661,13 @@ def varlen_tensor_checks(
             f"{max_seqlen_KV=}, {total_seqlen_KV=}."
         )
 
-    if (max_seqlen_Q == 0) != (max_seqlen_KV == 0):
-        raise ValueError(
-            "max_seqlen_Q and max_seqlen_KV must both be zero or both be non-zero, got "
-            f"{max_seqlen_Q=}, {max_seqlen_KV=}."
-        )
+    # NOTE: this check introduces recompiles
+    if not is_torch_compiling():
+        if (max_seqlen_Q == 0) != (max_seqlen_KV == 0):
+            raise ValueError(
+                "max_seqlen_Q and max_seqlen_KV must both be zero or both be non-zero, got "
+                f"{max_seqlen_Q=}, {max_seqlen_KV=}."
+            )
 
     if max_seqlen_Q < 0 or max_seqlen_KV < 0:
         raise ValueError(

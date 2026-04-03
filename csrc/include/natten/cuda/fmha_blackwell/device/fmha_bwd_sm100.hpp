@@ -57,7 +57,8 @@ template <
     class ElementAccumulator,
     class TileShape,
     // bool IsMla,
-    class Mask>
+    class Mask,
+    bool IsDeterministic = false>
 class FmhaBwdSm100 {
  private:
   template <typename T>
@@ -130,6 +131,8 @@ class FmhaBwdSm100 {
 
     ElementAccumulator softmax_scale;
 
+    int* ptr_dq_semaphore = nullptr;
+
     cutlass::KernelHardwareInfo hw_info;
   };
 
@@ -146,7 +149,8 @@ class FmhaBwdSm100 {
           Element,
           ElementAccumulator,
           TileShape,
-          Mask>>;
+          Mask,
+          IsDeterministic>>;
   using Kernel = typename Operation::Kernel;
 
   struct Params {
@@ -258,7 +262,8 @@ class FmhaBwdSm100 {
          to_bwd_stride(stride_sum_OdO),
          dQ_acc,
          to_bwd_stride(stride_dQ),
-         args.softmax_scale},
+         args.softmax_scale,
+         args.ptr_dq_semaphore},
         {args.ptr_dK,
          to_bwd_stride(args.stride_dK),
          args.ptr_dV,

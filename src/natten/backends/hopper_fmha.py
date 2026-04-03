@@ -101,6 +101,12 @@ class CutlassHopperFmhaAutogradFn(Function):
         ctx.max_seqlen_Q = max_seqlen_Q
         ctx.max_seqlen_KV = max_seqlen_KV
         ctx.backward_config = backward_config
+        # Always record determinism behavior during forward pass (forward pass itself is
+        # deterministic anyway).
+        # Determinism could be limited to part of the program, which means during forward pass
+        # it'll be true, but on .backward() call, if it's been turned off, it will stay off when we
+        # get to this operation's backward call.
+        ctx.deterministic = torch.are_deterministic_algorithms_enabled()
 
         return output, logsumexp
 
@@ -132,7 +138,7 @@ class CutlassHopperFmhaAutogradFn(Function):
 
         q_tile_size, k_tile_size = ctx.backward_config
 
-        if torch.are_deterministic_algorithms_enabled():
+        if ctx.deterministic:
             raise RuntimeError(
                 "Hopper FMHA backward pass does not have a deterministic mode, "
                 "but PyTorch's deterministic algorithms were enabled. To proceed, "
