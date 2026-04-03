@@ -589,6 +589,7 @@ def fmha_backward_torch_op(
             kv_splits=num_kv_splits,
             input_tensor=key,
             kv_tile_size=kv_tile_size,
+            deterministic=deterministic,
             max_seqlen=max_seqlen,
         )
 
@@ -1138,6 +1139,7 @@ def make_fna_ops(na_dim):
                 kv_splits=tuple(num_kv_splits) if num_kv_splits is not None else None,  # type: ignore[arg-type]
                 input_tensor=key,
                 kv_tile_shape=tuple(kv_tile_shape),  # type: ignore[arg-type]
+                deterministic=deterministic,
                 dilation=tuple(dilation),  # type: ignore[arg-type]
             )
 

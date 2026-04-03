@@ -68,8 +68,6 @@ def _reset_everything():
     random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
-
-    # Hopper FMHA bwd doesn't have deterministic option.
     torch.use_deterministic_algorithms(False)
 
 

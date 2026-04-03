@@ -32,7 +32,6 @@ import itertools
 import math
 from typing import Optional
 
-import torch
 from torch import Tensor
 
 from natten.context import (
@@ -132,6 +131,7 @@ def _get_possible_kv_splits(
 def get_default_kv_splits_backward(
     input_tensor: Tensor,
     kv_tile_shape: DimensionType,
+    deterministic: bool,
     dilation: Optional[DimensionType] = None,
     max_seqlen: Optional[DimensionType] = None,
 ) -> DimensionType:
@@ -151,10 +151,7 @@ def get_default_kv_splits_backward(
     elif na_dim == 3:
         kv_splits = (1, 1, 1)
 
-    if (
-        is_kv_parallelism_in_fused_na_enabled()
-        and not torch.are_deterministic_algorithms_enabled()
-    ):
+    if is_kv_parallelism_in_fused_na_enabled() and not deterministic:
         kv_splits = get_max_splits(
             input_shape, dilation=dilation, kv_tile_shape=kv_tile_shape
         )
@@ -181,6 +178,7 @@ def check_fmha_kv_splits(
     kv_splits: Optional[int],
     input_tensor: Tensor,
     kv_tile_size: int,
+    deterministic: bool,
     max_seqlen: Optional[int] = None,
 ) -> int:
     if kv_splits is not None and isinstance(kv_splits, int):
@@ -193,6 +191,7 @@ def check_fmha_kv_splits(
         max_seqlen_tuple = None if max_seqlen is None else (max_seqlen,)
         default_kv_splits: DimensionType = get_default_kv_splits_backward(
             input_tensor=input_tensor,
+            deterministic=deterministic,
             kv_tile_shape=(kv_tile_size,),
             max_seqlen=max_seqlen_tuple,
         )
@@ -206,6 +205,7 @@ def check_fna_kv_splits(
     kv_splits: Optional[DimensionType],
     input_tensor: Tensor,
     kv_tile_shape: DimensionType,
+    deterministic: bool,
     dilation: Optional[DimensionType] = None,
 ) -> DimensionType:
     if kv_splits is not None and isinstance(kv_splits, tuple):
@@ -219,6 +219,7 @@ def check_fna_kv_splits(
 
     if kv_splits is None:
         return get_default_kv_splits_backward(
+            deterministic=deterministic,
             input_tensor=input_tensor,
             kv_tile_shape=kv_tile_shape,
             dilation=dilation,

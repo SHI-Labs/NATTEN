@@ -72,8 +72,6 @@ def _reset_everything():
     random.seed(42)
     torch.manual_seed(42)
     torch.cuda.empty_cache()
-
-    # Hopper FMHA bwd doesn't have deterministic option.
     torch.use_deterministic_algorithms(False)
 
 
@@ -1034,7 +1032,7 @@ class FMHABackendTest(unittest.TestCase):
             if backend == "blackwell-fmha":
                 head_dim_choices = [32, 64, 128]
                 heads_choices = range(1, 8 + 1)
-                supports_gqa_mqa = reference != "cutlass_fmha"
+                supports_gqa_mqa = True
             elif backend == "hopper-fmha":
                 head_dim_choices = [32, 64, 128]
                 heads_choices = range(1, 4)
@@ -1087,7 +1085,9 @@ class FMHABackendTest(unittest.TestCase):
                     self._test_backend_against_natten(
                         batch=batch,
                         heads=heads,
+                        heads_kv=heads_kv,
                         head_dim=head_dim,
+                        head_dim_v=head_dim_v,
                         seqlen_q=seqlen_q,
                         seqlen_kv=seqlen_kv,
                         is_causal=is_causal,

@@ -74,11 +74,15 @@ void compute_delta(
       ptr_sum_OdO,
       stride_sum_OdO};
 
-  op_sum_OdO.initialize(args, nullptr, stream);
   auto status = OperationSumOdO::can_implement(args);
   if (status != cutlass::Status::kSuccess) {
     NATTEN_FAILURE(
         "`compute_delta` kernel is not supported for this use case.");
+  }
+
+  status = op_sum_OdO.initialize(args, nullptr, stream);
+  if (status != cutlass::Status::kSuccess) {
+    NATTEN_FAILURE("`compute_delta` kernel failed to initialize.");
   }
 
   auto result = op_sum_OdO.run(stream);

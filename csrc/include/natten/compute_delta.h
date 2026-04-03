@@ -37,11 +37,4 @@ void compute_delta(
     const at::Tensor& d_out,
     at::Tensor& delta);
 
-void compute_delta_(
-    const at::Tensor& out,
-    const at::Tensor& d_out,
-    at::Tensor& delta,
-    int32_t num_rows,
-    int32_t dim);
-
 } // namespace natten

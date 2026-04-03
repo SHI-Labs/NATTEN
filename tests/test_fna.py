@@ -721,6 +721,7 @@ class FNABackendTest(unittest.TestCase):
                     is_causal=is_causal,
                     test_backprop=True,
                     reference_backend="cutlass-fna",
+                    reference_fmha_backend="cutlass-fmha",
                     dtype=dtype,
                     reference_q_tile_shape=q_tile_shape,
                     reference_kv_tile_shape=kv_tile_shape,
