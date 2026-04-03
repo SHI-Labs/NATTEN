@@ -43,7 +43,9 @@ DEVICE = "cuda"
 DTYPE = torch.float16
 SEQLEN_PAD_MULTIPLE = 64
 
-KERNEL_PATTERN = re.compile(r"fmha|flash|sdpa", re.IGNORECASE)
+KERNEL_PATTERN = re.compile(r"fmha|fna", re.IGNORECASE)
+BWD_PATTERN = re.compile(r"backward|bwd", re.IGNORECASE)
+BWD_HELPER_PATTERN = re.compile(r"convert|sum_odo|sumodo|delta", re.IGNORECASE)
 
 
 def _generate_problem_shapes():
@@ -141,7 +143,22 @@ def _profile_case(label, fn, q, k, v, cumseq_q, cumseq_kv, max_q, max_kv):
 
 
 def _find_attention_kernels(prof):
-    return {evt.key for evt in prof.key_averages() if KERNEL_PATTERN.search(evt.key)}
+    """Return (all_names, fwd_dict, bwd_dict) of attention kernels.
+
+    Each dict maps kernel name to its call count from the profiler.
+    Forward kernels may not have an explicit forward/fwd keyword in their name,
+    so we identify them as any attention kernel that is NOT a backward kernel.
+    """
+    fwd_kernels = {}
+    bwd_kernels = {}
+    for evt in prof.key_averages():
+        if KERNEL_PATTERN.search(evt.key):
+            if BWD_PATTERN.search(evt.key) and not BWD_HELPER_PATTERN.search(evt.key):
+                bwd_kernels[evt.key] = evt.count
+            elif not BWD_PATTERN.search(evt.key):
+                fwd_kernels[evt.key] = evt.count
+    all_names = set(fwd_kernels) | set(bwd_kernels)
+    return all_names, fwd_kernels, bwd_kernels
 
 
 def _make_fn(backend, use_compile, is_causal):
@@ -230,27 +247,46 @@ def _run_empty_batch_kernel_check(backend, use_compile, test_causal=False):
             "Running interleaved compile check: normal_a -> empty_a -> normal_b -> empty_b"
         )
         for label, fn, args in cases:
+            logger.debug(f"Running compile check: {label}")
             fn(*args)
             logger.debug(f"PASS: {label} (no recompile)")
         # Reset compiler before profiling
         torch.compiler.reset()
         cases = _build_cases()
 
-    # Profile normal batches: must contain attention kernels
+    # Profile normal batches: must contain exactly 1 forward and 1 backward attention
+    # kernel, each called exactly once.
     all_normal_kernels = set()
     for label, fn, args in cases:
         if not label.startswith("normal"):
             continue
         full_label = f"{backend}/{mode}/{label}"
+        logger.debug(f"Checking normal batch kernels: {full_label}")
         prof = _profile_case(full_label, fn, *args)
-        kernels = _find_attention_kernels(prof)
-        logger.debug(f"[{full_label}] attention kernels: {kernels}")
-        assert kernels, (
-            f"[{full_label}] must invoke attention kernels, "
-            f"but none matched pattern {KERNEL_PATTERN.pattern}. "
-            f"CUDA events: {[evt.key for evt in prof.key_averages()]}"
+        all_names, fwd_kernels, bwd_kernels = _find_attention_kernels(prof)
+        all_events = [evt.key for evt in prof.key_averages()]
+        logger.debug(
+            f"[{full_label}] attention kernels: fwd={fwd_kernels}, bwd={bwd_kernels}"
         )
-        all_normal_kernels |= kernels
+        assert len(fwd_kernels) == 1, (
+            f"[{full_label}] expected exactly 1 forward attention kernel, "
+            f"got {len(fwd_kernels)}: {fwd_kernels}. CUDA events: {all_events}"
+        )
+        assert len(bwd_kernels) == 1, (
+            f"[{full_label}] expected exactly 1 backward attention kernel, "
+            f"got {len(bwd_kernels)}: {bwd_kernels}. CUDA events: {all_events}"
+        )
+        fwd_name, fwd_count = next(iter(fwd_kernels.items()))
+        bwd_name, bwd_count = next(iter(bwd_kernels.items()))
+        assert fwd_count == 1, (
+            f"[{full_label}] forward kernel {fwd_name!r} called {fwd_count} times, "
+            f"expected 1"
+        )
+        assert bwd_count == 1, (
+            f"[{full_label}] backward kernel {bwd_name!r} called {bwd_count} times, "
+            f"expected 1"
+        )
+        all_normal_kernels |= all_names
 
     logger.debug(f"Combined normal attention kernels: {all_normal_kernels}")
 
@@ -260,11 +296,13 @@ def _run_empty_batch_kernel_check(backend, use_compile, test_causal=False):
         if not label.startswith("empty"):
             continue
         full_label = f"{backend}/{mode}/{label}"
+        logger.debug(f"Checking empty batch kernels: {full_label}")
         prof = _profile_case(full_label, fn, *args)
-        empty_kernels = _find_attention_kernels(prof)
-        leaked = all_normal_kernels & empty_kernels
+        all_names, _fwd_kernels, _bwd_kernels = _find_attention_kernels(prof)
+        leaked = all_normal_kernels & all_names
         logger.debug(
-            f"[{full_label}] attention kernels found: {empty_kernels}, leaked from normal: {leaked}"
+            f"[{full_label}] attention kernels found: {all_names}, "
+            f"leaked from normal: {leaked}"
         )
         if leaked:
             failures.append(
