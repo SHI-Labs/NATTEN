@@ -65,16 +65,12 @@ class KernelSchedule(Enum):
 
 
 CutlassFnaForwardConfigType = QKTileShapeType
+CutlassFnaBackwardConfigType = QKTileShapeType
 CutlassBlackwellFnaForwardConfigType = QKTileShapeType
 CutlassBlackwellFnaBackwardConfigType = QKTileShapeType
 CutlassHopperFnaForwardConfigType = Tuple[QKTileShapeType, KernelSchedule]
 CutlassHopperFnaBackwardConfigType = QKTileShapeType
 FlexFnaForwardConfigType = QKTileShapeType
-
-# (query_tile_shape, kv_tile_shape)
-# NOTE: kv_splits and use_pt_reduction are independent arguments, not part of the config type.
-# They are validated/defaulted in the torch ops (torch_wrappers.py).
-CutlassFnaBackwardConfigType = QKTileShapeType
 
 # FMHA configs
 FmhaForwardConfigType = Tuple[int, int]
