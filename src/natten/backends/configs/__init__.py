@@ -67,7 +67,9 @@ from natten.types import (
     CutlassBlackwellFmhaForwardConfigType,
     CutlassBlackwellFnaBackwardConfigType,
     CutlassBlackwellFnaForwardConfigType,
+    CutlassFmhaBackwardConfigType,
     CutlassFmhaForwardConfigType,
+    CutlassFnaBackwardConfigType,
     CutlassFnaForwardConfigType,
     CutlassHopperFmhaBackwardConfigType,
     CutlassHopperFmhaForwardConfigType,
@@ -411,7 +413,7 @@ def get_bwd_configs_for_cutlass_fmha(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-) -> List[CutlassFmhaForwardConfigType]:
+) -> List[CutlassFmhaBackwardConfigType]:
     """Returns CUTLASS FMHA backward pass configurations compatible with input tensors, if any.
 
     Checks first if a CUDA tensor, and on a device with compute capability >= 5.0, and if so,
@@ -479,7 +481,7 @@ def get_bwd_configs_for_cutlass_fna(
     query: Tensor,
     key: Tensor,
     value: Tensor,
-) -> List[CutlassFnaForwardConfigType]:
+) -> List[CutlassFnaBackwardConfigType]:
     """Returns CUTLASS FNA backward pass configurations compatible with input tensors, if any.
 
     Checks first if a CUDA tensor, and on a device with compute capability >= 5.0, and if so,
