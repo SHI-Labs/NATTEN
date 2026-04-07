@@ -28,14 +28,11 @@ from typing import Optional
 import torch
 from natten.backends import get_compatible_backends, get_compatible_fmha_backends
 from natten.functional import attention, neighborhood_attention_generic
-from natten.utils import log
 from natten.utils.testing import skip_if_libnatten_is_not_supported
 from natten.utils.varlen import generate_varlen_parameters
 from torch import nn
 
-from .utils import reset_torch_compile
-
-logger = log.get_logger(__name__)
+from .utils import logger, reset_torch_compile
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):

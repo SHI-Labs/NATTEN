@@ -43,7 +43,6 @@ from natten.backends.configs.cutlass_hopper import (
 )
 from natten.functional import attention
 from natten.types import KernelSchedule
-from natten.utils import log
 from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
@@ -55,7 +54,7 @@ from natten.utils.testing import (
 )
 from torch import Tensor
 
-logger = log.get_logger(__name__)
+from .utils import logger
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):

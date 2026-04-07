@@ -24,6 +24,8 @@
 import enum
 import logging
 import os
+import sys
+from typing import Any
 
 from natten.utils.environment import is_torch_compiling
 
@@ -67,12 +69,12 @@ _map_log_level = {
 
 
 class NattenLogger:
-    def __init__(self, name: str):
+    def __init__(self, name: str, stream: Any = sys.stdout):
         self.logger = logging.getLogger(name)
         self.log_level = _map_log_level[_get_log_level()]
         self.logger.setLevel(self.log_level)
         self.formatter = logging.Formatter(log_format)
-        self.handler = logging.StreamHandler()
+        self.handler = logging.StreamHandler(stream)
         self.handler.setLevel(self.log_level)
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
@@ -93,5 +95,11 @@ class NattenLogger:
             self.logger.warning(*args, **kwargs)
 
 
-def get_logger(name):
+def get_logger(name) -> NattenLogger:
     return NattenLogger(name)
+
+
+def get_test_logger(name) -> NattenLogger:
+    # For now we stream test logs into stderr for better readability, but it makes more sense to
+    # stream debug and error logs into stderr, and everything else into stdout.
+    return NattenLogger(name, sys.stderr)

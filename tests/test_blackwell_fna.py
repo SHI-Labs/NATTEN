@@ -32,7 +32,6 @@ from natten.backends.configs.cutlass_blackwell import (
     get_all_backward_configs,
     get_all_forward_configs,
 )
-from natten.utils import log
 from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
@@ -40,9 +39,7 @@ from natten.utils.testing import (
     skip_if_not_running_extended_tests,
 )
 
-from .utils import NattenBackendTester
-
-logger = log.get_logger(__name__)
+from .utils import logger, NattenBackendTester
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):

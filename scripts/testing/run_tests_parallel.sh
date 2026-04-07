@@ -110,7 +110,7 @@ if [ ${NUM_GPUS} -gt 0 ]; then
 fi
 
 # Default log level
-export NATTEN_LOG_LEVEL="${NATTEN_LOG_LEVEL:-CRITICAL}"
+export NATTEN_LOG_LEVEL="${NATTEN_LOG_LEVEL:-DEBUG}"
 
 # Always must be set for all tests
 export PYTORCH_NO_CUDA_MEMORY_CACHING=1
@@ -123,8 +123,9 @@ TEST_DIR="${PROJECT_ROOT}/tests"
 LOG_DIR="${PROJECT_ROOT}/test-logs"
 PYTEST="${PYTEST:-pytest}"
 
-# Create log directory
+# Create log directories
 mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}/stderr"
 
 # Get all test files
 TEST_FILES=($(find "${TEST_DIR}" -name "test_*.py" -type f | sort))
@@ -162,11 +163,12 @@ run_single_test() {
         # GPU mode: distribute workers across GPUs using round-robin
         local gpu_id=$(( worker_id % NUM_GPUS ))
         local log_file="${LOG_DIR}/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
+        local stderr_file="${LOG_DIR}/stderr/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
 
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] [GPU ${gpu_id}] [Worker ${worker_id}] Starting: ${test_name}"
 
         # Run test with specific GPU
-        CUDA_VISIBLE_DEVICES=${gpu_id} ${PYTEST} -v -x "${test_file}" > "${log_file}" 2>&1
+        CUDA_VISIBLE_DEVICES=${gpu_id} ${PYTEST} -s -v -x "${test_file}" > "${log_file}" 2>"${stderr_file}"
         local exit_code=$?
 
         if [ ${exit_code} -eq 0 ]; then
@@ -177,11 +179,12 @@ run_single_test() {
     else
         # No GPU distribution: disable CUDA to prevent tests from using GPUs
         local log_file="${LOG_DIR}/${test_name}_worker${worker_id}.log"
+        local stderr_file="${LOG_DIR}/stderr/${test_name}_worker${worker_id}.log"
 
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Worker ${worker_id}] Starting: ${test_name}"
 
         # Run test with CUDA_VISIBLE_DEVICES="" to hide all GPUs from CUDA
-        CUDA_VISIBLE_DEVICES="" ${PYTEST} -v -x "${test_file}" > "${log_file}" 2>&1
+        CUDA_VISIBLE_DEVICES="" ${PYTEST} -s -v -x "${test_file}" > "${log_file}" 2>"${stderr_file}"
         local exit_code=$?
 
         if [ ${exit_code} -eq 0 ]; then

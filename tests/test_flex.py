@@ -32,7 +32,6 @@ import torch
 from natten import allow_flex_compile
 from natten._environment import _RUN_FLEX_TESTS as RUN_FLEX_TESTS
 from natten.backends.configs.flex import FLEX_FORWARD_TILE_SHAPES
-from natten.utils import log
 from natten.utils.testing import (
     skip_if_flex_compile_is_not_supported,
     skip_if_flex_is_not_supported,
@@ -42,10 +41,7 @@ from natten.utils.testing import (
     supports_float16,
 )
 
-from .utils import NattenBackendTester, reset_torch_compile
-
-logger = log.get_logger(__name__)
-
+from .utils import logger, NattenBackendTester, reset_torch_compile
 
 # TODO: enable when Flex is stable / check with new PT releases
 ENABLE_FLEX_COMPILE_TESTS = False

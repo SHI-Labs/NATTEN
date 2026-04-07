@@ -26,10 +26,9 @@ import unittest
 
 import torch
 from natten.token_permute import token_permute_operation, token_unpermute_operation
-from natten.utils import log
 from natten.utils.testing import skip_if_cuda_is_not_supported, supports_float16
 
-logger = log.get_logger(__name__)
+from .utils import logger
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):

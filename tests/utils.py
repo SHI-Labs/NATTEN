@@ -31,7 +31,7 @@ from natten.types import CausalArgType, DimensionType, KernelSchedule
 from natten.utils import log
 from natten.utils.checks import check_all_args
 
-logger = log.get_logger(__name__)
+logger = log.get_test_logger("natten_tests")
 
 
 def reset_torch_compile(cache_size_limit, recompile_limit: int | None = None):

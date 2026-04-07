@@ -35,7 +35,6 @@ from natten.backends.configs.cutlass import (
     get_all_forward_configs,
 )
 from natten.context import set_memory_usage_preference, use_kv_parallelism_in_fused_na
-from natten.utils import log
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
@@ -43,9 +42,7 @@ from natten.utils.testing import (
     supports_float16,
 )
 
-from .utils import NattenBackendTester
-
-logger = log.get_logger(__name__)
+from .utils import logger, NattenBackendTester
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):

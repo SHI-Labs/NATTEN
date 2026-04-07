@@ -29,7 +29,6 @@ import natten  # noqa: F401
 import torch
 from natten._environment import _NUM_RAND_SWEEP_TESTS as RAND_SWEEP_TESTS
 from natten.functional import attention, merge_attentions
-from natten.utils import log
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
     skip_if_hopper_kernels_not_supported,
@@ -38,9 +37,7 @@ from natten.utils.testing import (
 )
 from torch import Tensor
 
-from .utils import reset_torch_compile
-
-logger = log.get_logger(__name__)
+from .utils import logger, reset_torch_compile
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):

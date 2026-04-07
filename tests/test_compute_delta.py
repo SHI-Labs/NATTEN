@@ -26,14 +26,13 @@ import unittest
 
 import torch
 from natten._libnatten import compute_delta  # type: ignore
-from natten.utils import log
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,
     supports_bfloat16,
     supports_float16,
 )
 
-logger = log.get_logger(__name__)
+from .utils import logger
 
 
 def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
