@@ -121,11 +121,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${SCRIPT_DIR}/../.."
 TEST_DIR="${PROJECT_ROOT}/tests"
 LOG_DIR="${PROJECT_ROOT}/test-logs"
+ERR_DIR="${LOG_DIR}/stderr"
 PYTEST="${PYTEST:-pytest}"
 
 # Create log directories
 mkdir -p "${LOG_DIR}"
-mkdir -p "${LOG_DIR}/stderr"
+mkdir -p "${ERR_DIR}"
 
 # Get all test files
 TEST_FILES=($(find "${TEST_DIR}" -name "test_*.py" -type f | sort))
@@ -163,7 +164,7 @@ run_single_test() {
         # GPU mode: distribute workers across GPUs using round-robin
         local gpu_id=$(( worker_id % NUM_GPUS ))
         local log_file="${LOG_DIR}/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
-        local stderr_file="${LOG_DIR}/stderr/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
+        local stderr_file="${ERR_DIR}/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
 
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] [GPU ${gpu_id}] [Worker ${worker_id}] Starting: ${test_name}"
 
@@ -179,7 +180,7 @@ run_single_test() {
     else
         # No GPU distribution: disable CUDA to prevent tests from using GPUs
         local log_file="${LOG_DIR}/${test_name}_worker${worker_id}.log"
-        local stderr_file="${LOG_DIR}/stderr/${test_name}_worker${worker_id}.log"
+        local stderr_file="${ERR_DIR}/${test_name}_worker${worker_id}.log"
 
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Worker ${worker_id}] Starting: ${test_name}"
 
@@ -199,7 +200,7 @@ run_single_test() {
 
 # Export function and variables for GNU parallel
 export -f run_single_test
-export PYTEST LOG_DIR NUM_GPUS
+export PYTEST LOG_DIR ERR_DIR NUM_GPUS
 
 # Create joblog file
 JOBLOG="${LOG_DIR}/parallel_joblog.txt"
