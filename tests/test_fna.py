@@ -106,29 +106,10 @@ class FNABackendTest(unittest.TestCase):
             dtype=torch.float32,
         )
 
-        # GQA is implemented with graph transformations, and will therefore
-        # have a different error threshold since it involves reductions in bwd pass.
-        # MLA will also involve a reduction in bwd pass and needs higher error thresholds
-        is_gqa_or_mla = (
-            heads_kv is not None and heads != heads_kv
-        ) or head_dim_v != head_dim
-
-        # (dtype, is_gqa_or_mla) -> atol_dq, atol_dk, atol_dv
-        bwd_atols = {
-            (torch.float32, False): (1e-2, 1e-4, 1e-4),
-            (torch.float32, True): (7e-1, 7e-1, 7e-1),
-            #
-            (torch.float16, False): (1e-1, 1e-2, 1e-2),
-            (torch.float16, True): (7e-1, 7e-1, 7e-1),
-            #
-            (torch.bfloat16, False): (1e-1, 1e-2, 1e-2),
-            (torch.bfloat16, True): (7e-1, 7e-1, 7e-1),
-        }
-
         ALLOWED_DTYPES = [
             (
                 torch.float32,
-                (1e-4, bwd_atols[(torch.float32, is_gqa_or_mla)]),
+                (1e-4, (1e-2, 1e-4, 1e-4)),
             ),
         ]
 
@@ -136,7 +117,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.float16,
-                    (1e-2, bwd_atols[(torch.float16, is_gqa_or_mla)]),
+                    (1e-2, (1e-1, 1e-2, 1e-2)),
                 )
             )
 
@@ -144,7 +125,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.bfloat16,
-                    (1e-1, bwd_atols[(torch.bfloat16, is_gqa_or_mla)]),
+                    (1e-1, (1e-1, 1e-2, 1e-2)),
                 )
             )
 
@@ -479,23 +460,35 @@ class FNABackendTest(unittest.TestCase):
     ):
         max_seqlen = 2**17 if not quick else 2**16
         for i in range(max_tests):
-            batch = random.choice(range(1, 4))
-            heads = random.choice(range(1, 4))
+            input_shape = []
+            max_seqlen_ = max_seqlen
+            for j in range(na_dim):
+                max_dim = max(int(max_seqlen_ ** (1 / na_dim)), 4)
+                sz = random.choice(range(4, max_dim))
+                max_seqlen_ = max(int(max_seqlen_ / sz), 4)
+                input_shape.append(sz)
+
+            # while math.prod(input_shape) > max_seqlen:
+            #    dim_to_cut = random.choice(range(na_dim))
+            #    input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
+
+            input_shape = tuple(input_shape)
+            assert math.prod(input_shape) <= max_seqlen
+
+            max_heads = max(min(1, (max_seqlen // math.prod(input_shape)) * 4), 4)
+            heads = random.choice(range(1, max_heads))
+
+            max_batch = max(
+                min(1, ((max_seqlen // math.prod(input_shape)) * 4) // heads), 4
+            )
+            batch = random.choice(range(1, max_batch))
+
             heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
             head_dim = random.choice(range(8, 193, 8))
             head_dim_v = random.choice(
                 range(max(8, head_dim - 16), min(193, head_dim + 16), 8)
             )
 
-            input_shape = []
-            for j in range(na_dim):
-                input_shape.append(random.choice(range(4, 97)))
-
-            while math.prod(input_shape) > max_seqlen:
-                dim_to_cut = random.choice(range(na_dim))
-                input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
-
-            input_shape = tuple(input_shape)
             kernel_size = tuple(random.choice(range(2, x + 1)) for x in input_shape)
             stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
             dilation = tuple(
