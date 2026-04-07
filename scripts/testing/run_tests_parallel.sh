@@ -109,8 +109,9 @@ if [ ${NUM_GPUS} -gt 0 ]; then
     fi
 fi
 
-# Default log level
+# Default log level and pipe
 export NATTEN_LOG_LEVEL="${NATTEN_LOG_LEVEL:-DEBUG}"
+export NATTEN_LOG_PIPE="${NATTEN_LOG_PIPE:-stderr}"
 
 # Always must be set for all tests
 export PYTORCH_NO_CUDA_MEMORY_CACHING=1
