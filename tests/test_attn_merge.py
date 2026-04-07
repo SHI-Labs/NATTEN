@@ -43,9 +43,10 @@ from .utils import reset_torch_compile
 logger = log.get_logger(__name__)
 
 
-def _reset_everything():
-    random.seed(42)
-    torch.manual_seed(42)
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.cuda.empty_cache()
     torch.use_deterministic_algorithms(False)
 
@@ -200,11 +201,11 @@ class AttentionMergeTest(unittest.TestCase):
             torch.testing.assert_close(dq.float(), dq_ref.float(), atol=atol_dq, rtol=0)
 
     def _test_randsweep(self, backend, num_tests=1000):
-        random.seed(42)
-
         max_Q_ = 16384
         max_KV_total_ = 2**15
         for i in range(num_tests):
+            # to help with reproducibility of use cases
+            _reset_everything(random_seed=i, torch_seed=i)
             batch = random.choice(range(1, 4))
             heads = random.choice(range(1, 4))
 

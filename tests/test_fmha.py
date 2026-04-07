@@ -58,7 +58,7 @@ from torch import Tensor
 logger = log.get_logger(__name__)
 
 
-def _reset_everything():
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
     from natten.context import (
         NattenContext,
         set_memory_usage_preference,
@@ -69,8 +69,9 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.cuda.empty_cache()
     torch.use_deterministic_algorithms(False)
 
@@ -1025,6 +1026,8 @@ class FMHABackendTest(unittest.TestCase):
         assert reference in ("sdpa", "natten")
         max_qk = 2**21
         for i in range(max_tests):
+            # to help with reproducibility of use cases
+            _reset_everything(random_seed=i, torch_seed=i)
             batch = random.choice(range(1, 4))
 
             supports_dim_v = False
@@ -1125,14 +1128,15 @@ class FMHABackendTest(unittest.TestCase):
             (1, 2, 64, 64, 125, 231),
             (1, 1, 128, 128, 256, 10240),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             head_dim_v,
             seqlen_q,
             seqlen_kv,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_backend_against_torch_sdpa(
                     batch=batch,
@@ -1176,13 +1180,14 @@ class FMHABackendTest(unittest.TestCase):
             (1, 2, 64, 125, 231),
             (1, 1, 128, 256, 10240),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             seqlen_q,
             seqlen_kv,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [True, False]:
                 self._test_backend_against_torch_sdpa(
                     batch=batch,
@@ -1247,14 +1252,15 @@ class FMHABackendTest(unittest.TestCase):
             (1, 2, 2, 64, 125, 231),
             (1, 1, 1, 128, 256, 10240),
         ]
-        for (
+        for i, (
             batch,
             heads_q,
             heads_kv,
             head_dim,
             seqlen_q,
             seqlen_kv,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_backend_against_torch_sdpa(
                     batch=batch,
@@ -1286,14 +1292,15 @@ class FMHABackendTest(unittest.TestCase):
             (2, 4, 4, 32, 4096, 4096),
         ]
 
-        for (
+        for i, (
             batch,
             heads_q,
             heads_kv,
             head_dim,
             seqlen_q,
             seqlen_kv,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_backend_against_natten(
                     batch=batch,
@@ -1313,6 +1320,7 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_determinism_xfail0(self):
+        _reset_everything(random_seed=0, torch_seed=0)
         problem_sizes = [
             (3, 7, 1, 128, 3584, 2077),
         ]
@@ -1344,6 +1352,7 @@ class FMHABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_cutlass_blackwell_fmha_determinism_xfail1(self):
+        _reset_everything(random_seed=0, torch_seed=0)
         problem_sizes = [
             (2, 4, 2, 32, 11283, 9873),
         ]
@@ -1377,14 +1386,15 @@ class FMHABackendTest(unittest.TestCase):
             (2, 4, 4, 32, 4096, 4096),
         ]
 
-        for (
+        for i, (
             batch,
             heads_q,
             heads_kv,
             head_dim,
             seqlen_q,
             seqlen_kv,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_backend_against_natten(
                     batch=batch,

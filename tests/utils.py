@@ -34,14 +34,15 @@ from natten.utils.checks import check_all_args
 logger = log.get_logger(__name__)
 
 
-def reset_torch_compile(cache_size_limit):
+def reset_torch_compile(cache_size_limit, recompile_limit: int | None = None):
+    recompile_limit = recompile_limit or cache_size_limit * 4
     # Torch compile reset and sensible settings for unit testing
     logger.debug(
-        f"Resetting torch compile cache. New cache size limit: {cache_size_limit}"
+        f"Resetting torch compile cache: {cache_size_limit=}, {recompile_limit=}."
     )
     torch.compiler.reset()
     torch._dynamo.config.cache_size_limit = cache_size_limit
-    torch._dynamo.config.accumulated_recompile_limit = cache_size_limit * 4
+    torch._dynamo.config.accumulated_recompile_limit = recompile_limit
     torch._dynamo.config.fail_on_recompile_limit_hit = True
 
 

@@ -26,16 +26,20 @@ import unittest
 
 import torch
 from natten._libnatten import compute_delta  # type: ignore
+from natten.utils import log
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,
     supports_bfloat16,
     supports_float16,
 )
 
+logger = log.get_logger(__name__)
 
-def _reset_everything():
-    random.seed(42)
-    torch.manual_seed(42)
+
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.use_deterministic_algorithms(True)
 
 
@@ -113,7 +117,8 @@ class ComputeDeltaTests(unittest.TestCase):
             (5, 50, 1, 60),
             (1, 127, 1, 256),
         ]
-        for batch, seqlen, heads, head_dim in input_sizes:
+        for i, (batch, seqlen, heads, head_dim) in enumerate(input_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             self._test_all_dtypes_against_reference(batch, seqlen, heads, head_dim)
 
 
