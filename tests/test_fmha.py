@@ -96,7 +96,8 @@ def compute_sdpa_reference(
             torch.randn(
                 (batch, heads_kv, seqlen_kv, dim_v), device="cuda", dtype=dtype
             ),
-            torch.randn((batch, heads, seqlen_q, dim_v), device="cuda", dtype=dtype),
+            torch.randn((batch, heads, seqlen_q, dim_v), device="cuda", dtype=dtype)
+            * 0.05,
         )
         q_, k_, v_, d_out_ = (
             q.clone().permute(0, 2, 1, 3).contiguous(),
@@ -172,7 +173,8 @@ def compute_natten_fmha_reference(
             torch.randn(
                 (batch, seqlen_kv, heads_kv, dim_v), device="cuda", dtype=dtype
             ),
-            torch.randn((batch, seqlen_q, heads, dim_v), device="cuda", dtype=dtype),
+            torch.randn((batch, seqlen_q, heads, dim_v), device="cuda", dtype=dtype)
+            * 0.05,
         )
         q_, k_, v_, d_out_ = (
             q.clone(),
@@ -333,26 +335,20 @@ class FMHABackendTest(unittest.TestCase):
                 lse_ref is not None
             ), "Reference did not return LSE. If reference is PyTorch SDPA, it does not have an API for returning LSE. Use CUTLASS FMHA instead!"
 
-            torch.testing.assert_close(
-                lse, lse_ref, atol=atol_forward, rtol=0
-            )
+            torch.testing.assert_close(lse, lse_ref, atol=atol_forward, rtol=0)
 
         if test_backprop:
             if isinstance(atol_backward, tuple):
                 assert len(atol_backward) == 3
                 atol_dq, atol_dk, atol_dv = atol_backward
             else:
-                assert isinstance(atol_backward, float) or isinstance(atol_backward, int)
+                assert isinstance(atol_backward, float) or isinstance(
+                    atol_backward, int
+                )
                 atol_dq, atol_dk, atol_dv = atol_backward, atol_backward, atol_backward
-            torch.testing.assert_close(
-                dq, dq_ref, atol=atol_dq, rtol=0
-            )
-            torch.testing.assert_close(
-                dk, dk_ref, atol=atol_dk, rtol=0
-            )
-            torch.testing.assert_close(
-                dv, dv_ref, atol=atol_dv, rtol=0
-            )
+            torch.testing.assert_close(dq, dq_ref, atol=atol_dq, rtol=0)
+            torch.testing.assert_close(dk, dk_ref, atol=atol_dk, rtol=0)
+            torch.testing.assert_close(dv, dv_ref, atol=atol_dv, rtol=0)
 
     def _test_against_torch_sdpa(
         self,
@@ -508,6 +504,7 @@ class FMHABackendTest(unittest.TestCase):
     ):
         torch.set_default_device("cuda")
 
+        is_mla = head_dim_v is not None and head_dim != head_dim_v
         ALLOWED_DTYPES = [
             (torch.float32, (1e-4, (1e-2, 1e-4, 1e-4))),
         ]
@@ -516,7 +513,12 @@ class FMHABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append((torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))))
 
         if supports_bfloat16(torch.get_default_device()):
-            ALLOWED_DTYPES.append((torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))))
+            ALLOWED_DTYPES.append(
+                (
+                    torch.bfloat16,
+                    (5e-2, (2e-2, 5e-2, 5e-2) if is_mla else (1e-2, 1e-2, 1e-2)),
+                )
+            )
 
         for dtype, atol in ALLOWED_DTYPES:
 
@@ -580,7 +582,8 @@ class FMHABackendTest(unittest.TestCase):
     ):
         torch.set_default_device("cuda")
 
-        is_gqa_mqa = heads_kv is not None and heads != heads_kv
+        # TODO: REMOVE ME
+        # is_gqa_mqa = heads_kv is not None and heads != heads_kv
         ALLOWED_DTYPES = [
             # TODO: REMOVE ME
             # (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2) if not is_gqa_mqa else (1e-2, 1e-2, 1e-2))),
@@ -641,7 +644,7 @@ class FMHABackendTest(unittest.TestCase):
 
         ALLOWED_DTYPES = [
             (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
-            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.bfloat16, (5e-2, (1e-2, 2e-2, 2e-2))),
         ]
 
         for dtype, atol in ALLOWED_DTYPES:

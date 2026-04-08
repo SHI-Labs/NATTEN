@@ -34,7 +34,6 @@ from natten.backends.configs.cutlass import (
     get_all_backward_configs,
     get_all_forward_configs,
 )
-from natten.context import set_memory_usage_preference, use_kv_parallelism_in_fused_na
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
