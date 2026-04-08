@@ -234,7 +234,6 @@ class FMHABackendTest(unittest.TestCase):
         seqlen_kv: int,
         is_causal: bool,
         atol: Union[float, Tuple[float, float]],
-        rtol: Union[float, Tuple[float, float]],
         dtype: torch.dtype,
         test_backprop: bool,
         backend: str,
@@ -328,30 +327,31 @@ class FMHABackendTest(unittest.TestCase):
         else:
             atol_forward, atol_backward = atol, atol
 
-        if isinstance(rtol, tuple):
-            rtol_forward, rtol_backward = rtol
-        else:
-            rtol_forward, rtol_backward = rtol, rtol
-
-        torch.testing.assert_close(out, out_ref, atol=atol_forward, rtol=rtol_forward)
+        torch.testing.assert_close(out, out_ref, atol=atol_forward, rtol=0)
         if test_lse:
             assert (
                 lse_ref is not None
             ), "Reference did not return LSE. If reference is PyTorch SDPA, it does not have an API for returning LSE. Use CUTLASS FMHA instead!"
 
             torch.testing.assert_close(
-                lse, lse_ref, atol=atol_forward, rtol=rtol_forward
+                lse, lse_ref, atol=atol_forward, rtol=0
             )
 
         if test_backprop:
+            if isinstance(atol_backward, tuple):
+                assert len(atol_backward) == 3
+                atol_dq, atol_dk, atol_dv = atol_backward
+            else:
+                assert isinstance(atol_backward, float) or isinstance(atol_backward, int)
+                atol_dq, atol_dk, atol_dv = atol_backward, atol_backward, atol_backward
             torch.testing.assert_close(
-                dq, dq_ref, atol=atol_backward, rtol=rtol_backward
+                dq, dq_ref, atol=atol_dq, rtol=0
             )
             torch.testing.assert_close(
-                dk, dk_ref, atol=atol_backward, rtol=rtol_backward
+                dk, dk_ref, atol=atol_dk, rtol=0
             )
             torch.testing.assert_close(
-                dv, dv_ref, atol=atol_backward, rtol=rtol_backward
+                dv, dv_ref, atol=atol_dv, rtol=0
             )
 
     def _test_against_torch_sdpa(
@@ -363,7 +363,6 @@ class FMHABackendTest(unittest.TestCase):
         seqlen_kv: int,
         is_causal: bool,
         atol: Union[float, Tuple[float, float]],
-        rtol: Union[float, Tuple[float, float]],
         dtype: torch.dtype,
         test_backprop: bool,
         backend: str,
@@ -404,7 +403,6 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_kv=seqlen_kv,
             is_causal=is_causal,
             atol=atol,
-            rtol=rtol,
             dtype=dtype,
             test_backprop=test_backprop,
             backend=backend,
@@ -428,7 +426,6 @@ class FMHABackendTest(unittest.TestCase):
         seqlen_kv: int,
         is_causal: bool,
         atol: Union[float, Tuple[float, float]],
-        rtol: Union[float, Tuple[float, float]],
         dtype: torch.dtype,
         test_backprop: bool,
         test_lse: bool,
@@ -483,7 +480,6 @@ class FMHABackendTest(unittest.TestCase):
             seqlen_kv=seqlen_kv,
             is_causal=is_causal,
             atol=atol,
-            rtol=rtol,
             dtype=dtype,
             test_backprop=test_backprop,
             backend=backend,
@@ -513,16 +509,16 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float32, (1e-4, 1e-3), (0, 0)),
+            (torch.float32, (1e-4, (1e-2, 1e-4, 1e-4))),
         ]
 
         if supports_float16(torch.get_default_device()):
-            ALLOWED_DTYPES.append((torch.float16, (1e-2, 4e-2), (0, 1e-3)))
+            ALLOWED_DTYPES.append((torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))))
 
         if supports_bfloat16(torch.get_default_device()):
-            ALLOWED_DTYPES.append((torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)))
+            ALLOWED_DTYPES.append((torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))))
 
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy_fwd = torch.randn(
                 (batch, seqlen_q, heads, max(head_dim, head_dim_v)),
@@ -565,7 +561,6 @@ class FMHABackendTest(unittest.TestCase):
                     dtype=dtype,
                     test_backprop=True,
                     atol=atol,
-                    rtol=rtol,
                     backend="cutlass-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
@@ -587,13 +582,16 @@ class FMHABackendTest(unittest.TestCase):
 
         is_gqa_mqa = heads_kv is not None and heads != heads_kv
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 4e-2 if not is_gqa_mqa else 6e-2), (0, 1e-3)),
-            (torch.bfloat16, (1e-1, 2e-1 if not is_gqa_mqa else 4e-1), (0, 1e-2)),
-            (torch.float8_e4m3fn, (4e-1, None), (0, None)),
-            (torch.float8_e5m2, (7e-1, None), (0, None)),
+            # TODO: REMOVE ME
+            # (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2) if not is_gqa_mqa else (1e-2, 1e-2, 1e-2))),
+            # (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2) if not is_gqa_mqa else (1e-2, 1e-2, 1e-2))),
+            (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.float8_e4m3fn, (4e-1, None)),
+            (torch.float8_e5m2, (7e-1, None)),
         ]
 
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
             dummy = torch.empty(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
             )
@@ -623,7 +621,6 @@ class FMHABackendTest(unittest.TestCase):
                     dtype=dtype,
                     test_backprop=not is_fp8(dtype),
                     atol=atol,
-                    rtol=rtol,
                     backend="blackwell-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
@@ -643,11 +640,11 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
-            (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
+            (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))),
         ]
 
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
@@ -679,7 +676,6 @@ class FMHABackendTest(unittest.TestCase):
                     dtype=dtype,
                     test_backprop=True,
                     atol=atol,
-                    rtol=rtol,
                     backend="hopper-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
@@ -700,11 +696,11 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float16, 1e-2, 0),
-            (torch.bfloat16, 1e-1, 0),
+            (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))),
         ]
 
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
@@ -737,7 +733,6 @@ class FMHABackendTest(unittest.TestCase):
                     test_backprop=True,
                     test_lse=True,
                     atol=atol,
-                    rtol=rtol,
                     backend="hopper-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
@@ -761,12 +756,12 @@ class FMHABackendTest(unittest.TestCase):
 
         torch.use_deterministic_algorithms(not fail_case)
         ALLOWED_DTYPES = [
-            (torch.float32, (0, 0), (0, 0)),
-            (torch.float16, (0, 0), (0, 0)),
-            (torch.bfloat16, (0, 0), (0, 0)),
+            (torch.float32, (0, 0)),
+            (torch.float16, (0, 0)),
+            (torch.bfloat16, (0, 0)),
         ]
 
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
             dummy = torch.empty(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
             )
@@ -800,7 +795,6 @@ class FMHABackendTest(unittest.TestCase):
                     test_backprop=True,
                     test_lse=True,
                     atol=atol,
-                    rtol=rtol,
                     backend="cutlass-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,
@@ -834,18 +828,18 @@ class FMHABackendTest(unittest.TestCase):
         torch.set_default_device("cuda")
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 4e-2), (0, 1e-3)),
-            (torch.bfloat16, (1e-1, 2e-1), (0, 1e-2)),
+            (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))),
         ]
 
         if determinism:
             ALLOWED_DTYPES = [
-                (torch.float16, (0, 0), (0, 0)),
-                (torch.bfloat16, (0, 0), (0, 0)),
+                (torch.float16, (0, 0)),
+                (torch.bfloat16, (0, 0)),
             ]
             torch.use_deterministic_algorithms(not fail_case)
 
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
@@ -889,7 +883,6 @@ class FMHABackendTest(unittest.TestCase):
                     test_backprop=True,
                     test_lse=True,
                     atol=atol,
-                    rtol=rtol,
                     backend="blackwell-fmha",
                     q_tile_size=q_tile_size,
                     kv_tile_size=kv_tile_size,

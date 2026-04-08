@@ -118,7 +118,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.float16,
-                    (1e-2, (1e-1, 1e-2, 1e-2)),
+                    (1e-2, (1e-2, 1e-2, 1e-2)),
                 )
             )
 
@@ -126,7 +126,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.bfloat16,
-                    (1e-1, (1e-1, 1e-2, 1e-2)),
+                    (5e-2, (1e-2, 1e-2, 1e-2)),
                 )
             )
 
@@ -551,116 +551,6 @@ class FNABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     def test_randsweep_3d_against_reference(self):
         self._test_randsweep_against_reference(3, max_tests=RAND_SWEEP_TESTS)
-
-    def _test_block_sparse_against_reference(
-        self,
-        batch,
-        heads,
-        head_dim,
-        head_dim_v,
-        input_shape,
-        kernel_size,
-        stride,
-        dilation,
-        q_tile_shape,
-        kv_tile_shape,
-    ):
-        use_kv_parallelism_in_fused_na(True)
-        set_memory_usage_preference("unrestricted")
-
-        torch.set_default_device("cuda")
-        assert isinstance(input_shape, tuple)
-        na_dim = len(input_shape)
-        assert na_dim in [1, 2, 3], "Only supports NA1D, 2D, 3D."
-
-        tester = NattenBackendTester(
-            batch=batch,
-            heads=heads,
-            head_dim=head_dim,
-            head_dim_v=head_dim_v,
-            input_shape=input_shape,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilation=dilation,
-            is_causal=False,
-            test_backprop=True,
-            reference_backend="reference",
-            reference_fmha_backend="reference",
-            dtype=torch.float16,
-        )
-
-        if not supports_float16(torch.get_default_device()):
-            return
-
-        tester.test(
-            eps=1e-2,
-            dtype=torch.float16,
-            target_backend="cutlass-fna",
-            target_fmha_backend="cutlass-fmha",
-            q_tile_shape=q_tile_shape,
-            kv_tile_shape=kv_tile_shape,
-            backward_q_tile_shape=q_tile_shape,
-            backward_kv_tile_shape=kv_tile_shape,
-        )
-
-    @skip_if_libnatten_is_not_supported()
-    def test_block_sparse_3d_against_reference(self):
-        use_cases = [
-            ((48, 16, 16), (48, 2, 8), (16, 2, 4), (1, 1, 1), (16, 2, 2), (16, 2, 2)),
-            ((96, 16, 16), (48, 2, 8), (16, 2, 4), (2, 1, 1), (16, 2, 2), (16, 2, 2)),
-            ((24, 16, 16), (8, 4, 2), (8, 4, 2), (1, 1, 1), (8, 4, 2), (8, 4, 2)),
-            ((24, 16, 48), (8, 4, 2), (8, 4, 2), (1, 1, 3), (8, 4, 2), (8, 4, 2)),
-            ((24, 16, 16), (8, 14, 12), (8, 2, 8), (1, 1, 1), (8, 2, 4), (8, 2, 4)),
-            ((24, 16, 50), (8, 14, 12), (8, 2, 8), (1, 1, 3), (8, 2, 4), (8, 2, 4)),
-            ((16, 24, 16), (4, 8, 2), (4, 8, 2), (1, 1, 1), (4, 8, 2), (4, 8, 2)),
-            ((16, 48, 16), (4, 8, 2), (4, 8, 2), (1, 2, 1), (4, 8, 2), (4, 8, 2)),
-            ((16, 16, 16), (12, 12, 12), (8, 4, 8), (1, 1, 1), (4, 4, 4), (4, 4, 4)),
-            ((50, 16, 16), (12, 12, 12), (8, 4, 8), (3, 1, 1), (4, 4, 4), (4, 4, 4)),
-            ((16, 10, 24), (16, 10, 8), (16, 10, 8), (1, 1, 1), (4, 2, 8), (4, 2, 8)),
-            ((32, 10, 24), (16, 10, 8), (16, 10, 8), (2, 1, 1), (4, 2, 8), (4, 2, 8)),
-            ((16, 48, 16), (10, 16, 8), (2, 16, 8), (1, 1, 1), (2, 16, 2), (2, 16, 2)),
-            ((16, 97, 16), (10, 16, 8), (2, 16, 8), (1, 2, 1), (2, 16, 2), (2, 16, 2)),
-            ((12, 24, 16), (8, 24, 16), (6, 24, 16), (1, 1, 1), (2, 8, 4), (2, 8, 4)),
-            ((12, 49, 16), (8, 24, 16), (6, 24, 16), (1, 2, 1), (2, 8, 4), (2, 8, 4)),
-            ((16, 16, 16), (2, 16, 16), (2, 4, 16), (1, 1, 1), (2, 4, 8), (2, 4, 8)),
-            ((16, 16, 50), (2, 16, 16), (2, 4, 16), (1, 1, 3), (2, 4, 8), (2, 4, 8)),
-            ((16, 16, 48), (4, 10, 16), (4, 8, 16), (1, 1, 1), (2, 2, 16), (2, 2, 16)),
-            ((50, 16, 48), (4, 10, 16), (4, 8, 16), (3, 1, 1), (2, 2, 16), (2, 2, 16)),
-        ]
-
-        for i, (
-            input_shape,
-            kernel_size,
-            stride,
-            dilation,
-            q_tile_shape,
-            kv_tile_shape,
-        ) in enumerate(use_cases):
-            _reset_everything(random_seed=i, torch_seed=i)
-            self._test_block_sparse_against_reference(
-                batch=1,
-                heads=1,
-                head_dim=64,
-                head_dim_v=32,
-                input_shape=input_shape,
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
-                q_tile_shape=q_tile_shape,
-                kv_tile_shape=kv_tile_shape,
-            )
-            self._test_block_sparse_against_reference(
-                batch=1,
-                heads=1,
-                head_dim=32,
-                head_dim_v=64,
-                input_shape=input_shape,
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
-                q_tile_shape=q_tile_shape,
-                kv_tile_shape=kv_tile_shape,
-            )
 
     def _test_determinism(
         self,

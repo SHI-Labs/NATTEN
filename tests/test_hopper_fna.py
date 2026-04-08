@@ -101,12 +101,12 @@ class HopperFNABackendTest(unittest.TestCase):
         )
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 3e-2), (0, 1e-3)),
-            (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
+            (torch.float16, (1e-2, (3e-2, 3e-2, 3e-2))),
+            (torch.bfloat16, (5e-2, (3e-2, 3e-2, 3e-2))),
         ]
 
         test_id = 0
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
