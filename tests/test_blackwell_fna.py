@@ -444,23 +444,41 @@ class BlackwellFNABackendTest(unittest.TestCase):
         self, na_dim, max_tests=1000, configs_to_test=None
     ):
         max_seqlen = 2**17
+        # max size per-dim for different profiles
+        max_size = {1: 2**15, 2: 128, 3: 96}
+
+        # seqlen limit for freely choosing batch and heads
+        seqlen_limit_batched = 2**13
+
         for i in range(max_tests):
             # to help with reproducibility of use cases
             _reset_everything(random_seed=i, torch_seed=i)
-            batch = random.choice(range(1, 4))
-            heads = random.choice(range(1, 4))
-            heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
-            head_dim = random.choice([32, 64, 128])
 
             input_shape = []
             for j in range(na_dim):
-                input_shape.append(random.choice(range(4, 97)))
+                input_shape.append(random.choice(range(4, max_size[na_dim] + 1)))
 
             while math.prod(input_shape) > max_seqlen:
                 dim_to_cut = random.choice(range(na_dim))
                 input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
 
             input_shape = tuple(input_shape)
+            assert math.prod(input_shape) <= max_seqlen
+
+            max_heads = min(
+                max(1, (seqlen_limit_batched // math.prod(input_shape)) * 4), 4
+            )
+            heads = random.choice(range(1, max_heads + 1))
+
+            max_batch = min(
+                max(1, ((seqlen_limit_batched // math.prod(input_shape)) * 4) // heads),
+                4,
+            )
+            batch = random.choice(range(1, max_batch + 1))
+
+            heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
+            head_dim = random.choice([32, 64, 128])
+
             kernel_size = tuple(random.choice(range(2, x + 1)) for x in input_shape)
             stride = tuple(random.choice(range(1, k + 1)) for k in kernel_size)
             dilation = tuple(

@@ -464,31 +464,38 @@ class FNABackendTest(unittest.TestCase):
         quick=False,
     ):
         max_seqlen = 2**17 if not quick else 2**16
+
+        # max size per-dim for different profiles
+        max_size = {1: 2**15, 2: 128, 3: 64}
+
+        # seqlen limit for freely choosing batch and heads
+        seqlen_limit_batched = 2**13
+
         for i in range(max_tests):
             # to help with reproducibility of use cases
             _reset_everything(random_seed=i, torch_seed=i)
-            input_shape = []
-            max_seqlen_ = max_seqlen
-            for j in range(na_dim):
-                max_dim = max(int(max_seqlen_ ** (1 / na_dim)), 4)
-                sz = random.choice(range(4, max_dim))
-                max_seqlen_ = max(int(max_seqlen_ / sz), 4)
-                input_shape.append(sz)
 
-            # while math.prod(input_shape) > max_seqlen:
-            #    dim_to_cut = random.choice(range(na_dim))
-            #    input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
+            input_shape = []
+            for j in range(na_dim):
+                input_shape.append(random.choice(range(4, max_size[na_dim] + 1)))
+
+            while math.prod(input_shape) > max_seqlen:
+                dim_to_cut = random.choice(range(na_dim))
+                input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
 
             input_shape = tuple(input_shape)
             assert math.prod(input_shape) <= max_seqlen
 
-            max_heads = max(min(1, (max_seqlen // math.prod(input_shape)) * 4), 4)
-            heads = random.choice(range(1, max_heads))
-
-            max_batch = max(
-                min(1, ((max_seqlen // math.prod(input_shape)) * 4) // heads), 4
+            max_heads = min(
+                max(1, (seqlen_limit_batched // math.prod(input_shape)) * 4), 4
             )
-            batch = random.choice(range(1, max_batch))
+            heads = random.choice(range(1, max_heads + 1))
+
+            max_batch = min(
+                max(1, ((seqlen_limit_batched // math.prod(input_shape)) * 4) // heads),
+                4,
+            )
+            batch = random.choice(range(1, max_batch + 1))
 
             heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
             head_dim = random.choice(range(8, 193, 8))
