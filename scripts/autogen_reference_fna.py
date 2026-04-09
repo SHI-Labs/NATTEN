@@ -315,13 +315,10 @@ class NaDimDispatcher:
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += (
-            '      std::cerr << "Reference FNA kernel launch failed!" \\\n'
+            '      throw std::runtime_error("Reference FNA kernel dispatch failed! '
+            + "NATTEN only supports NA1D, 2D, and 3D!"
+            + '"); \\\n'
         )
-        dispatcher_str += (
-            '                << "' + "NATTEN only supports NA1D, 2D, and 3D!" + '" \\\n'
-        )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -356,15 +353,10 @@ class DTypeDispatcher:
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += (
-            '      std::cerr << "Reference FNA kernel launch failed!" \\\n'
-        )
-        dispatcher_str += (
-            '                << "'
+            '      throw std::runtime_error("Reference FNA kernel dispatch failed! '
             + f"Reference FNA-{self.na_dim}D does not support this data type."
-            + '" \\\n'
+            + '"); \\\n'
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -432,15 +424,10 @@ class CausalMaskDispatcher:
         dispatcher_str += "    else { \\\n"
         dispatcher_str += "    "
         dispatcher_str += (
-            '      std::cerr << "Reference FNA kernel launch failed!" \\\n'
-        )
-        dispatcher_str += (
-            '                << "'
+            '      throw std::runtime_error("Reference FNA kernel dispatch failed! '
             + "Causal mask dispatcher got invalid causal mask!"
-            + '" \\\n'
+            + '"); \\\n'
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -454,6 +441,7 @@ def write_header_file(content, path, namespaces, extra_includes=None):
         "\n\n",
     ]
     header_head += ["#include <iostream> \n"]
+    header_head += ["#include <stdexcept> \n"]
     header_head += ["#include <type_traits> \n"]
     header_head += ["#ifdef NATTEN_WITH_CUTLASS\n"]
     for incl in extra_includes:

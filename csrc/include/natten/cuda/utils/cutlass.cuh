@@ -35,6 +35,9 @@
 
 #pragma once
 
+#include <stdexcept>
+#include <string>
+
 #include <cutlass/cutlass.h>
 #include <cutlass/device_kernel.h>
 
@@ -98,13 +101,12 @@ __launch_bounds__(
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#define NATTEN_CUTLASS_CHECK(status)                                    \
-  [&] {                                                                 \
-    cutlass::Status error = status;                                     \
-    if (error != cutlass::Status::kSuccess) {                           \
-      std::cerr << "NATTEN failure: cutlass error: "                    \
-                << cutlassGetStatusString(error) << " at: " << __LINE__ \
-                << std::endl;                                           \
-      exit(EXIT_FAILURE);                                               \
-    }                                                                   \
+#define NATTEN_CUTLASS_CHECK(status)                                           \
+  [&] {                                                                        \
+    cutlass::Status error = status;                                            \
+    if (error != cutlass::Status::kSuccess) {                                  \
+      throw std::runtime_error(                                                \
+          std::string("NATTEN failure: cutlass error: ") +                     \
+          cutlassGetStatusString(error) + " at: " + std::to_string(__LINE__)); \
+    }                                                                          \
   }();

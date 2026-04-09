@@ -23,6 +23,9 @@
 
 #pragma once
 
+#include <stdexcept>
+#include <string>
+
 namespace natten {
 namespace cuda {
 namespace hopper {
@@ -34,6 +37,20 @@ enum class HopperKernelSchedule {
   Invalid
 };
 
+inline const char* to_string(HopperKernelSchedule schedule) {
+  switch (schedule) {
+    case HopperKernelSchedule::NonPersistent:
+      return "NonPersistent";
+    case HopperKernelSchedule::WSCooperative:
+      return "WSCooperative";
+    case HopperKernelSchedule::WSPingpong:
+      return "WSPingpong";
+    case HopperKernelSchedule::Invalid:
+      return "Invalid";
+  }
+  return "Unknown";
+}
+
 inline auto kernel_type_int_to_enum_type(int kernel_type) {
   switch (kernel_type) {
     case 0:
@@ -43,10 +60,10 @@ inline auto kernel_type_int_to_enum_type(int kernel_type) {
     case 2:
       return HopperKernelSchedule::WSPingpong;
   }
-  std::cerr
-      << "Invalid value for argument kernel_type; expected either 0, 1, or 2, got "
-      << kernel_type << ".\n";
-  return HopperKernelSchedule::Invalid;
+  throw std::runtime_error(
+      "Invalid value for argument kernel_type; "
+      "expected either 0, 1, or 2, got " +
+      std::to_string(kernel_type));
 }
 
 } // namespace hopper

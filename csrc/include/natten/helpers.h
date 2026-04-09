@@ -445,7 +445,7 @@ inline void AssertDimsAre128BitAligned(
       "Query head dimension must be a multiple of ",
       alignment,
       " for this data type ",
-      "to meet the 128-bit alignment constraint, got  ",
+      "to meet the 128-bit alignment constraint, got ",
       head_dim,
       ".");
   TORCH_CHECK(
@@ -453,7 +453,7 @@ inline void AssertDimsAre128BitAligned(
       "Value head dimension must be a multiple of ",
       alignment,
       " for this data type ",
-      "to meet the 128-bit alignment constraint, got  ",
+      "to meet the 128-bit alignment constraint, got ",
       head_dim_value,
       ".");
 }

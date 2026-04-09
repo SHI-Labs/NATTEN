@@ -24,17 +24,15 @@
 #pragma once
 
 #include <iostream>
+#include <stdexcept>
 
 namespace natten {
 
-#define NATTEN_FAILURE(msg)       \
-  std::cerr << #msg << std::endl; \
-  exit(EXIT_FAILURE);
+#define NATTEN_FAILURE(msg) throw std::runtime_error(#msg);
 
 #define NATTEN_CHECK(cond, msg)     \
   if (!(cond)) {                    \
-    std::cerr << #msg << std::endl; \
-    exit(EXIT_FAILURE);             \
+    throw std::runtime_error(#msg); \
   }
 
 // Causal mask helpers

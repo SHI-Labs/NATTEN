@@ -289,12 +289,11 @@ class NaDimDispatcher:
             dispatcher_str += f"  {self.name}_{na_dim}D(dtype, dim, is_causal, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Hopper FNA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "' + "NATTEN only supports NA1D, 2D, and 3D!" + '" \\\n'
+            '      throw std::runtime_error("Hopper FNA backward kernel dispatch failed! '
+            + "It only supports NA1D, 2D, and 3D!"
+            + '"); \\\n'
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -324,14 +323,12 @@ class DTypeDispatcher:
             dispatcher_str += f"  {self.name}_{dtype.short_name}(dim, is_causal, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Hopper FNA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
-            + f"Hopper FNA-{self.na_dim}D does not support this data type."
-            + '" \\\n'
+            '      throw std::runtime_error("Hopper FNA-'
+            + f"{self.na_dim}D backward kernel dispatch failed! "
+            'It does not support dtype "'
+            ' + std::string(c10::toString(dtype)) + "."' + "); \\\n"
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -365,14 +362,13 @@ class HeadDimDispatcher:
             dispatcher_str += f"  {self.name}_headdim{dim}(is_causal, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Hopper FNA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
-            + f"Hopper FNA-{self.na_dim}D does not support this data type."
-            + '" \\\n'
+            "      throw std::runtime_error("
+            '"Hopper FNA backward kernel dispatch failed! '
+            'It does not support head dim "'
+            + f' + std::to_string(dim) + " for {self.dtype.short_name}."'
+            + "); \\\n"
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -427,14 +423,12 @@ class CausalMaskDispatcher:
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += "    "
-        dispatcher_str += '      std::cerr << "Hopper FNA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
-            + "Causal mask dispatcher got invalid causal mask!"
-            + '" \\\n'
+            '      throw std::runtime_error("Hopper FNA-'
+            + f"{self.na_dim}D backward kernel dispatch failed! "
+            f"Causal mask dispatcher ({self.dtype.short_name}, "
+            f'head_dim {self.head_dim}) got invalid causal mask!"' + "); \\\n"
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -523,14 +517,27 @@ class ConfigDispatcher:
             dispatcher_str += "} \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += "    "
-        dispatcher_str += '      std::cerr << "Hopper FNA kernel launch failed!" \\\n'
-        dispatcher_str += (
-            '                << "'
-            + "Hopper FNA Backward got invalid Q tile and KV tile combination."
-            + '" \\\n'
+        q_tile_str = ' + "," + '.join(
+            [
+                f"std::to_string(cute::get<{i}>(q_tile_shape))"
+                for i in range(self.na_dim)
+            ]
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
+        kv_tile_str = ' + "," + '.join(
+            [
+                f"std::to_string(cute::get<{i}>(kv_tile_shape))"
+                for i in range(self.na_dim)
+            ]
+        )
+        dispatcher_str += (
+            '      throw std::runtime_error("Hopper FNA-'
+            + f"{self.na_dim}D backward kernel dispatch failed! "
+            "It got invalid Q tile and KV tile "
+            + f"combination ({self.dtype.short_name}, "
+            f"head_dim {self.head_dim}): "
+            'q_tile=(" + ' + q_tile_str + ' + "), '
+            'kv_tile=(" + ' + kv_tile_str + ' + ")."' + "); \\\n"
+        )
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -544,6 +551,8 @@ def write_header_file(content, path, namespaces, extra_includes=None):
         "\n\n",
     ]
     header_head += ["#include <iostream> \n"]
+    header_head += ["#include <stdexcept> \n"]
+    header_head += ["#include <string> \n"]
     header_head += ["#include <type_traits> \n"]
     header_head += ["#ifdef NATTEN_WITH_CUTLASS\n"]
     header_head += ["#ifdef NATTEN_WITH_HOPPER_FNA\n"]

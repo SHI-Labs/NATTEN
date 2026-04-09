@@ -23,13 +23,15 @@
 
 #pragma once
 
-#define NATTEN_CUDA_CHECK(status)                                   \
-  [&] {                                                             \
-    cudaError_t error = status;                                     \
-    if (error != cudaSuccess) {                                     \
-      std::cerr << "NATTEN failure: CUDA runtime error: "           \
-                << cudaGetErrorString(error) << " at: " << __LINE__ \
-                << std::endl;                                       \
-      exit(EXIT_FAILURE);                                           \
-    }                                                               \
+#include <stdexcept>
+#include <string>
+
+#define NATTEN_CUDA_CHECK(status)                                          \
+  [&] {                                                                    \
+    cudaError_t error = status;                                            \
+    if (error != cudaSuccess) {                                            \
+      throw std::runtime_error(                                            \
+          std::string("NATTEN failure: CUDA runtime error: ") +            \
+          cudaGetErrorString(error) + " at: " + std::to_string(__LINE__)); \
+    }                                                                      \
   }();

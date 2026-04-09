@@ -327,14 +327,11 @@ class DTypeDispatcher:
             dispatcher_str += f"  {self.name}_{dtype.short_name}(dim, q_tile_size, kv_tile_size, kernel_type, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Hopper FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
-            + "Hopper FMHA does not support this data type."
-            + '" \\\n'
+            '      throw std::runtime_error("Hopper FMHA forward kernel dispatch failed! '
+            + 'It does not support dtype " + std::string(c10::toString(dtype)) + "."'
+            + "); \\\n"
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -365,14 +362,13 @@ class HeadDimDispatcher:
             dispatcher_str += f"  {self.name}_headdim{dim}(q_tile_size, kv_tile_size, kernel_type, __VA_ARGS__); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "Hopper FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
-            + "Hopper FMHA does not support this data type."
-            + '" \\\n'
+            "      throw std::runtime_error("
+            '"Hopper FMHA forward kernel dispatch failed! '
+            'It does not support head dim "'
+            + f' + std::to_string(dim) + " for {self.dtype.short_name}."'
+            + "); \\\n"
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -453,14 +449,18 @@ class ConfigDispatcher:
             dispatcher_str += "} \\\n"
         dispatcher_str += "    else { \\\n"
         dispatcher_str += "    "
-        dispatcher_str += '      std::cerr << "Hopper FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
-            + "Hopper FMHA got invalid Q tile, KV tile, and schedule combination."
-            + '" \\\n'
+            "      throw std::runtime_error("
+            '"Hopper FMHA forward kernel dispatch failed! '
+            "It got invalid Q tile, KV tile, and schedule "
+            + f"combination ({self.dtype.short_name}, "
+            f"head_dim {self.head_dim}): "
+            'q_tile=" + std::to_string(q_tile_size)'
+            ' + ", kv_tile=" + std::to_string(kv_tile_size)'
+            ' + ", schedule="'
+            " + natten::cuda::hopper::to_string(kernel_type)"
+            ' + "."' + "); \\\n"
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -474,6 +474,8 @@ def write_header_file(content, path, namespaces, extra_includes=None):
         "\n\n",
     ]
     header_head += ["#include <iostream> \n"]
+    header_head += ["#include <stdexcept> \n"]
+    header_head += ["#include <string> \n"]
     header_head += ["#include <type_traits> \n"]
     header_head += ["#ifdef NATTEN_WITH_CUTLASS\n"]
     header_head += ["#ifdef NATTEN_WITH_HOPPER_FNA\n"]
@@ -630,6 +632,7 @@ def generate_hopper_fmha_kernels(path, num_splits=2):
         "torch/extension.h",
         "natten/natten.h",
         "natten/helpers.h",
+        "natten/cuda/hopper_fmha_fna.h",
         "natten/cuda/fmha_hopper/fmha_forward.cuh",
     ]
     write_header_file(

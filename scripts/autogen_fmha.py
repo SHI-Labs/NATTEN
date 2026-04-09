@@ -303,14 +303,11 @@ class DeviceDispatcher:
                 dispatcher_str += f"  {self.name_target}{sm}(dtype, cb); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "NATTEN FMHA kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
+            '      throw std::runtime_error("NATTEN FMHA kernel dispatch failed! '
             + "FMHA is not implemented for this device."
-            + '" \\\n'
+            + '"); \\\n'
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -353,14 +350,11 @@ class DataTypeDispatcher:
                 dispatcher_str += f"  {self.name_target}_{dtype.short_name}(cb); \\\n"
             dispatcher_str += "    } \\\n"
         dispatcher_str += "    else { \\\n"
-        dispatcher_str += '      std::cerr << "NATTEN kernel launch failed!" \\\n'
         dispatcher_str += (
-            '                << "'
+            '      throw std::runtime_error("NATTEN kernel dispatch failed! '
             + f"FMHA does not support this data type on SM{self.sm}."
-            + '" \\\n'
+            + '"); \\\n'
         )
-        dispatcher_str += "                << std::endl; \\\n"
-        dispatcher_str += "      exit(EXIT_FAILURE); \\\n"
         dispatcher_str += "    } \\\n"
         dispatcher_str += "}();"
         dispatcher_str += "\n\n"
@@ -374,6 +368,7 @@ def write_header_file(content, path, namespaces, extra_includes=None):
         "\n\n",
     ]
     header_head += ["#include <iostream> \n"]
+    header_head += ["#include <stdexcept> \n"]
     header_head += ["#include <type_traits> \n"]
     for incl in extra_includes:
         header_head += [f"#include <{incl}> \n"]
