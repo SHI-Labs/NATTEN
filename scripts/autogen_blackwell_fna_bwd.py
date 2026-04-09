@@ -347,11 +347,11 @@ class HeadDimDispatcher:
         dispatcher_str = ""
         dispatcher_str += f"#define {self.name}(dim, is_causal, q_tile_shape, kv_tile_shape, ...) \\\n"
         dispatcher_str += "  [&] { \\\n"
-        for i, dim in enumerate(self.dims):
+        for i, dim in enumerate(sorted(self.dims)):
             dispatcher_str += "    "
             if i > 0:
                 dispatcher_str += "else "
-            dispatcher_str += f"if (dim == {dim})"
+            dispatcher_str += f"if (dim <= {dim})"
             dispatcher_str += " { \\\n"
             dispatcher_str += "    "
             dispatcher_str += f"  {self.name}_headdim{dim}(is_causal, q_tile_shape, kv_tile_shape, __VA_ARGS__); \\\n"

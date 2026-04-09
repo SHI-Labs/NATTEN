@@ -26,6 +26,8 @@
           implementation.
       * All knobs affecting determinism are checked against PyTorch's deterministic mode. Just set
           pytorch to deterministic and NATTEN will respect that setting.
+* Blackwell FMHA / FNA now allow arbitrary head dimensions up to 128 that are multiples of 8
+    for float16 and bfloat16, and multiples of 16 for fp8.
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:

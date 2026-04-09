@@ -591,6 +591,9 @@ class FMHABackendTest(unittest.TestCase):
         ]
 
         for dtype, atol in ALLOWED_DTYPES:
+            if is_fp8(dtype) and head_dim % 16 != 0:
+                continue
+
             dummy = torch.empty(
                 (batch, seqlen_kv, heads, head_dim), device="cuda", dtype=dtype
             )
@@ -1024,7 +1027,7 @@ class FMHABackendTest(unittest.TestCase):
             supports_dim_v = False
             supports_gqa_mqa = False
             if backend == "blackwell-fmha":
-                head_dim_choices = [32, 64, 128]
+                head_dim_choices = list(range(8, 129, 8))
                 heads_choices = range(1, 8 + 1)
                 supports_gqa_mqa = True
             elif backend == "hopper-fmha":
@@ -1205,12 +1208,12 @@ class FMHABackendTest(unittest.TestCase):
         problem_sizes = [
             #
             (1, 1, 1, 128, 128, 128),
-            (1, 4, 1, 128, 128, 128),
-            (1, 4, 2, 128, 128, 128),
-            (1, 4, 4, 128, 128, 128),
-            (1, 1, 1, 128, 128, 1024),
+            (1, 4, 1, 120, 128, 128),
+            (1, 4, 2, 72, 128, 128),
+            (1, 4, 4, 96, 128, 128),
+            (1, 1, 1, 48, 128, 1024),
             (1, 1, 1, 128, 128, 13568),
-            (1, 1, 1, 128, 128, 13496),
+            (1, 1, 1, 16, 128, 13496),
             (1, 1, 1, 32, 128, 13496),
             (1, 1, 1, 32, 32, 13496),
             (3, 1, 1, 32, 77, 8504),
@@ -1224,7 +1227,7 @@ class FMHABackendTest(unittest.TestCase):
             (1, 1, 1, 32, 32, 32),
             (1, 1, 1, 32, 128, 128),
             (1, 1, 1, 128, 3584, 381),
-            (1, 1, 1, 128, 12072, 1680),
+            (1, 1, 1, 112, 12072, 1680),
             (1, 1, 1, 32, 128, 128),
             (1, 1, 1, 32, 128, 4096),
             (1, 1, 1, 32, 128, 258),

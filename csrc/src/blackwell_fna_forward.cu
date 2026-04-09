@@ -171,8 +171,24 @@ void blackwell_fna_generic_forward(
       "Blackwell FNA forward: KV sequence length ({k,v}.shape[1]) must match the size of QKV shape.");
 
   TORCH_CHECK(
-      dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FNA forward only supports head dims 32, 64, and 128 for now.");
+      dim > 0 && dim <= 128,
+      "Blackwell FNA forward only supports head dims up to 128, got ",
+      dim,
+      ".");
+  if (query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+      query.scalar_type() == c10::ScalarType::Float8_e5m2) {
+    TORCH_CHECK(
+        dim >= 16 && dim % 16 == 0,
+        "Blackwell FNA forward with FP8 requires head dims that are multiples of 16 (minimum 16), got ",
+        dim,
+        ".");
+  } else {
+    TORCH_CHECK(
+        dim >= 8 && dim % 8 == 0,
+        "Blackwell FNA forward with FP16/BF16 requires head dims that are multiples of 8 (minimum 8), got ",
+        dim,
+        ".");
+  }
 
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());

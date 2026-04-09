@@ -181,9 +181,13 @@ void blackwell_fna_generic_backward(
   auto dilation = std_tuple_to_cute_tuple(dilation_);
   auto is_causal = std_tuple_to_cute_tuple(is_causal_);
 
+  // NOTE: if FP8 backward support is ever added, alignment must be multiples
+  // of 16.
   TORCH_CHECK(
-      dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FNA backward only supports head dims 32, 64, and 128 for now.");
+      dim > 0 && dim <= 128 && dim >= 8 && dim % 8 == 0,
+      "Blackwell FNA backward requires head dims that are multiples of 8 (minimum 8, maximum 128), got ",
+      dim,
+      ".");
 
   TORCH_CHECK(
       size(q_shape) == seqlen_q,

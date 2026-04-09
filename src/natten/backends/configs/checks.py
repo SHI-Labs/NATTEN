@@ -113,12 +113,29 @@ def can_run_cutlass_blackwell_fmha(
         )
         return False
 
-    if head_dim not in [32, 64, 128]:
+    if head_dim > 128:
         target_fn(
-            "Can't run Blackwell FMHA; it only supports head dims 32, 64, and 128 for now.",
+            f"Can't run Blackwell FMHA; maximum supported head dim is 128, got {head_dim}.",
             exception=NotImplementedError,
         )
         return False
+
+    if is_fp8(query.dtype):
+        if head_dim < 16 or head_dim % 16 != 0:
+            target_fn(
+                "Can't run Blackwell FMHA; FP8 requires head dims that are multiples of 16 "
+                f"(minimum 16), got {head_dim}.",
+                exception=NotImplementedError,
+            )
+            return False
+    else:
+        if head_dim < 8 or head_dim % 8 != 0:
+            target_fn(
+                "Can't run Blackwell FMHA; FP16 and BF16 require head dims that are multiples "
+                f"of 8 (minimum 8), got {head_dim}.",
+                exception=NotImplementedError,
+            )
+            return False
 
     return True
 
@@ -204,12 +221,29 @@ def can_run_cutlass_blackwell_fna(
         )
         return False
 
-    if head_dim not in [32, 64, 128]:
+    if head_dim > 128:
         target_fn(
-            "Can't run Blackwell FNA; it only supports head dims 32, 64, and 128 for now.",
+            f"Can't run Blackwell FNA; maximum supported head dim is 128, got {head_dim}.",
             exception=NotImplementedError,
         )
         return False
+
+    if is_fp8(query.dtype):
+        if head_dim < 16 or head_dim % 16 != 0:
+            target_fn(
+                "Can't run Blackwell FNA; FP8 requires head dims that are multiples of 16 "
+                f"(minimum 16), got {head_dim}.",
+                exception=NotImplementedError,
+            )
+            return False
+    else:
+        if head_dim < 8 or head_dim % 8 != 0:
+            target_fn(
+                "Can't run Blackwell FNA; FP16 and BF16 require head dims that are multiples "
+                f"of 8 (minimum 8), got {head_dim}.",
+                exception=NotImplementedError,
+            )
+            return False
 
     return True
 

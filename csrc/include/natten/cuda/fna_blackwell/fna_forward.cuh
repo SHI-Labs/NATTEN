@@ -147,8 +147,8 @@ struct KernelForward {
     auto problem_shape_regular = cute::make_tuple(
         seqlen_Q,
         seqlen_KV,
-        // head dim is always either 32, 64, or 128 in natten, but it should
-        // always meet the 128-bit alignment constraint
+        // head dims are checked to be multiples of 8 for fp16/bf16 and 16 for
+        // fp8, to meet the 128-bit alignment constraint. No action needed here.
         dim,
         cute::make_tuple(
             cute::make_tuple(heads_q / heads_kv, heads_kv), batch));
@@ -158,9 +158,6 @@ struct KernelForward {
 
     problem_shape_memory = problem_shape_regular;
     problem_shape_launch = problem_shape_regular;
-
-    // get<2>(problem_shape_memory) =
-    //     cutlass::round_up(get<2>(problem_shape_memory), 8); // alignment
 
     int SQ = size<0>(problem_shape_memory);
     int SK = size<1>(problem_shape_memory);
