@@ -38,10 +38,10 @@ from natten.utils.testing import (
     skip_if_not_running_extended_tests,
 )
 
-from .utils import NattenBackendTester
+from .utils import logger, NattenBackendTester
 
 
-def _reset_everything():
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
     from natten.context import (
         NattenContext,
         set_memory_usage_preference,
@@ -52,8 +52,9 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.cuda.empty_cache()
     torch.use_deterministic_algorithms(False)
 
@@ -100,12 +101,12 @@ class HopperFNABackendTest(unittest.TestCase):
         )
 
         ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, 3e-2), (0, 1e-3)),
-            (torch.bfloat16, (1e-1, 1e-1), (0, 1e-2)),
+            (torch.float16, (1e-2, (3e-2, 3e-2, 3e-2))),
+            (torch.bfloat16, (5e-2, (3e-2, 3e-2, 3e-2))),
         ]
 
         test_id = 0
-        for dtype, atol, rtol in ALLOWED_DTYPES:
+        for dtype, atol in ALLOWED_DTYPES:
 
             dummy = torch.randn(
                 (batch, *input_shape, heads, head_dim), device="cuda", dtype=dtype
@@ -194,7 +195,7 @@ class HopperFNABackendTest(unittest.TestCase):
             (1, 2, 2, 64, (125,), (15,), (1,), (1)),
             (1, 1, 1, 128, (256,), (3,), (2,), (10)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -203,7 +204,8 @@ class HopperFNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal in [True, False]:
                 is_causal = (causal,)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -239,7 +241,7 @@ class HopperFNABackendTest(unittest.TestCase):
             (1, 1, 1, 64, (36, 40), (36, 40), (12, 13), (1, 1)),
             (1, 1, 1, 128, (44, 80), (44, 80), (4, 8), (1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -248,7 +250,8 @@ class HopperFNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([False, True], [False, True]):
                 is_causal = (causal_x, causal_y)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -296,7 +299,7 @@ class HopperFNABackendTest(unittest.TestCase):
             (1, 1, 1, 64, (36, 40), (36, 40), (1, 1), (1, 1)),
             (1, 1, 1, 128, (48, 80), (24, 24), (8, 8), (1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -305,7 +308,8 @@ class HopperFNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([True, False], [True, False]):
                 is_causal = (causal_x, causal_y)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -343,7 +347,7 @@ class HopperFNABackendTest(unittest.TestCase):
             (1, 1, 1, 64, (24, 28, 40), (24, 28, 40), (1, 1, 1), (1, 1, 1)),
             (1, 1, 1, 32, (16, 16, 16), (16, 16, 16), (2, 4, 5), (1, 1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -352,7 +356,8 @@ class HopperFNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [True, False], [True, False], [True, False]
             ):
@@ -418,7 +423,7 @@ class HopperFNABackendTest(unittest.TestCase):
             (1, 1, 1, 128, (32, 64, 64), (16, 16, 16), (1, 1, 2), (1, 3, 2)),
             (1, 1, 1, 128, (48, 64, 64), (7, 15, 11), (1, 2, 2), (5, 3, 2)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -427,7 +432,8 @@ class HopperFNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [True, False], [True, False], [True, False]
             ):
@@ -444,23 +450,44 @@ class HopperFNABackendTest(unittest.TestCase):
                     is_causal=is_causal,
                 )
 
-    def _test_rand_sweep_against_cutlass_2x(
+    def _test_randsweep_against_cutlass_2x(
         self, na_dim, max_tests=1000, configs_to_test=None
     ):
         max_seqlen = 2**17
+        # max size per-dim for different profiles
+        max_size = {1: 2**15, 2: 128, 3: 96}
+
+        # seqlen limit for freely choosing batch and heads
+        seqlen_limit_batched = 2**13
+
         for i in range(max_tests):
-            batch = random.choice(range(1, 4))
-            heads = random.choice(range(1, 4))
-            heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
-            head_dim = random.choice([32, 64, 128])
+            # to help with reproducibility of use cases
+            _reset_everything(random_seed=i, torch_seed=i)
 
             input_shape = []
             for j in range(na_dim):
-                input_shape.append(random.choice(range(4, 97)))
+                input_shape.append(random.choice(range(4, max_size[na_dim] + 1)))
 
             while math.prod(input_shape) > max_seqlen:
                 dim_to_cut = random.choice(range(na_dim))
                 input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
+
+            input_shape = tuple(input_shape)
+            assert math.prod(input_shape) <= max_seqlen
+
+            max_heads = min(
+                max(1, (seqlen_limit_batched // math.prod(input_shape)) * 4), 4
+            )
+            heads = random.choice(range(1, max_heads + 1))
+
+            max_batch = min(
+                max(1, ((seqlen_limit_batched // math.prod(input_shape)) * 4) // heads),
+                4,
+            )
+            batch = random.choice(range(1, max_batch + 1))
+
+            heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
+            head_dim = random.choice([32, 64, 128])
 
             input_shape = tuple(input_shape)
             kernel_size = tuple(random.choice(range(2, x)) for x in input_shape)
@@ -486,36 +513,36 @@ class HopperFNABackendTest(unittest.TestCase):
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
-    def test_rand_sweep_1d_against_cutlass_2x_quick(self):
-        self._test_rand_sweep_against_cutlass_2x(1, max_tests=10, configs_to_test=3)
+    def test_randsweep_1d_against_cutlass_2x_quick(self):
+        self._test_randsweep_against_cutlass_2x(1, max_tests=10, configs_to_test=3)
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
-    def test_rand_sweep_2d_against_cutlass_2x_quick(self):
-        self._test_rand_sweep_against_cutlass_2x(2, max_tests=10, configs_to_test=3)
+    def test_randsweep_2d_against_cutlass_2x_quick(self):
+        self._test_randsweep_against_cutlass_2x(2, max_tests=10, configs_to_test=3)
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
-    def test_rand_sweep_3d_against_cutlass_2x_quick(self):
-        self._test_rand_sweep_against_cutlass_2x(3, max_tests=10, configs_to_test=3)
-
-    @skip_if_not_running_extended_tests()
-    @skip_if_libnatten_is_not_supported()
-    @skip_if_hopper_kernels_not_supported()
-    def test_rand_sweep_1d_against_cutlass_2x(self):
-        self._test_rand_sweep_against_cutlass_2x(1, max_tests=RAND_SWEEP_TESTS)
+    def test_randsweep_3d_against_cutlass_2x_quick(self):
+        self._test_randsweep_against_cutlass_2x(3, max_tests=10, configs_to_test=3)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
-    def test_rand_sweep_2d_against_cutlass_2x(self):
-        self._test_rand_sweep_against_cutlass_2x(2, max_tests=RAND_SWEEP_TESTS)
+    def test_randsweep_1d_against_cutlass_2x(self):
+        self._test_randsweep_against_cutlass_2x(1, max_tests=RAND_SWEEP_TESTS)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_hopper_kernels_not_supported()
-    def test_rand_sweep_3d_against_cutlass_2x(self):
-        self._test_rand_sweep_against_cutlass_2x(3, max_tests=RAND_SWEEP_TESTS)
+    def test_randsweep_2d_against_cutlass_2x(self):
+        self._test_randsweep_against_cutlass_2x(2, max_tests=RAND_SWEEP_TESTS)
+
+    @skip_if_not_running_extended_tests()
+    @skip_if_libnatten_is_not_supported()
+    @skip_if_hopper_kernels_not_supported()
+    def test_randsweep_3d_against_cutlass_2x(self):
+        self._test_randsweep_against_cutlass_2x(3, max_tests=RAND_SWEEP_TESTS)
 
 
 if __name__ == "__main__":

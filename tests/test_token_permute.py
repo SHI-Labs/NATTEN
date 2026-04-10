@@ -26,15 +26,15 @@ import unittest
 
 import torch
 from natten.token_permute import token_permute_operation, token_unpermute_operation
-from natten.utils import log
 from natten.utils.testing import skip_if_cuda_is_not_supported, supports_float16
 
-logger = log.get_logger(__name__)
+from .utils import logger
 
 
-def _reset_everything():
-    random.seed(42)
-    torch.manual_seed(42)
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.use_deterministic_algorithms(False)
 
 
@@ -107,7 +107,8 @@ class TokenPermuteTest(unittest.TestCase):
             (1, 1, (30, 48, 80), 32, (4, 8, 8), (2, 5, 4)),
             (1, 1, (16, 16, 16), 32, (4, 8, 2), (1, 9, 3)),
         ]
-        for B, H, S, D, tile_shape, dilation in problem_sizes:
+        for i, (B, H, S, D, tile_shape, dilation) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for flip_dims in [True, False]:
                 self._test_permute_unpermute_torch(
                     B=B,
@@ -178,7 +179,8 @@ class TokenPermuteTest(unittest.TestCase):
             (1, 1, (57, 20, 88), 128, (2, 8, 16), (2, 1, 1)),
             (1, 1, (57, 20, 88), 128, (4, 4, 16), (2, 1, 1)),
         ]
-        for B, H, S, D, tile_shape, dilation in problem_sizes:
+        for i, (B, H, S, D, tile_shape, dilation) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for flip_dims in [True, False]:
                 self._test_permute_unpermute_torch(
                     B=B,
@@ -258,7 +260,8 @@ class TokenPermuteTest(unittest.TestCase):
             (1, 1, (57, 20, 88), 128, (4, 4, 16), (2, 1, 1)),
             (1, 1, (57, 20, 88), 1, (4, 4, 16), (2, 1, 1)),
         ]
-        for B, H, S, D, tile_shape, dilation in problem_sizes:
+        for i, (B, H, S, D, tile_shape, dilation) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for flip_dims in [True, False]:
                 for dtype in [torch.float32, torch.float16, torch.bfloat16]:
                     self._test_permute_cuda_kernel(

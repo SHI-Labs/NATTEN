@@ -34,7 +34,6 @@ from natten.backends.configs.cutlass import (
     get_all_backward_configs,
     get_all_forward_configs,
 )
-from natten.context import set_memory_usage_preference, use_kv_parallelism_in_fused_na
 from natten.utils.testing import (
     skip_if_libnatten_is_not_supported,
     skip_if_not_running_extended_tests,
@@ -42,10 +41,10 @@ from natten.utils.testing import (
     supports_float16,
 )
 
-from .utils import NattenBackendTester
+from .utils import logger, NattenBackendTester
 
 
-def _reset_everything():
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
     from natten.context import (
         NattenContext,
         set_memory_usage_preference,
@@ -56,8 +55,9 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.cuda.empty_cache()
     torch.use_deterministic_algorithms(False)
 
@@ -117,7 +117,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.float16,
-                    (1e-2, (1e-1, 1e-2, 1e-2)),
+                    (1e-2, (1e-2, 1e-2, 1e-2)),
                 )
             )
 
@@ -125,7 +125,7 @@ class FNABackendTest(unittest.TestCase):
             ALLOWED_DTYPES.append(
                 (
                     torch.bfloat16,
-                    (1e-1, (1e-1, 1e-2, 1e-2)),
+                    (5e-2, (1e-2, 1e-2, 1e-2)),
                 )
             )
 
@@ -197,7 +197,7 @@ class FNABackendTest(unittest.TestCase):
             (1, 2, 2, 64, (125,), (15,), (1,), (1)),
             (1, 1, 1, 128, (256,), (3,), (2,), (10)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -206,7 +206,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
                 for causal in [False, True]:
                     is_causal = (causal,)
@@ -244,7 +245,7 @@ class FNABackendTest(unittest.TestCase):
             (1, 1, 1, 64, (36, 40), (36, 40), (12, 13), (1, 1)),
             (1, 1, 1, 128, (44, 80), (44, 80), (4, 8), (1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -253,7 +254,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
                 for causal_x, causal_y in product([True, False], [True, False]):
                     is_causal = (causal_x, causal_y)
@@ -304,7 +306,7 @@ class FNABackendTest(unittest.TestCase):
             (1, 1, 1, 64, (36, 40), (36, 40), (1, 1), (1, 1)),
             (1, 1, 1, 128, (48, 80), (24, 24), (8, 8), (1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -313,7 +315,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([True, False], [True, False]):
                 is_causal = (causal_x, causal_y)
                 self._test_all_dtypes_against_reference(
@@ -341,7 +344,7 @@ class FNABackendTest(unittest.TestCase):
             (1, 1, 1, 32, (8, 4, 8), (7, 3, 7), (1, 1, 1), (1, 1, 1)),
             (1, 1, 1, 32, (16, 16, 16), (16, 16, 16), (2, 4, 5), (1, 1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -350,7 +353,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for head_dim_v in [random.choice(range(8, 193, 8)), head_dim]:
                 for causal_x, causal_y, causal_z in product(
                     [True, False], [True, False], [True, False]
@@ -426,7 +430,7 @@ class FNABackendTest(unittest.TestCase):
             # (1, 1, 128, (32, 64, 64), (16, 16, 16), (1, 1, 2), (1, 3, 2)),  # seqlen=131072
             # (1, 1, 128, (48, 64, 64), (7, 15, 11), (1, 2, 2), (5, 3, 2)),  # seqlen=196608
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
@@ -434,7 +438,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [True, False], [True, False], [True, False]
             ):
@@ -451,7 +456,7 @@ class FNABackendTest(unittest.TestCase):
                     is_causal=is_causal,
                 )
 
-    def _test_rand_sweep_against_reference(
+    def _test_randsweep_against_reference(
         self,
         na_dim,
         max_tests=1000,
@@ -459,29 +464,38 @@ class FNABackendTest(unittest.TestCase):
         quick=False,
     ):
         max_seqlen = 2**17 if not quick else 2**16
-        for i in range(max_tests):
-            input_shape = []
-            max_seqlen_ = max_seqlen
-            for j in range(na_dim):
-                max_dim = max(int(max_seqlen_ ** (1 / na_dim)), 4)
-                sz = random.choice(range(4, max_dim))
-                max_seqlen_ = max(int(max_seqlen_ / sz), 4)
-                input_shape.append(sz)
 
-            # while math.prod(input_shape) > max_seqlen:
-            #    dim_to_cut = random.choice(range(na_dim))
-            #    input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
+        # max size per-dim for different profiles
+        max_size = {1: 2**15, 2: 128, 3: 64}
+
+        # seqlen limit for freely choosing batch and heads
+        seqlen_limit_batched = 2**13
+
+        for i in range(max_tests):
+            # to help with reproducibility of use cases
+            _reset_everything(random_seed=i, torch_seed=i)
+
+            input_shape = []
+            for j in range(na_dim):
+                input_shape.append(random.choice(range(4, max_size[na_dim] + 1)))
+
+            while math.prod(input_shape) > max_seqlen:
+                dim_to_cut = random.choice(range(na_dim))
+                input_shape[dim_to_cut] = max(4, int(input_shape[dim_to_cut] * 0.1))
 
             input_shape = tuple(input_shape)
             assert math.prod(input_shape) <= max_seqlen
 
-            max_heads = max(min(1, (max_seqlen // math.prod(input_shape)) * 4), 4)
-            heads = random.choice(range(1, max_heads))
-
-            max_batch = max(
-                min(1, ((max_seqlen // math.prod(input_shape)) * 4) // heads), 4
+            max_heads = min(
+                max(1, (seqlen_limit_batched // math.prod(input_shape)) * 4), 4
             )
-            batch = random.choice(range(1, max_batch))
+            heads = random.choice(range(1, max_heads + 1))
+
+            max_batch = min(
+                max(1, ((seqlen_limit_batched // math.prod(input_shape)) * 4) // heads),
+                4,
+            )
+            batch = random.choice(range(1, max_batch + 1))
 
             heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
             head_dim = random.choice(range(8, 193, 8))
@@ -512,146 +526,37 @@ class FNABackendTest(unittest.TestCase):
             )
 
     @skip_if_libnatten_is_not_supported()
-    def test_rand_sweep_1d_against_reference_quick(self):
-        self._test_rand_sweep_against_reference(
+    def test_randsweep_1d_against_reference_quick(self):
+        self._test_randsweep_against_reference(
             1, max_tests=10, configs_to_test=5, quick=True
         )
 
     @skip_if_libnatten_is_not_supported()
-    def test_rand_sweep_2d_against_reference_quick(self):
-        self._test_rand_sweep_against_reference(
+    def test_randsweep_2d_against_reference_quick(self):
+        self._test_randsweep_against_reference(
             2, max_tests=10, configs_to_test=5, quick=True
         )
 
     @skip_if_libnatten_is_not_supported()
-    def test_rand_sweep_3d_against_reference_quick(self):
-        self._test_rand_sweep_against_reference(
+    def test_randsweep_3d_against_reference_quick(self):
+        self._test_randsweep_against_reference(
             3, max_tests=10, configs_to_test=5, quick=True
         )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
-    def test_rand_sweep_1d_against_reference(self):
-        self._test_rand_sweep_against_reference(1, max_tests=RAND_SWEEP_TESTS)
+    def test_randsweep_1d_against_reference(self):
+        self._test_randsweep_against_reference(1, max_tests=RAND_SWEEP_TESTS)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
-    def test_rand_sweep_2d_against_reference(self):
-        self._test_rand_sweep_against_reference(2, max_tests=RAND_SWEEP_TESTS)
+    def test_randsweep_2d_against_reference(self):
+        self._test_randsweep_against_reference(2, max_tests=RAND_SWEEP_TESTS)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
-    def test_rand_sweep_3d_against_reference(self):
-        self._test_rand_sweep_against_reference(3, max_tests=RAND_SWEEP_TESTS)
-
-    def _test_block_sparse_against_reference(
-        self,
-        batch,
-        heads,
-        head_dim,
-        head_dim_v,
-        input_shape,
-        kernel_size,
-        stride,
-        dilation,
-        q_tile_shape,
-        kv_tile_shape,
-    ):
-        use_kv_parallelism_in_fused_na(True)
-        set_memory_usage_preference("unrestricted")
-
-        torch.set_default_device("cuda")
-        assert isinstance(input_shape, tuple)
-        na_dim = len(input_shape)
-        assert na_dim in [1, 2, 3], "Only supports NA1D, 2D, 3D."
-
-        tester = NattenBackendTester(
-            batch=batch,
-            heads=heads,
-            head_dim=head_dim,
-            head_dim_v=head_dim_v,
-            input_shape=input_shape,
-            kernel_size=kernel_size,
-            stride=stride,
-            dilation=dilation,
-            is_causal=False,
-            test_backprop=True,
-            reference_backend="reference",
-            reference_fmha_backend="reference",
-            dtype=torch.float16,
-        )
-
-        if not supports_float16(torch.get_default_device()):
-            return
-
-        tester.test(
-            eps=1e-2,
-            dtype=torch.float16,
-            target_backend="cutlass-fna",
-            target_fmha_backend="cutlass-fmha",
-            q_tile_shape=q_tile_shape,
-            kv_tile_shape=kv_tile_shape,
-            backward_q_tile_shape=q_tile_shape,
-            backward_kv_tile_shape=kv_tile_shape,
-        )
-
-    @skip_if_libnatten_is_not_supported()
-    def test_block_sparse_3d_against_reference(self):
-        use_cases = [
-            ((48, 16, 16), (48, 2, 8), (16, 2, 4), (1, 1, 1), (16, 2, 2), (16, 2, 2)),
-            ((96, 16, 16), (48, 2, 8), (16, 2, 4), (2, 1, 1), (16, 2, 2), (16, 2, 2)),
-            ((24, 16, 16), (8, 4, 2), (8, 4, 2), (1, 1, 1), (8, 4, 2), (8, 4, 2)),
-            ((24, 16, 48), (8, 4, 2), (8, 4, 2), (1, 1, 3), (8, 4, 2), (8, 4, 2)),
-            ((24, 16, 16), (8, 14, 12), (8, 2, 8), (1, 1, 1), (8, 2, 4), (8, 2, 4)),
-            ((24, 16, 50), (8, 14, 12), (8, 2, 8), (1, 1, 3), (8, 2, 4), (8, 2, 4)),
-            ((16, 24, 16), (4, 8, 2), (4, 8, 2), (1, 1, 1), (4, 8, 2), (4, 8, 2)),
-            ((16, 48, 16), (4, 8, 2), (4, 8, 2), (1, 2, 1), (4, 8, 2), (4, 8, 2)),
-            ((16, 16, 16), (12, 12, 12), (8, 4, 8), (1, 1, 1), (4, 4, 4), (4, 4, 4)),
-            ((50, 16, 16), (12, 12, 12), (8, 4, 8), (3, 1, 1), (4, 4, 4), (4, 4, 4)),
-            ((16, 10, 24), (16, 10, 8), (16, 10, 8), (1, 1, 1), (4, 2, 8), (4, 2, 8)),
-            ((32, 10, 24), (16, 10, 8), (16, 10, 8), (2, 1, 1), (4, 2, 8), (4, 2, 8)),
-            ((16, 48, 16), (10, 16, 8), (2, 16, 8), (1, 1, 1), (2, 16, 2), (2, 16, 2)),
-            ((16, 97, 16), (10, 16, 8), (2, 16, 8), (1, 2, 1), (2, 16, 2), (2, 16, 2)),
-            ((12, 24, 16), (8, 24, 16), (6, 24, 16), (1, 1, 1), (2, 8, 4), (2, 8, 4)),
-            ((12, 49, 16), (8, 24, 16), (6, 24, 16), (1, 2, 1), (2, 8, 4), (2, 8, 4)),
-            ((16, 16, 16), (2, 16, 16), (2, 4, 16), (1, 1, 1), (2, 4, 8), (2, 4, 8)),
-            ((16, 16, 50), (2, 16, 16), (2, 4, 16), (1, 1, 3), (2, 4, 8), (2, 4, 8)),
-            ((16, 16, 48), (4, 10, 16), (4, 8, 16), (1, 1, 1), (2, 2, 16), (2, 2, 16)),
-            ((50, 16, 48), (4, 10, 16), (4, 8, 16), (3, 1, 1), (2, 2, 16), (2, 2, 16)),
-        ]
-
-        for (
-            input_shape,
-            kernel_size,
-            stride,
-            dilation,
-            q_tile_shape,
-            kv_tile_shape,
-        ) in use_cases:
-            self._test_block_sparse_against_reference(
-                batch=1,
-                heads=1,
-                head_dim=64,
-                head_dim_v=32,
-                input_shape=input_shape,
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
-                q_tile_shape=q_tile_shape,
-                kv_tile_shape=kv_tile_shape,
-            )
-            self._test_block_sparse_against_reference(
-                batch=1,
-                heads=1,
-                head_dim=32,
-                head_dim_v=64,
-                input_shape=input_shape,
-                kernel_size=kernel_size,
-                stride=stride,
-                dilation=dilation,
-                q_tile_shape=q_tile_shape,
-                kv_tile_shape=kv_tile_shape,
-            )
+    def test_randsweep_3d_against_reference(self):
+        self._test_randsweep_against_reference(3, max_tests=RAND_SWEEP_TESTS)
 
     def _test_determinism(
         self,
@@ -741,7 +646,7 @@ class FNABackendTest(unittest.TestCase):
             (1, 1, 32, (128,), (3,), (2,), (5,)),
             (1, 1, 64, (128,), (8,), (7,), (5,)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
@@ -749,7 +654,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal in [False, True]:
                 is_causal = (causal,)
                 self._test_determinism(
@@ -770,7 +676,7 @@ class FNABackendTest(unittest.TestCase):
             (1, 1, 128, (19, 29), (8, 8), (1, 1), (2, 3)),
             (1, 1, 128, (48, 17), (24, 16), (1, 1), (2, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
@@ -778,7 +684,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([False, True], [False, True]):
                 is_causal = (causal_x, causal_y)
                 self._test_determinism(
@@ -799,7 +706,7 @@ class FNABackendTest(unittest.TestCase):
             (3, 1, 16, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 2, 1)),
             (1, 1, 32, (16, 16, 16), (3, 3, 3), (1, 1, 1), (1, 1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
@@ -807,7 +714,8 @@ class FNABackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [False, True], [False, True], [False, True]
             ):

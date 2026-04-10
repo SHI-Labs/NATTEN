@@ -32,7 +32,6 @@ import torch
 from natten import allow_flex_compile
 from natten._environment import _RUN_FLEX_TESTS as RUN_FLEX_TESTS
 from natten.backends.configs.flex import FLEX_FORWARD_TILE_SHAPES
-from natten.utils import log
 from natten.utils.testing import (
     skip_if_flex_compile_is_not_supported,
     skip_if_flex_is_not_supported,
@@ -42,17 +41,21 @@ from natten.utils.testing import (
     supports_float16,
 )
 
-from .utils import NattenBackendTester, reset_torch_compile
-
-logger = log.get_logger(__name__)
-
+from .utils import logger, NattenBackendTester, reset_torch_compile
 
 # TODO: enable when Flex is stable / check with new PT releases
 ENABLE_FLEX_COMPILE_TESTS = False
 ENABLE_FLEX_COMPILE_BACKPROP_TESTS = False
 
 
-def _reset_everything():
+def _reset_torch_compile():
+    reset_torch_compile(1024)
+    allow_flex_compile(
+        ENABLE_FLEX_COMPILE_TESTS, backprop=ENABLE_FLEX_COMPILE_BACKPROP_TESTS
+    )
+
+
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
     # NOTE: It is important to ensure determinism in torch GEMMs since
     # we don't write our own. Therefore we have to force determinism in
     # CUBLAS, and turn off CUDNN benchmarking (in case that backend
@@ -66,15 +69,12 @@ def _reset_everything():
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
 
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.cuda.empty_cache()
 
-    reset_torch_compile(1024)
-
-    allow_flex_compile(
-        ENABLE_FLEX_COMPILE_TESTS, backprop=ENABLE_FLEX_COMPILE_BACKPROP_TESTS
-    )
+    _reset_torch_compile()
 
 
 @unittest.skipIf(not RUN_FLEX_TESTS, "Flex tests are disabled by environment variable")
@@ -176,7 +176,7 @@ class FlexBackendTest(unittest.TestCase):
         # Torch compile autotuner might also have a separate cache of its own...
 
         def run_tests(problem_sizes, max_runs_per_use_case):
-            for (
+            for i, (
                 batch,
                 heads,
                 heads_kv,
@@ -185,7 +185,8 @@ class FlexBackendTest(unittest.TestCase):
                 kernel_size,
                 stride,
                 dilation,
-            ) in problem_sizes:
+            ) in enumerate(problem_sizes):
+                _reset_everything(random_seed=i, torch_seed=i)
                 self._test_all_dtypes_against_cutlass_2x_fna(
                     batch=batch,
                     heads=heads,
@@ -253,7 +254,7 @@ class FlexBackendTest(unittest.TestCase):
             (1, 2, 1, 8, (125,), (15,), (1,), (1)),
             (1, 1, 1, 64, (256,), (3,), (2,), (10)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -262,7 +263,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal in [True, False]:
                 is_causal = (causal,)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -296,7 +298,7 @@ class FlexBackendTest(unittest.TestCase):
             (1, 1, 1, 128, (128,), (61,), (33,), (1)),
             (1, 1, 1, 32, (256,), (3,), (2,), (10)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -305,7 +307,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal in [True, False]:
                 is_causal = (causal,)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -337,7 +340,7 @@ class FlexBackendTest(unittest.TestCase):
             (4, 3, 3, 128, (56, 56), (7, 7), (1, 1), (2, 4)),
             (4, 3, 1, 128, (56, 56), (7, 7), (1, 1), (2, 4)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -346,7 +349,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([True, False], [True, False]):
                 is_causal = (causal_x, causal_y)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -384,7 +388,7 @@ class FlexBackendTest(unittest.TestCase):
             (2, 4, 1, 64, (64, 128), (55, 101), (1, 1), (1, 1)),
             (4, 3, 3, 128, (28, 46), (11, 13), (1, 1), (1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -393,7 +397,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([True, False], [True, False]):
                 is_causal = (causal_x, causal_y)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -430,7 +435,7 @@ class FlexBackendTest(unittest.TestCase):
             (2, 4, 4, 64, (64, 128), (21, 29), (10, 12), (3, 4)),
             (4, 3, 3, 128, (56, 56), (7, 7), (1, 1), (2, 4)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -439,7 +444,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y in product([True, False], [True, False]):
                 is_causal = (causal_x, causal_y)
                 self._test_all_dtypes_against_cutlass_2x_fna(
@@ -476,7 +482,7 @@ class FlexBackendTest(unittest.TestCase):
             (2, 2, 2, 32, (8, 8, 10), (3, 4, 3), (3, 4, 1), (1, 1, 1)),
             (1, 12, 12, 64, (32, 8, 8), (7, 5, 5), (2, 1, 3), (2, 1, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -485,7 +491,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [True, False], [True, False], [True, False]
             ):
@@ -507,6 +514,7 @@ class FlexBackendTest(unittest.TestCase):
     # Runs perfectly fine without torch compile.
     @unittest.skip("Failing use case.")
     def test_3d_against_cutlass_2x_compiled_failing(self):
+        _reset_everything(random_seed=0, torch_seed=0)
         problem_sizes = [
             (1, 1, 128, (13, 11, 9), (3, 4, 3), (2, 3, 3), (3, 2, 2)),
         ]
@@ -544,7 +552,7 @@ class FlexBackendTest(unittest.TestCase):
             (1, 4, 4, 32, (8, 8, 16), (3, 3, 3), (2, 1, 2), (2, 2, 4)),
             (1, 4, 2, 32, (8, 8, 16), (3, 3, 3), (2, 1, 2), (2, 2, 4)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -553,7 +561,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [True, False], [True, False], [True, False]
             ):
@@ -591,7 +600,7 @@ class FlexBackendTest(unittest.TestCase):
             (4, 8, 2, 64, (32, 10, 10), (7, 3, 3), (5, 1, 1), (1, 2, 3)),
             (1, 1, 1, 64, (18, 37, 12), (14, 16, 12), (12, 8, 1), (1, 2, 1)),
         ]
-        for (
+        for i, (
             batch,
             heads,
             heads_kv,
@@ -600,7 +609,8 @@ class FlexBackendTest(unittest.TestCase):
             kernel_size,
             stride,
             dilation,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for causal_x, causal_y, causal_z in product(
                 [True, False], [True, False], [True, False]
             ):
@@ -618,12 +628,14 @@ class FlexBackendTest(unittest.TestCase):
                     torch_compile=False,
                 )
 
-    def _test_rand_sweep_against_cutlass_2x(self, na_dim, torch_compile: bool = False):
+    def _test_randsweep_against_cutlass_2x(self, na_dim, torch_compile: bool = False):
         max_tests = 1000
         max_seqlen = 2**17 if torch_compile else 2**13
         max_kernel_size = None if torch_compile else 2**10
 
         for i in range(max_tests):
+            # to help with reproducibility of use cases
+            _reset_everything(random_seed=i, torch_seed=i)
             batch = random.choice(range(1, 4))
             heads = random.choice(range(1, 4))
             heads_kv = random.choice([i for i in range(1, heads + 1) if heads % i == 0])
@@ -682,20 +694,20 @@ class FlexBackendTest(unittest.TestCase):
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_flex_is_not_supported()
-    def test_rand_sweep_1d_against_cutlass_2x(self):
-        self._test_rand_sweep_against_cutlass_2x(1)
+    def test_randsweep_1d_against_cutlass_2x(self):
+        self._test_randsweep_against_cutlass_2x(1)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_flex_is_not_supported()
-    def test_rand_sweep_2d_against_cutlass_2x(self):
-        self._test_rand_sweep_against_cutlass_2x(2)
+    def test_randsweep_2d_against_cutlass_2x(self):
+        self._test_randsweep_against_cutlass_2x(2)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_flex_is_not_supported()
-    def test_rand_sweep_3d_against_cutlass_2x(self):
-        self._test_rand_sweep_against_cutlass_2x(3)
+    def test_randsweep_3d_against_cutlass_2x(self):
+        self._test_randsweep_against_cutlass_2x(3)
 
 
 if __name__ == "__main__":

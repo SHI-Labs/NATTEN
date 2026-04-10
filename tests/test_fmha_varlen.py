@@ -42,7 +42,6 @@ from natten.backends.configs.cutlass_hopper import (
 )
 from natten.functional import attention
 from natten.types import KernelSchedule
-from natten.utils import log
 from natten.utils.dtype import is_fp8
 from natten.utils.testing import (
     skip_if_blackwell_kernels_not_supported,
@@ -51,10 +50,10 @@ from natten.utils.testing import (
     skip_if_not_running_extended_tests,
 )
 
-logger = log.get_logger(__name__)
+from .utils import logger
 
 
-def _reset_everything():
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
     from natten.context import (
         NattenContext,
         set_memory_usage_preference,
@@ -65,8 +64,9 @@ def _reset_everything():
     set_memory_usage_preference("unrestricted")
     use_kv_parallelism_in_fused_na(True)
 
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.cuda.empty_cache()
     torch.use_deterministic_algorithms(False)
 
@@ -657,6 +657,8 @@ class FMHAVarlenTest(unittest.TestCase):
     ):
         max_qk = 2**17
         for i in range(max_tests):
+            # to help with reproducibility of use cases
+            _reset_everything(random_seed=i, torch_seed=i)
             batch = random.choice(range(1, 10))
 
             supports_dim_v = False
@@ -742,13 +744,14 @@ class FMHAVarlenTest(unittest.TestCase):
             (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
             (2, 1, 128, [1024, 256], [512, 768]),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             seqlens_Q_list,
             seqlens_KV_list,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_varlen_backend(
                     batch=batch,
@@ -786,13 +789,14 @@ class FMHAVarlenTest(unittest.TestCase):
             (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
             (2, 1, 128, [1024, 256], [512, 768]),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             seqlens_Q_list,
             seqlens_KV_list,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_varlen_backend(
                     batch=batch,
@@ -842,13 +846,14 @@ class FMHAVarlenTest(unittest.TestCase):
             (2, 1, 64, [128, 128], [128, 128]),
             (2, 1, 128, [512, 512], [512, 512]),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             seqlens_Q_list,
             seqlens_KV_list,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_varlen_backend(
                     batch=batch,
@@ -888,13 +893,14 @@ class FMHAVarlenTest(unittest.TestCase):
             (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
             (2, 1, 128, [1024, 256], [512, 768]),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             seqlens_Q_list,
             seqlens_KV_list,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_varlen_backend(
                     batch=batch,
@@ -929,13 +935,14 @@ class FMHAVarlenTest(unittest.TestCase):
             (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
             (2, 1, 128, [1024, 256], [512, 768]),
         ]
-        for (
+        for i, (
             batch,
             heads,
             head_dim,
             seqlens_Q_list,
             seqlens_KV_list,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_varlen_backend(
                     batch=batch,

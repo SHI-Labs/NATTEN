@@ -28,22 +28,20 @@ from typing import Optional
 import torch
 from natten.backends import get_compatible_backends, get_compatible_fmha_backends
 from natten.functional import attention, neighborhood_attention_generic
-from natten.utils import log
 from natten.utils.testing import skip_if_libnatten_is_not_supported
 from natten.utils.varlen import generate_varlen_parameters
 from torch import nn
 
-from .utils import reset_torch_compile
-
-logger = log.get_logger(__name__)
+from .utils import logger, reset_torch_compile
 
 
-def _reset_everything():
-    reset_torch_compile(1024)
+def _reset_everything(random_seed: int = 42, torch_seed: int = 42):
+    reset_torch_compile(cache_size_limit=1, recompile_limit=1)
     torch.cuda.empty_cache()
 
-    random.seed(42)
-    torch.manual_seed(42)
+    random.seed(random_seed)
+    torch.manual_seed(torch_seed)
+    logger.debug(f"Reset seeds: {random_seed=}, {torch_seed=}")
     torch.use_deterministic_algorithms(False)
 
 
@@ -228,7 +226,7 @@ class TorchCompileTests(unittest.TestCase):
             if b != "flex-fna"
         ]
         for backend in backends:
-            _reset_everything()
+            reset_torch_compile(cache_size_limit=1, recompile_limit=1)
 
             logger.debug(
                 f"Testing torch compile on {na_dim}-D module with input shapes: "
@@ -304,7 +302,7 @@ class TorchCompileTests(unittest.TestCase):
                 dc_ref = additional_context_ref.grad
                 torch.testing.assert_close(dc, dc_ref, atol=atol, rtol=0)
 
-            # Second run, just to make sure it doesn't crash
+            # Second run, just to make sure it doesn't recompile or crash
             y = model_compiled(x, additional_context, **forward_args)
             y.backward(dy)
             dx = x.grad
@@ -380,7 +378,7 @@ class TorchCompileTests(unittest.TestCase):
         )
 
         for backend in backends:
-            _reset_everything()
+            reset_torch_compile(cache_size_limit=1, recompile_limit=1)
 
             logger.debug(
                 f"Testing torch compile on FMHA module with input shapes: "
@@ -451,7 +449,7 @@ class TorchCompileTests(unittest.TestCase):
             torch.testing.assert_close(dx, dx_ref, atol=atol, rtol=0)
             torch.testing.assert_close(dc, dc_ref, atol=atol, rtol=0)
 
-            # Second run, just to make sure it doesn't crash
+            # Second run, just to make sure it doesn't recompile or crash
             y = model_compiled(
                 x,
                 c,
@@ -500,7 +498,8 @@ class TorchCompileTests(unittest.TestCase):
             (1, (3287,), 4, 64, (3287,), (1,), (1,), (False,)),  # fmha case
             (1, (3287,), 4, 64, (3287,), (1,), (1,), (True,)),  # fmha case
         ]
-        for problem in problems:
+        for i, problem in enumerate(problems):
+            _reset_everything(random_seed=i, torch_seed=i)
             (
                 batch,
                 token_layout_shape,
@@ -552,13 +551,14 @@ class TorchCompileTests(unittest.TestCase):
             (3, 2, 128, [268, 1584, 1571], [2448, 4088, 1925]),
             (2, 1, 128, [1024, 256], [512, 768]),
         ]
-        for (
+        for i, (
             batch,
             num_heads,
             head_dim,
             seqlens_Q,
             seqlens_KV,
-        ) in problem_sizes:
+        ) in enumerate(problem_sizes):
+            _reset_everything(random_seed=i, torch_seed=i)
             for is_causal in [False, True]:
                 self._test_fmha_module(
                     batch=batch,

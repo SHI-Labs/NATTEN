@@ -23,9 +23,9 @@
 
 import enum
 import logging
-import os
+import sys
 
-from natten.utils.environment import is_torch_compiling
+from natten.utils.environment import is_torch_compiling, parse_env_str
 
 log_format = "| %(asctime)s | [[ %(name)s ]] [ %(levelname)s ]: %(message)s"
 
@@ -40,18 +40,18 @@ class LogLevel(enum.Enum):
 
 
 def _get_log_level() -> LogLevel:
-    if "NATTEN_LOG_LEVEL" in os.environ:
-        log_level = str(os.environ["NATTEN_LOG_LEVEL"]).lower()
-        if log_level == "debug":
-            return LogLevel.Debug
-        elif log_level == "info":
-            return LogLevel.Info
-        elif log_level == "warning":
-            return LogLevel.Warnings
-        elif log_level == "error":
-            return LogLevel.Errors
-        elif log_level == "critical":
-            return LogLevel.Critical
+    log_level = parse_env_str("NATTEN_LOG_LEVEL", "").lower()
+
+    if log_level == "debug":
+        return LogLevel.Debug
+    elif log_level == "info":
+        return LogLevel.Info
+    elif log_level == "warning":
+        return LogLevel.Warnings
+    elif log_level == "error":
+        return LogLevel.Errors
+    elif log_level == "critical":
+        return LogLevel.Critical
 
     return LogLevel.Default
 
@@ -66,13 +66,26 @@ _map_log_level = {
 }
 
 
+# Tests will stream into stderr instead of stdout
+def _get_log_pipe():
+    log_pipe = parse_env_str("NATTEN_LOG_PIPE", "").lower()
+
+    if log_pipe == "stderr":
+        return sys.stderr
+
+    elif log_pipe == "stdout":
+        return sys.stdout
+
+    return sys.stdout
+
+
 class NattenLogger:
     def __init__(self, name: str):
         self.logger = logging.getLogger(name)
         self.log_level = _map_log_level[_get_log_level()]
         self.logger.setLevel(self.log_level)
         self.formatter = logging.Formatter(log_format)
-        self.handler = logging.StreamHandler()
+        self.handler = logging.StreamHandler(_get_log_pipe())
         self.handler.setLevel(self.log_level)
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
@@ -93,5 +106,5 @@ class NattenLogger:
             self.logger.warning(*args, **kwargs)
 
 
-def get_logger(name):
+def get_logger(name) -> NattenLogger:
     return NattenLogger(name)
