@@ -128,10 +128,6 @@ out-of-kernel token permutation.
 }
 ```
 
-## Acknowledgements
+## Contributors & Acknowledgements
 
-We thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/), without which this
-project would not have been possible.
-
-We also thank Meta and the [xFormers](https://github.com/facebookresearch/xformers/) team
-for their FMHA kernel, and the [PyTorch](https://github.com/pytorch/pytorch/) project and team.
+See [CONTRIBUTORS.md](CONTRIBUTORS.md).

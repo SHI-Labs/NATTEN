@@ -23,6 +23,7 @@
 
 import enum
 import logging
+import os
 import sys
 
 from natten.utils.environment import is_torch_compiling, parse_env_str
@@ -67,16 +68,32 @@ _map_log_level = {
 
 
 # Tests will stream into stderr instead of stdout
+# It can be set to either stderr, stdout or any writeable file.
+# Otherwise logging will be disabled.
 def _get_log_pipe():
-    log_pipe = parse_env_str("NATTEN_LOG_PIPE", "").lower()
+    log_pipe = parse_env_str("NATTEN_LOG_PIPE", "stdout")
 
-    if log_pipe == "stderr":
+    # Skip checking /dev/null writablity
+    if log_pipe == "/dev/null":
+        return None
+
+    if log_pipe.lower() == "stderr":
         return sys.stderr
 
-    elif log_pipe == "stdout":
+    if log_pipe.lower() == "stdout":
         return sys.stdout
 
-    return sys.stdout
+    # Treat as file path; validate writability
+    if os.path.isfile(log_pipe) and os.access(log_pipe, os.W_OK):
+        return log_pipe
+
+    try:
+        open(log_pipe, "a").close()
+        return log_pipe
+    except OSError:
+        pass
+
+    return None
 
 
 class NattenLogger:
@@ -85,7 +102,14 @@ class NattenLogger:
         self.log_level = _map_log_level[_get_log_level()]
         self.logger.setLevel(self.log_level)
         self.formatter = logging.Formatter(log_format)
-        self.handler = logging.StreamHandler(_get_log_pipe())
+        log_pipe = _get_log_pipe()
+        if log_pipe in [sys.stderr, sys.stdout]:
+            self.handler = logging.StreamHandler(log_pipe)
+        elif isinstance(log_pipe, str):
+            self.handler = logging.FileHandler(log_pipe)
+        else:
+            # Invalid / null
+            self.handler = logging.NullHandler()  # type: ignore[assignment]
         self.handler.setLevel(self.log_level)
         self.handler.setFormatter(self.formatter)
         self.logger.addHandler(self.handler)
