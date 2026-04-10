@@ -246,15 +246,11 @@ def main():
             )
             lines_printed = len(test_names)
 
+            time.sleep(REFRESH_INTERVAL)
+
             if done_count == total:
-                # Re-render to ensure the last update is visible
-                tty_out.write(f"\033[{lines_printed + 2}A")
-                render_table(
-                    tty_out, status_dir, test_names, name_width, clear_eol=True
-                )
                 break
 
-            time.sleep(REFRESH_INTERVAL)
     except (KeyboardInterrupt, SystemExit):
         pass
 
