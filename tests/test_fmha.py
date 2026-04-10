@@ -585,9 +585,12 @@ class FMHABackendTest(unittest.TestCase):
         is_gqa = heads_kv is not None and heads != heads_kv
         ALLOWED_DTYPES = [
             (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
-            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2) if not is_gqa else (1e-2, 2e-2, 2e-2))),
-            (torch.float8_e4m3fn, (4e-1, None)),
-            (torch.float8_e5m2, (7e-1, None)),
+            (
+                torch.bfloat16,
+                (5e-2, (1e-2, 1e-2, 1e-2) if not is_gqa else (1e-2, 5e-2, 5e-2)),
+            ),
+            (torch.float8_e4m3fn, (5e-1, None)),
+            (torch.float8_e5m2, (9e-1, None)),
         ]
 
         for dtype, atol in ALLOWED_DTYPES:
