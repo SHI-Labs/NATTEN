@@ -549,6 +549,9 @@ class FMHAVarlenTest(unittest.TestCase):
             ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
+            if is_fp8(dtype) and head_dim % 16 != 0:
+                continue
+
             dummy = torch.empty((1, 128, heads, head_dim), device="cuda", dtype=dtype)
 
             forward_configs = get_all_blackwell_fmha_forward_configs(dummy)
@@ -664,7 +667,7 @@ class FMHAVarlenTest(unittest.TestCase):
             supports_dim_v = False
             supports_gqa_mqa = False
             if backend == "blackwell-fmha":
-                head_dim_choices = [32, 64, 128]
+                head_dim_choices = list(range(8, 129, 8))
                 heads_choices = range(1, 8 + 1)
                 supports_gqa_mqa = True
             elif backend == "hopper-fmha":

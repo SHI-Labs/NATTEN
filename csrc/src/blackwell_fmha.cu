@@ -128,8 +128,24 @@ void blackwell_fmha_forward(
   }
 
   TORCH_CHECK(
-      dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FMHA forward only supports head dims 32, 64, and 128 for now.");
+      dim > 0 && dim <= 128,
+      "Blackwell FMHA forward only supports head dims up to 128, got ",
+      dim,
+      ".");
+  if (query.scalar_type() == c10::ScalarType::Float8_e4m3fn ||
+      query.scalar_type() == c10::ScalarType::Float8_e5m2) {
+    TORCH_CHECK(
+        dim >= 16 && dim % 16 == 0,
+        "Blackwell FMHA forward with FP8 requires head dims that are multiples of 16 (minimum 16), got ",
+        dim,
+        ".");
+  } else {
+    TORCH_CHECK(
+        dim >= 8 && dim % 8 == 0,
+        "Blackwell FMHA forward with FP16/BF16 requires head dims that are multiples of 8 (minimum 8), got ",
+        dim,
+        ".");
+  }
 
   cudaDeviceProp* device_props =
       at::cuda::getDeviceProperties(query.device().index());
@@ -354,9 +370,13 @@ void blackwell_fmha_backward(
   int heads_kv = key.size(2);
   int dim = query.size(3);
 
+  // NOTE: if FP8 backward support is ever added, alignment must be multiples
+  // of 16.
   TORCH_CHECK(
-      dim == 32 || dim == 64 || dim == 128,
-      "Blackwell FMHA backward only supports head dims 32, 64, and 128 for now.");
+      dim > 0 && dim <= 128 && dim >= 8 && dim % 8 == 0,
+      "Blackwell FMHA backward requires head dims that are multiples of 8 (minimum 8, maximum 128), got ",
+      dim,
+      ".");
 
   TORCH_CHECK(
       query.scalar_type() == torch::kFloat16 ||
