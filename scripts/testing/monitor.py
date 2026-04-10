@@ -29,6 +29,7 @@ def _handle_term(*_):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)  # next TERM kills immediately
     sys.exit(0)
 
+
 GREEN = "\033[32m"
 RED = "\033[31m"
 YELLOW = "\033[33m"
@@ -111,8 +112,18 @@ def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=
     now = time.time()
     done_count = 0
     sep = " " * COL_SPACING
-    total_width = name_width + COL_GPU + COL_WORKER + COL_STARTED + COL_ELAPSED + COL_SPACING * 4 + 3
-    out.write(f"     {'Test':<{name_width}}{sep}{'GPU':>{COL_GPU}}{sep}{'Worker':>{COL_WORKER}}{sep}{'Started':{COL_STARTED}}{sep}{'Elapsed':{COL_ELAPSED}}\n")
+    total_width = (
+        name_width
+        + COL_GPU
+        + COL_WORKER
+        + COL_STARTED
+        + COL_ELAPSED
+        + COL_SPACING * 4
+        + 3
+    )
+    out.write(
+        f"     {'Test':<{name_width}}{sep}{'GPU':>{COL_GPU}}{sep}{'Worker':>{COL_WORKER}}{sep}{'Started':{COL_STARTED}}{sep}{'Elapsed':{COL_ELAPSED}}\n"
+    )
     out.write(f"  {'─' * total_width}\n")
 
     for name in test_names:
@@ -143,7 +154,7 @@ def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=
 
 
 def print_summary(status_dir, test_names, monitor_start, out=sys.stdout):
-    p = lambda *a, **kw: print(*a, file=out, **kw)
+    p = lambda *a, **kw: print(*a, file=out, **kw)  # noqa: E731
     monitor_end = time.time()
     counts = {NOT_STARTED: 0, RUNNING: 0, INVALID: 0, PASSED: 0, FAILED: 0}
     all_starts = []
@@ -194,9 +205,7 @@ def main():
         sys.exit(1)
 
     status_dir = os.path.join(sys.argv[2], ".status")
-    test_names = sorted(
-        f for f in os.listdir(status_dir) if not f.startswith(".")
-    )
+    test_names = sorted(f for f in os.listdir(status_dir) if not f.startswith("."))
     total = len(test_names)
     name_width = max(len(n) for n in test_names) if test_names else 20
     monitor_start = time.time()
@@ -210,7 +219,9 @@ def main():
     except OSError:
         tty_fd = None
         tty_out = sys.stdout
-        print(f"{YELLOW}Warning: could not open /dev/tty — do not background this process (Ctrl+Z / bg){RESET}")
+        print(
+            f"{YELLOW}Warning: could not open /dev/tty — do not background this process (Ctrl+Z / bg){RESET}"
+        )
 
     def is_foreground():
         if tty_fd is None:
@@ -230,16 +241,16 @@ def main():
             if lines_printed > 0:
                 tty_out.write(f"\033[{lines_printed + 2}A")
 
-            done_count = render_table(tty_out, status_dir, test_names, name_width, clear_eol=True)
+            done_count = render_table(
+                tty_out, status_dir, test_names, name_width, clear_eol=True
+            )
             lines_printed = len(test_names)
 
+            time.sleep(REFRESH_INTERVAL)
+
             if done_count == total:
-                # Re-render to ensure the last update is visible
-                tty_out.write(f"\033[{lines_printed + 2}A")
-                render_table(tty_out, status_dir, test_names, name_width, clear_eol=True)
                 break
 
-            time.sleep(REFRESH_INTERVAL)
     except (KeyboardInterrupt, SystemExit):
         pass
 
