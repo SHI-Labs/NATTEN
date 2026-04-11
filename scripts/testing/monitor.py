@@ -19,6 +19,7 @@
 #
 # Usage: monitor.py --log-dir DIR
 
+import json
 import os
 import signal
 import sys
@@ -36,9 +37,9 @@ YELLOW = "\033[33m"
 DIM = "\033[2m"
 RESET = "\033[0m"
 
-# States
 REFRESH_INTERVAL = 1.0
 
+# States
 NOT_STARTED = "not_started"
 RUNNING = "running"
 INVALID = "invalid"
@@ -106,6 +107,38 @@ COL_ELAPSED = 8
 COL_SPACING = 2  # spaces between columns
 
 
+def read_progress(status_dir, name):
+    """Read progress JSON for a test. Returns dict or None."""
+    path = os.path.join(status_dir, f"{name}.progress")
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def format_progress(prog, color=True):
+    """Format progress as colored breakdown: passed+skipped+not_run / total."""
+    if prog is None:
+        return ""
+    g, r, y, d, rs = (GREEN, RED, YELLOW, DIM, RESET) if color else ("",) * 5
+    collected = prog.get("collected", 0)
+    passed = prog.get("passed", 0)
+    failed = prog.get("failed", 0)
+    skipped = prog.get("skipped", 0)
+    not_run = max(0, collected - passed - failed - skipped)
+    parts = []
+    if passed:
+        parts.append(f"{g}{passed}{rs}")
+    if failed:
+        parts.append(f"{r}{failed}{rs}")
+    if skipped:
+        parts.append(f"{y}{skipped}{rs}")
+    if not_run:
+        parts.append(f"{d}{not_run}{rs}")
+    return f"{'+'.join(parts)}/{collected}" if parts else ""
+
+
 def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=False):
     """Render the test status table to `out`. Returns done count."""
     g, r, y, d, rs = (GREEN, RED, YELLOW, DIM, RESET) if color else ("",) * 5
@@ -122,7 +155,7 @@ def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=
         + 3
     )
     out.write(
-        f"     {'Test':<{name_width}}{sep}{'GPU':>{COL_GPU}}{sep}{'Worker':>{COL_WORKER}}{sep}{'Started':{COL_STARTED}}{sep}{'Elapsed':{COL_ELAPSED}}\n"
+        f"     {'Test':<{name_width}}{sep}{'GPU':>{COL_GPU}}{sep}{'Worker':>{COL_WORKER}}{sep}{'Started':{COL_STARTED}}{sep}{'Elapsed':{COL_ELAPSED}}{sep}Progress\n"
     )
     out.write(f"  {'─' * total_width}\n")
 
@@ -132,6 +165,8 @@ def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=
         )
         gpu_str = "CPU" if gpu == "-1" else (gpu or "").rjust(COL_GPU)
         worker_str = (worker or "").rjust(COL_WORKER)
+        prog = read_progress(status_dir, name)
+        prog_str = format_progress(prog, color=color)
 
         if state == NOT_STARTED:
             line = f"  {d}○ {name}{rs}"
@@ -141,11 +176,11 @@ def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=
         elif state in (PASSED, FAILED):
             c, symbol = (g, "✓") if state == PASSED else (r, "✗")
             elapsed = end - start
-            line = f"  {c}{symbol} {name:<{name_width}}{sep}{gpu_str}{sep}{worker_str}{sep}{format_time(start)}{sep}{format_elapsed(elapsed)}{rs}"
+            line = f"  {c}{symbol} {name:<{name_width}}{sep}{gpu_str}{sep}{worker_str}{sep}{format_time(start)}{sep}{format_elapsed(elapsed)}{rs}{sep}{prog_str}"
             done_count += 1
         else:
             elapsed = now - start
-            line = f"  ● {name:<{name_width}}{sep}{gpu_str}{sep}{worker_str}{sep}{format_time(start)}{sep}{format_elapsed(elapsed)}"
+            line = f"  ● {name:<{name_width}}{sep}{gpu_str}{sep}{worker_str}{sep}{format_time(start)}{sep}{format_elapsed(elapsed)}{sep}{prog_str}"
 
         out.write(f"{line}\033[K\n" if clear_eol else f"{line}\n")
 
@@ -200,11 +235,17 @@ def print_summary(status_dir, test_names, monitor_start, out=sys.stdout):
 def main():
     signal.signal(signal.SIGTERM, _handle_term)
 
-    if len(sys.argv) < 3 or sys.argv[1] != "--log-dir":
-        print(f"Usage: {sys.argv[0]} --log-dir DIR", file=sys.stderr)
-        sys.exit(1)
+    import argparse
 
-    status_dir = os.path.join(sys.argv[2], ".status")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-l", "--log-dir", required=True)
+    parser.add_argument(
+        "-r", "--refresh-interval", type=float, default=REFRESH_INTERVAL
+    )
+    args = parser.parse_args()
+
+    refresh = args.refresh_interval
+    status_dir = os.path.join(args.log_dir, ".status")
     test_names = sorted(f for f in os.listdir(status_dir) if not f.startswith("."))
     total = len(test_names)
     name_width = max(len(n) for n in test_names) if test_names else 20
@@ -235,7 +276,7 @@ def main():
         while True:
             if not is_foreground():
                 lines_printed = 0
-                time.sleep(REFRESH_INTERVAL)
+                time.sleep(refresh)
                 continue
 
             if lines_printed > 0:
@@ -246,7 +287,7 @@ def main():
             )
             lines_printed = len(test_names)
 
-            time.sleep(REFRESH_INTERVAL)
+            time.sleep(refresh)
 
             if done_count == total:
                 break
@@ -266,7 +307,7 @@ def main():
         os.close(tty_fd)
 
     # Write final table and summary directly to runner.log (tee may be dead on interrupt)
-    log_dir = sys.argv[2]
+    log_dir = args.log_dir
     with open(os.path.join(log_dir, "runner.log"), "a") as log:
         render_table(log, status_dir, test_names, name_width, color=False)
         print_summary(status_dir, test_names, monitor_start, out=log)
