@@ -22,7 +22,14 @@ def _write(data, path):
 class ProgressPlugin:
     def __init__(self, path):
         self.path = path
-        self.data = {"collected": 0, "passed": 0, "failed": 0, "skipped": 0, "error": 0}
+        self.data = {
+            "collected": 0,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "xfailed": 0,
+            "error": 0,
+        }
 
     def pytest_collection_modifyitems(self, items):
         self.data["collected"] = len(items)
@@ -30,7 +37,9 @@ class ProgressPlugin:
 
     def pytest_runtest_logreport(self, report):
         if report.when == "call":
-            if report.passed:
+            if hasattr(report, "wasxfail"):
+                self.data["xfailed"] += 1
+            elif report.passed:
                 self.data["passed"] += 1
             elif report.failed:
                 self.data["failed"] += 1
@@ -40,7 +49,10 @@ class ProgressPlugin:
             if report.failed:
                 self.data["error"] += 1
             elif report.skipped:
-                self.data["skipped"] += 1
+                if hasattr(report, "wasxfail"):
+                    self.data["xfailed"] += 1
+                else:
+                    self.data["skipped"] += 1
         _write(self.data, self.path)
 
     def pytest_collectreport(self, report):

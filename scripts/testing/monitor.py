@@ -34,6 +34,7 @@ def _handle_term(*_):
 GREEN = "\033[32m"
 RED = "\033[31m"
 YELLOW = "\033[33m"
+MAGENTA = "\033[35m"
 DIM = "\033[2m"
 RESET = "\033[0m"
 
@@ -118,24 +119,33 @@ def read_progress(status_dir, name):
 
 
 def format_progress(prog, color=True):
-    """Format progress as colored breakdown: passed+skipped+not_run / total."""
+    """Format progress as colored breakdown: passed+failed+xfailed+skipped+unknown+not_run / total."""
     if prog is None:
         return ""
-    g, r, y, d, rs = (GREEN, RED, YELLOW, DIM, RESET) if color else ("",) * 5
+    g, r, y, m, d, rs = (
+        (GREEN, RED, YELLOW, MAGENTA, DIM, RESET) if color else ("",) * 6
+    )
     collected = prog.get("collected", 0)
     passed = prog.get("passed", 0)
     failed = prog.get("failed", 0)
     skipped = prog.get("skipped", 0)
-    not_run = max(0, collected - passed - failed - skipped)
+    xfailed = prog.get("xfailed", 0)
+    error = prog.get("error", 0)
+    known = passed + failed + skipped + xfailed + error
+    not_run = max(0, collected - known)
     parts = []
     if passed:
         parts.append(f"{g}{passed}{rs}")
     if failed:
         parts.append(f"{r}{failed}{rs}")
+    if xfailed:
+        parts.append(f"{m}{xfailed}{rs}")
     if skipped:
         parts.append(f"{y}{skipped}{rs}")
+    if error:
+        parts.append(f"{d}{error}{rs}")
     if not_run:
-        parts.append(f"{d}{not_run}{rs}")
+        parts.append(f"{not_run}")
     return f"{'+'.join(parts)}/{collected}" if parts else ""
 
 
