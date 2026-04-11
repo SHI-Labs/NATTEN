@@ -77,7 +77,7 @@ To install NATTEN using wheels, please first check your PyTorch version, and sel
         introduced in CUDA Toolkit 12.8.
 
 ??? question "Don't know your PyTorch build? Other questions?"
-    If you don't know your PyTorch build, simply run this command:
+    If you don't know your PyTorch build, run this command:
 
     ```shell
     python -c "import torch; print(torch.__version__)"
@@ -103,6 +103,7 @@ To install NATTEN using wheels, please first check your PyTorch version, and sel
 
     If you see something else, or have further questions, feel free to
     [open an issue](https://github.com/SHI-Labs/NATTEN/issues).
+    Please share your [environment information](#environment-info) when you open issues.
 
 ## NATTEN via PyPI
 
@@ -306,7 +307,7 @@ If you want to do an editable (development) install, use `make dev` instead of `
     Once in the command prompt, make sure your correct Python environment is in the system path. If
     you're using anaconda, you should be able to do `conda activate $YOUR_ENV_NAME`.
 
-    Then simply confirm you have PyTorch installed, and use our Windows batch script to build:
+    Then confirm you have PyTorch installed, and use our Windows batch script to build:
 
     ```python
     WindowsBuilder.bat install
@@ -361,6 +362,14 @@ python -c "import natten; print(natten.HAS_LIBNATTEN)"
 If `True`, you're good to go. If `False`, it could mean either you didn't install NATTEN with
 `libnatten`, or that your current device doesn't support it. Feel free to
 [open an issue](https://github.com/SHI-Labs/NATTEN/issues) if you have questions.
+
+## Environment info
+
+You can quickly gather system, PyTorch, and NATTEN information for troubleshooting by running:
+
+```shell
+curl -sSL https://natten.org/info.py | python3 -
+```
 
 ## Older NATTEN builds
 We highly recommend using the latest NATTEN builds, but if you need to install older NATTEN
