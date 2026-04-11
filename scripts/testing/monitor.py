@@ -151,7 +151,8 @@ def render_table(out, status_dir, test_names, name_width, color=True, clear_eol=
         + COL_WORKER
         + COL_STARTED
         + COL_ELAPSED
-        + COL_SPACING * 4
+        + len("Progress")
+        + COL_SPACING * 5
         + 3
     )
     out.write(
