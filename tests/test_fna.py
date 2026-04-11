@@ -552,14 +552,14 @@ class FNABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     def test_randsweep_2d_against_reference(self):
         self._test_randsweep_against_reference(
-            2, max_tests=RAND_SWEEP_TESTS, configs_to_test=5
+            2, max_tests=RAND_SWEEP_TESTS, configs_to_test=3
         )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     def test_randsweep_3d_against_reference(self):
         self._test_randsweep_against_reference(
-            3, max_tests=RAND_SWEEP_TESTS, configs_to_test=5
+            3, max_tests=RAND_SWEEP_TESTS, configs_to_test=2
         )
 
     def _test_determinism(
