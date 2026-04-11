@@ -27,8 +27,8 @@ mkdocs-material==9.6.14
 mkdocstrings-python==1.16.11
 mkdocs-glightbox==0.4.0
 markdown-grid-tables==0.4.0
-pymdown-extensions==10.15
-Pygments==2.19.1
+pymdown-extensions>=10.16.1
+Pygments>=2.20.0
 ruff==0.11.12
 
 # Optional: Pretty-printing stuff
