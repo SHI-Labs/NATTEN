@@ -254,6 +254,11 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         pass
 
+    # Re-render in case bash sends sigterm and we exit loop before finalizing render
+    if lines_printed > 0:
+        tty_out.write(f"\033[{lines_printed + 2}A")
+    render_table(tty_out, status_dir, test_names, name_width, clear_eol=True)
+
     # Print summary to terminal
     if tty_fd is not None:
         print_summary(status_dir, test_names, monitor_start, out=tty_out)
