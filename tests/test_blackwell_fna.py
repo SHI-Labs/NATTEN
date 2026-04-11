@@ -443,7 +443,7 @@ class BlackwellFNABackendTest(unittest.TestCase):
                 )
 
     def _test_randsweep_against_cutlass_2x(
-        self, na_dim, max_tests=1000, configs_to_test=None
+        self, na_dim, max_tests=1000, configs_to_test=5
     ):
         max_seqlen = 2**17
         # max size per-dim for different profiles
@@ -505,17 +505,17 @@ class BlackwellFNABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_randsweep_1d_against_cutlass_2x_quick(self):
-        self._test_randsweep_against_cutlass_2x(1, max_tests=10, configs_to_test=3)
+        self._test_randsweep_against_cutlass_2x(1, max_tests=10, configs_to_test=None)
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_randsweep_2d_against_cutlass_2x_quick(self):
-        self._test_randsweep_against_cutlass_2x(2, max_tests=10, configs_to_test=3)
+        self._test_randsweep_against_cutlass_2x(2, max_tests=10, configs_to_test=10)
 
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_randsweep_3d_against_cutlass_2x_quick(self):
-        self._test_randsweep_against_cutlass_2x(3, max_tests=10, configs_to_test=3)
+        self._test_randsweep_against_cutlass_2x(3, max_tests=10, configs_to_test=10)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -527,13 +527,25 @@ class BlackwellFNABackendTest(unittest.TestCase):
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_randsweep_2d_against_cutlass_2x(self):
-        self._test_randsweep_against_cutlass_2x(2, max_tests=RAND_SWEEP_TESTS)
+        # NOTE: Blackwell FNA has more variations than Hopper FNA due to persistent scheduling being
+        # separate from the config, 2 additional dtypes (even though they're forward only), and more
+        # configs in 2D and 3D (despite fewer in 1D).
+        # This has caused this entire test, with randsweep over 1000 use cases to take close to 6
+        # hours.  We need to cut down on configs like we do for cutlass-fna to make it run in a more
+        # reasonable time frame.
+        self._test_randsweep_against_cutlass_2x(2, max_tests=RAND_SWEEP_TESTS, configs_to_test=5)
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
     @skip_if_blackwell_kernels_not_supported()
     def test_randsweep_3d_against_cutlass_2x(self):
-        self._test_randsweep_against_cutlass_2x(3, max_tests=RAND_SWEEP_TESTS)
+        # NOTE: Blackwell FNA has more variations than Hopper FNA due to persistent scheduling being
+        # separate from the config, 2 additional dtypes (even though they're forward only), and more
+        # configs in 2D and 3D (despite fewer in 1D).
+        # This has caused this entire test, with randsweep over 1000 use cases to take close to 6
+        # hours.  We need to cut down on configs like we do for cutlass-fna to make it run in a more
+        # reasonable time frame.
+        self._test_randsweep_against_cutlass_2x(3, max_tests=RAND_SWEEP_TESTS, configs_to_test=5)
 
 
 if __name__ == "__main__":
