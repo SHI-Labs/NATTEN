@@ -533,7 +533,9 @@ class BlackwellFNABackendTest(unittest.TestCase):
         # This has caused this entire test, with randsweep over 1000 use cases to take close to 6
         # hours.  We need to cut down on configs like we do for cutlass-fna to make it run in a more
         # reasonable time frame.
-        self._test_randsweep_against_cutlass_2x(2, max_tests=RAND_SWEEP_TESTS, configs_to_test=5)
+        self._test_randsweep_against_cutlass_2x(
+            2, max_tests=RAND_SWEEP_TESTS, configs_to_test=5
+        )
 
     @skip_if_not_running_extended_tests()
     @skip_if_libnatten_is_not_supported()
@@ -545,7 +547,9 @@ class BlackwellFNABackendTest(unittest.TestCase):
         # This has caused this entire test, with randsweep over 1000 use cases to take close to 6
         # hours.  We need to cut down on configs like we do for cutlass-fna to make it run in a more
         # reasonable time frame.
-        self._test_randsweep_against_cutlass_2x(3, max_tests=RAND_SWEEP_TESTS, configs_to_test=5)
+        self._test_randsweep_against_cutlass_2x(
+            3, max_tests=RAND_SWEEP_TESTS, configs_to_test=5
+        )
 
 
 if __name__ == "__main__":
