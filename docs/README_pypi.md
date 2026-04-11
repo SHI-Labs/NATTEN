@@ -49,7 +49,7 @@ attention span in any dimension/axis of your input can be controlled with its re
 NATTEN supports PyTorch >= 2.7, and Python >= 3.9 (everything PyTorch supports).
 Please refer to [install instructions](https://natten.org/install/) for details on how to install NATTEN.
 
-### Release `0.21.5`
+### Release `0.21.6`
 
 NATTEN has undergone major changes since the last release (`0.17.5`), so we strongly recommend
 reading our new updated documentation in this webpage before upgrading.
@@ -127,8 +127,4 @@ out-of-kernel token permutation.
 
 ## Acknowledgements
 
-We thank NVIDIA, and the [CUTLASS project](https://github.com/NVIDIA/cutlass/), without which this
-project would not have been possible.
-
-We also thank Meta and the [xFormers](https://github.com/facebookresearch/xformers/) team
-for their FMHA kernel, and the [PyTorch](https://github.com/pytorch/pytorch/) project and team.
+See [CONTRIBUTORS.md](https://github.com/SHI-Labs/NATTEN/blob/main/CONTRIBUTORS.md).

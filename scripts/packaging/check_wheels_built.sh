@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Copyright (c) 2022 - 2026 Ali Hassani.
 
-NATTEN_VERSION="0.21.5"
+NATTEN_VERSION="0.21.6"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 
@@ -58,15 +58,15 @@ check_one() {
   done
 }
 
+# Torch 2.11.X
+check_one cu130 2.11.0
+check_one cu128 2.11.0
+check_one cu126 2.11.0
+
 # Torch 2.10.X
 check_one cu130 2.10.0
 check_one cu128 2.10.0
 check_one cu126 2.10.0
-
-# Torch 2.9.X
-check_one cu130 2.9.0
-check_one cu128 2.9.0
-check_one cu126 2.9.0
 
 WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING))
 

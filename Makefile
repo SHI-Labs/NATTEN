@@ -17,6 +17,8 @@ NUM_RAND_SWEEP_TESTS=${NATTEN_RAND_SWEEP_TESTS}
 RUN_FLEX_TESTS=${NATTEN_RUN_FLEX_TESTS}
 # Number of GPUs / parallel tests used in test_parallel (-1 = auto-detect)
 GPUS=-1
+# Monitor refresh interval in seconds
+REFRESH_INTERVAL=5
 
 # common flags
 # number of build workers or parallel tests
@@ -131,6 +133,7 @@ test_parallel:
 	NATTEN_RUN_EXTENDED_TESTS="${RUN_EXTENDED_TESTS}" \
 	NATTEN_RUN_FLEX_TESTS="${RUN_FLEX_TESTS}" \
 	NATTEN_RAND_SWEEP_TESTS="${NUM_RAND_SWEEP_TESTS}" \
+	REFRESH_INTERVAL="${REFRESH_INTERVAL}" \
 	./scripts/testing/run_tests_parallel.sh "${GPUS}" "${WORKERS}"
 
 format:
