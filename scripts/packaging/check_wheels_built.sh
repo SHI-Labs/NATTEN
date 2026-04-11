@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Copyright (c) 2022 - 2026 Ali Hassani.
 
-NATTEN_VERSION="0.21.5"
+NATTEN_VERSION="0.21.6"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 
