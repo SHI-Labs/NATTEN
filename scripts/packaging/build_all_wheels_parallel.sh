@@ -101,13 +101,13 @@ build_target () {
 ##################################################
 ##################################################
 
+build_target cuda13.0 2.11.0 & \
+  build_target cuda12.8 2.11.0 & \
+  build_target cuda12.6 2.11.0
+
 build_target cuda13.0 2.10.0 & \
   build_target cuda12.8 2.10.0 & \
   build_target cuda12.6 2.10.0
-
-build_target cuda13.0 2.9.0 & \
-  build_target cuda12.8 2.9.0 & \
-  build_target cuda12.6 2.9.0
 
 wait
 

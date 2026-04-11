@@ -1,17 +1,18 @@
 # Changelog
 
 ## [Main branch]
+
+## [0.21.6] - 2026-04-13
 * Fixed syntax error in natten.profiler (only affects `python < 3.12`)
 * Fixed stride overflow issue (occurs in very large seqlen + heads) in Blackwell FMHA/FNA, Hopper FMHA/FNA, and TokPerm kernels.
+* Blackwell FMHA / FNA improvements:
+    * Deterministic backward pass added to Blackwell FMHA kernel (ported from [FBGEMM](https://github.com/pytorch/FBGEMM)).
+    * Arbitrary head dimensions up to 128 that are multiples of 8 for float16 and bfloat16, and multiples of 16 for fp8 are now supported.
 * Hopper FMHA improvements:
     * Causal mask support
     * Varlen support
     * Removed extra memory op on LSE in backward pass (both FMHA and FNA)
-* Added build flags for adding lineinfo and building with PTX (`NATTEN_BUILD_WITH_PTX`,
-    `NATTEN_BUILD_WITH_LINEINFO`).
-* Attention Merge backward pass now allows arbitrary number of splits.
 * Improved deterministic backward pass:
-    * Added deterministic backward pass to Blackwell FMHA kernel (ported from [FBGEMM](https://github.com/pytorch/FBGEMM)).
     * Improved deterministic mode and torch compile support for cutlass-fmha/cutlass-fna backends:
       * `backward_kv_splits` and `backward_use_pt_reduction` are now independent of backward config, and
           backward config is strictly tile shapes, while these two knobs are verified entirely inside
@@ -26,8 +27,13 @@
           implementation.
       * All knobs affecting determinism are checked against PyTorch's deterministic mode. Just set
           pytorch to deterministic and NATTEN will respect that setting.
-* Blackwell FMHA / FNA now allow arbitrary head dimensions up to 128 that are multiples of 8
-    for float16 and bfloat16, and multiples of 16 for fp8.
+* Attention Merge backward pass now allows arbitrary number of splits.
+* Improved testing utilities, logging, stability, and runtime.
+* Improved error reporting and handling in libnatten.
+* Added build flags for adding lineinfo and building with PTX (`NATTEN_BUILD_WITH_PTX`,
+    `NATTEN_BUILD_WITH_LINEINFO`).
+* Added runtime environment variable `NATTEN_LOG_PIPE` which allows customizing where NATTEN logs
+    are streamed.
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:
