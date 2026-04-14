@@ -44,9 +44,7 @@ pip_install \
   -U "torch==${PYTORCH_VERSION}+${CU_VERSION}" \
   -f https://download.pytorch.org/whl/torch/
 
-pip_install "cmake==4.1.0"
-
-# Print torch version and support acrhs
+# Print torch version and support arches
 python -c "import torch;\
 print(f\"Current torch version: {torch.__version__}\");\
 print(f\"Current torch CUDA support (build and runtime): {torch.cuda.is_available()=}\");\

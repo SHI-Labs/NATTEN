@@ -115,6 +115,10 @@ PYTEST="${PYTEST:-pytest}"
 # Create log directories
 mkdir -p "${LOG_DIR}"
 mkdir -p "${ERR_DIR}"
+if [ -z "${STATUS_DIR}" ]; then
+    echo "Error: STATUS_DIR is empty"
+    exit 1
+fi
 rm -rf "${STATUS_DIR}"
 mkdir -p "${STATUS_DIR}"
 
@@ -167,56 +171,36 @@ run_single_test() {
     local worker_id=$((PARALLEL_JOBSLOT - 1))
     local test_name=$(basename "${test_file}" .py)
     local status_file="${STATUS_DIR}/${test_name}"
+    local progress_file="${STATUS_DIR}/${test_name}.progress"
 
     if [ ${NUM_GPUS} -gt 0 ]; then
-        # GPU mode: distribute workers across GPUs using round-robin
         local gpu_id=$(( worker_id % NUM_GPUS ))
-        local log_file="${LOG_DIR}/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
-        local stderr_file="${ERR_DIR}/${test_name}_gpu${gpu_id}_worker${worker_id}.log"
-
-        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] [GPU ${gpu_id}] [Worker ${worker_id}] Starting: ${test_name}"
-
-        printf "start=%s\ngpu=%s\nworker=%s\n" "$(date +%s)" "${gpu_id}" "${worker_id}" > "${status_file}"
-
-        # Run test with specific GPU
-        CUDA_VISIBLE_DEVICES=${gpu_id} ${PYTEST} -s -v -x "${test_file}" > "${log_file}" 2>"${stderr_file}"
-        local exit_code=$?
-
-        printf "end=%s\nrc=%s\n" "$(date +%s)" "${exit_code}" >> "${status_file}"
-
-        # if [ ${exit_code} -eq 0 ]; then
-        #     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [GPU ${gpu_id}] [Worker ${worker_id}] ✓ PASSED: ${test_name}"
-        # else
-        #     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [GPU ${gpu_id}] [Worker ${worker_id}] ✗ FAILED: ${test_name} (exit code: ${exit_code})"
-        # fi
+        local cuda_vis="${gpu_id}"
     else
-        # No GPU distribution: disable CUDA to prevent tests from using GPUs
-        local log_file="${LOG_DIR}/${test_name}_worker${worker_id}.log"
-        local stderr_file="${ERR_DIR}/${test_name}_worker${worker_id}.log"
-
-        # echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Worker ${worker_id}] Starting: ${test_name}"
-
-        printf "start=%s\ngpu=-1\nworker=%s\n" "$(date +%s)" "${worker_id}" > "${status_file}"
-
-        # Run test with CUDA_VISIBLE_DEVICES="" to hide all GPUs from CUDA
-        CUDA_VISIBLE_DEVICES="" ${PYTEST} -s -v -x "${test_file}" > "${log_file}" 2>"${stderr_file}"
-        local exit_code=$?
-
-        printf "end=%s\nrc=%s\n" "$(date +%s)" "${exit_code}" >> "${status_file}"
-
-        # if [ ${exit_code} -eq 0 ]; then
-        #     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Worker ${worker_id}] ✓ PASSED: ${test_name}"
-        # else
-        #     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [Worker ${worker_id}] ✗ FAILED: ${test_name} (exit code: ${exit_code})"
-        # fi
+        local gpu_id=-1
+        local cuda_vis=""
     fi
+
+    local log_file="${LOG_DIR}/${test_name}.log"
+    local stderr_file="${ERR_DIR}/${test_name}.log"
+
+    printf "start=%s\ngpu=%s\nworker=%s\n" "$(date +%s)" "${gpu_id}" "${worker_id}" > "${status_file}"
+
+    CUDA_VISIBLE_DEVICES=${cuda_vis} \
+        NATTEN_PROGRESS_FILE="${progress_file}" \
+        PYTHONPATH="${SCRIPT_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
+        ${PYTEST} -s -v -x -p pytest_progress_plugin "${test_file}" \
+        > "${log_file}" 2>"${stderr_file}"
+    local exit_code=$?
+
+    printf "end=%s\nrc=%s\n" "$(date +%s)" "${exit_code}" >> "${status_file}"
 
     return ${exit_code}
 }
 
 # Export function and variables for GNU parallel
 export -f run_single_test
-export PYTEST LOG_DIR ERR_DIR STATUS_DIR NUM_GPUS
+export PYTEST LOG_DIR ERR_DIR STATUS_DIR NUM_GPUS SCRIPT_DIR
 
 # Create joblog file
 JOBLOG="${LOG_DIR}/parallel_joblog.txt"
@@ -226,7 +210,7 @@ JOBLOG="${LOG_DIR}/parallel_joblog.txt"
 # echo ""
 
 # Start progress monitor in background
-python "${SCRIPT_DIR}/monitor.py" --log-dir "${LOG_DIR}" &
+python "${SCRIPT_DIR}/monitor.py" --log-dir "${LOG_DIR}" --refresh-interval "${REFRESH_INTERVAL:-5}" &
 MONITOR_PID=$!
 
 # Cleanup: send TERM to monitor so it prints summary, then wait for it
