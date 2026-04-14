@@ -188,7 +188,7 @@ run_single_test() {
 
     CUDA_VISIBLE_DEVICES=${cuda_vis} \
         NATTEN_PROGRESS_FILE="${progress_file}" \
-        PYTHONPATH="${SCRIPT_DIR}:${PYTHONPATH}" \
+        PYTHONPATH="${SCRIPT_DIR}${PYTHONPATH:+:$PYTHONPATH}" \
         ${PYTEST} -s -v -x -p pytest_progress_plugin "${test_file}" \
         > "${log_file}" 2>"${stderr_file}"
     local exit_code=$?

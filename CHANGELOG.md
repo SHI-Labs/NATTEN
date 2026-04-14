@@ -2,7 +2,7 @@
 
 ## [Main branch]
 
-## [0.21.6] - 2026-04-13
+## [0.21.6] - 2026-04-14
 * Fixed syntax error in natten.profiler (only affects `python < 3.12`)
 * Fixed stride overflow issue (occurs in very large seqlen + heads) in Blackwell FMHA/FNA, Hopper FMHA/FNA, and TokPerm kernels.
 * Blackwell FMHA / FNA improvements:
@@ -34,6 +34,7 @@
     `NATTEN_BUILD_WITH_LINEINFO`).
 * Added runtime environment variable `NATTEN_LOG_PIPE` which allows customizing where NATTEN logs
     are streamed.
+* `cmake` dependency removed. It is only a build dependency.
 
 ## [0.21.5] - 2026-02-08
 * Extended Attention (FMHA) functionality:

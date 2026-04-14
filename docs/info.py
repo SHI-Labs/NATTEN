@@ -61,11 +61,12 @@ if torch is not None:
         n = torch.cuda.device_count()
         ccs = sorted(
             set(
-                f"SM{major * 10 + minor}"
+                (major * 10 + minor, f"SM{major * 10 + minor}")
                 for i in range(n)
                 for major, minor in [torch.cuda.get_device_capability(i)]
             )
         )
+        ccs = [name for _, name in ccs]
         names = sorted(set(torch.cuda.get_device_name(i) for i in range(n)))
         torch_info.append(
             (
