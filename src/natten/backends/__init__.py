@@ -83,6 +83,7 @@ from natten.backends.hopper_fna import (
     na2d_cutlass_hopper_fna,
     na3d_cutlass_hopper_fna,
 )
+from natten.backends.torch_fna import torch_fna_generic
 
 
 def choose_backend(
@@ -104,10 +105,8 @@ def choose_backend(
         logger.debug("Backend not set; picked Flex Attention kernel.")
         return "flex-fna"
 
-    raise NotImplementedError(
-        "NATTEN could not find a suitable backend for this use case. "
-        "Run with NATTEN_LOG_LEVEL=DEBUG to find out why."
-    )
+    logger.debug("Backend not set; falling back to eager PyTorch torch-fna backend.")
+    return "torch-fna"
 
 
 def choose_fmha_backend(
@@ -168,6 +167,9 @@ def get_compatible_backends(
 
     if can_run_flex_attention(query, key, value, torch_compile=torch_compile):
         compatible_backends.append("flex-fna")
+
+    # Always available (slow) correctness backend.
+    compatible_backends.append("torch-fna")
 
     return compatible_backends
 
@@ -231,6 +233,7 @@ __all__ = [
     "na3d_cutlass_blackwell_fna",
     "flex_fmha",
     "flex_fna_generic",
+    "torch_fna_generic",
     "na1d_flex",
     "na2d_flex",
     "na3d_flex",

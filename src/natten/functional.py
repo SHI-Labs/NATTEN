@@ -37,6 +37,7 @@ from natten.backends import (
     cutlass_hopper_fna_generic,
     flex_fmha,
     flex_fna_generic,
+    torch_fna_generic,
 )
 from natten.types import (
     CausalArg1DTypeOrDed,
@@ -518,6 +519,19 @@ def neighborhood_attention_generic(
             return_lse=True,
         )
 
+    elif backend == "torch-fna":
+        output, lse = torch_fna_generic(
+            query=query,
+            key=key,
+            value=value,
+            kernel_size=kernel_size,
+            stride=stride,
+            dilation=dilation,
+            is_causal=is_causal,
+            scale=scale,
+            return_lse=True,
+        )
+
     else:
         raise NotImplementedError(f"Unrecognized NATTEN backend {backend}.")
 
@@ -645,7 +659,8 @@ def na1d(
 
     Other Parameters:
         backend (str): Backend implementation to run with. Choices are: `None` (pick the best
-            available one), `"cutlass-fna"`, `"hopper-fna"`, `"blackwell-fna"`, `"flex-fna"`.
+            available one), `"cutlass-fna"`, `"hopper-fna"`, `"blackwell-fna"`, `"flex-fna"`,
+            `"torch-fna"`.
             Refer to [backends](backends.md) for more information.
 
         q_tile_shape (Tuple[int]): 1-D Tile shape for the query token layout in the forward pass
@@ -844,7 +859,8 @@ def na2d(
 
     Other Parameters:
         backend (str): Backend implementation to run with. Choices are: `None` (pick the best
-            available one), `"cutlass-fna"`, `"hopper-fna"`, `"blackwell-fna"`, `"flex-fna"`.
+            available one), `"cutlass-fna"`, `"hopper-fna"`, `"blackwell-fna"`, `"flex-fna"`,
+            `"torch-fna"`.
             Refer to [backends](backends.md) for more information.
 
         q_tile_shape (Tuple[int, int]): 2-D Tile shape for the query token layout in the forward
@@ -1043,7 +1059,8 @@ def na3d(
 
     Other Parameters:
         backend (str): Backend implementation to run with. Choices are: `None` (pick the best
-            available one), `"cutlass-fna"`, `"hopper-fna"`, `"blackwell-fna"`, `"flex-fna"`.
+            available one), `"cutlass-fna"`, `"hopper-fna"`, `"blackwell-fna"`, `"flex-fna"`,
+            `"torch-fna"`.
             Refer to [backends](backends.md) for more information.
 
         q_tile_shape (Tuple[int, int, int]): 3-D Tile shape for the query token layout in the
