@@ -33,53 +33,102 @@
 
 #include <natten/cuda/fna/gemm_kernel_utils.h>
 
+#include <type_traits>
+
 namespace natten {
 namespace cuda {
 namespace fna {
 
-struct NA1dDim {
-  int32_t x;
+// NA{1,2,3}dDimT<T> is parameterized on the integer element type so the same
+// struct serves as both the int32 coord/extent and the int64 byte-stride. The
+// public aliases below preserve the existing names:
+//     NA{1,2,3}dDim    = NA{1,2,3}dDimT<int32_t>
+//     NA{1,2,3}dStride = NA{1,2,3}dDimT<int64_t>
+// The cross-T operator overloads promote the result to common_type<T,U>, so
+// (Dim * Stride).sum() and (Stride * Dim).sum() are computed in int64 and
+// don't overflow int32 when stride * coord exceeds 2**31-1.
+
+template <typename T>
+struct NA1dDimT {
+  T x;
 
   // Default ctor
-  CUTLASS_HOST_DEVICE constexpr NA1dDim(int32_t x_) : x(x_) {}
+  CUTLASS_HOST_DEVICE constexpr NA1dDimT(T x_) : x(x_) {}
 
-  CUTLASS_HOST_DEVICE NA1dDim() : x(0) {}
+  CUTLASS_HOST_DEVICE NA1dDimT() : x(0) {}
 
-  CUTLASS_HOST_DEVICE void operator=(const NA1dDim& other) {
+  CUTLASS_HOST_DEVICE void operator=(const NA1dDimT& other) {
     x = other.x;
   }
 
   // Operators
-  CUTLASS_HOST_DEVICE NA1dDim operator+(NA1dDim other) const {
-    return NA1dDim(x + other.x);
+  CUTLASS_HOST_DEVICE NA1dDimT operator+(NA1dDimT other) const {
+    return NA1dDimT(x + other.x);
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator*(NA1dDim other) const {
-    return NA1dDim(x * other.x);
+  CUTLASS_HOST_DEVICE NA1dDimT operator*(NA1dDimT other) const {
+    return NA1dDimT(x * other.x);
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator-(NA1dDim other) const {
-    return NA1dDim(x - other.x);
+  CUTLASS_HOST_DEVICE NA1dDimT operator-(NA1dDimT other) const {
+    return NA1dDimT(x - other.x);
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator/(NA1dDim other) const {
-    return NA1dDim(x / other.x);
+  CUTLASS_HOST_DEVICE NA1dDimT operator/(NA1dDimT other) const {
+    return NA1dDimT(x / other.x);
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator+(int32_t other) const {
-    return NA1dDim(x + other);
+  // Cross-T binary ops; promote to common_type<T, U>.
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA1dDimT<typename std::common_type<T, U>::type> operator+(
+      NA1dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA1dDimT<R>(static_cast<R>(x) + static_cast<R>(other.x));
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator*(int32_t other) const {
-    return NA1dDim(x * other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA1dDimT<typename std::common_type<T, U>::type> operator*(
+      NA1dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA1dDimT<R>(static_cast<R>(x) * static_cast<R>(other.x));
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator-(int32_t other) const {
-    return NA1dDim(x - other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA1dDimT<typename std::common_type<T, U>::type> operator-(
+      NA1dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA1dDimT<R>(static_cast<R>(x) - static_cast<R>(other.x));
   }
 
-  CUTLASS_HOST_DEVICE NA1dDim operator/(int32_t other) const {
-    return NA1dDim(x / other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA1dDimT<typename std::common_type<T, U>::type> operator/(
+      NA1dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA1dDimT<R>(static_cast<R>(x) / static_cast<R>(other.x));
+  }
+
+  CUTLASS_HOST_DEVICE NA1dDimT operator+(int32_t other) const {
+    return NA1dDimT(x + other);
+  }
+
+  CUTLASS_HOST_DEVICE NA1dDimT operator*(int32_t other) const {
+    return NA1dDimT(x * other);
+  }
+
+  CUTLASS_HOST_DEVICE NA1dDimT operator-(int32_t other) const {
+    return NA1dDimT(x - other);
+  }
+
+  CUTLASS_HOST_DEVICE NA1dDimT operator/(int32_t other) const {
+    return NA1dDimT(x / other);
   }
 
   // Cmp
@@ -99,7 +148,7 @@ struct NA1dDim {
   //   return x >= other.x;
   // }
 
-  CUTLASS_HOST_DEVICE bool operator==(NA1dDim other) const {
+  CUTLASS_HOST_DEVICE bool operator==(NA1dDimT other) const {
     return x == other.x;
   }
 
@@ -107,8 +156,8 @@ struct NA1dDim {
   // coordinate exceeds the spatial extent. This is used in
   // the NA mask (`get_window_start`).
   // It should NOT overload the >= operator.
-  CUTLASS_HOST_DEVICE NA1dDim is_overflowing(NA1dDim extent) const {
-    return NA1dDim(x >= extent.x);
+  CUTLASS_HOST_DEVICE NA1dDimT is_overflowing(NA1dDimT extent) const {
+    return NA1dDimT(x >= extent.x);
   }
 
   // CUTLASS_HOST_DEVICE bool operator<=(int32_t other) const {
@@ -141,58 +190,103 @@ struct NA1dDim {
   }
 
   CUTLASS_HOST_DEVICE int32_t prod32() const {
-    return x;
+    return (int32_t)x;
   }
 };
 
-struct NA2dDim {
-  int32_t x;
-  int32_t y;
+template <typename T>
+struct NA2dDimT {
+  T x;
+  T y;
 
   // Default ctor
-  CUTLASS_HOST_DEVICE constexpr NA2dDim(int32_t x_, int32_t y_)
-      : x(x_), y(y_) {}
+  CUTLASS_HOST_DEVICE constexpr NA2dDimT(T x_, T y_) : x(x_), y(y_) {}
 
-  CUTLASS_HOST_DEVICE NA2dDim() : x(0), y(0) {}
+  CUTLASS_HOST_DEVICE NA2dDimT() : x(0), y(0) {}
 
-  CUTLASS_HOST_DEVICE void operator=(const NA2dDim& other) {
+  CUTLASS_HOST_DEVICE void operator=(const NA2dDimT& other) {
     x = other.x;
     y = other.y;
   }
 
-  // CUTLASS_HOST_DEVICE NA2dDim(int32_t n): x(n), y(n) {}
+  // CUTLASS_HOST_DEVICE NA2dDimT(T n): x(n), y(n) {}
 
   // Operators
-  CUTLASS_HOST_DEVICE NA2dDim operator+(NA2dDim other) const {
-    return NA2dDim(x + other.x, y + other.y);
+  CUTLASS_HOST_DEVICE NA2dDimT operator+(NA2dDimT other) const {
+    return NA2dDimT(x + other.x, y + other.y);
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator*(NA2dDim other) const {
-    return NA2dDim(x * other.x, y * other.y);
+  CUTLASS_HOST_DEVICE NA2dDimT operator*(NA2dDimT other) const {
+    return NA2dDimT(x * other.x, y * other.y);
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator-(NA2dDim other) const {
-    return NA2dDim(x - other.x, y - other.y);
+  CUTLASS_HOST_DEVICE NA2dDimT operator-(NA2dDimT other) const {
+    return NA2dDimT(x - other.x, y - other.y);
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator/(NA2dDim other) const {
-    return NA2dDim(x / other.x, y / other.y);
+  CUTLASS_HOST_DEVICE NA2dDimT operator/(NA2dDimT other) const {
+    return NA2dDimT(x / other.x, y / other.y);
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator+(int32_t other) const {
-    return NA2dDim(x + other, y + other);
+  // Cross-T binary ops; promote to common_type<T, U>.
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA2dDimT<typename std::common_type<T, U>::type> operator+(
+      NA2dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA2dDimT<R>(
+        static_cast<R>(x) + static_cast<R>(other.x),
+        static_cast<R>(y) + static_cast<R>(other.y));
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator*(int32_t other) const {
-    return NA2dDim(x * other, y * other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA2dDimT<typename std::common_type<T, U>::type> operator*(
+      NA2dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA2dDimT<R>(
+        static_cast<R>(x) * static_cast<R>(other.x),
+        static_cast<R>(y) * static_cast<R>(other.y));
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator-(int32_t other) const {
-    return NA2dDim(x - other, y - other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA2dDimT<typename std::common_type<T, U>::type> operator-(
+      NA2dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA2dDimT<R>(
+        static_cast<R>(x) - static_cast<R>(other.x),
+        static_cast<R>(y) - static_cast<R>(other.y));
   }
 
-  CUTLASS_HOST_DEVICE NA2dDim operator/(int32_t other) const {
-    return NA2dDim(x / other, y / other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA2dDimT<typename std::common_type<T, U>::type> operator/(
+      NA2dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA2dDimT<R>(
+        static_cast<R>(x) / static_cast<R>(other.x),
+        static_cast<R>(y) / static_cast<R>(other.y));
+  }
+
+  CUTLASS_HOST_DEVICE NA2dDimT operator+(int32_t other) const {
+    return NA2dDimT(x + other, y + other);
+  }
+
+  CUTLASS_HOST_DEVICE NA2dDimT operator*(int32_t other) const {
+    return NA2dDimT(x * other, y * other);
+  }
+
+  CUTLASS_HOST_DEVICE NA2dDimT operator-(int32_t other) const {
+    return NA2dDimT(x - other, y - other);
+  }
+
+  CUTLASS_HOST_DEVICE NA2dDimT operator/(int32_t other) const {
+    return NA2dDimT(x / other, y / other);
   }
 
   // Cmp
@@ -212,7 +306,7 @@ struct NA2dDim {
   //  return x >= other.x && y >= other.y;
   //}
 
-  CUTLASS_HOST_DEVICE bool operator==(NA2dDim other) const {
+  CUTLASS_HOST_DEVICE bool operator==(NA2dDimT other) const {
     return x == other.x && y == other.y;
   }
 
@@ -220,8 +314,8 @@ struct NA2dDim {
   // coordinate exceeds the spatial extent. This is used in
   // the NA mask (`get_window_start`).
   // It should NOT overload the >= operator.
-  CUTLASS_HOST_DEVICE NA2dDim is_overflowing(NA2dDim extent) const {
-    return NA2dDim(x >= extent.x, y >= extent.y);
+  CUTLASS_HOST_DEVICE NA2dDimT is_overflowing(NA2dDimT extent) const {
+    return NA2dDimT(x >= extent.x, y >= extent.y);
   }
 
   // CUTLASS_HOST_DEVICE bool operator<=(int32_t other) const {
@@ -246,68 +340,118 @@ struct NA2dDim {
 
   // Reduce
   CUTLASS_HOST_DEVICE int64_t sum() const {
-    return (int64_t)(x + y);
+    return (int64_t)x + (int64_t)y;
   }
 
   CUTLASS_HOST_DEVICE int64_t prod() const {
-    return (int64_t)(x * y);
+    return (int64_t)x * (int64_t)y;
   }
 
   CUTLASS_HOST_DEVICE int32_t prod32() const {
-    return x * y;
+    return (int32_t)x * (int32_t)y;
   }
 };
 
-struct NA3dDim {
-  int32_t x;
-  int32_t y;
-  int32_t z;
+template <typename T>
+struct NA3dDimT {
+  T x;
+  T y;
+  T z;
 
   // Default ctor
-  CUTLASS_HOST_DEVICE constexpr NA3dDim(int32_t x_, int32_t y_, int32_t z_)
+  CUTLASS_HOST_DEVICE constexpr NA3dDimT(T x_, T y_, T z_)
       : x(x_), y(y_), z(z_) {}
 
-  CUTLASS_HOST_DEVICE NA3dDim() : x(0), y(0), z(0) {}
+  CUTLASS_HOST_DEVICE NA3dDimT() : x(0), y(0), z(0) {}
 
-  CUTLASS_HOST_DEVICE void operator=(const NA3dDim& other) {
+  CUTLASS_HOST_DEVICE void operator=(const NA3dDimT& other) {
     x = other.x;
     y = other.y;
     z = other.z;
   }
 
-  // CUTLASS_HOST_DEVICE NA3dDim(int32_t n): x(n), y(n), z(n) {}
+  // CUTLASS_HOST_DEVICE NA3dDimT(T n): x(n), y(n), z(n) {}
 
   // Operators
-  CUTLASS_HOST_DEVICE NA3dDim operator+(NA3dDim other) const {
-    return NA3dDim(x + other.x, y + other.y, z + other.z);
+  CUTLASS_HOST_DEVICE NA3dDimT operator+(NA3dDimT other) const {
+    return NA3dDimT(x + other.x, y + other.y, z + other.z);
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator*(NA3dDim other) const {
-    return NA3dDim(x * other.x, y * other.y, z * other.z);
+  CUTLASS_HOST_DEVICE NA3dDimT operator*(NA3dDimT other) const {
+    return NA3dDimT(x * other.x, y * other.y, z * other.z);
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator-(NA3dDim other) const {
-    return NA3dDim(x - other.x, y - other.y, z - other.z);
+  CUTLASS_HOST_DEVICE NA3dDimT operator-(NA3dDimT other) const {
+    return NA3dDimT(x - other.x, y - other.y, z - other.z);
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator/(NA3dDim other) const {
-    return NA3dDim(x / other.x, y / other.y, z / other.z);
+  CUTLASS_HOST_DEVICE NA3dDimT operator/(NA3dDimT other) const {
+    return NA3dDimT(x / other.x, y / other.y, z / other.z);
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator+(int32_t other) const {
-    return NA3dDim(x + other, y + other, z + other);
+  // Cross-T binary ops; promote to common_type<T, U>.
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA3dDimT<typename std::common_type<T, U>::type> operator+(
+      NA3dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA3dDimT<R>(
+        static_cast<R>(x) + static_cast<R>(other.x),
+        static_cast<R>(y) + static_cast<R>(other.y),
+        static_cast<R>(z) + static_cast<R>(other.z));
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator*(int32_t other) const {
-    return NA3dDim(x * other, y * other, z * other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA3dDimT<typename std::common_type<T, U>::type> operator*(
+      NA3dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA3dDimT<R>(
+        static_cast<R>(x) * static_cast<R>(other.x),
+        static_cast<R>(y) * static_cast<R>(other.y),
+        static_cast<R>(z) * static_cast<R>(other.z));
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator-(int32_t other) const {
-    return NA3dDim(x - other, y - other, z - other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA3dDimT<typename std::common_type<T, U>::type> operator-(
+      NA3dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA3dDimT<R>(
+        static_cast<R>(x) - static_cast<R>(other.x),
+        static_cast<R>(y) - static_cast<R>(other.y),
+        static_cast<R>(z) - static_cast<R>(other.z));
   }
 
-  CUTLASS_HOST_DEVICE NA3dDim operator/(int32_t other) const {
-    return NA3dDim(x / other, y / other, z / other);
+  template <
+      typename U,
+      typename = typename std::enable_if<!std::is_same<T, U>::value>::type>
+  CUTLASS_HOST_DEVICE NA3dDimT<typename std::common_type<T, U>::type> operator/(
+      NA3dDimT<U> other) const {
+    using R = typename std::common_type<T, U>::type;
+    return NA3dDimT<R>(
+        static_cast<R>(x) / static_cast<R>(other.x),
+        static_cast<R>(y) / static_cast<R>(other.y),
+        static_cast<R>(z) / static_cast<R>(other.z));
+  }
+
+  CUTLASS_HOST_DEVICE NA3dDimT operator+(int32_t other) const {
+    return NA3dDimT(x + other, y + other, z + other);
+  }
+
+  CUTLASS_HOST_DEVICE NA3dDimT operator*(int32_t other) const {
+    return NA3dDimT(x * other, y * other, z * other);
+  }
+
+  CUTLASS_HOST_DEVICE NA3dDimT operator-(int32_t other) const {
+    return NA3dDimT(x - other, y - other, z - other);
+  }
+
+  CUTLASS_HOST_DEVICE NA3dDimT operator/(int32_t other) const {
+    return NA3dDimT(x / other, y / other, z / other);
   }
 
   // Cmp
@@ -327,7 +471,7 @@ struct NA3dDim {
   //  return x >= other.x && y >= other.y && z >= other.z;
   //}
 
-  CUTLASS_HOST_DEVICE bool operator==(NA3dDim other) const {
+  CUTLASS_HOST_DEVICE bool operator==(NA3dDimT other) const {
     return x == other.x && y == other.y && z == other.z;
   }
 
@@ -335,8 +479,8 @@ struct NA3dDim {
   // coordinate exceeds the spatial extent. This is used in
   // the NA mask (`get_window_start`).
   // It should NOT overload the >= operator.
-  CUTLASS_HOST_DEVICE NA3dDim is_overflowing(NA3dDim extent) const {
-    return NA3dDim(x >= extent.x, y >= extent.y, z >= extent.z);
+  CUTLASS_HOST_DEVICE NA3dDimT is_overflowing(NA3dDimT extent) const {
+    return NA3dDimT(x >= extent.x, y >= extent.y, z >= extent.z);
   }
 
   // CUTLASS_HOST_DEVICE bool operator<=(int32_t other) const {
@@ -361,17 +505,29 @@ struct NA3dDim {
 
   // Reduce
   CUTLASS_HOST_DEVICE int64_t sum() const {
-    return (int64_t)(x + y + z);
+    return (int64_t)x + (int64_t)y + (int64_t)z;
   }
 
   CUTLASS_HOST_DEVICE int64_t prod() const {
-    return (int64_t)(x * y * z);
+    return (int64_t)x * (int64_t)y * (int64_t)z;
   }
 
   CUTLASS_HOST_DEVICE int32_t prod32() const {
-    return x * y * z;
+    return (int32_t)x * (int32_t)y * (int32_t)z;
   }
 };
+
+// Public aliases. NA{1,2,3}dDim is the int32 coord/extent variant; the
+// existing per-rank free function specializations (fast_min, ceil_div_dim,
+// etc.) below resolve to these. NA{1,2,3}dStride is the int64 byte-stride
+// variant returned by compute_stride.
+using NA1dDim = NA1dDimT<int32_t>;
+using NA2dDim = NA2dDimT<int32_t>;
+using NA3dDim = NA3dDimT<int32_t>;
+
+using NA1dStride = NA1dDimT<int64_t>;
+using NA2dStride = NA2dDimT<int64_t>;
+using NA3dStride = NA3dDimT<int64_t>;
 
 template <int NADim>
 struct GetDim;
@@ -389,6 +545,24 @@ struct GetDim<2> {
 template <>
 struct GetDim<3> {
   using type = NA3dDim;
+};
+
+template <int NADim>
+struct GetStride;
+
+template <>
+struct GetStride<1> {
+  using type = NA1dStride;
+};
+
+template <>
+struct GetStride<2> {
+  using type = NA2dStride;
+};
+
+template <>
+struct GetStride<3> {
+  using type = NA3dStride;
 };
 
 // data structure conversions
@@ -707,27 +881,27 @@ CUTLASS_HOST_DEVICE NA3dDim div_dim(NA3dDim lhs, NA3dDim rhs) {
   return NA3dDim(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z);
 }
 
-template <typename Dim>
-CUTLASS_HOST_DEVICE Dim compute_stride(Dim input_shape, int64_t last_stride);
-
-template <>
-CUTLASS_HOST_DEVICE NA1dDim
+// compute_stride returns the int64 NAxdStride variant so subsequent
+// stride * coord products are evaluated in int64 and don't overflow int32
+// even when individual stride values themselves still fit in int32. The 3D
+// case also casts the leading shape product to int64 explicitly to guard
+// against int32 overflow within the stride computation itself for very large
+// shapes.
+CUTLASS_HOST_DEVICE NA1dStride
 compute_stride(NA1dDim input_shape, int64_t last_stride) {
-  return NA1dDim(last_stride);
+  return NA1dStride(last_stride);
 }
 
-template <>
-CUTLASS_HOST_DEVICE NA2dDim
+CUTLASS_HOST_DEVICE NA2dStride
 compute_stride(NA2dDim input_shape, int64_t last_stride) {
-  return NA2dDim(input_shape.y * last_stride, last_stride);
+  return NA2dStride((int64_t)input_shape.y * last_stride, last_stride);
 }
 
-template <>
-CUTLASS_HOST_DEVICE NA3dDim
+CUTLASS_HOST_DEVICE NA3dStride
 compute_stride(NA3dDim input_shape, int64_t last_stride) {
-  return NA3dDim(
-      input_shape.y * input_shape.z * last_stride,
-      input_shape.z * last_stride,
+  return NA3dStride(
+      (int64_t)input_shape.y * input_shape.z * last_stride,
+      (int64_t)input_shape.z * last_stride,
       last_stride);
 }
 

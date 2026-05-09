@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Main branch]
+* Switched to int64 strides in cutlass-fna to avoid overflows in larger use cases.
 
 ## [0.21.6] - 2026-04-14
 * Fixed syntax error in natten.profiler (only affects `python < 3.12`)

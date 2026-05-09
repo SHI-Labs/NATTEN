@@ -58,6 +58,7 @@ namespace threadblock {
 template <int NADim>
 struct CustomPredicatedTileIteratorParams {
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Index = int32_t;
   using LongIndex = int64_t;
@@ -66,7 +67,8 @@ struct CustomPredicatedTileIteratorParams {
   // Data members
   //
 
-  Dim stride; ///< stride in bytes between rows
+  Stride stride; ///< stride in bytes between rows (int64-typed so stride*coord
+                 ///< doesn't overflow int32)
 
   // LongIndex increment_row;        ///< increment quantity (in bytes) to
   // advance when moving between rows LongIndex increment_group;      ///<
@@ -86,7 +88,7 @@ struct CustomPredicatedTileIteratorParams {
 
   CUTLASS_HOST_DEVICE
   Status initialize(
-      Dim stride_,
+      Stride stride_,
       Index elem,
       Dim extent_row,
       OutputTileThreadMapDesc thread_map) {
@@ -137,7 +139,7 @@ struct CustomPredicatedTileIteratorParams {
 
   CUTLASS_HOST_DEVICE
   CustomPredicatedTileIteratorParams(
-      Dim stride,
+      Stride stride,
       Index elem,
       Dim extent_row,
       OutputTileThreadMapDesc thread_map) {
