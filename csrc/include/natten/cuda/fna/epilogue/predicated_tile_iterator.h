@@ -84,6 +84,7 @@ class CustomPredicatedTileIterator {
  public:
   static_assert(NADim >= 1 && NADim < 4);
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using ThreadMap = ThreadMap_;
   using Shape = typename ThreadMap::Shape;
@@ -138,7 +139,7 @@ class CustomPredicatedTileIterator {
     Params() {}
 
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row)
+    Params(Stride stride, Dim extent_row)
         : ParamsBase(
               stride,
               int32_t(sizeof(AccessType)) / kElementsPerAccess,

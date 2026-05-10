@@ -107,6 +107,7 @@ class PredicatedTileIteratorResidualLast<
       "contiguous(rank=0) or strided(rank=1) dimension.");
 
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -164,7 +165,7 @@ class PredicatedTileIteratorResidualLast<
    public:
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row) : params_(stride, extent_row) {}
+    Params(Stride stride, Dim extent_row) : params_(stride, extent_row) {}
 
     CUTLASS_HOST_DEVICE
     Params() {}
@@ -408,6 +409,7 @@ class PredicatedTileIteratorResidualLast<
       "contiguous(rank=0) or strided(rank=1) dimension.");
 
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -458,7 +460,7 @@ class PredicatedTileIteratorResidualLast<
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row) : params_(stride, extent_row) {}
+    Params(Stride stride, Dim extent_row) : params_(stride, extent_row) {}
 
     CUTLASS_HOST_DEVICE
     Params(typename UnderlyingIterator::Params::Base const& base)

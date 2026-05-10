@@ -116,6 +116,7 @@ struct FusedNeighborhoodAttentionKernel {
   static constexpr int NADim = NADim_;
   static_assert(NADim >= 1 && NADim < 4, "Only 1D-3D NA are implemented.");
   using Dim = typename GetDim<NADim>::type;
+  using Stride = typename GetStride<NADim>::type;
   using NAMask = NeighborhoodAttentionMask<NADim, CausalMask>;
 
   static constexpr int kKeysPerBlock = kKeysPerBlock_;
@@ -188,11 +189,11 @@ struct FusedNeighborhoodAttentionKernel {
     Dim query_tile_shape;
     Dim key_tile_shape;
 
-    Dim lse_strideM;
-    Dim q_strideM;
-    Dim k_strideM;
-    Dim v_strideM;
-    Dim o_strideM;
+    Stride lse_strideM;
+    Stride q_strideM;
+    Stride k_strideM;
+    Stride v_strideM;
+    Stride o_strideM;
 
     int32_t num_heads = 0;
     int32_t num_batches = 0;

@@ -72,6 +72,7 @@ namespace threadblock {
 template <int NADim, typename Shape>
 struct CustomPredicatedTileAccessIteratorParams {
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Index = int32_t;
   using LongIndex =
@@ -81,7 +82,7 @@ struct CustomPredicatedTileAccessIteratorParams {
   // Data members
   //
   /// stride of pitch-linear layout (units of Element)
-  Dim stride_;
+  Stride stride_;
   /// amount (in byte) to increment pointer to move to next access along
   /// strided dimension
   LongIndex inc_strided_;
@@ -98,7 +99,7 @@ struct CustomPredicatedTileAccessIteratorParams {
 
   CUTLASS_HOST_DEVICE
   Status initialize(
-      Dim stride,
+      Stride stride,
       Dim extent_row,
       PredicatedTileAccessIteratorDesc desc) {
     stride_ = stride;
@@ -173,7 +174,7 @@ struct CustomPredicatedTileAccessIteratorParams {
 
   CUTLASS_HOST_DEVICE
   CustomPredicatedTileAccessIteratorParams(
-      Dim stride,
+      Stride stride,
       Dim extent_row,
       PredicatedTileAccessIteratorDesc desc) {
     initialize(stride, extent_row, desc);
@@ -196,6 +197,7 @@ class CustomPredicatedTileAccessIteratorPredicates {
  public:
   static_assert(NADim >= 1 && NADim < 4);
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -534,6 +536,7 @@ class CustomPredicatedTileAccessIterator<
       "contiguous(rank=0) or strided(rank=1) dimension.");
 
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -579,7 +582,7 @@ class CustomPredicatedTileAccessIterator<
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row)
+    Params(Stride stride, Dim extent_row)
         : Base(
               stride,
               extent_row,
@@ -909,6 +912,7 @@ class CustomPredicatedTileAccessIterator<
       "contiguous(rank=0) or strided(rank=1) dimension.");
 
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -954,7 +958,7 @@ class CustomPredicatedTileAccessIterator<
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row)
+    Params(Stride stride, Dim extent_row)
         : Base(
               stride,
               extent_row,
@@ -1241,6 +1245,7 @@ class CustomPredicatedTileAccessIterator<
       "contiguous(rank=0) or strided(rank=1) dimension.");
 
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -1287,7 +1292,7 @@ class CustomPredicatedTileAccessIterator<
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row) : params_(stride, extent_row){};
+    Params(Stride stride, Dim extent_row) : params_(stride, extent_row){};
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
@@ -1464,6 +1469,7 @@ class CustomPredicatedTileAccessIterator<
       "contiguous(rank=0) or strided(rank=1) dimension.");
 
   using Dim = typename natten::cuda::fna::GetDim<NADim>::type;
+  using Stride = typename natten::cuda::fna::GetStride<NADim>::type;
 
   using Shape = Shape_;
   using Element = Element_;
@@ -1510,7 +1516,7 @@ class CustomPredicatedTileAccessIterator<
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE
-    Params(Dim stride, Dim extent_row) : params_(stride, extent_row){};
+    Params(Stride stride, Dim extent_row) : params_(stride, extent_row){};
 
     /// Construct the Params object given a pitch-linear tensor's layout
     CUTLASS_HOST_DEVICE

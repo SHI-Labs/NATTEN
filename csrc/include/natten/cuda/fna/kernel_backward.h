@@ -239,6 +239,7 @@ struct FusedNeighborhoodAttentionBackwardKernel {
   static constexpr int NADim = NADim_;
   static_assert(NADim >= 1 && NADim < 4, "Only 1D-3D NA are implemented.");
   using Dim = typename GetDim<NADim>::type;
+  using Stride = typename GetStride<NADim>::type;
   using NAMask = NeighborhoodAttentionMask<NADim, CausalMask>;
   static constexpr bool kHasCausalDims = CausalMask::AnyCausalDims;
 
@@ -702,11 +703,11 @@ struct FusedNeighborhoodAttentionBackwardKernel {
     int32_t num_heads = -1;
     int32_t num_batches = -1;
 
-    Dim lse_strideM;
-    Dim q_strideM;
-    Dim k_strideM;
-    Dim v_strideM;
-    Dim o_strideM;
+    Stride lse_strideM;
+    Stride q_strideM;
+    Stride k_strideM;
+    Stride v_strideM;
+    Stride o_strideM;
 
     // int16_t num_splits_key = 1; // We use `gridDim.x` inside kernel
     Dim num_splits_key; // We use `gridDim.x` inside kernel
