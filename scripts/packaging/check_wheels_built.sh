@@ -4,11 +4,18 @@
 NATTEN_VERSION="0.21.6"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
+WHEELS_SKIPPED=0
 
 [[ -d "scripts/packaging" ]] || {
   echo "Please run this script from natten root!"
   exit 1
 }
+
+# Wheels that are expected to be missing. A wheel listed here is reported as
+# skipped instead of missing. Anything else missing is a real miss.
+declare -A ALLOWED_MISSING_WHEELS
+ALLOWED_MISSING_WHEELS["natten-0.21.6+torch2120cu132-cp313-cp313t-linux_x86_64.whl"]=1
+ALLOWED_MISSING_WHEELS["natten-0.21.6+torch2120cu132-cp313-cp313t-linux_aarch64.whl"]=1
 
 check_one() {
   cu=$1
@@ -46,10 +53,14 @@ check_one() {
     pytag_a=${py//./}
     python_tag="cp${pytag_a/t/}-cp${py//./}"
     for arch_tag in "${SUPPORTED_ARCHES[@]}";do
-      WHEEL_FILE="wheels/${cu}/torch${pytorch_ver}/natten-${NATTEN_VERSION}+${torch_build}-${python_tag}-linux_${arch_tag}.whl"
+      WHEEL_NAME="natten-${NATTEN_VERSION}+${torch_build}-${python_tag}-linux_${arch_tag}.whl"
+      WHEEL_FILE="wheels/${cu}/torch${pytorch_ver}/${WHEEL_NAME}"
       if [ -f $WHEEL_FILE ]; then
         echo "[x] Wheel found for v${NATTEN_VERSION} with ${torch_build} for Python $py, arch $arch_tag."
         WHEELS_FOUND=$((WHEELS_FOUND+1))
+      elif [[ -v ALLOWED_MISSING_WHEELS["$WHEEL_NAME"] ]]; then
+        echo "[-] Wheel SKIPPED (known missing) for v${NATTEN_VERSION} with ${torch_build} for Python $py, arch $arch_tag."
+        WHEELS_SKIPPED=$((WHEELS_SKIPPED+1))
       else
         echo "[ ] Wheel MISSING for v${NATTEN_VERSION} with ${torch_build} for Python $py, arch $arch_tag."
         WHEELS_MISSING=$((WHEELS_MISSING+1))
@@ -57,6 +68,11 @@ check_one() {
     done
   done
 }
+
+# Torch 2.12.X
+check_one cu132 2.12.0
+check_one cu130 2.12.0
+check_one cu126 2.12.0
 
 # Torch 2.11.X
 check_one cu130 2.11.0
@@ -68,10 +84,11 @@ check_one cu130 2.10.0
 check_one cu128 2.10.0
 check_one cu126 2.10.0
 
-WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING))
+WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING+WHEELS_SKIPPED))
 
 echo ""
 echo ""
 echo "Wheels found: $WHEELS_FOUND"
 echo "Wheels missing: $WHEELS_MISSING"
+echo "Wheels skipped (known missing): $WHEELS_SKIPPED"
 echo "Wheels total: $WHEELS_TOTAL"

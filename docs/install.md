@@ -32,7 +32,33 @@ Refer to [NATTEN via PyPI](#natten-via-pypi) for more information.
 We offer pre-built wheels (binaries) for the **two most recent** official PyTorch builds.
 To install NATTEN using wheels, please first check your PyTorch version, and select it below.
 
-???+ pip-install "`torch==2.11.0+cu130` | x86-64 and aarch64"
+???+ pip-install "`torch==2.12.0+cu132` | x86-64 and aarch64"
+
+    ```python
+    pip install natten==0.21.6+torch2120cu132 -f https://whl.natten.org
+    ```
+
+    !!! warning
+        This build does not support `cp313-313t`. PyTorch's build container drops that version
+        entirely in the `cuda13.2` tag.
+
+??? pip-install "`torch==2.12.0+cu130` | x86-64 and aarch64"
+
+    ```python
+    pip install natten==0.21.6+torch2120cu130 -f https://whl.natten.org
+    ```
+
+??? pip-install "`torch==2.12.0+cu126` | x86-64 and aarch64"
+
+    ```python
+    pip install natten==0.21.6+torch2120cu126 -f https://whl.natten.org
+    ```
+
+    !!! warning
+        Blackwell FNA/FMHA kernels are not available in this build. Blackwell support was
+        introduced in CUDA Toolkit 12.8.
+
+??? pip-install "`torch==2.11.0+cu130` | x86-64 and aarch64"
 
     ```python
     pip install natten==0.21.6+torch2110cu130 -f https://whl.natten.org
