@@ -16,6 +16,10 @@ ROOT_WHEEL_LIST=""
 declare -A CTK_VER_WHEEL_DICT
 declare -A TORCH_VER_WHEEL_DICT
 
+declare -A ALLOWED_MISSING_WHEELS
+ALLOWED_MISSING_WHEELS["natten-0.21.6+torch2120cu132-cp313-cp313t-linux_x86_64.whl"]=1
+ALLOWED_MISSING_WHEELS["natten-0.21.6+torch2120cu132-cp313-cp313t-linux_aarch64.whl"]=1
+
 check_one() {
   NATTEN_VERSION=$1
   cu=$2
@@ -82,6 +86,9 @@ check_one() {
 
       if curl --head --silent --fail $EXPECTED_WHL_LINK 2> /dev/null 1> /dev/null; then
         echo "[CHECK] $EXPECTED_WHL_LINK"
+      elif [[ -v ALLOWED_MISSING_WHEELS["$WHL_FILENAME"] ]]; then
+        echo "[SKIP] $EXPECTED_WHL_LINK (known missing, ignoring)"
+        continue
       else
         echo "[NOT FOUND] $EXPECTED_WHL_LINK"
         exit 1
@@ -114,6 +121,10 @@ check_one 0.21.6 cu126 2.10.0 $URL_PREFIX
 check_one 0.21.6 cu130 2.11.0 $URL_PREFIX
 check_one 0.21.6 cu128 2.11.0 $URL_PREFIX
 check_one 0.21.6 cu126 2.11.0 $URL_PREFIX
+
+check_one 0.21.6 cu132 2.12.0 $URL_PREFIX
+check_one 0.21.6 cu130 2.12.0 $URL_PREFIX
+check_one 0.21.6 cu126 2.12.0 $URL_PREFIX
 
 # v0.21.5
 check_one 0.21.5 cu130 2.9.0 $URL_PREFIX
