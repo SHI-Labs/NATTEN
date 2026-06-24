@@ -1659,9 +1659,7 @@ struct FusedNeighborhoodAttentionBackwardKernel {
               // kernels, I don't know how safe that is, so I'll just keep it
               // for all of them.
               if (accum_m >= num_keys_in_block_int ||
-#if __CUDA_ARCH__ < 800
                   accum_n >= num_queries_in_block_int ||
-#endif
                   !is_coord_within_bounds_nn(col - first_col, query_bound)) {
                 accum[idx] =
                     -cutlass::platform::numeric_limits<accum_t>::infinity();
@@ -1682,15 +1680,10 @@ struct FusedNeighborhoodAttentionBackwardKernel {
                   map_index_to_coord((int32_t)accum_n, num_queries_in_block) +
                   query_start;
 
-#if __CUDA_ARCH__ < 800
               if (accum_m >= num_keys_in_block_int ||
                   accum_n >= num_queries_in_block_int ||
                   !is_coord_less_than_or_equal_to(
                       query_coord, p.num_queries_post_partitioning)) {
-#else
-              if (!is_coord_less_than_or_equal_to(
-                      query_coord, p.num_queries_post_partitioning)) {
-#endif
                 accum[idx] =
                     -cutlass::platform::numeric_limits<accum_t>::infinity();
               } else {
@@ -1705,17 +1698,13 @@ struct FusedNeighborhoodAttentionBackwardKernel {
             lane_offset,
             [&](int accum_m) {},
             [&](int accum_m, int accum_n, int idx) {
-#if __CUDA_ARCH__ < 800
               if (accum_m >= num_keys_in_block_int ||
                   accum_n >= num_queries_in_block_int) {
                 accum[idx] =
                     -cutlass::platform::numeric_limits<accum_t>::infinity();
               } else {
-#endif
                 accum[idx] -= shared_storage.lse_i()[accum_n];
-#if __CUDA_ARCH__ < 800
               }
-#endif
             },
             [&](int accum_m) {});
       }
