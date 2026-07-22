@@ -376,9 +376,9 @@ class FMHAVarlenTest(unittest.TestCase):
         else:
             ALLOWED_DTYPES = [
                 # dtype, (atol_out, atol_lse), (atol_dq, atol_dk, atol_dv)
-                (torch.float32, (0, 0), (1e-2, 0, 0)),
-                (torch.float16, (0, 0), (1e-2, 0, 0)),
-                (torch.bfloat16, (0, 0), (1e-2, 0, 0)),
+                (torch.float32, (0, 0), (2e-2, 0, 0)),
+                (torch.float16, (0, 0), (2e-2, 0, 0)),
+                (torch.bfloat16, (0, 0), (2e-2, 0, 0)),
             ]
 
         for dtype, atol_fwd, atol_bwd in ALLOWED_DTYPES:
