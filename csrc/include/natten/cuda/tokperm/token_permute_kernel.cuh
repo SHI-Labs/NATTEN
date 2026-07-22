@@ -193,6 +193,10 @@ struct TokenPermuteKernel {
     TokenShape rest;
     TokenShape tile;
     TokenShape dilation;
+
+    // Whether any token dim requires padding (rest * tile * dilation !=
+    // extent). When false, the bounds predicate is skipped entirely.
+    bool has_padding;
   };
 
   using Params = Arguments;
@@ -206,6 +210,11 @@ struct TokenPermuteKernel {
   static const int kNumThreadsSeq = MaxThreadsPerBlock / kNumThreadsD;
 
   static const int kIterationsSeq = kBlockSeq / kNumThreadsSeq;
+
+  // Heads and head dim are merged into a single contiguous H * D mode; each
+  // thread copies kChunksPerThread vectors of it, amortizing the per-token
+  // coordinate math and decoupling grid.y from the number of heads.
+  static const int kChunksPerThread = 4;
 
   static bool can_implement(Arguments const& args) {
     if (cute::size<0>(args.problem_shape_src) !=
@@ -252,9 +261,12 @@ struct TokenPermuteKernel {
           << std::endl;
       return false;
     }
-    if (cute::size<3>(args.problem_shape_src) % kElementsPerLoad != 0) {
+    if ((cute::size<2>(args.problem_shape_src) *
+         cute::size<3>(args.problem_shape_src)) %
+            kElementsPerLoad !=
+        0) {
       std::cerr
-          << "Token Permute/UnPermute requires head dim to be evenly divisible by load size ("
+          << "Token Permute/UnPermute requires heads * head dim to be evenly divisible by load size ("
           << kElementsPerLoad << ")" << std::endl;
       return false;
     }
@@ -263,16 +275,20 @@ struct TokenPermuteKernel {
   }
 
   static dim3 get_grid_shape(Params const& params) {
+    int hd = cute::size<2>(params.problem_shape_dst) *
+        cute::size<3>(params.problem_shape_dst);
     dim3 grid(
         // never put seq in z, long seqs can easily exceed the 64K limit
         cute::ceil_div(size<1>(params.problem_shape_dst), kBlockSeq),
-        cute::size<2>(params.problem_shape_dst),
+        cute::ceil_div(hd, kNumThreadsD * kElementsPerLoad * kChunksPerThread),
         cute::size<0>(params.problem_shape_dst));
     return grid;
   }
 
   static dim3 get_block_shape() {
-    dim3 block(kNumThreadsSeq, kNumThreadsD, 1);
+    // H * D lanes are threadIdx.x so each warp covers long contiguous runs per
+    // token (better cache-line utilization than token-major lane order).
+    dim3 block(kNumThreadsD, kNumThreadsSeq, 1);
     return block;
   }
 
@@ -281,16 +297,14 @@ struct TokenPermuteKernel {
   }
 
   CUTLASS_DEVICE void operator()(const Params& params, char* smem) {
-    auto ptr_src_bh = params.ptr_src +
+    // Heads and head dim are one contiguous H * D mode on both sides (head
+    // stride is exactly head dim); blockIdx.y covers chunks of it, not heads.
+    auto ptr_src_b = params.ptr_src +
         (static_cast<OffsetTypeInternal>(get<0>(params.stride_src)) *
-             static_cast<OffsetTypeInternal>(blockIdx.z) +
-         static_cast<OffsetTypeInternal>(get<2>(params.stride_src)) *
-             static_cast<OffsetTypeInternal>(blockIdx.y));
-    auto ptr_dst_bh = params.ptr_dst +
+         static_cast<OffsetTypeInternal>(blockIdx.z));
+    auto ptr_dst_b = params.ptr_dst +
         (static_cast<OffsetTypeInternal>(get<0>(params.stride_dst)) *
-             static_cast<OffsetTypeInternal>(blockIdx.z) +
-         static_cast<OffsetTypeInternal>(get<2>(params.stride_dst)) *
-             static_cast<OffsetTypeInternal>(blockIdx.y));
+         static_cast<OffsetTypeInternal>(blockIdx.z));
 
     auto token_layout_src = make_layout(
         get<1>(params.problem_shape_src), get<1>(params.stride_src));
@@ -300,15 +314,17 @@ struct TokenPermuteKernel {
     auto src_shape = token_layout_src.shape();
 
     auto seqlen = size<1>(params.problem_shape_dst);
+    int hd =
+        size<2>(params.problem_shape_dst) * size<3>(params.problem_shape_dst);
 
-    for (int idx_s_t = threadIdx.x; idx_s_t < kBlockSeq;
+    for (int idx_s_t = threadIdx.y; idx_s_t < kBlockSeq;
          idx_s_t += kNumThreadsSeq) {
       int idx_s = idx_s_t + kBlockSeq * blockIdx.x;
       if (idx_s >= seqlen)
         continue;
 
       auto crd_dst = idx2crd(idx_s, token_layout_dst.shape());
-      bool pred = false;
+      bool pred = true;
 
       TokenShapeIn crd_src;
       if constexpr (IsUnpermute) {
@@ -319,14 +335,23 @@ struct TokenPermuteKernel {
             perm2unperm(crd_dst, params.rest, params.tile, params.dilation);
       }
 
-      pred = elem_less(crd_src, src_shape);
+      if (params.has_padding) {
+        pred = elem_less(crd_src, src_shape);
+      }
 
-      auto ptr_src_bhs = ptr_src_bh + token_layout_src(crd_src);
-      auto ptr_dst_bhs = ptr_dst_bh + token_layout_dst(crd_dst);
+      auto ptr_src_bs = ptr_src_b + token_layout_src(crd_src);
+      auto ptr_dst_bs = ptr_dst_b + token_layout_dst(crd_dst);
 
-      for (int idx_d = threadIdx.y * kElementsPerLoad;
-           idx_d < get<3>(params.problem_shape_dst);
-           idx_d += kElementsPerLoad * kNumThreadsD) {
+      int idx_d_base =
+          (blockIdx.y * kNumThreadsD * kChunksPerThread + threadIdx.x) *
+          kElementsPerLoad;
+
+      CUTLASS_PRAGMA_UNROLL
+      for (int chunk = 0; chunk < kChunksPerThread; chunk++) {
+        int idx_d = idx_d_base + chunk * kNumThreadsD * kElementsPerLoad;
+        if (idx_d >= hd)
+          break;
+
         ElementIn value_src[kElementsPerLoad];
         ElementOut value_dst[kElementsPerLoad];
 
@@ -334,7 +359,7 @@ struct TokenPermuteKernel {
         using VecDst = uint_bit_t<sizeof_bits_v<ElementOut> * kElementsPerLoad>;
         if (pred) {
           *reinterpret_cast<VecSrc*>(value_src) =
-              *reinterpret_cast<VecSrc*>(&ptr_src_bhs[idx_d]);
+              *reinterpret_cast<VecSrc*>(&ptr_src_bs[idx_d]);
 
           for (int v = 0; v < kElementsPerLoad; v++) {
             value_dst[v] = static_cast<ElementOut>(value_src[v]);
@@ -345,7 +370,7 @@ struct TokenPermuteKernel {
           }
         }
 
-        *reinterpret_cast<VecDst*>(&ptr_dst_bhs[idx_d]) =
+        *reinterpret_cast<VecDst*>(&ptr_dst_bs[idx_d]) =
             *reinterpret_cast<VecDst*>(value_dst);
       }
     }

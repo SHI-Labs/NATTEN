@@ -46,7 +46,7 @@ class TokenPermuteTest(unittest.TestCase):
         _reset_everything()
 
     def _test_permute_unpermute_torch(
-        self, B, H, S, D, tile_shape, dilation, flip_dims, eps, dtype, device="cuda"
+        self, B, H, S, D, tile_shape, dilation, flip_dims, dtype, device="cuda"
     ):
         with torch.no_grad():
             tensor = torch.randn((B, *S, H, D), device=device, dtype=dtype)
@@ -72,7 +72,7 @@ class TokenPermuteTest(unittest.TestCase):
                 use_torch=True,
             )
 
-            torch.testing.assert_close(tensor, tensor_out, atol=eps, rtol=0)
+            torch.testing.assert_close(tensor, tensor_out, atol=0, rtol=0)
 
     def test_permute_torch_cpu(self):
         problem_sizes = [
@@ -118,7 +118,6 @@ class TokenPermuteTest(unittest.TestCase):
                     tile_shape=tile_shape,
                     dilation=dilation,
                     flip_dims=flip_dims,
-                    eps=1e-3,
                     dtype=torch.float32,
                     device="cpu",
                 )
@@ -190,7 +189,6 @@ class TokenPermuteTest(unittest.TestCase):
                     tile_shape=tile_shape,
                     dilation=dilation,
                     flip_dims=flip_dims,
-                    eps=1e-3,
                     dtype=(
                         torch.float16
                         if supports_float16(torch.get_default_device())
@@ -272,13 +270,12 @@ class TokenPermuteTest(unittest.TestCase):
                         tile_shape=tile_shape,
                         dilation=dilation,
                         flip_dims=flip_dims,
-                        eps=1e-4,
                         dtype=dtype,
                         device="cuda",
                     )
 
     def _test_permute_cuda_kernel(
-        self, B, H, S, D, tile_shape, dilation, flip_dims, eps, dtype, device="cuda"
+        self, B, H, S, D, tile_shape, dilation, flip_dims, dtype, device="cuda"
     ):
         with torch.no_grad():
             tensor = torch.randn((B, *S, H, D), device=device, dtype=dtype)
@@ -322,10 +319,10 @@ class TokenPermuteTest(unittest.TestCase):
             )
 
             torch.testing.assert_close(
-                tensor_permuted, tensor_permuted_ref, atol=eps, rtol=0
+                tensor_permuted, tensor_permuted_ref, atol=0, rtol=0
             )
-            torch.testing.assert_close(tensor_out, tensor_out_ref, atol=eps, rtol=0)
-            torch.testing.assert_close(tensor_out, tensor, atol=eps, rtol=0)
+            torch.testing.assert_close(tensor_out, tensor_out_ref, atol=0, rtol=0)
+            torch.testing.assert_close(tensor_out, tensor, atol=0, rtol=0)
 
 
 if __name__ == "__main__":

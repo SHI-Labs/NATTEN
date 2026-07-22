@@ -65,6 +65,12 @@ bool token_permute_op(
 
   auto rest = ceil_div(ceil_div(token_layout, tile_shape), dilation);
 
+  bool has_padding = false;
+  cute::for_each(cute::make_seq<NumDims>{}, [&](auto k) {
+    has_padding |= get<k>(token_layout) !=
+        get<k>(rest) * get<k>(tile_shape) * get<k>(dilation);
+  });
+
   auto problem_shape_in = cute::make_tuple(batch, token_layout, heads, dim);
   auto stride_in = utils::make_torch_contiguous_stride(problem_shape_in);
 
@@ -118,6 +124,7 @@ bool token_permute_op(
         rest,
         tile_shape,
         dilation,
+        has_padding,
     };
 
     if (not op.can_implement(arguments)) {
@@ -142,10 +149,12 @@ bool token_permute_op(
     return true;
   };
 
-  if (dim % 8 == 0) {
+  // Heads and head dim form one contiguous H * D mode in the kernel; every
+  // non-HD stride is a multiple of it, so alignment only requires vec | H * D.
+  if ((heads * dim) % 8 == 0) {
     OperationAlign8 op;
     return launch_kernel(op);
-  } else if (dim % 4 == 0) {
+  } else if ((heads * dim) % 4 == 0) {
     OperationAlign4 op;
     return launch_kernel(op);
   } else {
@@ -176,6 +185,12 @@ bool token_unpermute_op(
   using DimIn = utils::make_tuple_type<NumDims * 3, int>;
 
   auto rest = ceil_div(ceil_div(token_layout, tile_shape), dilation);
+
+  bool has_padding = false;
+  cute::for_each(cute::make_seq<NumDims>{}, [&](auto k) {
+    has_padding |= get<k>(token_layout) !=
+        get<k>(rest) * get<k>(tile_shape) * get<k>(dilation);
+  });
 
   auto problem_shape_out = cute::make_tuple(batch, token_layout, heads, dim);
   auto stride_out = utils::make_torch_contiguous_stride(problem_shape_out);
@@ -222,6 +237,7 @@ bool token_unpermute_op(
         rest,
         tile_shape,
         dilation,
+        has_padding,
     };
 
     if (not op.can_implement(arguments)) {
@@ -247,10 +263,11 @@ bool token_unpermute_op(
     return true;
   };
 
-  if (dim % 8 == 0) {
+  // See token_permute_op: alignment only requires vec | H * D.
+  if ((heads * dim) % 8 == 0) {
     OperationAlign8 op;
     return launch_kernel(op);
-  } else if (dim % 4 == 0) {
+  } else if ((heads * dim) % 4 == 0) {
     OperationAlign4 op;
     return launch_kernel(op);
   } else {
