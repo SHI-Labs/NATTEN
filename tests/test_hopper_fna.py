@@ -100,10 +100,21 @@ class HopperFNABackendTest(unittest.TestCase):
             dtype=torch.float32,
         )
 
-        ALLOWED_DTYPES = [
-            (torch.float16, (1e-2, (3e-2, 3e-2, 3e-2))),
-            (torch.bfloat16, (5e-2, (3e-2, 3e-2, 3e-2))),
+        ALLOWED_DTYPES_DEFAULT = [
+            (torch.float16, (1e-2, (1e-2, 1e-2, 1e-2))),
+            (torch.bfloat16, (5e-2, (1e-2, 1e-2, 1e-2))),
         ]
+
+        ALLOWED_DTYPES_GQA = [
+            (torch.float16, (1e-2, (3e-2, 4e-2, 4e-2))),
+            (torch.bfloat16, (5e-2, (3e-2, 4e-2, 4e-2))),
+        ]
+
+        ALLOWED_DTYPES = (
+            ALLOWED_DTYPES_DEFAULT
+            if heads_kv is None or heads_kv == heads
+            else ALLOWED_DTYPES_GQA
+        )
 
         test_id = 0
         for dtype, atol in ALLOWED_DTYPES:
