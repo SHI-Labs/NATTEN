@@ -5,6 +5,7 @@
 * Fixed longstanding issue in CUTLASS FNA backward's mask that evaded nearly all unit tests, and
   only broke one application (that we know of), resulting in NaNs in dV. We were avoiding a boundary
   check that seems to be required when we have partial tiles, but only on SM80 and later.
+* Performance improvements for Token Permute kernels up to ~5X (just the memory op).
 
 ## [0.21.6] - 2026-04-14
 * Fixed syntax error in natten.profiler (only affects `python < 3.12`)
