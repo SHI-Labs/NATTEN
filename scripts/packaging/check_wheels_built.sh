@@ -1,7 +1,7 @@
 #!/bin/bash -e
 # Copyright (c) 2022 - 2026 Ali Hassani.
 
-NATTEN_VERSION="0.21.6"
+NATTEN_VERSION="0.21.7"
 WHEELS_FOUND=0
 WHEELS_MISSING=0
 WHEELS_SKIPPED=0
@@ -14,8 +14,6 @@ WHEELS_SKIPPED=0
 # Wheels that are expected to be missing. A wheel listed here is reported as
 # skipped instead of missing. Anything else missing is a real miss.
 declare -A ALLOWED_MISSING_WHEELS
-ALLOWED_MISSING_WHEELS["natten-0.21.6+torch2120cu132-cp313-cp313t-linux_x86_64.whl"]=1
-ALLOWED_MISSING_WHEELS["natten-0.21.6+torch2120cu132-cp313-cp313t-linux_aarch64.whl"]=1
 
 check_one() {
   cu=$1
@@ -25,7 +23,8 @@ check_one() {
 
   # Torch started supporting python 3.13 since ~2.5
   # We are building wheels for 3.13 starting 0.21.1
-  py_versions=(3.10 3.11 3.12 3.13 3.13t)
+  # Starting 0.21.7 we no longer ship the free-threaded ("t") python variants.
+  py_versions=(3.10 3.11 3.12 3.13)
 
   if [[ $torch_major -lt 27 ]]; then
     echo "Only torch 2.7 and later are supported from now on."
@@ -34,7 +33,12 @@ check_one() {
 
   # Torch 2.10 started supporting python 3.14
   if [[ $torch_major -ge 210 ]]; then
-    py_versions+=(3.14 3.14t)
+    py_versions+=(3.14)
+  fi
+
+  # Torch 2.13 started supporting python 3.15
+  if [[ $torch_major -ge 213 ]]; then
+    py_versions+=(3.15)
   fi
 
   # Torch 2.9 no longer ships for python 3.9.
@@ -69,20 +73,9 @@ check_one() {
   done
 }
 
-# Torch 2.12.X
-check_one cu132 2.12.0
-check_one cu130 2.12.0
-check_one cu126 2.12.0
-
-# Torch 2.11.X
-check_one cu130 2.11.0
-check_one cu128 2.11.0
-check_one cu126 2.11.0
-
-# Torch 2.10.X
-check_one cu130 2.10.0
-check_one cu128 2.10.0
-check_one cu126 2.10.0
+# Torch 2.13.X
+check_one cu132 2.13.0
+check_one cu130 2.13.0
 
 WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING+WHEELS_SKIPPED))
 

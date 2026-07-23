@@ -56,7 +56,13 @@ check_one() {
   if [[ $natten_minor -ge 211 ]]; then
     # Torch started supporting python 3.13 since ~2.5
     # We are building wheels for 3.13 starting 0.21.1
-    py_versions+=(3.13 3.13t)
+    py_versions+=(3.13)
+
+    # Free-threaded ("t") python variants shipped 0.21.1 through 0.21.6.
+    # Dropped starting 0.21.7.
+    if [[ $natten_minor -lt 217 ]]; then
+      py_versions+=(3.13t)
+    fi
 
     # Torch also started shipping arm CUDA builds since 2.9.
     # NATTEN started since 0.21.1
@@ -68,7 +74,17 @@ check_one() {
   # Torch 2.10 started supporting python 3.14
   # NATTEN started shipping for torch compile starting 0.21.5
   if [[ $natten_minor -ge 215 ]] && [[ $torch_major -ge 210 ]]; then
-    py_versions+=(3.14 3.14t)
+    py_versions+=(3.14)
+
+    if [[ $natten_minor -lt 217 ]]; then
+      py_versions+=(3.14t)
+    fi
+  fi
+
+  # Torch 2.13 started supporting python 3.15
+  # NATTEN started shipping for it starting 0.21.7
+  if [[ $natten_minor -ge 217 ]] && [[ $torch_major -ge 213 ]]; then
+    py_versions+=(3.15)
   fi
 
   for py in "${py_versions[@]}"; do
@@ -112,6 +128,10 @@ check_one() {
 ##################################
 
 URL_PREFIX="https://github.com/SHI-Labs/NATTEN/releases/download/"
+
+# v0.21.7
+check_one 0.21.7 cu132 2.13.0 $URL_PREFIX
+check_one 0.21.7 cu130 2.13.0 $URL_PREFIX
 
 # v0.21.6
 check_one 0.21.6 cu130 2.10.0 $URL_PREFIX
