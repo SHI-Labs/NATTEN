@@ -36,11 +36,17 @@ build_target () {
 
   # Torch started supporting python 3.13 since ~2.5
   # We are building wheels for 3.13 starting 0.21.1
-  py_versions=(3.10 3.11 3.12 3.13 3.13t)
+  # Starting 0.21.7 we no longer ship the free-threaded ("t") python variants.
+  py_versions=(3.10 3.11 3.12 3.13)
 
   # Torch 2.10 started supporting python 3.14
   if [[ $torch_major -ge 210 ]]; then
-    py_versions+=(3.14 3.14t)
+    py_versions+=(3.14)
+  fi
+
+  # Torch 2.13 started supporting python 3.15
+  if [[ $torch_major -ge 213 ]]; then
+    py_versions+=(3.15)
   fi
 
   # Torch 2.9 no longer ships python 3.9 wheels.
@@ -101,17 +107,13 @@ build_target () {
 ##################################################
 ##################################################
 
+build_target cuda13.2 2.13.0 & \
+  build_target cuda13.0 2.13.0 & \
+  build_target cuda12.6 2.13.0
+
 build_target cuda13.2 2.12.0 & \
   build_target cuda13.0 2.12.0 & \
   build_target cuda12.6 2.12.0
-
-build_target cuda13.0 2.11.0 & \
-  build_target cuda12.8 2.11.0 & \
-  build_target cuda12.6 2.11.0
-
-build_target cuda13.0 2.10.0 & \
-  build_target cuda12.8 2.10.0 & \
-  build_target cuda12.6 2.10.0
 
 wait
 

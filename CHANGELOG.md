@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+
+## [0.21.7] - 2026-07-23
 * Switched to int64 strides in cutlass-fna to avoid overflows in larger use cases.
 * Fixed longstanding issue in CUTLASS FNA backward's mask that evaded nearly all unit tests, and
   only broke one application (that we know of), resulting in NaNs in dV. We were avoiding a boundary

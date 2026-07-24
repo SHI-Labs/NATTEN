@@ -49,20 +49,6 @@ attention span in any dimension/axis of your input can be controlled with its re
 NATTEN supports PyTorch >= 2.7, and Python >= 3.9 (everything PyTorch supports).
 Please refer to [install instructions](https://natten.org/install/) for details on how to install NATTEN.
 
-### Release `0.21.6`
-
-NATTEN has undergone major changes since the last release (`0.17.5`), so we strongly recommend
-reading our new updated documentation in this webpage before upgrading.
-
-Our latest release ships our [Hopper FNA](https://natten.org/backends/#hopper-fna-fmha) and
-[Blackwell FNA](https://natten.org/backends/#blackwell-fna-fmha) kernels, bringing you
-[massive speedups](https://natten.org/profiler/#hopper-and-blackwell-examples) on
-modern data center class NVIDIA GPUs such as the H100 and B200.
-It also speeds up inference in our existing
-[Ampere FNA](https://natten.org/backends/#cutlass-fna-fmha) kernels up to 1.47X in fully
-block-sparse cases, provides much cleaner error reporting, ships with our
-[profiling toolkit](https://natten.org/profiler/), and so much more!
-
 ## License
 NATTEN is released under the [MIT License](https://github.com/SHI-Labs/NATTEN/tree/main/LICENSE).
 

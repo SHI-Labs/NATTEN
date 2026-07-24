@@ -77,10 +77,19 @@ setup_wheel_python() {
     3.13t) python_abi=cp313-cp313t ;;
     3.14) python_abi=cp314-cp314 ;;
     3.14t) python_abi=cp314-cp314t ;;
+    3.15) python_abi=cp315-cp315 ;;
     *)
       echo "Unrecognized PYTHON_VERSION=$PYTHON_VERSION"
       exit 1
       ;;
   esac
-  export PATH="/opt/python/$python_abi/bin:$PATH"
+
+  python_bin="/opt/python/$python_abi/bin"
+  if [[ ! -d "$python_bin" ]]; then
+    echo "Python not found for PYTHON_VERSION=$PYTHON_VERSION (abi $python_abi):" \
+         "$python_bin does not exist in this build container."
+    exit 1
+  fi
+
+  export PATH="$python_bin:$PATH"
 }
