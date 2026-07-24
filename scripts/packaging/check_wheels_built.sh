@@ -76,6 +76,12 @@ check_one() {
 # Torch 2.13.X
 check_one cu132 2.13.0
 check_one cu130 2.13.0
+check_one cu126 2.13.0
+
+# Torch 2.12.X
+check_one cu132 2.12.0
+check_one cu130 2.12.0
+check_one cu126 2.12.0
 
 WHEELS_TOTAL=$((WHEELS_FOUND+WHEELS_MISSING+WHEELS_SKIPPED))
 

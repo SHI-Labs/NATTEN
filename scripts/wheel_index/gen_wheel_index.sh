@@ -132,6 +132,11 @@ URL_PREFIX="https://github.com/SHI-Labs/NATTEN/releases/download/"
 # v0.21.7
 check_one 0.21.7 cu132 2.13.0 $URL_PREFIX
 check_one 0.21.7 cu130 2.13.0 $URL_PREFIX
+check_one 0.21.7 cu126 2.13.0 $URL_PREFIX
+
+check_one 0.21.7 cu132 2.12.0 $URL_PREFIX
+check_one 0.21.7 cu130 2.12.0 $URL_PREFIX
+check_one 0.21.7 cu126 2.12.0 $URL_PREFIX
 
 # v0.21.6
 check_one 0.21.6 cu130 2.10.0 $URL_PREFIX
