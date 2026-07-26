@@ -90,24 +90,16 @@ def get_all_tile_shapes_forward(
     if not is_cuda(device):
         return []
 
-    # SM80 and SM90 have more shared memory than SM86 and SM89
-    # and their tensor core GEMMs can therefore target larger
-    # tile shapes.
-    # SM80 and 86 have been tested, but I don't have an SM89.
-    # However, I suspect SM89 is to SM90 what SM86 was to SM80
-    # in terms of shared memory (and only that).
-    # Better to disable the larger tile configs for SM89 as well
-    # as 86 until we can test it.
-    if get_device_cc(device) in [86, 89]:
+    # DC-class GPUs have more shared memory
+    if get_device_cc(device) in [80, 90, 100, 103]:
         return (
             _FNA_FORWARD_32x128_TILE_SIZES[na_dim]
             + _FNA_FORWARD_64x64_TILE_SIZES[na_dim]
+            + _FNA_FORWARD_64x128_TILE_SIZES[na_dim]
         )
 
     return (
-        _FNA_FORWARD_32x128_TILE_SIZES[na_dim]
-        + _FNA_FORWARD_64x64_TILE_SIZES[na_dim]
-        + _FNA_FORWARD_64x128_TILE_SIZES[na_dim]
+        _FNA_FORWARD_32x128_TILE_SIZES[na_dim] + _FNA_FORWARD_64x64_TILE_SIZES[na_dim]
     )
 
 
