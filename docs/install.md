@@ -1,7 +1,7 @@
 # Install NATTEN
 
 **Newest release: `0.21.7`** |
-**[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0217---2026-07-25).**
+**[Changelog](https://github.com/SHI-Labs/NATTEN/blob/main/CHANGELOG.md#0217---2026-07-26).**
 
 Starting version `0.21.5`, NATTEN only supports PyTorch 2.8 and newer.
 However, you can still attempt to install NATTEN with PyTorch >= 2.5 at your own risk.
