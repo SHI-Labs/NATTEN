@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright (c) 2022 - 2026 Ali Hassani.
 #
 # Parallel test runner for NATTEN unit tests

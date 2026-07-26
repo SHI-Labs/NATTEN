@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash -e
 # Copyright (c) 2022 - 2026 Ali Hassani.
 
 LOGDIR="wheel-logs/"

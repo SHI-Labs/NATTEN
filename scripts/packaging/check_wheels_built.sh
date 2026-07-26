@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 # Copyright (c) 2022 - 2026 Ali Hassani.
 
 NATTEN_VERSION="0.21.7"
