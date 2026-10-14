@@ -47,12 +47,12 @@ struct FmhaKernelBwdSumOdO {
     ProblemShape problem_shape;
 
     const Element* ptr_O;
-    cute::tuple<int64_t, int, int, cute::_1> stride_O;
+    cute::tuple<int64_t, int64_t, int64_t, cute::_1> stride_O;
     const Element* ptr_dO;
-    cute::tuple<int64_t, int, int, cute::_1> stride_dO;
+    cute::tuple<int64_t, int64_t, int64_t, cute::_1> stride_dO;
 
     ElementAcc* ptr_sum_OdO;
-    cute::tuple<int64_t, _1, int> stride_sum_OdO;
+    cute::tuple<int64_t, _1, int64_t> stride_sum_OdO;
   };
 
   using Params = Arguments;

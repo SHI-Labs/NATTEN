@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Main branch]
+* Fixed int32 address-offset overflow in the CUTLASS `dO * O` reduction
+  kernel for large sequence lengths.
 
 ## [0.21.7] - 2026-07-26
 * Switched to int64 strides in cutlass-fna to avoid overflows in larger use cases.

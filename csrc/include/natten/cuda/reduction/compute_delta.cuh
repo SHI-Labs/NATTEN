@@ -54,16 +54,18 @@ void compute_delta(
   OperationSumOdO op_sum_OdO;
 
   ProblemShape problem_shape = cute::make_tuple(batch, heads, seqlen_Q, dim);
-  auto stride_O = make_stride(
-      static_cast<int64_t>(dim * heads) * static_cast<int64_t>(seqlen_Q),
-      dim,
-      dim * heads,
-      _1{});
+  // Keep dynamic strides int64-typed so device-side coordinate * stride
+  // address arithmetic is evaluated in 64 bits.
+  const int64_t q_stride =
+      static_cast<int64_t>(dim) * static_cast<int64_t>(heads);
+  const int64_t batch_stride = q_stride * static_cast<int64_t>(seqlen_Q);
+  auto stride_O =
+      make_stride(batch_stride, static_cast<int64_t>(dim), q_stride, _1{});
   auto stride_dO = stride_O;
   auto stride_sum_OdO = make_stride(
       static_cast<int64_t>(heads) * static_cast<int64_t>(seqlen_Q),
       _1{},
-      heads);
+      static_cast<int64_t>(heads));
 
   auto args = typename OperationSumOdO::Arguments{
       problem_shape,
