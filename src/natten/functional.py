@@ -408,8 +408,13 @@ def neighborhood_attention_generic(
         has_additional_attention=has_additional_attention,
     ):
         logger.debug(
-            f"{query.shape=} with {kernel_size=}, {has_additional_attention=} and {is_causal=} is "
-            "self attention. Calling attention instead of neighborhood attention directly."
+            "query.shape=%s with kernel_size=%s, has_additional_attention=%s and "
+            "is_causal=%s is self attention. Calling attention instead of neighborhood "
+            "attention directly.",
+            query.shape,
+            kernel_size,
+            has_additional_attention,
+            is_causal,
         )
 
         query_shape = query.shape

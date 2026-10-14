@@ -192,6 +192,32 @@ class Block(nn.Module):
 
 
 class TorchCompileTests(unittest.TestCase):
+    @skip_if_libnatten_is_not_supported()
+    def test_dynamic_compile_self_attention_fallback(self):
+        _reset_everything()
+
+        query = torch.randn(
+            (1, 8, 8, 1, 64), device="cuda", dtype=torch.float16
+        )
+
+        def self_attention_fallback(query):
+            return neighborhood_attention_generic(
+                query,
+                query,
+                query,
+                kernel_size=(8, 8),
+            )
+
+        compiled = torch.compile(
+            self_attention_fallback,
+            backend="eager",
+            fullgraph=True,
+            dynamic=True,
+        )
+        output = compiled(query)
+
+        self.assertEqual(output.shape, query.shape)
+
     def _test_na_module(
         self,
         batch,
