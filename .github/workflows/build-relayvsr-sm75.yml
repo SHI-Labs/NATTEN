@@ -1,0 +1,164 @@
+name: RelayVSR SM75 NATTEN wheel
+
+on:
+  push:
+    branches:
+      - "relayvsr-*"
+    paths:
+      - ".github/workflows/build-relayvsr-sm75.yml"
+      - "BUILDING_RELAYVSR_SM75.md"
+      - "csrc/include/natten/cuda/fna/na_utils.cuh"
+      - "scripts/autogen_fna.py"
+      - "scripts/validate_relayvsr_sm75_profile.py"
+      - "setup.py"
+      - "src/natten/version.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: relayvsr-sm75-wheel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build CPython 3.13 / Torch 2.11.0 cu130 / SM75
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      NATTEN_CUDA_ARCH: "7.5"
+      NATTEN_N_WORKERS: "2"
+      NATTEN_AUTOGEN_POLICY: "coarse"
+      NATTEN_VERBOSE: "1"
+      NATTEN_IS_BUILDING_DIST: "0"
+      CMAKE_BUILD_PARALLEL_LEVEL: "2"
+      MAX_JOBS: "2"
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Check out source and CUTLASS submodule
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up CPython 3.13
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install CUDA Toolkit 13.0.2 (compiler only, no GPU needed)
+        uses: Jimver/cuda-toolkit@v0.2.35
+        with:
+          cuda: "13.0.2"
+          linux-local-args: '["--toolkit"]'
+
+      - name: Verify compiler and install pinned build dependencies
+        shell: bash
+        run: |
+          set -euxo pipefail
+          nvcc --version
+          cmake --version || true
+          python --version
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install "cmake==4.1.0" ninja "build>=1.3.0"
+          python -m pip install "torch==2.11.0" \
+            --index-url https://download.pytorch.org/whl/cu130 \
+            --extra-index-url https://pypi.org/simple
+          python - <<'PY'
+          import sys, torch
+          print("Python:", sys.version)
+          print("Torch:", torch.__version__)
+          print("Torch CUDA runtime:", torch.version.cuda)
+          print("GPU available on hosted runner:", torch.cuda.is_available())
+          assert sys.version_info[:2] == (3, 13)
+          assert torch.__version__.split("+")[0] == "2.11.0"
+          assert torch.version.cuda == "13.0"
+          PY
+          echo "CUDA_HOME=$CUDA_PATH" >> "$GITHUB_ENV"
+          echo "CUDACXX=$CUDA_PATH/bin/nvcc" >> "$GITHUB_ENV"
+
+      - name: Audit the checked-in RelayVSR build profile
+        run: python scripts/validate_relayvsr_sm75_profile.py
+
+      - name: Build the focused CUDA wheel
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p dist "${RUNNER_TEMP}/natten-build"
+          export NATTEN_BUILD_DIR="${RUNNER_TEMP}/natten-build"
+          python -m pip wheel -v --no-deps --no-build-isolation --wheel-dir dist .
+          ls -lh dist/*.whl
+          test "$(find dist -maxdepth 1 -name 'natten-*.whl' | wc -l)" -eq 1
+
+      - name: Smoke-test the wheel and write its manifest
+        shell: bash
+        run: |
+          set -euxo pipefail
+          WHEEL="$(find dist -maxdepth 1 -name 'natten-*.whl' -print -quit)"
+          mkdir -p "${RUNNER_TEMP}/natten-wheel-smoke"
+          python -m pip install --no-deps --target "${RUNNER_TEMP}/natten-wheel-smoke" "$WHEEL"
+          PYTHONPATH="${RUNNER_TEMP}/natten-wheel-smoke" python - <<'PY'
+          import glob, json, os, pathlib, platform, subprocess, sys, torch, natten
+          package_dir = pathlib.Path(natten.__file__).parent
+          extensions = list(package_dir.glob("libnatten*.so"))
+          print("NATTEN:", natten.__version__)
+          print("HAS_LIBNATTEN:", getattr(natten, "HAS_LIBNATTEN", None))
+          print("Extension:", [p.name for p in extensions])
+          assert natten.__version__ == "0.21.6+relayvsr1.sm75.torch2110cu130"
+          assert bool(getattr(natten, "HAS_LIBNATTEN", False)), "CUDA extension did not load"
+          assert extensions, "compiled libnatten shared object not found in wheel"
+          assert torch.__version__.split("+")[0] == "2.11.0"
+          assert torch.version.cuda == "13.0"
+          PY
+          python - <<'PY'
+          import glob, hashlib, json, os, pathlib, platform, subprocess, sys, torch
+          wheels = glob.glob("dist/natten-*.whl")
+          assert len(wheels) == 1, wheels
+          wheel = pathlib.Path(wheels[0])
+          digest = hashlib.sha256(wheel.read_bytes()).hexdigest()
+          nvcc = subprocess.check_output(["nvcc", "--version"], text=True)
+          manifest = {
+              "package": "natten",
+              "build_version": "0.21.6+relayvsr1.sm75.torch2110cu130",
+              "upstream_source_commit": "4472b95f46f55a8ba2c5f9869eba252bbf5a22f5",
+              "python": sys.version.split()[0],
+              "python_tag": "cp313",
+              "torch": torch.__version__,
+              "torch_cuda": torch.version.cuda,
+              "cuda_toolkit_nvcc": nvcc.strip().splitlines()[-1],
+              "target_architecture": "sm75",
+              "profile": {
+                  "rank": 2,
+                  "dtype": "float16",
+                  "causal": [False, False],
+                  "forward_gemm_shape": [64, 64, 64],
+                  "backward_gemm_shape": [64, 64, 64],
+                  "stride_one_window_mode": "query-centred clipped",
+              },
+              "wheel_filename": wheel.name,
+              "wheel_sha256": digest,
+              "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "github_run_number": os.environ.get("GITHUB_RUN_NUMBER"),
+              "github_commit": os.environ.get("GITHUB_SHA"),
+              "runtime_gpu_tested": False,
+          }
+          pathlib.Path("dist/build-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          pathlib.Path("dist/SHA256SUMS").write_text(f"{digest}  {wheel.name}\n")
+          print(json.dumps(manifest, indent=2))
+          PY
+
+      - name: Publish a downloadable prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euxo pipefail
+          TAG="relayvsr-sm75-build-${GITHUB_RUN_NUMBER}"
+          gh release create "$TAG" dist/*.whl dist/build-manifest.json dist/SHA256SUMS \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --prerelease \
+            --title "RelayVSR NATTEN SM75 build ${GITHUB_RUN_NUMBER}" \
+            --notes "Compile and import smoke-test passed. Target: CPython 3.13, PyTorch 2.11.0+cu130, CUDA Toolkit 13.0.2, NVIDIA SM75/T4. This prerelease has not yet been runtime-tested on a physical T4; run the notebook's RelayVSR geometry and numeric checks before production use."
