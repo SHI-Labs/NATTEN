@@ -1070,6 +1070,12 @@ struct NeighborhoodAttentionMaskBase<false> {
         spatial_extent(spatial_extent_) {}
 
   CUTLASS_DEVICE int32_t get_window_start(int32_t index) const {
+    // RelayVSR Flash attention uses clipped query-centred windows at stride=1.
+    // Do not relocate a full window inward at the right/bottom image borders.
+    // Keep stock NATTEN behavior unchanged for every other stride.
+    if (stride == 1) {
+      return cutlass::fast_max(index - window_radius_left, 0);
+    }
     // Stride group leader is the center-most query in the stride group.
     // If stride is even, choose the right hand side center query.
     int32_t stride_group_leader_idx = cutlass::fast_min(
@@ -1080,6 +1086,12 @@ struct NeighborhoodAttentionMaskBase<false> {
   }
 
   CUTLASS_DEVICE int32_t get_window_end(int32_t index, int32_t start) const {
+    // RelayVSR clips both sides of the original query-centred interval.
+    // Do not shift a truncated window to preserve its full size at image borders.
+    if (stride == 1) {
+      return cutlass::fast_min(
+          index - window_radius_left + window_size, spatial_extent);
+    }
     return start + window_size;
   }
 
