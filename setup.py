@@ -219,7 +219,7 @@ NUM_SPLITS = {
     },
     "coarse": {
         "reference": 1,
-        "fna": 32,
+        "fna": 1,
         "fmha": 3,
         "hopper-fna": 4,
         "hopper-fna-bwd": 2,
